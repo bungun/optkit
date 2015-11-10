@@ -1,52 +1,47 @@
-# CUDA Flags
-CUXX=nvcc
-CUFLAGS=-arch=sm_50 -Xcompiler '-fPIC'
-CULDFLAGS_=-lstdc++ -lcudart -lcublas -lcusparse
+# C++ Flags
+CXX=gcc
+CXXFLAGS= -g -O3 -fPIC -I. -I./include -Wall -Wconversion
+LDFLAGS=-lm
 
-
-# Set CUDA_HOME= path/to/CUDA/libraries/
-ifndef CUDAHOME
-ifeq ($(shell uname -s), Darwin)
-CUDAHOME=/usr/local/cuda/lib/
-else
-CUDAHOME=/usr/local/cuda/lib64/
-endif
-endif
 
 # Check System Args.
 ifeq ($(shell uname -s), Darwin)
-CULDFLAGS=-L$(CUDAHOME) -L/usr/local/lib $(CULDFLAGS_)
+LDFLAGS+= -framework Accelerate
 SHARED=dylib
 else
-CULDFLAGS=-L$(CUDAHOME) $(CULDFLAGS_)
+LDFLAGS+= -lblas
 SHARED=so
 endif
 
-# C++ Flags
-CXX=g++
-CXXFLAGS=$(IFLAGS) -g -O3 -I. -std=c++11 -Wall -Wconversion -fPIC
+OPT_FLAGS=
+# optional compiler flags 
+FLOAT = 0
+ifneq ($(FLOAT), 0)
+OPT_FLAGS += -D=$(FLOAT) # use floats rather than doubles
+endif
+
+CXXFLAGS += $(OPT_FLAGS)
+
+GSLROOT=./
+OUT=$(GSLROOT)build/
 
 
+.PHONY: default, libgsl, gsl
+default: gsl
 
-.PHONY: default, libcml, cml
-default: cml
+libgsl: $(OUT)/gsl.o
+	mkdir -p $(OUT)
+	$(CXX) $(CXXFLAGS) -shared -o $(OUT)$@.$(SHARED) $< $(LDFLAGS)
 
-libcml: link.o
-	g++  -shared -Wl,-soname,libtest.so -o $@.$(SHARED) cml_matrix_c.o link.o -L$(CUDAHOME)  -lcudart
+gsl: $(OUT)/gsl.o
 
-cml: cml_matrix_c.o cml_vector_c.o
+$(OUT)/gsl.o: gsl.c gsl.h
+	mkdir -p $(OUT)
+	$(CXX) $(CXXFLAGS) $< -c -o $@ $(LDFLAGS)	
 
-link.o: cml_matrix_c.cu  cml_matrix_c.cuh
-	nvcc  $(CUFLAGS) -dc cml_matrix_c.cu
-	nvcc  $(CUFLAGS) -dlink cml_matrix_c.o -o link.o
-
-cml_vector_c.o: cml_vector_c.cu cml_vector_c.cuh 
-	$(CUXX) -I. $(CUFLAGS) $< -dc -o $@ $(CULDFLAGS)
-
-cml_matrix_c.o: cml_matrix_c.cu cml_matrix_c.cuh 
-	$(CUXX) -I. $(CUFLAGS) $< -dc -o $@ $(CULDFLAGS)
 
 .PHONY: clean
 clean:
-	rm -f *.o *.so *.dylib *~ *~ cml_vector cml_matrix 
+	rm -f *.o *.so *.dylib *~ *~ 
 	rm -rf *.dSYM
+	rm -rf $(OUT)
