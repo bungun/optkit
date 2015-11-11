@@ -1,2 +1,9 @@
 *.DS_Store
 test
+
+*.o
+*.so
+*.dylib
+*.dll
+
+*.pyc
