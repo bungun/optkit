@@ -1,15 +1,13 @@
 from ctypes import CDLL, c_int, c_size_t
-from optkit.types import ok_float, ok_float_p, vector_p, matrix_p
-from optkit.defs import __sparse_tag, __gpu_tag, __float_tag
+from optkit.types import ok_float, ok_float_p
+from optkit.types.lowlevel import vector_p, matrix_p
+from optkit.defs import SPARSE_TAG as MATRIX__,  GPU_TAG as DEVICE__, \
+						FLOAT_TAG as PRECISION__
 
-
-__matrix_ = __sparse_tag
-__device_ = __gpu_tag
-__precision_ = __float_tag
 
 libpath = '/Users/Baris/Documents/Thesis/modules/optkit/'
 oklib = CDLL('{}build/libok_{}_{}{}.dylib'.format(
-	libpath,__device_,__matrix_,__precision_))
+	libpath,DEVICE__,MATRIX__,PRECISION__))
 
 # TODO: argtypes different for gpu because of cuda handle. i wonder whether this can be pre-pended to the argtypes lists????
 
@@ -60,7 +58,7 @@ oklib.__matrix_free.argtypes=[matrix_p]
 oklib.__matrix_submatrix.argtypes=[matrix_p, matrix_p, c_size_t, c_size_t, c_size_t, c_size_t]
 oklib.__matrix_row.argtypes=[vector_p, matrix_p, c_size_t]
 oklib.__matrix_column.argtypes=[vector_p, matrix_p, c_size_t]
-oklib.__matrix_diagonal.argtypes=[vector_p, matrix_p, c_size_t]
+oklib.__matrix_diagonal.argtypes=[vector_p, matrix_p]
 oklib.__matrix_view_array.argtypes=[matrix_p, ok_float_p, c_size_t, c_size_t, c_int]
 oklib.__matrix_set_all.argtypes=[matrix_p, ok_float]
 oklib.__matrix_memcpy_mm.argtypes=[matrix_p, matrix_p]
@@ -92,7 +90,7 @@ oklib.__blas_axpy.argtypes=[ok_float, vector_p, vector_p]
 oklib.__blas_nrm2.argtypes=[vector_p]
 oklib.__blas_scal.argtypes=[ok_float, vector_p]
 oklib.__blas_asum.argtypes=[vector_p]
-oklib.__blas_dot.argtypes=[vector_p, vector_p, ok_float_p]
+oklib.__blas_dot.argtypes=[vector_p, vector_p]
 oklib.__blas_gemv.argtypes=[c_int, ok_float, matrix_p, vector_p, ok_float, vector_p]
 oklib.__blas_trsv.argtypes=[c_int, c_int, c_int, matrix_p, vector_p]
 oklib.__blas_syrk.argtypes=[c_int, c_int, ok_float, matrix_p, ok_float, matrix_p]
@@ -104,7 +102,7 @@ oklib.__blas_axpy.restype=None
 oklib.__blas_nrm2.restype=ok_float
 oklib.__blas_scal.restype=None
 oklib.__blas_asum.restype=ok_float
-oklib.__blas_dot.restype=None
+oklib.__blas_dot.restype=ok_float
 oklib.__blas_gemv.restype=None
 oklib.__blas_trsv.restype=None
 oklib.__blas_syrk.restype=None

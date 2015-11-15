@@ -77,7 +77,7 @@ void __blas_axpy(ok_float alpha, const vector *x, vector *y);
 ok_float __blas_nrm2(const vector *x);
 void __blas_scal(const ok_float alpha, vector *x);
 ok_float __blas_asum(const vector *x);
-void __blas_dot(const vector *x, const vector *y, ok_float *result);
+ok_float __blas_dot(const vector *x, const vector *y);
 
 
 /* BLAS LEVEL 2 */

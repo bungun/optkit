@@ -1,3 +1,3 @@
-from types import enums, ok_vector, ok_matrix
-from utils import make_cvector, make_cmatrix
-from libs import oklib
+from optkit.types import Vector, Matrix
+from optkit.utils import make_cvector, make_cmatrix
+from optkit.libs import oklib

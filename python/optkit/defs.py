@@ -1,11 +1,13 @@
 from numpy import float32, float64
 
-__float_flag=False
-__sparse_flag=False
-__gpu_flag=False
+FLOAT_FLAG=False
+SPARSE_FLAG=False
+GPU_FLAG=False
+DIMCHECK_FLAG=True
+TYPECHECK_FLAG=True
 
-__float_tag='32' if __float_flag else '64'
-__sparse_tag='sparse' if __sparse_flag else 'dense'
-__gpu_tag='gpu' if __gpu_flag else 'cpu'
+FLOAT_TAG='32' if FLOAT_FLAG else '64'
+SPARSE_TAG='sparse' if SPARSE_FLAG else 'dense'
+GPU_TAG='gpu' if GPU_FLAG else 'cpu'
 
-__float_conversion = float32 if __float_flag else float64
+FLOAT_CAST = float32 if FLOAT_FLAG else float64
