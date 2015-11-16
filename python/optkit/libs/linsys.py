@@ -1,6 +1,6 @@
-from ctypes import CDLL, c_int, c_size_t, c_void_p
+from ctypes import CDLL, c_int, c_uint, c_size_t, c_void_p
 from optkit.types import ok_float, ok_float_p
-from optkit.types.lowlevel import vector_p, matrix_p
+from optkit.types.lowlevel import vector_p, matrix_p, c_uint_p
 from optkit.defs import SPARSE_TAG as MATRIX__,  GPU_TAG as DEVICE__, \
 						FLOAT_TAG as PRECISION__, OK_HOME
 
@@ -51,14 +51,14 @@ oklib.__vector_add_constant.restype=None
 # Matrix
 # ------
 ## arguments
-oklib.__matrix_alloc.argtypes=[matrix_p, c_size_t, c_size_t, c_int]
-oklib.__matrix_calloc.argtypes=[matrix_p, c_size_t, c_size_t, c_int]
+oklib.__matrix_alloc.argtypes=[matrix_p, c_size_t, c_size_t, c_uint]
+oklib.__matrix_calloc.argtypes=[matrix_p, c_size_t, c_size_t, c_uint]
 oklib.__matrix_free.argtypes=[matrix_p]
 oklib.__matrix_submatrix.argtypes=[matrix_p, matrix_p, c_size_t, c_size_t, c_size_t, c_size_t]
 oklib.__matrix_row.argtypes=[vector_p, matrix_p, c_size_t]
 oklib.__matrix_column.argtypes=[vector_p, matrix_p, c_size_t]
 oklib.__matrix_diagonal.argtypes=[vector_p, matrix_p]
-oklib.__matrix_view_array.argtypes=[matrix_p, ok_float_p, c_size_t, c_size_t, c_int]
+oklib.__matrix_view_array.argtypes=[matrix_p, ok_float_p, c_size_t, c_size_t, c_uint]
 oklib.__matrix_set_all.argtypes=[matrix_p, ok_float]
 oklib.__matrix_memcpy_mm.argtypes=[matrix_p, matrix_p]
 oklib.__matrix_memcpy_ma.argtypes=[matrix_p, ok_float_p]
@@ -93,11 +93,11 @@ oklib.__blas_nrm2.argtypes=[c_void_p, vector_p]
 oklib.__blas_scal.argtypes=[c_void_p, ok_float, vector_p]
 oklib.__blas_asum.argtypes=[c_void_p, vector_p]
 oklib.__blas_dot.argtypes=[c_void_p, vector_p, vector_p]
-oklib.__blas_gemv.argtypes=[c_void_p, c_int, ok_float, matrix_p, vector_p, ok_float, vector_p]
-oklib.__blas_trsv.argtypes=[c_void_p, c_int, c_int, c_int, matrix_p, vector_p]
-oklib.__blas_syrk.argtypes=[c_void_p, c_int, c_int, ok_float, matrix_p, ok_float, matrix_p]
-oklib.__blas_gemm.argtypes=[c_void_p, c_int, c_int, ok_float, matrix_p, matrix_p, ok_float, matrix_p]
-oklib.__blas_trsm.argtypes=[c_void_p, c_int, c_int, c_int, c_int, ok_float, matrix_p, matrix_p]
+oklib.__blas_gemv.argtypes=[c_void_p, c_uint, ok_float, matrix_p, vector_p, ok_float, vector_p]
+oklib.__blas_trsv.argtypes=[c_void_p, c_uint, c_uint, c_uint, matrix_p, vector_p]
+oklib.__blas_syrk.argtypes=[c_void_p, c_uint, c_uint, ok_float, matrix_p, ok_float, matrix_p]
+oklib.__blas_gemm.argtypes=[c_void_p, c_uint, c_uint, ok_float, matrix_p, matrix_p, ok_float, matrix_p]
+oklib.__blas_trsm.argtypes=[c_void_p, c_uint, c_uint, c_uint, c_uint, ok_float, matrix_p, matrix_p]
 
 ## return values 
 oklib.__blas_make_handle.restype=None

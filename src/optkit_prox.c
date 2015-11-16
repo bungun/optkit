@@ -20,7 +20,7 @@ void function_vector_calloc(FunctionVector * f, size_t n){
 	#pragma omp parallel for
 	#endif
 	for (i = 0; i < n; ++i)
-		f->objectives[i] = (FunctionObj){1,0,1,0,0,FnZero}; 
+		f->objectives[i] = (FunctionObj){FnZero,1,0,1,0,0}; 
 }
 
 void function_vector_free(FunctionVector * f){
@@ -61,71 +61,79 @@ void function_vector_memcpy_vmulti(FunctionVector * f, Function_t *h,
 		#pragma omp parallel for
 		#endif
 		for (i = 0; i < f->size; ++i)
-			f->objectives[i] = (FunctionObj){1,0,1,0,0,FnZero};
+			f->objectives[i] = (FunctionObj){FnZero,1,0,1,0,0};
 	} else if (a == OK_NULL) {
 		#ifdef _OPENMP
 		#pragma omp parallel for
 		#endif
 		for (i = 0; i < f->size; ++i)
-			f->objectives[i] = (FunctionObj){1,0,1,0,0, h[i]};
+			f->objectives[i] = (FunctionObj){h[i],1,0,1,0,0};
 	} else if (b == OK_NULL) {
 		#ifdef _OPENMP
 		#pragma omp parallel for
 		#endif
 		for (i = 0; i < f->size; ++i)
-			f->objectives[i] = (FunctionObj){a[i],0,1,0,0,h[i]};
+			f->objectives[i] = (FunctionObj){h[i],a[i],0,1,0,0};
 	} else if (c == OK_NULL) {
 		#ifdef _OPENMP
 		#pragma omp parallel for
 		#endif
 		for (i = 0; i < f->size; ++i)
-			f->objectives[i] = (FunctionObj){a[i],b[i],1,0,0,h[i]};
+			f->objectives[i] = (FunctionObj){h[i],a[i],b[i],1,0,0};
 	} else if (d == OK_NULL) {
 		#ifdef _OPENMP
 		#pragma omp parallel for
 		#endif
 		for (i = 0; i < f->size; ++i)
-			f->objectives[i] = (FunctionObj){a[i],b[i],c[i],0,0,h[i]};
+			f->objectives[i] = (FunctionObj){h[i],a[i],b[i],c[i],0,0};
 
 	} else if (e == OK_NULL) {
 		#ifdef _OPENMP
 		#pragma omp parallel for
 		#endif
 		for (i = 0; i < f->size; ++i)
-			f->objectives[i] = (FunctionObj){a[i],b[i],c[i],d[i],0,h[i]};
+			f->objectives[i] = (FunctionObj){h[i],a[i],b[i],c[i],d[i],0};
 	} else {
 		#ifdef _OPENMP
 		#pragma omp parallel for
 		#endif
 		for (i = 0; i < f->size; ++i)
-			f->objectives[i] = (FunctionObj){a[i], b[i], c[i], 
-											 d[i], e[i], h[i]};
+			f->objectives[i] = (FunctionObj){h[i],a[i],b[i],c[i],d[i],e[i]};
 	}
 
 }
 
 
+void function_vector_print(FunctionVector * f){
+	size_t i;
+	for (i = 0; i < f->size; ++i)
+		printf("h: %i, a: %0.2e, b: %0.2e, c: %0.2e, d: %0.2e, e: %0.2e\n", 
+				(int) f->objectives[i].h, f->objectives[i].a,
+				f->objectives[i].b, f->objectives[i].c,
+				f->objectives[i].d, f->objectives[i].e);
+}
+
 void ProxEvalVector(const FunctionVector * f, ok_float rho, 
-			  const ok_float * x_in, size_t stride_in, 
-			  ok_float * x_out, size_t stride_out) {
+			  const vector * x_in, vector * x_out) {
 	
 	#ifdef _OPENMP
 	#pragma omp parallel for
 	#endif
-	for (uint i = 0; i < f->size; ++i)
-		x_out[i * stride_out] = ProxEval(&f->objectives[i], x_in[i * stride_in], rho);
+	for (uint i = 0; i < f->size; ++i){
+		x_out->data[i * x_out->stride] = ProxEval(&f->objectives[i], 
+			x_in->data[i * x_in->stride], rho);
+	}
 }
 
 
-ok_float FuncEvalVector(const FunctionVector * f, const ok_float * x_in, 
-				  size_t stride) {
+ok_float FuncEvalVector(const FunctionVector * f, const vector * x) {
 	ok_float sum = 0;
 
 	#ifdef _OPENMP
 	#pragma omp parallel for reduction(+:sum)
 	#endif
 	for (uint i = 0; i < f->size; ++i)
-		sum += FuncEval(&f->objectives[i], x_in[i * stride]);
+		sum += FuncEval(&f->objectives[i], x->data[i * x->stride]);
 	return sum;
 }
 

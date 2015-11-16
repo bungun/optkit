@@ -5,6 +5,7 @@
 #define OPTKIT_PROXLIB_H_GUARD
 
 #include "optkit_defs.h"
+#include "optkit_dense.h"
 
 
 #ifdef __cplusplus
@@ -61,6 +62,7 @@ void function_vector_memcpy_vmulti(FunctionVector * f, Function_t * h,
                                      ok_float * a, ok_float * b, 
                                      ok_float * c, ok_float * d, 
                                      ok_float * e);
+void function_vector_print(FunctionVector *f);
 
 __DEVICE__ inline void checkvexity(FunctionObj * f);
 __DEVICE__ inline ok_float Abs(ok_float x) { return fabs(x); }
@@ -401,11 +403,9 @@ __DEVICE__ inline ok_float FuncEval(const FunctionObj *f_obj, ok_float x) {
 
 
 void ProxEvalVector(const FunctionVector * f, ok_float rho,
-			  const ok_float * x_in, size_t stride_in,
-			  ok_float * x_out, size_t stride_out);
+			  const vector * x_in, vector * x_out);
 
-ok_float FuncEvalVector(const FunctionVector * f, const ok_float * x_in,
-          		  size_t stride);
+ok_float FuncEvalVector(const FunctionVector * f, const vector * x);
 
 
 #ifdef __cplusplus
