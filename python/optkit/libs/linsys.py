@@ -1,15 +1,14 @@
-from ctypes import CDLL, c_int, c_size_t
+from ctypes import CDLL, c_int, c_size_t, c_void_p
 from optkit.types import ok_float, ok_float_p
 from optkit.types.lowlevel import vector_p, matrix_p
 from optkit.defs import SPARSE_TAG as MATRIX__,  GPU_TAG as DEVICE__, \
-						FLOAT_TAG as PRECISION__
+						FLOAT_TAG as PRECISION__, OK_HOME
 
 
-libpath = '/Users/Baris/Documents/Thesis/modules/optkit/'
 oklib = CDLL('{}build/libok_{}_{}{}.dylib'.format(
-	libpath,DEVICE__,MATRIX__,PRECISION__))
+	OK_HOME,DEVICE__,MATRIX__,PRECISION__))
 
-# TODO: argtypes different for gpu because of cuda handle. i wonder whether this can be pre-pended to the argtypes lists????
+
 
 # Vector 
 # ------
@@ -85,19 +84,24 @@ oklib.__matrix_scale.restype=None
 
 # BLAS
 # ----
+
 ## arguments
-oklib.__blas_axpy.argtypes=[ok_float, vector_p, vector_p]
-oklib.__blas_nrm2.argtypes=[vector_p]
-oklib.__blas_scal.argtypes=[ok_float, vector_p]
-oklib.__blas_asum.argtypes=[vector_p]
-oklib.__blas_dot.argtypes=[vector_p, vector_p]
-oklib.__blas_gemv.argtypes=[c_int, ok_float, matrix_p, vector_p, ok_float, vector_p]
-oklib.__blas_trsv.argtypes=[c_int, c_int, c_int, matrix_p, vector_p]
-oklib.__blas_syrk.argtypes=[c_int, c_int, ok_float, matrix_p, ok_float, matrix_p]
-oklib.__blas_gemm.argtypes=[c_int, c_int, ok_float, matrix_p, matrix_p, ok_float, matrix_p]
-oklib.__blas_trsm.argtypes=[c_int, c_int, c_int, c_int, ok_float, matrix_p, matrix_p]
+oklib.__blas_make_handle.argtypes=[c_void_p]
+oklib.__blas_destroy_handle.argtypes=[c_void_p]
+oklib.__blas_axpy.argtypes=[c_void_p, ok_float, vector_p, vector_p]
+oklib.__blas_nrm2.argtypes=[c_void_p, vector_p]
+oklib.__blas_scal.argtypes=[c_void_p, ok_float, vector_p]
+oklib.__blas_asum.argtypes=[c_void_p, vector_p]
+oklib.__blas_dot.argtypes=[c_void_p, vector_p, vector_p]
+oklib.__blas_gemv.argtypes=[c_void_p, c_int, ok_float, matrix_p, vector_p, ok_float, vector_p]
+oklib.__blas_trsv.argtypes=[c_void_p, c_int, c_int, c_int, matrix_p, vector_p]
+oklib.__blas_syrk.argtypes=[c_void_p, c_int, c_int, ok_float, matrix_p, ok_float, matrix_p]
+oklib.__blas_gemm.argtypes=[c_void_p, c_int, c_int, ok_float, matrix_p, matrix_p, ok_float, matrix_p]
+oklib.__blas_trsm.argtypes=[c_void_p, c_int, c_int, c_int, c_int, ok_float, matrix_p, matrix_p]
 
 ## return values 
+oklib.__blas_make_handle.restype=None
+oklib.__blas_destroy_handle.restype=None
 oklib.__blas_axpy.restype=None
 oklib.__blas_nrm2.restype=ok_float
 oklib.__blas_scal.restype=None
@@ -112,9 +116,9 @@ oklib.__blas_trsm.restype=None
 # LINALG
 # -------
 ## arguments
-oklib.__linalg_cholesky_decomp_noblk.argtypes=[matrix_p]
-oklib.__linalg_cholesky_decomp.argtypes=[matrix_p]
-oklib.__linalg_cholesky_svx.argtypes=[matrix_p, vector_p]
+oklib.__linalg_cholesky_decomp_noblk.argtypes=[c_void_p, matrix_p]
+oklib.__linalg_cholesky_decomp.argtypes=[c_void_p, matrix_p]
+oklib.__linalg_cholesky_svx.argtypes=[c_void_p, matrix_p, vector_p]
 
 ## return values
 oklib.__linalg_cholesky_decomp_noblk.restype=None

@@ -15,25 +15,25 @@ extern "C" {
 
 /* List of functions supported by the proximal operator library. */
 enum Function { 
-                FnZero 		/* f(x) = 0 				*/
-				FnAbs,       /* f(x) = |x| 				*/
-                FnExp,       /* f(x) = e^x 				*/
-                FnHuber,     /* f(x) = huber(x) 			*/
-                FnIdentity,  /* f(x) = x 				*/
-                FnIndBox01,  /* f(x) = I(0 <= x <= 1) 	*/
-                FnIndEq0,    /* f(x) = I(x = 0) 			*/
-                FnIndGe0,    /* f(x) = I(x >= 0) 		*/
-                FnIndLe0,    /* f(x) = I(x <= 0) 		*/
-                FnLogistic,  /* f(x) = log(1 + e^x) 		*/
-                FnMaxNeg0,   /* f(x) = max(0, -x) 		*/
-                FnMaxPos0,   /* f(x) = max(0, x)  		*/
-                FnNegEntr,   /* f(x) = x log(x) 			*/
-                FnNegLog,    /* f(x) = -log(x) 			*/
-                FnRecipr,    /* f(x) = 1/x  				*/
-                FnSquare,    /* f(x) = (1/2) x^2 		*/
+                FnZero, 		   /* f(x) = 0 */
+				        FnAbs,       /* f(x) = |x| */
+                FnExp,       /* f(x) = e^x */
+                FnHuber,     /* f(x) = huber(x) */
+                FnIdentity,  /* f(x) = x */
+                FnIndBox01,  /* f(x) = I(0 <= x <= 1) */
+                FnIndEq0,    /* f(x) = I(x = 0) */
+                FnIndGe0,    /* f(x) = I(x >= 0) */
+                FnIndLe0,    /* f(x) = I(x <= 0) */
+                FnLogistic,  /* f(x) = log(1 + e^x) */
+                FnMaxNeg0,   /* f(x) = max(0, -x) */
+                FnMaxPos0,   /* f(x) = max(0, x) */
+                FnNegEntr,   /* f(x) = x log(x) */
+                FnNegLog,    /* f(x) = -log(x) */
+                FnRecipr,    /* f(x) = 1/x */
+                FnSquare,    /* f(x) = (1/2) x^2 */
                 };    
 
-typedef enum Function Function_t
+typedef enum Function Function_t;
 
 /* f(x) = c * h(ax-b) + dx + ex^2 */
 typedef struct FunctionObj{
@@ -47,25 +47,22 @@ typedef struct FunctionVector{
 } FunctionVector;
 
 
-/* check/enforce convexity of function objects */
-void checkvexity(FunctionObj * f);
-/*void init_fobj(FunctionObj * f);
-void init_fobj_a(FunctionObj * f, Function_t h, ok_float a);
-void init_fobj_ab(FunctionObj * f, Function_t h, 
-				  ok_float a, ok_float b);
-void init_fobj_ac(FunctionObj * f, Function_t h, 
-				  ok_float a, ok_float b, ok_float c);
-void init_fobj_ad(FunctionObj * f, Function_t h, 
-				  ok_float a, ok_float b,
-				  ok_float c, ok_float d);
-void init_fobj_ae(FunctionObj * f, Function_t h, 
-				  ok_float a, ok_float b,
-				  ok_float c, ok_float d,
-				  ok_float e);*/
-void function_vector_alloc(FunctionVector * f, size_t len);
-void function_vector_calloc(FunctionVector * f, size_t len);
-void function_vector_free(FunctionVector * f);
 
+void function_vector_alloc(FunctionVector * f, size_t n);
+void function_vector_calloc(FunctionVector * f, size_t n);
+void function_vector_free(FunctionVector * f);
+void function_vector_view_array(FunctionVector * f, FunctionObj * h, size_t n);
+void function_vector_from_multiarray(FunctionVector * f, Function_t * h,
+                                     ok_float * a, ok_float * b, 
+                                     ok_float * c, ok_float * d, 
+                                     ok_float * e, size_t n);
+void function_vector_memcpy_va(FunctionVector * f, FunctionObj * h);
+void function_vector_memcpy_vmulti(FunctionVector * f, Function_t * h,
+                                     ok_float * a, ok_float * b, 
+                                     ok_float * c, ok_float * d, 
+                                     ok_float * e);
+
+__DEVICE__ inline void checkvexity(FunctionObj * f);
 __DEVICE__ inline ok_float Abs(ok_float x) { return fabs(x); }
 __DEVICE__ inline ok_float Acos(ok_float x) { return acos(x); }
 __DEVICE__ inline ok_float Cos(ok_float x) { return cos(x); }
@@ -94,10 +91,12 @@ __DEVICE__ inline ok_float Sign(ok_float x) {
 __DEVICE__ inline ok_float LambertW(ok_float x) {
   const ok_float kEm1 = (ok_float)(0.3678794411714423215955237701614608);
   const ok_float kE = (ok_float)(2.7182818284590452353602874713526625);
+  ok_float e, p, q, q2, q3, r, t, w;
+  uint i;
   if (x == 0) {
     return 0;
   } else if (x < -kEm1 + 1e-4) {
-    ok_float q = x + kEm1, r = Sqrt(q), q2 = q * q, q3 = q2 * q;
+    q = x + kEm1, r = Sqrt(q), q2 = q * q, q3 = q2 * q;
     return
      -(ok_float) 1.0
      +(ok_float) 2.331643981597124203363536062168 * r
@@ -109,19 +108,19 @@ __DEVICE__ inline ok_float LambertW(ok_float x) {
      +(ok_float) 5.858023729874774148815053846119 * r * q3
      -(ok_float) 8.401032217523977370984161688514 * q3 * q;
   } else {
-    ok_float w;
+  
     if (x < 1) {
-      ok_float p = Sqrt((ok_float)(2.0 * (kE * x + 1.0)));
+      p = Sqrt((ok_float)(2.0 * (kE * x + 1.0)));
       w = (ok_float)(-1.0 + p * (1.0 + p * (-1.0 / 3.0 + p * 11.0 / 72.0)));
     } else {
       w = Log(x);
     }
     if (x > 3)
       w -= Log(w);
-    for (unsigned int i = 0; i < 10; i++) {
-      ok_float e = Exp(w);
-      ok_float t = w * e - x;
-      ok_float p = w + (ok_float)(1);
+    for (i = 0; i < 10; i++) {
+      e = Exp(w);
+      t = w * e - x;
+      p = w + (ok_float)(1);
       t /= (ok_float)(e * p - 0.5 * (p + 1.0) * t / p);
       w -= t;
     }
@@ -197,8 +196,8 @@ __DEVICE__ inline ok_float ProxIndLe0(ok_float v, ok_float rho) {
   return v >= 0 ? 0 : v;
 }
 
-__DEVICE__ inline ok_float ProxLogistic(ok_float v, ok_float rho) {
-	ok_float x, l, inv_ex, f, g, g_rho;
+__DEVICE__ ok_float ProxLogistic(ok_float v, ok_float rho) {
+	ok_float x, l, inv_ex, f, g, g_rho, u;
 	size_t i;
 
   	/* Initial guess based on piecewise approximation. */
@@ -268,10 +267,10 @@ __DEVICE__ inline ok_float ProxZero(ok_float v, ok_float rho) {
 }
 
 // Evaluates the proximal operator of f.
-__DEVICE__ inline ok_float ProxEval(const FunctionObj *f_obj, 
+__DEVICE__ ok_float ProxEval(const FunctionObj *f_obj, 
 									ok_float v, ok_float rho) {
-	const ok_float a = f_obj.a, b = f_obj.b, c = f_obj.c, 
-				   d = f_obj.d, e = f_obj.e;
+	const ok_float a = f_obj->a, b = f_obj->b, c = f_obj->c, 
+				   d = f_obj->d, e = f_obj->e;
 
 	v = a * (v * rho - d) / (e + rho) - b;
 	rho = (e + rho) / (c * a * a);
@@ -361,7 +360,7 @@ __DEVICE__ inline ok_float FuncNegLog(ok_float x) {
   return -Log(x);
 }
 
-__DEVICE__ inline ok_float FuncRecpr(ok_float x) {
+__DEVICE__ inline ok_float FuncRecipr(ok_float x) {
   x = Max((ok_float) 0, x);
   return 1 / x;
 }
@@ -376,26 +375,26 @@ __DEVICE__ inline ok_float FuncZero(ok_float x) {
 
 /* Evaluates the function f. */
 __DEVICE__ inline ok_float FuncEval(const FunctionObj *f_obj, ok_float x) {
-	ok_float dx = f_obj.d * x;
-	ok_float ex = f_obj.e * x * x / 2;
-	x = f_obj.a * x - f_obj.b;
+  ok_float dx = f_obj->d * x;
+	ok_float ex = f_obj->e * x * x / 2;
+  x = f_obj->a * x - f_obj->b;
 
 
-	if (f_obj->h == FnAbs) FuncAbs(x);
-	else if (f_obj->h == FnNegEntr) FuncNegEntr(x);
-	else if (f_obj->h == FnExp) FuncExp(x);
-	else if (f_obj->h == FnHuber) FuncHuber(x);
-	else if (f_obj->h == FnIdentity) FuncIdentity(x);
-	else if (f_obj->h == FnIndBox01) FuncIndBox01(x);
-	else if (f_obj->h == FnIndEq0) FuncIndEq0(x);
-	else if (f_obj->h == FnIndGe0) FuncIndGe0(x);
-	else if (f_obj->h == FnIndLe0) FuncIndLe0(x);
-	else if (f_obj->h == FnLogistic) FuncLogistic(x);
-	else if (f_obj->h == FnMaxNeg0) FuncMaxNeg0(x);
-	else if (f_obj->h == FnMaxPos0) FuncMaxPos0(x);
-	else if (f_obj->h == FnRecipr) FuncRecipr(x);
-	else if (f_obj->h == FnSquare) FuncSquare(x);
-	else v = FuncZero(v, rho);
+	if (f_obj->h == FnAbs) x = FuncAbs(x);
+	else if (f_obj->h == FnNegEntr) x = FuncNegEntr(x);
+	else if (f_obj->h == FnExp) x = FuncExp(x);
+	else if (f_obj->h == FnHuber) x = FuncHuber(x);
+	else if (f_obj->h == FnIdentity) x = FuncIdentity(x);
+	else if (f_obj->h == FnIndBox01) x = FuncIndBox01(x);
+	else if (f_obj->h == FnIndEq0) x = FuncIndEq0(x);
+	else if (f_obj->h == FnIndGe0) x = FuncIndGe0(x);
+	else if (f_obj->h == FnIndLe0) x = FuncIndLe0(x);
+	else if (f_obj->h == FnLogistic) x = FuncLogistic(x);
+	else if (f_obj->h == FnMaxNeg0) x = FuncMaxNeg0(x);
+	else if (f_obj->h == FnMaxPos0) x = FuncMaxPos0(x);
+	else if (f_obj->h == FnRecipr) x = FuncRecipr(x);
+	else if (f_obj->h == FnSquare) x = FuncSquare(x);
+	else x = FuncZero(x);
 
 	return f_obj->c * x + dx * ex;
 }
@@ -409,7 +408,7 @@ ok_float FuncEvalVector(const FunctionVector * f, const ok_float * x_in,
           		  size_t stride);
 
 
-#ifdef
+#ifdef __cplusplus
 }		/* extern "C" */
 #endif
 

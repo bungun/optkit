@@ -72,7 +72,7 @@
 #define cublasGetPointerMode cublasGetPointerMode_v2
 #define cublasSetPointerMode cublasSetPointerMode_v2
 
-/* Blas3 Routines   */
+/* Blas1 Routines   */
 
 #define cublasSnrm2          cublasSnrm2_v2
 #define cublasDnrm2          cublasDnrm2_v2 

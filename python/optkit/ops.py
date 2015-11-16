@@ -3,7 +3,8 @@ from optkit.utils import ndarray_pointer, make_cvector, make_cmatrix
 from optkit.pyutils import istypedtuple
 from optkit.libs import oklib
 from optkit.defs import DIMCHECK_FLAG, TYPECHECK_FLAG
-# from toolz import *
+from ctypes import c_void_p
+# from toolz import curry
 
 # in-place operations
 
@@ -12,6 +13,23 @@ from optkit.defs import DIMCHECK_FLAG, TYPECHECK_FLAG
 # TODO: change functions to templates with handle, lib
 # TODO: partial evaluation/currying with handle (or None) and lib
 # TODO: operator overloading?
+
+
+
+
+# class LinAlgContext(object):
+# 	def __init__(self, lib):
+# 		self.blas_handle = c_void_p()
+# 		self.lib = lib
+# 		self.lib.__blas_make_handle(self.blas_handle)
+
+# 	def __del__(self, ):
+# 		self.lib.__blas_destroy_handle(self.blas_handle)
+
+blas_handle = c_void_p()
+oklib.__blas_make_handle(blas_handle)
+# oklib.__blas_destroy_handle(blas_handle)
+# ok_ctx = LinAlgContext(oklib)
 
 
 def copy(orig, dest, python=False):
@@ -28,7 +46,7 @@ def view(x, *range_, **viewtype):
 
 	input_err = str("Error: optkit.ops.view: "
 		"invalid view specification.\n"
-		"Valid argument & keyword argument combinations:"
+		"Valid argument & keyword argument combinations:\n"
 		"(`optkit.Vector`, `tuple(int,int)`)\n"
 		"(`optkit.Matrix`, diag=1)\n"
 		"(`optkit.Matrix`, `int`, [no keyword args, views row])\n"		
@@ -48,9 +66,9 @@ def view(x, *range_, **viewtype):
 
 	elif isinstance(x, Vector) and \
 		 len(range_) == 1 and \
-		 istypedtuple(range_,2,int):
+		 istypedtuple(range_[0],2,int):
 
-		rng = Range(x.size, *range_)
+		rng = Range(x.size, *range_[0])
 		pyview = x.py[rng.idx1:rng.idx2]
 		cview = make_cvector()
 		oklib.__vector_subvector(cview, x.c, rng.idx1, rng.elements)
@@ -164,6 +182,47 @@ def div(const_x,y, python=False):
 			  "\t(int/float, optkit.Vector) \n"
 			  "\t(int/float, optkit.Matrix)")
 
+
+"""
+	keyword args: python_to_C (default=False), sets copy direction
+"""
+def sync(*vars, **py2c):
+	python_to_C = "python_to_C" in py2c
+
+	for x in vars:
+		if not isinstance(x, (Vector,Matrix)):
+			print("optkit.ops.sync undefined for "
+				  "types other than:\n optkit.Vector "
+				  "\n optkit.Matrix")	
+		else:
+			if not x.sync_required: return
+			if isinstance(x,Vector):
+				if python_to_C:
+					oklib.__vector_memcpy_va(x.c, ndarray_pointer(x.py))
+				else:
+					oklib.__vector_memcpy_av(ndarray_pointer(x.py), x.c)
+			else:
+				if python_to_C:
+					oklib.__vector_memcpy_ma(x.c, ndarray_pointer(x.py))
+				else:
+					oklib.__vector_memcpy_am(ndarray_pointer(x.py), x.c)
+
+
+def print_var(x, python=False):
+	if not isinstance(x, (Vector,Matrix)):
+		print("optkit.ops.print_var undefined for "
+			   "types other than: \n optkit.Vector"
+				"\n optkit.Matrix")
+	else:
+		if python:
+			if x.sync_required: sync(x)
+			print x.py
+		elif isinstance(x, Vector):
+			oklib.__vector_print(x.c)
+		else:
+			oklib.__matrix_print(x.c)
+
+
 def dot(x,y, python=False, 
 		typecheck=TYPECHECK_FLAG, dimcheck=DIMCHECK_FLAG):
 	if typecheck and not \
@@ -177,22 +236,22 @@ def dot(x,y, python=False,
 				   "incompatible Vector dimensions\n"
 				   "x: {}, y: {}".format(x.size, y.size))
 		else:
-			return oklib.__blas_dot(x.c,y.c)
+			return oklib.__blas_dot(blas_handle, x.c,y.c)
 
 def asum(x, python=False, typecheck=True):
 	if typecheck and not isinstance(x, Vector):
 		print("optkit.ops.div(x) defined for optkit.Vector")
 	else:
-		return oklib.__blas_asum(x.c)
+		return oklib.__blas_asum(blas_handle, x.c)
 
 def nrm2(x, python=False, typecheck=True):
 	if typecheck and not isinstance(x, Vector):
 		print("optkit.ops.div(x) defined for optkit.Vector")
 	else:
-		return oklib.__blas_nrm2(x.c)
+		return oklib.__blas_nrm2(blas_handle, x.c)
 
 def axpy(alpha, const_x, y, python=False, 
-			typecheck=TYPECHECK_FLAG, dimcheck=DIMCHECK_FLAG):
+		typecheck=TYPECHECK_FLAG, dimcheck=DIMCHECK_FLAG):
 	if typecheck and not \
 			(isinstance(alpha, (int,float)) and
 			 isinstance(const_x, Vector) and
@@ -205,10 +264,10 @@ def axpy(alpha, const_x, y, python=False,
 				   "incompatible dimensions for y+=alpha x\n"
 				   "x: {}, y: {}".format(const_x.size, y.size))
 		else:
-			oklib.__blas_axpy(alpha, const_x.c, y.c)			
+			oklib.__blas_axpy(blas_handle, alpha, const_x.c, y.c)			
 
 def gemv(tA, alpha, A, x, beta, y, 
-			typecheck=TYPECHECK_FLAG, dimcheck=DIMCHECK_FLAG):
+		typecheck=TYPECHECK_FLAG, dimcheck=DIMCHECK_FLAG):
 	if typecheck and not \
 	 	   (isinstance(alpha, (int,float)) and
 			isinstance(A, Matrix) and  
@@ -239,11 +298,10 @@ def gemv(tA, alpha, A, x, beta, y,
 				return 
 
 		At = enums.CblasTrans if tA =='T' else enums.CblasNoTrans			
-		oklib.__blas_gemv(At, alpha, A.c, x.c, beta, y.c)
-
+		oklib.__blas_gemv(blas_handle, At, alpha, A.c, x.c, beta, y.c)
 
 def gemm(tA, tB, alpha, A, B, beta, C, 
-			typecheck=TYPECHECK_FLAG, dimcheck=DIMCHECK_FLAG):
+		typecheck=TYPECHECK_FLAG, dimcheck=DIMCHECK_FLAG):
 	if typecheck and not \
 	       (isinstance(alpha, (int,float)) and
 			isinstance(A, Matrix) and  
@@ -275,12 +333,9 @@ def gemm(tA, tB, alpha, A, B, beta, C,
 		
 		At = enums.CblasTrans if tA =='T' else enums.CblasNoTrans
 		Bt = enums.CblasTrans if tB =='T' else enums.CblasNoTrans
-		print "ALPHA:", alpha
-		print "BETA:", beta
 
-		oklib.__blas_gemm(At, Bt, alpha, A.c, B.c, beta, C.c)
+		oklib.__blas_gemm(blas_handle, At, Bt, alpha, A.c, B.c, beta, C.c)
 
-	
 def cholesky_factor(A, python=False, dimcheck=DIMCHECK_FLAG):
 	if not isinstance(A, Matrix):
 		print("optkit.ops.cholesky_factor(A) defined"
@@ -291,11 +346,13 @@ def cholesky_factor(A, python=False, dimcheck=DIMCHECK_FLAG):
 			print ("Error: optkit.ops.cholesky_factor(A)"
 				   "only defined for square matrices A"
 				   "A: {}x{}".format(A.size1, A.size2))
-		oklib.__linalg_cholesky_decomp(A.c)
+		
+		oklib.__linalg_cholesky_decomp(blas_handle, A.c)
+
 
 def cholesky_solve(L, x, python=False, 
-					typecheck=TYPECHECK_FLAG,
-					dimcheck=DIMCHECK_FLAG):
+				typecheck=TYPECHECK_FLAG,
+				dimcheck=DIMCHECK_FLAG):
 	if typecheck:
 		if not isinstance(L, Matrix):
 			print("optkit.ops.cholesky_solve(L, x) defined"
@@ -314,46 +371,7 @@ def cholesky_solve(L, x, python=False,
 			   "L: {}x{}\nx: {}".format(L.size1, L.size2, x.size))
 		return
 
-	oklib.__linalg_cholesky_svx(L.c,x.c)
+	oklib.__linalg_cholesky_svx(blas_handle, L.c,x.c)
 
-
-
-"""
-	keyword args: python_to_C (default=False), sets copy direction
-"""
-def sync(*vars, **py2c):
-	python_to_C = "python_to_C" in py2c
-
-	for x in vars:
-		if not isinstance(x, (Vector,Matrix)):
-			print("optkit.ops.sync undefined for "
-				  "types other than:\n optkit.Vector "
-				  "\n optkit.Matrix")	
-		else:
-			if not x.sync_required: return
-			if isinstance(x,Vector):
-				if python_to_C:
-					oklib.__vector_memcpy_va(x.c, ndarray_pointer(x.py))
-				else:
-					oklib.__vector_memcpy_av(ndarray_pointer(x.py), x.c)
-			else:
-				if python_to_C:
-					oklib.__vector_memcpy_ma(x.c, ndarray_pointer(x.py))
-				else:
-					oklib.__vector_memcpy_am(ndarray_pointer(x.py), x.c)
-
-def print_var(x, python=False):
-	if not isinstance(x, (Vector,Matrix)):
-		print("optkit.ops.print_var undefined for "
-			   "types other than: \n optkit.Vector"
-				"\n optkit.Matrix")
-	else:
-		if python:
-			if x.sync_required: sync(x)
-			print x.py
-		elif isinstance(x, Vector):
-			oklib.__vector_print(x.c)
-		else:
-			oklib.__matrix_print(x.c)
 
 

@@ -1,5 +1,10 @@
 #include "optkit_dense.h"
+#include "optkit_dense.h"
 #include "gsl_cblas.h"
+
+
+/* TODO: CHANGE TRANSPOSE AND LU ENUMS */
+/* TODO: FUNCTIONS TO CREATE AND DESTROY HANDLES */
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,7 +59,7 @@ void __vector_subvector(vector * v_out, vector * v_in, size_t offset, size_t n) 
 
 void __vector_view_array(vector * v, ok_float * base, size_t n) {
   if (!__vector_exists(v)) return;
-	v->size=n;
+  v->size=n;
   v->stride=1;
   v->data=base;
 }
@@ -72,51 +77,51 @@ void __vector_memcpy_vv(vector * v1, const vector * v2) {
 
 void __vector_memcpy_va(vector * v, const ok_float *y) {
   if (v->stride == 1) {
-		memcpy(v->data, y, v->size * sizeof(ok_float));
-	} else {
-		for (uint i = 0; i < v->size; ++i)
-			__vector_set(v, i, y[i]);
-	}
+    memcpy(v->data, y, v->size * sizeof(ok_float));
+  } else {
+    for (uint i = 0; i < v->size; ++i)
+      __vector_set(v, i, y[i]);
+  }
 }
 
 void __vector_memcpy_av(ok_float *x, const vector *v) {
-	if (v->stride ==1) {
-		memcpy(x, v->data, v->size * sizeof(ok_float));
-	} else {
-		for (uint i = 0; i < v->size; ++i)
-			x[i] = __vector_get(v,i);
-	}
+  if (v->stride ==1) {
+    memcpy(x, v->data, v->size * sizeof(ok_float));
+  } else {
+    for (uint i = 0; i < v->size; ++i)
+      x[i] = __vector_get(v,i);
+  }
 }
 
 
 void __vector_print(const vector * v) {
-	for (uint i = 0; i < v->size; ++i)
-		printf("%e ", __vector_get(v, i));
-	printf("\n");
+  for (uint i = 0; i < v->size; ++i)
+    printf("%e ", __vector_get(v, i));
+  printf("\n");
 }
 
 void __vector_scale(vector * v, ok_float x) {
-	CBLAS(scal)( (int) v->size, x, v->data, (int) v->stride);
+  CBLAS(scal)( (int) v->size, x, v->data, (int) v->stride);
 }
 
 void __vector_add(vector * v1, const vector * v2) {
-	for (uint i = 0; i < v1->size; ++i)
-		v1->data[i * v1->stride] += v2->data[i * v2->stride];
+  for (uint i = 0; i < v1->size; ++i)
+    v1->data[i * v1->stride] += v2->data[i * v2->stride];
 }
 
 void __vector_sub(vector * v1, const vector * v2) {
-	for (uint i = 0; i < v1->size; ++i)
-		v1->data[i * v1->stride] -= v2->data[i * v2->stride];
+  for (uint i = 0; i < v1->size; ++i)
+    v1->data[i * v1->stride] -= v2->data[i * v2->stride];
 }
 
 void __vector_mul(vector * v1, const vector * v2) {
-	for (uint i = 0; i < v1->size; ++i)
-		v1->data[i * v1->stride] *= v2->data[i * v2->stride];
+  for (uint i = 0; i < v1->size; ++i)
+    v1->data[i * v1->stride] *= v2->data[i * v2->stride];
 }
 
 void __vector_div(vector * v1, const vector * v2) {
-	for (uint i = 0; i < v1->size; ++i)
-		v1->data[i * v1->stride] /= v2->data[i * v2->stride];
+  for (uint i = 0; i < v1->size; ++i)
+    v1->data[i * v1->stride] /= v2->data[i * v2->stride];
 }
 
 void __vector_add_constant(vector * v, const ok_float x) {
@@ -266,50 +271,50 @@ void __matrix_scale(matrix *A, ok_float x) {
 
 /* BLAS routines */
 
-inline int __blas_check_handle(void * linalg_handle){
-  if (linalg_handle == OK_NULL) return 1;
+inline int __blas_check_handle(void * handle){
+  if (handle == OK_NULL) return 1;
   else { 
-    // printf("%s\n","Error: CBLAS operations take no linear algebra handle. 
-            // Non-void pointer provided for argument \'linalg_handle\'");
+    printf("Error: CBLAS operations take no linear algebra handle.
+            Non-void pointer provided for `linalg_handle.`\n");
     return 0;
   }
 }
 
-void __blas_make_handle(void * linalg_handle){
-  linalg_handle = OK_NULL;
+void __blas_make_handle(void * handle){
+  handle = OK_NULL;
 }
 
-void __blas_destroy_handle(void * linalg_handle){
-  linalg_handle = OK_NULL;
+void __blas_destroy_handle(void * handle){
+  handle = OK_NULL;
 }
 
 
 /* BLAS LEVEL 1 */
-void __blas_axpy(void * linalg_handle, ok_float alpha, 
+void __blas_axpy(void * blas_handle, ok_float alpha, 
                  const vector *x, vector *y) {
   if ( !__blas_check_handle(linalg_handle) ) return;
   CBLAS(axpy)( (int) x->size, alpha, x->data, (int) x->stride, 
                y->data, (int) y->stride);
 }
 
-ok_float __blas_nrm2(void * linalg_handle, const vector *x) {
-  if ( !__blas_check_handle(linalg_handle) ) return NAN;
+ok_float __blas_nrm2(void * blas_handle, const vector *x) {
+  if ( !__blas_check_handle(linalg_handle) ) return;
   return CBLAS(nrm2)((int) x->size, x->data, (int) x->stride);
 }
 
-void __blas_scal(void * linalg_handle, const ok_float alpha, vector *x) {
+void __blas_scal(void * blas_handle, const ok_float alpha, vector *x) {
   if ( !__blas_check_handle(linalg_handle) ) return;
   CBLAS(scal)((int) x->size, alpha, x->data, (int) x->stride);
 }
 
 ok_float __blas_asum(void * linalg_handle, const vector * x) {
-  if ( !__blas_check_handle(linalg_handle) ) return NAN;
+  if ( !__blas_check_handle(linalg_handle) ) return;
   return CBLAS(asum)((int) x->size, x->data, (int) x->stride);
 }
 
 ok_float __blas_dot(void * linalg_handle, 
                     const vector * x, const vector * y) {
-  if ( !__blas_check_handle(linalg_handle) ) return NAN;
+  if ( !__blas_check_handle(linalg_handle) ) return;
   return CBLAS(dot)( (int) x->size, x->data, (int) x->stride, 
                      y->data, (int) y->stride);
 }
@@ -377,33 +382,110 @@ void __blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side,
 
 /* LINEAR ALGEBRA routines */
 
-/* Non-Block Cholesky. */
-void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
-  ok_float l11;
-  matrix * l21, * a22;
-  size_t n = A->size1, i;
+/* CUDA helper kernels */
+__device__ inline ok_float& __Get(ok_float * A, uint i, 
+                                   uint j, uint tda,
+                                   uint rowmajor) {
+  if (rowmajor)
+    return &A[i + j * tda];
+  else
+    return &A[i * tda + j];
+}
 
-  l21= &(matrix){0,0,0,OK_NULL,CblasRowMajor};
-  a22= &(matrix){0,0,0,OK_NULL,CblasRowMajor};
+/* cholesky decomposition of a single block */
+__global__ void __block_chol(ok_float * A, uint iter, 
+                             uint tda, uint rowmajor) {
+  
+  uint col, row, mat_dim, global_col, global_row, i;
+  const uint kSmTda = kTileSize + 1u;
+  __shared__ ok_float L[kSmTda * kTileSize];
+  ok_float rl11;
 
-  for (i = 0; i < n; ++i) {
-    /* L11 = sqrt(A11) */
-    l11 = (ok_float) sqrt(__matrix_get(A, i, i));
-    __matrix_set(A, i, i, l11);
+  col = threadIdx.x;
+  row = threadIdx.y;
+  mat_dim = blockDim.x;
 
-    if (i + 1 < n) {
-      /* L21 = A21 / L11 */
-      __matrix_submatrix(l21, A, i + 1, i, n - i - 1, 1);
-      __matrix_scale(l21, (ok_float) 1. / l11);
-     
-      /* A22 -= L12*L12'*/
-      __matrix_submatrix(a22, A, i + 1, i + 1, n - i - 1, n - i - 1);
-      __blas_syrk(linalg_handle, CblasLower, CblasNoTrans, 
-                  (ok_float) -1, l21, (ok_float) 1, a22);
-      
+  global_col = iter * kTileSize + col;
+  global_row = iter * kTileSize + row;
+
+  __Get(L, row, col, kSmTda, rowmajor) = 
+      __Get(A, global_row, global_col, tda, rowmajor);
+  __syncthreads();
+
+  for (i = 0; i < mat_dim; ++i) {
+    /* l11 = sqrt(a11) */
+    rl11 = math_rsqrt(__Get(L, i, i, kSmTda, rowmajor));
+    __syncthreads();
+
+
+    /* l21 = a21 / l11 */
+    if (row >= i && col == 0)
+      __Get(L, row, i, kSmTda, rowmajor) *= rl11;
+    __syncthreads();
+
+
+    /* a22 -= l21 * l21' */
+    if (row >= col && col > i)
+      __Get(L, row, col, kSmTda, rowmajor) -=
+          __Get(L, col, i, kSmTda, rowmajor) * 
+          __Get(L, row, i, kSmTda, rowmajor);
+    __syncthreads();
+  }
+
+  if (row >= col)
+    __Get(A, global_row, global_col, tda, rowmajor) = 
+        __Get(L, row, col, kSmTda, rowmajor);
+}
+
+__global__ void __block_trsv(ok_float * A, uint iter, uint n, 
+                             uint tda, uint rowmajor) {
+  
+  uint tile_idx, row, global_row, global_col, i, j;
+  const uint kSmTda = kTileSize + 1u;
+  __shared__ ok_float L[kSmTda * kTileSize];
+  __shared__ ok_float A12[kSmTda * kTileSize];
+
+  tile_idx = blockIdx.x;
+  row = threadIdx.x;
+  global_col = iter * kTileSize;
+  global_row = iter * kTileSize + row;
+
+  // Load A -> L column-wise.
+  for (i = 0; i < kTileSize; ++i)
+    __Get(L, row, i, kSmTda, rowmajor) =
+        __Get(A, global_row, global_col + i, tda, rowmajor);
+
+  global_row = row + (iter + tile_idx + 1u) * kTileSize;
+
+  if (global_row < n) {
+    for (i = 0; i < kTileSize; ++i)
+      __Get(A12, row, i, kSmTda, rowmajor) = 
+          __Get(A, global_row, global_col + i, tda, rowmajor);
+  }
+  __syncthreads();
+
+  if (global_row < n) {
+    for (i = 0; i < kTileSize; ++i) {
+      for (j = 0; j < i; ++j)
+        __Get(A12, row, i, kSmTda) -=
+            __Get(A12, row, j, kSmTda, rowmajor) * 
+            __Get(L, i, j, kSmTda, rowmajor);
+      __Get(A12, row, i, kSmTda, rowmajor) /= 
+        __Get(L, i, i, kSmTda, rowmajor);
     }
   }
+  __syncthreads();
+
+  if (global_row < n) {
+    for (uint i = 0; i < kTileSize; ++i)
+      __Get(A, global_row, global_col + i, tda, rowmajor) =
+          __Get(A12, row, i, kSmTda, rowmajor);
+  }
 }
+
+
+
+
 
 /*
 // Block Cholesky.
@@ -413,45 +495,72 @@ void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
 //
 // Stores result in Lower triangular part.
 */
-void __linalg_cholesky_decomp(void * linalg_handle, matrix * A) {
-  matrix * L11, * L21, * A22;
-  size_t n = A->size1, blk_dim, i, n11;
+cublasStatus_t __linalg_cholesky_decomp(void * linalg_handle, matrix * A) {
+
+  cublasStatus_t err;
+  cudaStream_t stm;
+  matrix * L21, * A22;
+  size_t n = A->size1, blk_dim, n11;
+  uint num_tiles, blk_dim_1d, grid_dim, i;
+  dim3 block_dim;
 
 
-  L11= &(matrix){0,0,0,OK_NULL,CblasRowMajor};
   L21= &(matrix){0,0,0,OK_NULL,CblasRowMajor};
   A22= &(matrix){0,0,0,OK_NULL,CblasRowMajor};
 
-  /* block dimension borrowed from Eigen. */
-  blk_dim = (size_t) fmax(fmin( (n / 128) * 16, 8), 128);
-  for (i = 0; i < n; i += blk_dim) {
-    n11 = (size_t) fmin(blk_dim, n - i);
+  err = cublasGetStream(linalg_handle, &stm);
+  num_tiles = (A->size1 + kTileSize - 1u) / kTileSize;
+
+  for (i = 0; i < num_tiles; ++i) {
+    if (err != CUBLAS_STATUS_SUCCESS) break;
 
     /* L11 = chol(A11) */
-    __matrix_submatrix(L11, A, i, i, n11, n11);
-    __linalg_cholesky_decomp_noblk(linalg_handle, L11);
+    block_dim_1d = std::min<uint>(kTileSize, A->size1 - i * kTileSize);
+    block_dim = (dim3){block_dim_1d, block_dim_1d};
+    __block_chol<<<1, block_dim, 0, stm>>>(A->data, i, (uint) A->tda,
+                                  (uint) A->rowmajor == CblasRowMajor);
 
-    if (i + blk_dim < n) {
+    if (i < num_tiles - 1u) {
+
       /* L21 = A21 L21^-T */
-      __matrix_submatrix(L21, A, i + n11, i, n - i - n11, n11);
-      __blas_trsm(linalg_handle, CblasRight, CblasLower, CblasTrans, 
-                  CblasNonUnit, (ok_float) 1, L11, L21);
+      grid_dim = num_tiles - i - 1u;
+      __block_trsv<<<grid_dim, kTileSize, 0, stm>>>(A->data, i, 
+                                  (uint) A->size1, (uint) A->tda,
+                                  (uint) A->rowmajor == CblasRowMajor);
+
+      err = __matrix_submatrix(L21, A, (i + 1) * kTileSize, i * kTileSize,
+          A->size1 - (i + 1) * kTileSize, kTileSize);
 
       /* A22 -= L21*L21^T */
-      __matrix_submatrix(A22, A, i + blk_dim, i + blk_dim, 
-                         n - i - blk_dim, n - i - blk_dim);
-      __blas_syrk(linalg_handle, CblasLower, CblasNoTrans, 
-                  (ok_float) -1, L21, (ok_float) 1, A22);
+      err = __matrix_submatrix(A22, A, (i + 1) * kTileSize,
+          (i + 1) * kTileSize, A->size1 - (i + 1) * kTileSize,
+          A->size1 - (i + 1) * kTileSize);
+      err = __blas_syrk(linalg_handle, CblasLower, CblasNoTrans,
+          (ok_float) -1, &L21, (ok_float) 1, &A22);
     }
   }
+  // CublasCheckError(err);
+
+
+
 }
 
 
 /* Cholesky solve */
 void __linalg_cholesky_svx(void * linalg_handle, 
                            const matrix * L, vector * x) {
-  __blas_trsv(linalg_handle, CblasLower, CblasNoTrans, CblasNonUnit, L, x);
-  __blas_trsv(linalg_handle, CblasLower, CblasTrans, CblasNonUnit, L, x);
+  cublasStatus_t err;
+
+  __blas_trsv(linalg_handle, 
+                  CblasLower, CblasNoTrans, CblasNonUnit, L, x);
+  // CublasCheckError(err);
+
+  __blas_trsv(linalg_handle, 
+                  CblasLower, CblasTrans, CblasNonUnit, L, x);
+  // CublasCheckError(err);
+
+
+
 }
 
 

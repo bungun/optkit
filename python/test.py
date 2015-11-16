@@ -68,7 +68,7 @@ ops.print_var(a)
 print "\nView"
 print "---variable `a_view`---"
 print "a_view = view(a, 0:2)"
-c=ops.view(a,0,2)
+c=ops.view(a,(0,2))
 ops.print_var(c)
 
 print "a_view *=2"
@@ -314,6 +314,8 @@ print LLT
 
 
 print "\nCholesky factorization"
+ops.print_var(E)
+	
 ops.cholesky_factor(E)
 print "E_LLT := chol(E) (lower triangular)"
 ops.print_var(E)

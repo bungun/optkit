@@ -7,17 +7,25 @@ PREFIX_OUT=$(OUT)optkit_
 # C++ Flags
 CXX=gcc
 CXXFLAGS= -g -O3 -fPIC -I. -I./include -Wall -Wconversion
-LDFLAGS=-lm
+LDFLAGS_=-lstdc++ -lm
 
+# CUDA Flags
+CUXX=nvcc
+CUXXFLAGS=-arch=sm_50 -Xcompiler -fPIC
+CULDFLAGS_=-lstdc++ -lm
 
 # Check system args
 ifeq ($(shell uname -s), Darwin)
-LDFLAGS+= -framework Accelerate
+LDFLAGS_+= -framework Accelerate
+CULDFLAGS_+= -L/usr/local/cuda/lib 
 SHARED=dylib
 else
-LDFLAGS+= -lblas
+LDFLAGS_+= -lblas
+CULDFLAGS_+= -L/usr/local/cuda/lib64 
 SHARED=so
 endif
+
+CULDFLAGS_+= -lcudart -lcublas -lcusparse
 
 # make options
 GPU=0
@@ -44,20 +52,24 @@ PRECISION=64
 endif
 
 ifneq ($(GPU), 0)
-ifneq ($(SPARSE), 0)
-STATICTARG=gpu_sparse
+LDFLAGS=$(CULDFLAGS_)
+DEVICETAG=gpu
 else
-STATICTARG=gpu_dense
+LDFLAGS=$(LDFLAGS_)
+DEVICETAG=cpu
 endif
-else
-ifneq ($(SPARSE), 0)
-STATICTARG=cpu_sparse
-else
-STATICTARG=cpu_dense
-endif
-endif
-STATICLIB=$(PREFIX_OUT)$(STATICTARG)$(PRECISION).o
 
+ifneq ($(SPARSE), 0)
+MATRIXTAG=sparse
+else
+MATRIXTAG=dense
+endif
+
+STATICTARG=$(DEVICETAG)_$(MATRIXTAG)
+PROXTARG=$(DEVICETAG)_prox
+
+STATICLIB=$(PREFIX_OUT)$(STATICTARG)$(PRECISION).o
+PROXLIB=$(PREFIX_OUT)$(PROXTARG)$(PRECISION).o
 
 
 .PHONY: default, lib, cpu_dense 
@@ -68,6 +80,9 @@ libok: $(STATICTARG)
 	mkdir -p $(OUT)
 	$(CXX) $(CXXFLAGS) -shared -o $(OUT)$@_$(STATICTARG)$(PRECISION).$(SHARED) $(STATICLIB) $(LDFLAGS)
 
+libprox: $(PROXTARG)
+	mkdir -p $(OUT)
+	$(CXX) $(CXXFLAGS) -shared -o $(OUT)$@_$(DEVICETAG)$(PRECISION).$(SHARED) $(PROXLIB) $(LDFLAGS)
 
 cpu_dense: $(SRC)optkit_dense.c $(SRC)optkit_dense.h
 	mkdir -p $(OUT)
@@ -75,7 +90,7 @@ cpu_dense: $(SRC)optkit_dense.c $(SRC)optkit_dense.h
 
 gpu_dense: $(SRC)optkit_dense.cu $(SRC)optkit_dense.h
 	mkdir -p $(OUT)
-	$(CXX) $(CXXFLAGS) $< -c -o $(PREFIX_OUT)$@$(PRECISION).o	
+	$(CUXX) $(CUXXFLAGS) $< -c -o $(PREFIX_OUT)$@$(PRECISION).o	
 
 cpu_sparse: $(SRC)optkit_sparse.c $(SRC)optkit_sparse.h
 	mkdir -p $(OUT)
@@ -83,7 +98,15 @@ cpu_sparse: $(SRC)optkit_sparse.c $(SRC)optkit_sparse.h
 
 gpu_sparse: $(SRC)optkit_sparse.cu $(SRC)optkit_sparse.h
 	mkdir -p $(OUT)
-	$(CXX) $(CXXFLAGS) $< -c -o $(PREFIX_OUT)$@$(PRECISION).o	
+	$(CUXX) $(CUXXFLAGS) $< -c -o $(PREFIX_OUT)$@$(PRECISION).o	
+
+cpu_prox: $(SRC)optkit_prox.c $(SRC)optkit_prox.h
+	mkdir -p $(OUT)
+	$(CXX) $(CXXFLAGS) $< -c -o $(PREFIX_OUT)$@$(PRECISION).o
+
+gpu_prox: $(SRC)optkit_prox.cu $(SRC)optkit_prox.h
+	mkdir -p $(OUT)
+	$(CUXX) $(CUXXFLAGS) $< -c -o $(PREFIX_OUT)$@$(PRECISION).o
 
 
 

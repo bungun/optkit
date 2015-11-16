@@ -104,7 +104,6 @@ class Matrix(object):
 			else:
 				data = zeros(A,dtype=FLOAT_CAST)
 
-
 			self.py = data
 			self.c = make_cmatrix(self.py, copy_data = GPU_FLAG)
 			self.size1 = self.py.shape[0]
@@ -138,6 +137,10 @@ class Range(object):
 	def __str__(self):
 		return "index 1: {}\nindex2: {}\n length: {}".format(
 			self.idx1, self.idx2, self.elements)
+
+
+
+
 
 
 
