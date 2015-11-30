@@ -97,6 +97,7 @@ class Matrix(object):
 			return
 
 
+
 		self.on_gpu = GPU_FLAG
 		self.sync_required = GPU_FLAG
 		if len(A)==1 or istypedtuple(A,2,int):

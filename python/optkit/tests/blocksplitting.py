@@ -8,7 +8,7 @@ from operator import add
 
 
 
-def blocksplitting_test(*size, **kwargs):
+def test_blocksplitting(*size, **kwargs):
 
 	HLINE  = reduce(add, ['-' for i in xrange(100)])
 
@@ -155,7 +155,7 @@ def blocksplitting_test(*size, **kwargs):
 	print "z dual", z.dual.vec
 
 	print "\nVARIABLE UNSCALING"
-	unscale_output(0.5, z, output)		
+	unscale_output(settings.rho, z, output)		
 	print "output vars:", output
 
 

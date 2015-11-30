@@ -31,6 +31,9 @@ def admm_loop(A, Proj, Prox, admm_vars, settings, info, stopping_conditions):
 		Prox(settings.rho,z)				# z.12 	= prox(z - zt)
 		project_primal(Proj,z,
 						alpha=alpha)		# z.1 	= proj(z.12 + zt)
+
+
+
 		update_dual(z,alpha=alpha)			# zt.1 	= zt.1 + z.12 - z.1
 											# zt.12 = zt + z.12 - z
 
@@ -79,7 +82,7 @@ def pogs(A,f,g, solver_state=None, **options):
 	if solver_state is not None: 
 		Proj = solver_state.Proj
 	else: 
-		Proj = DirectProjector(A.mat)		
+		Proj = DirectProjector(A.mat, normalize=True)		
 
 	normalize_system(A, Proj, d, e)
 	scale_functions(f,g,d,e)				
@@ -94,12 +97,13 @@ def pogs(A,f,g, solver_state=None, **options):
 		initialize_variables(A.mat, settings.rho, z, x0, nu0)
 
 	admm_loop(A.mat,Proj,Prox,z,settings,info,conditions) # execute ADMM loop
+
 									
 	unscale_output(info.rho, z, output)		# unscale system
 
+
+	# TODO: update solver state if it exists already
 	if solver_state is None: solver_state = SolverState(A,z,Proj)
-
-
 
 	return info, output, solver_state
 

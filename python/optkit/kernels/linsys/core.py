@@ -4,6 +4,7 @@ from optkit.utils import ndarray_pointer, make_cvector, make_cmatrix, \
 from optkit.libs import oklib
 from optkit.defs import DIMCHECK_FLAG, TYPECHECK_FLAG
 from ctypes import c_void_p
+from numpy import ndarray 
 # from toolz import curry
 
 # in-place operations
@@ -53,10 +54,21 @@ def copy(orig, dest, python=False):
 		oklib.__vector_memcpy_vv(dest.c,orig.c)
 	elif isinstance(orig, Matrix) and isinstance(dest, Matrix):
 		oklib.__matrix_memcpy_mm(dest.c,orig.c)
+	elif isinstance(orig, ndarray) and isinstance(dest,Vector):
+		if orig.size != dest.size: raise ValueError(
+			"incompatible array shapes for copy")
+		oklib.__vector_memcpy_va(dest.c,ndarray_pointer(orig))
+	elif isinstance(orig, ndarray) and isinstance(dest,Matrix):
+		if orig.shape != dest.shape: raise ValueError(
+			"incompatible array shapes for copy")
+		oklib.__matrix_memcpy_ma(dest.c,ndarray_pointer(orig))
 	else:
-		raise TypeError("optkit.kernels.linsys.copy(dest, orig) defined"
-			  "only when arguments are jointly of"
-			  "type opkit.Vector or opkit.Matrix")	
+		raise TypeError("optkit.kernels.linsys.copy(dest, orig) defined "
+			  "only when arguments are type:\n\t"
+			  "(optkit.Vector,optkit.Vector\n\t"	
+			  "(optkit.Matrix,optkit.Matrix\n\t"	
+			  "(numpy.ndarray,optkit.Vector\n\t"	
+			  "(numpy.ndarray,optkit.Matrix")	
 
 def view(x, *range_, **viewtype):
 
@@ -96,7 +108,7 @@ def view(x, *range_, **viewtype):
 		if not istypedtuple(range_[0],2,int) and \
 			   istypedtuple(range_[1],2,int):
 
-			print input_err
+			raise TypeError(input_err)
 			return None
 
 		rng1 = Range(x.size1, *range_[0])

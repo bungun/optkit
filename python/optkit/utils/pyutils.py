@@ -7,13 +7,13 @@ from numpy import ndarray
 
 def ndarray_pointer(x, function = False):
 	if not isinstance(x,ndarray):
-		print ("Optkit error: input to method `ndarray_pointer "
+		raise TypeError("input to method `ndarray_pointer "
 			  "must be a NumPy array. \n "
 			  "Input type: {}".format(type(x)))
 		return None
 	if not function:
 		if x.dtype != FLOAT_CAST:
-			print ("Optkit error: input to method `ndarray_pointer` " 
+			raise TypeError("input to method `ndarray_pointer` " 
 			  "must be a NumPy array of type {} when keyword argument"
 			  "`function` is set to `False` or not provided.\n "
 			  "Input array type: {}".format(FLOAT_CAST, x.dtype))
@@ -21,7 +21,7 @@ def ndarray_pointer(x, function = False):
 		else: return x.ctypes.data_as(ok_float_p)
 	elif function:
 		if x.dtype != c_uint:
-			print ("Optkit error: input to method `ndarray_pointer` " 
+			raise TypeError("input to method `ndarray_pointer` " 
 				  "must be a NumPy array of type {} when keyword argument"
 				  "`function` is set to `True`.\n "
 				  "Input array type: {}".format(c_uint, x.dtype))

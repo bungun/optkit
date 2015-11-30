@@ -5,6 +5,7 @@ from optkit.blocksplitting.types import *
 from optkit.equilibration.methods import *
 from numpy import inf, sqrt
 from toolz import curry
+from numpy.linalg import norm
 
 def overrelax(alpha, z12, z, z_out, overwrite=True):
 	if alpha != 1:
@@ -20,27 +21,17 @@ def estimate_norm(A, *args):
 
 def equilibrate(A, d, e):
 	m,n = A.shape
-	dense_equilibrate(A.mat, d, e)
+	dense_l2_equilibration(A.orig,A.mat, d, e)
 	A.equilibrated = True
 
-def normalize_system(A, Proj, d, e):
+def normalize_system(A, normA, d, e):
 
-	normA = 1.
 	(m,n)=A.shape
-
-	if Proj.normalized:
-		normA = Proj.normA
-		if not A.normalized:
-			div(normA,A.mat)
-			A.normalized=True
 
 	if not A.normalized:
 		normA = estimate_norm(A.mat) 
 		div(normA, A.mat)
 		A.normalized = True
-		if not Proj.normalized:
-			Warning("A normalized, Projector_A non-normalized")
-			# normalize_projector(Proj, normA)
 
 	factor = sqrt( nrm2(d)/nrm2(e) * sqrt(n)/sqrt(m))
 	div(factor*sqrt(normA), d)
@@ -171,6 +162,7 @@ def project_primal(Proj, admm_vars, alpha=None):
 	else: blockcopy(z.primal12, z.temp)
 	Proj(z.temp.x, z.temp.y, z.primal.x, z.primal.y)
 
+
 def update_dual(admm_vars, alpha=None):
 	z=admm_vars
 	if alpha != None: overrelax(alpha,z.primal12,z.prev,z.dual,
@@ -189,6 +181,7 @@ def unscale_output(rho, admm_vars, output_vars):
 	sync(z.temp.vec)
 	out.x[:]=z.temp.x.py[:]
 	out.y[:]=z.temp.y.py[:]
+
 
 	z.temp.copy(z.dual12)
 	mul(-rho, z.temp.vec)

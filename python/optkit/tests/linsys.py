@@ -2,7 +2,7 @@ from optkit import *
 from optkit.kernels import core as ops
 import numpy as np
 
-def linsys_test():
+def test_linsys():
 	print "TESTING:"
 	print "=======\n\n"
 

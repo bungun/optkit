@@ -4,15 +4,17 @@ from optkit.kernels.linsys import *
 from toolz import curry
 import numpy as np
 
+
 # forms chol(I+A'A) or chol(I+AA')
 def make_projector(A, normalize=True):
 	L = gramian(A) # L = A'A or AA'
 
 	normA = 1.
+	mean_diag = asum(diag(L))/A.mindim
 	if normalize: 
-		mean_diag = asum(diag(L))/A.mindim
 		div(mean_diag,L)
-		normA = np.sqrt(mean_diag)
+		div(mean_diag**0.5,A)
+	normA = mean_diag**0.5
 
 	add_diag(1,L)
 	cholesky_factor(L)

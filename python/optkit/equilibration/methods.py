@@ -1,23 +1,78 @@
 from optkit.kernels.linsys.core import *
+import numpy as np
+
+def dense_l2_equilibration(A, A_out, d, e):
+	assert A.shape == A_out.shape
+	copy(A,A_out)
+
+	m,n = A_out.shape
+	if not A_out.skinny:
+		set_all(1,e)
+		for i in xrange(m):
+			a = view(A_out,i,row=1)
+			val = dot(a,a)
+			if val == 0: raise ValueError("matrix A contains all-zero row")
+			val **=-0.5
+			d.py[i]=val
+			mul(val,a)
+		sync(d,python_to_C=True)
+	else:
+		set_all(1,d)
+		for j in xrange(n):
+			a = view(A_out,j,col=1)
+			val=dot(a,a)
+			if val == 0: raise ValueError("matrix A contains all-zero column")
+			val **=-0.5
+			e.py[j]=val
+			mul(val,a)
 
 
-def dense_equilibrate(A, d, e):
-	m,n = A.shape
-	set_all(1,e)
+
+def sinkhornknopp_equilibration(A, A_out, d, e):
+	assert A.shape == A_out.shape
+
+	NUMITER=10
+	(m,n) = A_out.shape
+
+	copy(A, A_out)
+	set_all(1,d)
+
+
+	sqrtm = m**0.5
+	sqrtn = n**0.5
+
+
+	# A_out = |A|
+	for i in xrange(A_out.size1):
+		for j in xrange(A_out.size2):
+			A_out.py[i,j]=abs(A_out.py[i,j])
+
+	# repeat NUMITER times
+	# e = 1./ A_out^T d;
+	# d = 1./ A_out e
+	for k in xrange(NUMITER):
+		gemv('T',1,A_out,d,0,e)
+
+		e.py[:]**=-1
+		sync(e,python_to_C=True)
+
+		gemv('N',1,A,e,0,d)
+
+		d.py[:]**=-1
+		sync(d,python_to_C=True)
+
+		nrm_d = nrm2(d) / sqrtm
+		nrm_e = nrm2(e) / sqrtn
+		fac = (nrm_e/nrm_d)**0.5
+		mul(fac,d)
+		div(fac,e)
+
+	# A_out = D*A*E
+	copy(A, A_out)
 	for i in xrange(m):
-		a = view(A,i,row=1)
-		val = dot(a,a)
-		if val == 0: raise ValueError("matrix A contains all-zero row")
-		val **=-0.5
-		d.py[i]=val
-		mul(val,a)
-	sync(d,python_to_C=True)
-
-
-
-
-
-
+		mul(d.py[i],view(A_out,i,row=1))
+	for j in xrange(n):
+		mul(e.py[j],view(A_out,j,col=1))
 
 
 
