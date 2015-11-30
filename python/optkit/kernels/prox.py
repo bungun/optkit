@@ -5,17 +5,53 @@ from numpy import nan
 
 # TODO: raise exceptions instead of printing errors directly
 
-def push_function_vector(f):
-	if not isinstance(f, FunctionVector):
-		print ("Error: optkit.FunctionVector required")
 
-	proxlib.function_vector_memcpy_vmulti(f.c,
-			ndarray_pointer(f.h_, function = True),
-			ndarray_pointer(f.a_, function = False),
-			ndarray_pointer(f.b_, function = False),
-			ndarray_pointer(f.c_, function = False),
-			ndarray_pointer(f.d_, function = False),
-			ndarray_pointer(f.e_, function = False))	
+  # // Scale f and g to account for diagonal scaling e and d.
+  # for (unsigned int i = 0; i < m && !err; ++i) {
+  #   f[i].a /= gsl::vector_get(&d, i);
+  #   f[i].d /= gsl::vector_get(&d, i);
+  # }
+  # for (unsigned int j = 0; j < n && !err; ++j) {
+  #   g[j].a *= gsl::vector_get(&e, j);
+  #   g[j].d *= gsl::vector_get(&e, j);
+  # }
+
+
+def scale_function_vector(f, v, mul=True):
+	if not isinstance(f, FunctionVector):
+		raise TypeError("Error: optkit.FunctionVector required "
+						"as first argument.\n Provided: {}\n".format(
+								type(f)))
+#
+	if not isinstance(v, Vector):
+		raise TypeError("Error: optkit.Vector required "
+						"as second argument.\n Provided: {}\n".format(
+							type(v)))
+#
+	if mul:
+		f.a_ *= v.py
+		f.d_ *= v.py
+		f.e_ *= v.py
+	else:
+		f.a_ /= v.py
+		f.d_ /= v.py
+		f.e_ /= v.py
+
+
+
+
+def push_function_vector(*function_vectors):
+	for f in function_vectors:
+		if not isinstance(f, FunctionVector):
+			raise TypeError("Error: optkit.FunctionVector required")
+
+		proxlib.function_vector_memcpy_vmulti(f.c,
+				ndarray_pointer(f.h_, function = True),
+				ndarray_pointer(f.a_, function = False),
+				ndarray_pointer(f.b_, function = False),
+				ndarray_pointer(f.c_, function = False),
+				ndarray_pointer(f.d_, function = False),
+				ndarray_pointer(f.e_, function = False))	
 
 def print_function_vector(f):
 	if not isinstance(f, FunctionVector):

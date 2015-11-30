@@ -1,11 +1,10 @@
 from optkit.defs import GPU_FLAG, FLOAT_CAST
 from optkit.types import ok_vector, ok_matrix
 from optkit.utils import make_cvector, make_cmatrix, \
-						 release_cvector, release_cmatrix
-from optkit.pyutils import istypedtuple
+						 release_cvector, release_cmatrix, \
+						 istypedtuple
 from numpy import zeros, ndarray
 
-# high-level optkit-python types
 class Vector(object):
 	def __init__(self, *x, **syncargs):
 		valid = istypedtuple(x,1,int)
@@ -52,11 +51,10 @@ class Vector(object):
 			self.sync_required = 'sync_required' in syncargs
 
 	def __str__(self):
-		return string("PY: {},\nC: {},\nSIZE: ({},{},\n"
-					  "on GPU? {}\n sync required? {})".format(
-					  self.py.__str__(), self.c.__str__(), 
-					  self.size1,self.size2,self, 
-					  self.on_gpu, self.sync_required))
+		return str("PY: {},\nC: {},\nSIZE: {}\n"
+					  "on GPU? {}\nsync required? {}\n".format(
+					  str(self.py), str(self.c), self.size, 
+					  	self.on_gpu, self.sync_required))
 
 	def __del__(self):
 		if self.on_gpu: release_cvector(self.c)
@@ -93,6 +91,9 @@ class Matrix(object):
 			self.c = None
 			self.size1 = None
 			self.size2 = None
+			self.shape = None
+			self.skinny = None
+			self.mindim = None
 			return
 
 
@@ -113,12 +114,16 @@ class Matrix(object):
 			self.c = A[1]
 			self.size1=A[1].size1
 			self.size2=A[1].size2
+		self.skinny = self.size1 >= self.size2
+		self.square = self.size1 == self.size2
+		self.mindim = min(self.size1, self.size2)
+		self.shape = (self.size1, self.size2)
 
 	def __str__(self):
-		return string("PY: {},\nC: {},\nSIZE: ({},{},\n"
-					  "on GPU? {}\n sync required? {})".format(
-					  self.py.__str__(), self.c.__str__(), 
-					  self.size1,self.size2,self, 
+		return str("PY: {},\nC: {},\nSIZE: ({},{}),\n"
+					  "on GPU? {}\nsync required? {}\n".format(
+					  str(self.py), str(self.c), 
+					  self.size1,self.size2, 
 					  self.on_gpu, self.sync_required))
 
 

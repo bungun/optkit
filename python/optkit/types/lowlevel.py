@@ -27,54 +27,55 @@ class OKEnums(object):
 		pass
 
 class OKFunctionEnums(object):
-	Zero = c_uint(0)
-	Abs = c_uint(1)
-	Exp = c_uint(2)
-	Huber = c_uint(3)
-	Identity = c_uint(4)
-	IndBox01 = c_uint(5)
-	IndEq0 = c_uint(6)
-	IndGe0 = c_uint(7)
-	IndLe0 = c_uint(8)
-	Logistic = c_uint(9)
-	MaxNeg0 = c_uint(10)
-	MaxPos0 = c_uint(11)
-	NegEntr = c_uint(12)
-	NegLog = c_uint(13)
-	Recipr = c_uint(14)
-	Square = c_uint(15)
+	Zero = c_uint(0).value
+	Abs = c_uint(1).value
+	Exp = c_uint(2).value
+	Huber = c_uint(3).value
+	Identity = c_uint(4).value
+	IndBox01 = c_uint(5).value
+	IndEq0 = c_uint(6).value
+	IndGe0 = c_uint(7).value
+	IndLe0 = c_uint(8).value
+	Logistic = c_uint(9).value
+	MaxNeg0 = c_uint(10).value
+	MaxPos0 = c_uint(11).value
+	NegEntr = c_uint(12).value
+	NegLog = c_uint(13).value
+	Recipr = c_uint(14).value
+	Square = c_uint(15).value
 
 	def __init__(self):
 		self.min_enum = 0;
 		self.max_enum = 15;
-		self.enum_dict = {'Zero':1}
+		self.enum_dict = {'Zero':0, 'Abs':1, 'Exp':2, 'Huber':3, 
+			'Identity':4, 'IndBox01':5, 'IndEq0':6, 'IndGe0':7,
+			'IndLe0':8, 'Logistic':9, 'MaxNeg0':10, 'MaxPos0':11,
+			'NegEntr':12, 'NegLog':13, 'Recipr':14, 'Square':15}
 
 	def safe_enum(self, h):
-		if isinstance(h, (int, c_int)):
-			h_ = h if isinstance(h, int) else h.value
-
-			if h_ < self.min_enum or h_ > self.max_enum:
-					print ("value out of range, "
+		if isinstance(h, int):
+			if h < self.min_enum or h > self.max_enum:
+				print ("value out of range: {}, "
 							"(valid = {} to {}\n"
-							"Setting `h` = Zero".format(
+							"Setting `h` = Zero".format(h,
 							self.min_enum, self.max_enum))
-					return c_uint(0)
+				return c_uint(0).value
 			else:
-				return c_uint(h_)
+				return c_uint(h).value
 		elif isinstance(h, str):
 			if not h in self.enum_dict:
-				print ("invalid key. valid keys:\n{}\n"
-					   "Setting `h` = Zero)".format(
+				print ("invalid key: {}. valid keys:\n{}\n"
+					   "Setting `h` = Zero)".format(h,
 					   self.enum_dict.keys()))
-				return c_uint(0)			
+				return c_uint(0).value			
 			else:
-				return c_uint(self.enum_dict[h])
+				return c_uint(self.enum_dict[h]).value
 		else:
 			print ("optkit.types.Function, field \'h\'"
 				   "can be initialized with arguments of type:\n"
 				   "`int`, `c_int`, or `str`\n"
 				   "Setting `h` = Zero")
-			return c_uint(0)
+			return c_uint(0).value
 
 ok_enums = OKEnums()
 ok_function_enums = OKFunctionEnums()

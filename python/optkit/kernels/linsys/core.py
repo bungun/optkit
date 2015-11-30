@@ -1,6 +1,6 @@
 from optkit.types import Vector, Matrix, Range, ok_enums as enums
-from optkit.utils import ndarray_pointer, make_cvector, make_cmatrix
-from optkit.pyutils import istypedtuple
+from optkit.utils import ndarray_pointer, make_cvector, make_cmatrix, \
+							istypedtuple
 from optkit.libs import oklib
 from optkit.defs import DIMCHECK_FLAG, TYPECHECK_FLAG
 from ctypes import c_void_p
@@ -10,10 +10,7 @@ from ctypes import c_void_p
 
 # TODO: gpu version
 # TODO: wrap in class---takes lib as init argument
-# TODO: change functions to templates with handle, lib
-# TODO: partial evaluation/currying with handle (or None) and lib
-# TODO: operator overloading?
-
+# TODO: change functions to templates with lib
 
 
 
@@ -32,19 +29,38 @@ oklib.__blas_make_handle(blas_handle)
 # ok_ctx = LinAlgContext(oklib)
 
 
+def elemwise_inverse():
+	pass
+
+def elemwise_sqrt():
+	pass
+
+def elemwise_inverse_sqrt():
+	pass
+
+def set_all(a, x):
+	if not isinstance(x, (Vector)):
+		raise TypeError("input 'x' must be an optkit.Vector.\n"
+						"Provided:{}".format(type(x)))
+	elif not isinstance(a, (int,float)):
+		raise TypeError("input 'a' must be a (real) scalar\n"
+						"Provided:{}".format(type(x)))
+	else: oklib.__vector_set_all(x.c,a)
+
+
 def copy(orig, dest, python=False):
 	if isinstance(orig, Vector) and isinstance(dest, Vector):
 		oklib.__vector_memcpy_vv(dest.c,orig.c)
 	elif isinstance(orig, Matrix) and isinstance(dest, Matrix):
 		oklib.__matrix_memcpy_mm(dest.c,orig.c)
 	else:
-		print("optkit.ops.copy(dest, orig) defined"
+		print("optkit.kernels.linsys.copy(dest, orig) defined"
 			  "only when arguments are jointly of"
 			  "type opkit.Vector or opkit.Matrix")	
 
 def view(x, *range_, **viewtype):
 
-	input_err = str("Error: optkit.ops.view: "
+	input_err = str("Error: optkit.kernels.linsys.view: "
 		"invalid view specification.\n"
 		"Valid argument & keyword argument combinations:\n"
 		"(`optkit.Vector`, `tuple(int,int)`)\n"
@@ -60,8 +76,8 @@ def view(x, *range_, **viewtype):
 
 
 	if not isinstance(x, (Vector,Matrix)):
-		print("Error: optkit.ops.view(x) only defined"
-			  "for argument of type optkit.Vector or"
+		print("Error: optkit.kernels.linsys.view(x) only defined "
+			  "for argument of type optkit.Vector or "
 			  "optkit.Matrix.")
 
 	elif isinstance(x, Vector) and \
@@ -119,7 +135,7 @@ def view(x, *range_, **viewtype):
 def add(const_x,y, python=False):
 	if isinstance(const_x, Vector) and isinstance(y, Vector):
 		if y.size != const_x.size: 
-			print ("Error: optkit.ops.add---"
+			print ("Error: optkit.kernels.linsys.add---"
 				   "incompatible Vector dimensions\n"
 				   "const_x: {}, y: {}".format(const_x.size, y.size))
 		else:
@@ -127,14 +143,14 @@ def add(const_x,y, python=False):
 	elif isinstance(const_x, (int,float)) and isinstance(y, Vector):
 		oklib.__vector_add_constant(y.c, const_x)
 	else:
-		print("optkit.ops.add(x,y) defined for : \n"
+		print("optkit.kernels.linsys.add(x,y) defined for : \n"
 			  "\t(optkit.Vector, optkit.Vector) \n"
 			  "\t(int/float, optkit.Vector) ")
 
 def sub(const_x,y, python=False):
 	if isinstance(const_x, Vector) and isinstance(y, Vector):
 		if y.size != const_x.size: 
-			print ("Error: optkit.ops.sub---"
+			print ("Error: optkit.kernels.linsys.sub---"
 				   "incompatible Vector dimensions\n"
 				   "const_x: {}, y: {}".format(const_x.size, y.size))
 		else:
@@ -142,14 +158,14 @@ def sub(const_x,y, python=False):
 	elif isinstance(const_x, (int,float)) and isinstance(y, Vector):
 		oklib.__vector_add_constant(y.c, -const_x)
 	else:
-		print("optkit.ops.sub(x,y) defined for : \n"
+		print("optkit.kernels.linsys.sub(x,y) defined for : \n"
 			  "\t(optkit.Vector, optkit.Vector) \n"
 			  "\t(int/float, optkit.Vector) ")
 
 def mul(const_x,y, python=False):
 	if isinstance(const_x, Vector) and isinstance(y, Vector):
 		if y.size != const_x.size: 
-			print ("Error: optkit.ops.mul---"
+			print ("Error: optkit.kernels.linsys.mul---"
 				   "incompatible Vector dimensions\n"
 				   "const_x: {}, y: {}".format(const_x.size, y.size))
 		else:
@@ -159,15 +175,16 @@ def mul(const_x,y, python=False):
 	elif isinstance(const_x, (int,float)) and isinstance(y, Matrix):
 		oklib.__matrix_scale(y.c, const_x);		
 	else:
-		print("optkit.ops.mul(x,y) defined for : \n"
+		print("optkit.kernels.linsys.mul(x,y) defined for : \n"
 			  "\t(optkit.Vector, optkit.Vector) \n"
 			  "\t(int/float, optkit.Vector) \n"
-			  "\t(int/float, optkit.Matrix)")
+			  "\t(int/float, optkit.Matrix)\n"
+			  "Provided:{}{}".format(type(const_x),type(y)))
 
 def div(const_x,y, python=False):
 	if isinstance(const_x, Vector) and isinstance(y, Vector):
 		if y.size != const_x.size: 
-			print ("Error: optkit.ops.div---"
+			print ("Error: optkit.kernels.linsys.div---"
 				   "incompatible Vector dimensions\n"
 				   "const_x: {}, y: {}".format(const_x.size, y.size))
 		else:
@@ -177,7 +194,7 @@ def div(const_x,y, python=False):
 	elif isinstance(const_x, (int,float)) and isinstance(y, Matrix):
 		oklib.__matrix_scale(y.c, 1./const_x);		
 	else:
-		print("optkit.ops.div(x,y) defined for : \n"
+		print("optkit.kernels.linsys.div(x,y) defined for : \n"
 			  "\t(optkit.Vector, optkit.Vector) \n"
 			  "\t(int/float, optkit.Vector) \n"
 			  "\t(int/float, optkit.Matrix)")
@@ -191,7 +208,7 @@ def sync(*vars, **py2c):
 
 	for x in vars:
 		if not isinstance(x, (Vector,Matrix)):
-			print("optkit.ops.sync undefined for "
+			print("optkit.kernels.linsys.sync undefined for "
 				  "types other than:\n optkit.Vector "
 				  "\n optkit.Matrix")	
 		else:
@@ -210,7 +227,7 @@ def sync(*vars, **py2c):
 
 def print_var(x, python=False):
 	if not isinstance(x, (Vector,Matrix)):
-		print("optkit.ops.print_var undefined for "
+		print("optkit.kernels.linsys.print_var undefined for "
 			   "types other than: \n optkit.Vector"
 				"\n optkit.Matrix")
 	else:
@@ -228,11 +245,11 @@ def dot(x,y, python=False,
 	if typecheck and not \
 		   (isinstance(x, Vector) and 
 			isinstance(y, Vector)):
-		print("optkit.ops.div(x,y) defined for : \n"
+		print("optkit.kernels.linsys.div(x,y) defined for : \n"
 			  "\t(optkit.Vector, optkit.Vector)")
 	else:
 		if dimcheck and y.size != x.size: 
-			print ("Error: optkit.ops.dot---"
+			print ("Error: optkit.kernels.linsys.dot---"
 				   "incompatible Vector dimensions\n"
 				   "x: {}, y: {}".format(x.size, y.size))
 		else:
@@ -240,13 +257,13 @@ def dot(x,y, python=False,
 
 def asum(x, python=False, typecheck=True):
 	if typecheck and not isinstance(x, Vector):
-		print("optkit.ops.div(x) defined for optkit.Vector")
+		print("optkit.kernels.linsys.div(x) defined for optkit.Vector")
 	else:
 		return oklib.__blas_asum(blas_handle, x.c)
 
 def nrm2(x, python=False, typecheck=True):
 	if typecheck and not isinstance(x, Vector):
-		print("optkit.ops.div(x) defined for optkit.Vector")
+		print("optkit.kernels.linsys.div(x) defined for optkit.Vector")
 	else:
 		return oklib.__blas_nrm2(blas_handle, x.c)
 
@@ -256,11 +273,11 @@ def axpy(alpha, const_x, y, python=False,
 			(isinstance(alpha, (int,float)) and
 			 isinstance(const_x, Vector) and
 			 isinstance(y, Vector)):
-		print ("optkit.ops.axpy(alpha, x, y) defined for: \n"
+		print ("optkit.kernels.linsys.axpy(alpha, x, y) defined for: \n"
 			   "\t(int/float, optkit.Vector, optkit.Vector)")
 	else:
 		if dimcheck and const_x.size != y.size:
-			print ("Error: optkit.ops.axpy---"
+			print ("Error: optkit.kernels.linsys.axpy---"
 				   "incompatible dimensions for y+=alpha x\n"
 				   "x: {}, y: {}".format(const_x.size, y.size))
 		else:
@@ -274,7 +291,7 @@ def gemv(tA, alpha, A, x, beta, y,
 			isinstance(x, Vector) and
 			isinstance(beta, (int,float)) and
 			isinstance(y, Vector)):
-		print("optkit.ops.div(alpha, A, x, beta, y) defined for : \n"
+		print("optkit.kernels.linsys.div(alpha, A, x, beta, y) defined for : \n"
 			  "\t(int/float, optkit.Matrix, optkit.Matrix," 
 			  " int/float, optkit.Matrix)")
 	else:
@@ -291,7 +308,7 @@ def gemv(tA, alpha, A, x, beta, y,
 				dim_out = A.size1
 				tsym = ""
 			if (x.size!= dim_in or y.size != dim_out): 
-				print ("Error: optkit.ops.gemv---"
+				print ("Error: optkit.kernels.linsys.gemv---"
 				   "incompatible dimensions for y=A{} * x\n"
 				   "A: {},{}\n x: {}, y: {}".format(tsym,
 				   	A.size1, A.size2, x.size, y.size))
@@ -300,6 +317,8 @@ def gemv(tA, alpha, A, x, beta, y,
 		At = enums.CblasTrans if tA =='T' else enums.CblasNoTrans			
 		oklib.__blas_gemv(blas_handle, At, alpha, A.c, x.c, beta, y.c)
 
+
+# TODO: split this allocating/non-allocating
 def gemm(tA, tB, alpha, A, B, beta, C, 
 		typecheck=TYPECHECK_FLAG, dimcheck=DIMCHECK_FLAG):
 	if typecheck and not \
@@ -308,7 +327,7 @@ def gemm(tA, tB, alpha, A, B, beta, C,
 			isinstance(B, Matrix) and
 			isinstance(beta, (int,float)) and
 			isinstance(C, Matrix)): 
-		print("optkit.ops.gemm(alpha, A, B, beta, y) defined for : \n"
+		print("optkit.kernels.linsys.gemm(alpha, A, B, beta, y) defined for : \n"
 			  "\t(int/float, optkit.Matrix, optkit.Matrix,"
 			  " int/float, optkit.Matrix)")
 	else:
@@ -324,7 +343,7 @@ def gemm(tA, tB, alpha, A, B, beta, C,
 			if (C.size1 != outer_dim_L or \
 						 inner_dim_L != inner_dim_R or \
 						 C.size2 != outer_dim_R): 
-				print ("Error: optkit.ops.gemm---"
+				print ("Error: optkit.kernels.linsys.gemm---"
 				   "incompatible dimensions for C=A{} * B{}\n"
 				   "A: {}x{}\nB: {}x{}\nC: {}x{}".format(
 				   	tsymA, tsymB, A.size1, A.size2, B.size1, 
@@ -338,12 +357,12 @@ def gemm(tA, tB, alpha, A, B, beta, C,
 
 def cholesky_factor(A, python=False, dimcheck=DIMCHECK_FLAG):
 	if not isinstance(A, Matrix):
-		print("optkit.ops.cholesky_factor(A) defined"
+		print("optkit.kernels.linsys.cholesky_factor(A) defined"
 		      "only when argument is of"
 			  "type opkit.Matrix")
 	else:
 		if dimcheck and A.size1 != A.size2:
-			print ("Error: optkit.ops.cholesky_factor(A)"
+			print ("Error: optkit.kernels.linsys.cholesky_factor(A)"
 				   "only defined for square matrices A"
 				   "A: {}x{}".format(A.size1, A.size2))
 		
@@ -355,18 +374,18 @@ def cholesky_solve(L, x, python=False,
 				dimcheck=DIMCHECK_FLAG):
 	if typecheck:
 		if not isinstance(L, Matrix):
-			print("optkit.ops.cholesky_solve(L, x) defined"
+			print("optkit.kernels.linsys.cholesky_solve(L, x) defined"
 				  "only when first argument is of"
 				  "type opkit.Matrix")
 			return
 		elif not isinstance(x, Vector):
-			print("optkit.ops.cholesky_solve(L, x) defined"
+			print("optkit.kernels.linsys.cholesky_solve(L, x) defined"
 				  "only when second argument is of"
 				  "type opkit.Vector")
 			return
 
 	if dimcheck and (x.size != L.size2 or x.size != L.size2): 
-		print ("Error: optkit.ops.cholesky_solve---"
+		print ("Error: optkit.kernels.linsys.cholesky_solve---"
 			   "incompatible dimensions for x:=inv(L) * x\n"
 			   "L: {}x{}\nx: {}".format(L.size1, L.size2, x.size))
 		return

@@ -1,83 +1,66 @@
 from optkit.defs import GPU_FLAG, FLOAT_CAST
 from optkit.types import ok_function_enums as fcn_enums
 from optkit.types.lowlevel import ok_float
-from optkit.utils import make_cfunctionvector, release_cfunctionvector
-from optkit.pyutils import istypedtuple
+from optkit.utils import make_cfunctionvector, release_cfunctionvector,\
+							istypedtuple
 from ctypes import c_uint
 from numpy import ones, zeros, ndarray
 
 
 class FunctionVector(object):
-	def __init__(self, *f, **params):
-		# h = fcn_enums.safe_enum(params['h']) if 'h' in params else fcn_enums.Zero
-		# a = float(params['a']) if 'a' in params else 1.
-		# b = float(params['b']) if 'b' in params else 0.
-		# c = max(float(params['c']),0.) if 'c' in params else 1.
-		# d = float(params['d']) if 'd' in params else 0.
-		# e = max(float(params['e']),0.) if 'e' in params else 0.
-
-
-
-		valid = istypedtuple(f,1,int)
-		print f[0]
-		print valid
-		# if len(f) > 0:
-		# 	valid_local = True
-		# 	for i in xrange(len(f)):
-		# 		valid |= isinstance(f[i], (int, float, ndarray))
-		# 		valid_local &= len(f[i].shape==1
-		# 		if i == 0:
-		# 			valid_local &= f[i].dtype==int
-		# 			valid |= valid_local
-		# 			valid |= isinstance(f[i],int)
-		# 		else:
-		# 			valid_local &= f[i].dtype==ok_float
-		# 		valid |= valid_local
-		# 		valid |= 
-
-
-
-		# if len(f)==1:
-		# 	if isinstance(f[0],ndarray):
-		# 		valid |= len(f[0].shape)==1
-		# elif len(f)==2:
-		# 	if isinstance(x[0],ndarray) and isinstance(f[1],ok_function_vector):
-		# 		valid |= ( len(f[0].shape)==1 and \
-		# 					len(f[0])==f[1].size)			
-
-
-		if not valid:
-			print ("optkit.FunctionVector must be initialized with:\n"
-					"-one `int`")
+	def __init__(self, n, **params):
+		if not isinstance(n,int):
+			raise ValueError("optkit.FunctionVector must be initialized "
+				"with:\n -one `int`")
 		
-					# "-one `int` OR\n" 
-		# 			"-one 1-dimensional `numpy.ndarray`, OR\n"
-		# 			"-one 1-dimensional `numpy.ndarray` and"
-		# 			" one `optkit.types.lowlevel.ok_vector` with"
-		# 			" compatible dimensions)")
-			self.on_gpu = None
-			self.c = None
-			self.h_ = None
-			self.a_ = None
-			self.b_ = None
-			self.c_ = None
-			self.d_ = None
-			self.e_ = None
-			self.size = None
-			return
-
-		self.h_ = ones(f[0], dtype=c_uint)
-		self.a_ = ones(f[0], dtype=ok_float)
-		self.b_ = zeros(f[0], dtype=ok_float)
-		self.c_ = ones(f[0], dtype=ok_float)
-		self.d_ = zeros(f[0], dtype=ok_float)
-		self.e_ = zeros(f[0], dtype=ok_float)
-		self.size = f[0];
-
-
+		self.h_ = ones(n, dtype=c_uint)
+		self.a_ = ones(n, dtype=ok_float)
+		self.b_ = zeros(n, dtype=ok_float)
+		self.c_ = ones(n, dtype=ok_float)
+		self.d_ = zeros(n, dtype=ok_float)
+		self.e_ = zeros(n, dtype=ok_float)
+		self.size = n;
+		self.set(**params)
 		self.on_gpu = GPU_FLAG
 		self.c = make_cfunctionvector(self.size)
 
+	def set(self, **params):
+		if 'h' in params:
+			if isinstance(params['h'],(int,str)):
+				self.h_[:]=fcn_enums.safe_enum(params['h'])
+			elif isinstance(params['h'],ndarray):
+				self.h_[:]=map(lambda v : fcn_enums.safe_enum(v), params['h'])
+		if 'a' in params:
+			if isinstance(params['a'],(int,float)):
+				self.a_[:]=params['a']
+			elif isinstance(params['a'],ndarray):
+				self.a_[:]=params['a'][:]
+		if 'b' in params:
+			if isinstance(params['b'],(int,float)):
+				self.b_[:]=params['b']
+			elif isinstance(params['b'],ndarray):
+				self.b_[:]=params['b'][:]
+		if 'c' in params:
+			if isinstance(params['c'],(int,float)):
+				self.c_[:]=max(params['c'],0)
+			elif isinstance(params['c'],ndarray):
+				self.c_[:]=map(lambda v : max(v,0),params['c'])
+		if 'd' in params:
+			if isinstance(params['d'],(int,float)):
+				self.d_[:]=params['d']
+			elif isinstance(params['d'],ndarray):
+				self.d_[:]=params['d'][:]
+		if 'e' in params:
+			if isinstance(params['e'],(int,float)):
+				self.e_[:]=max(params['e'],0)
+			elif isinstance(params['e'],ndarray):
+				self.e_[:]=map(lambda v : max(v,0),params['e'][:])
+
+	def __str__(self):
+		return str("size: {}\nc pointer: {}\non GPU?: {}\n"
+			"h: {}\na: {}\nb: {}\nc: {}\nd: {}\ne: {}".format(
+			self.size, self.c, self.on_gpu,
+			self.h_, self.a_, self.b_, self.c_, self.d_, self.e_))
 
 	def __del__(self):
 		if self.on_gpu: release_cfunctionvector(self.c)
