@@ -41,8 +41,9 @@ ok_float __vector_get(const vector *v, size_t i) {
 }
 
 void __vector_set_all(vector * v, ok_float x) {
-  for (uint i = 0; i < v->size; ++i)
-    __vector_set(v, i, x);
+	uint i;
+ 	for (i = 0; i < v->size; ++i)
+		__vector_set(v, i, x);
 }
 
 void __vector_subvector(vector * v_out, vector * v_in, size_t offset, size_t n) {
@@ -53,44 +54,48 @@ void __vector_subvector(vector * v_out, vector * v_in, size_t offset, size_t n) 
 }
 
 void __vector_view_array(vector * v, ok_float * base, size_t n) {
-  if (!__vector_exists(v)) return;
-	v->size=n;
-  v->stride=1;
-  v->data=base;
+	if (!__vector_exists(v)) return;
+		v->size=n;
+	v->stride=1;
+	v->data=base;
 }
 
 
 void __vector_memcpy_vv(vector * v1, const vector * v2) {
-  if ( v1->stride == 1 && v2->stride == 1) {
-    memcpy(v1->data, v2->data, v1->size * sizeof(ok_float));
-  } else {
-    for (uint i = 0; i < v1->size; ++i)
-      __vector_set(v1, i, __vector_get(v2,i));
-  }
+	uint i;
+ 	if ( v1->stride == 1 && v2->stride == 1) {
+		memcpy(v1->data, v2->data, v1->size * sizeof(ok_float));
+	} else {
+  		for (i = 0; i < v1->size; ++i)
+      			__vector_set(v1, i, __vector_get(v2,i));
+  	}
 }
 
 
 void __vector_memcpy_va(vector * v, const ok_float *y) {
-  if (v->stride == 1) {
+	uint i;
+	if (v->stride == 1) {
 		memcpy(v->data, y, v->size * sizeof(ok_float));
 	} else {
-		for (uint i = 0; i < v->size; ++i)
+		for (i = 0; i < v->size; ++i)
 			__vector_set(v, i, y[i]);
 	}
 }
 
 void __vector_memcpy_av(ok_float *x, const vector *v) {
+	uint i;
 	if (v->stride ==1) {
 		memcpy(x, v->data, v->size * sizeof(ok_float));
 	} else {
-		for (uint i = 0; i < v->size; ++i)
+		for (i = 0; i < v->size; ++i)
 			x[i] = __vector_get(v,i);
 	}
 }
 
 
 void __vector_print(const vector * v) {
-	for (uint i = 0; i < v->size; ++i)
+	uint i;
+	for (i = 0; i < v->size; ++i)
 		printf("%e ", __vector_get(v, i));
 	printf("\n");
 }
@@ -100,27 +105,32 @@ void __vector_scale(vector * v, ok_float x) {
 }
 
 void __vector_add(vector * v1, const vector * v2) {
-	for (uint i = 0; i < v1->size; ++i)
+	uint i;
+	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] += v2->data[i * v2->stride];
 }
 
 void __vector_sub(vector * v1, const vector * v2) {
-	for (uint i = 0; i < v1->size; ++i)
+	uint i;
+	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] -= v2->data[i * v2->stride];
 }
 
 void __vector_mul(vector * v1, const vector * v2) {
-	for (uint i = 0; i < v1->size; ++i)
+	uint i;
+	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] *= v2->data[i * v2->stride];
 }
 
 void __vector_div(vector * v1, const vector * v2) {
-	for (uint i = 0; i < v1->size; ++i)
+	uint i;
+	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] /= v2->data[i * v2->stride];
 }
 
 void __vector_add_constant(vector * v, const ok_float x) {
-  for (uint i = 0; i < v->size; ++i)
+  uint i;
+  for (i = 0; i < v->size; ++i)
     v->data[i * v->stride] += x;
 }
 
@@ -210,10 +220,11 @@ inline void __matrix_set(matrix *A, size_t i, size_t j, ok_float x){
 }
 
 void __matrix_set_all(matrix * A, ok_float x) {
-  memset(A->data, x, A->size1 * A->size2 * sizeof(ok_float)); 
+	memset(A->data, x, A->size1 * A->size2 * sizeof(ok_float)); 
 }
 
 void __matrix_memcpy_mm(matrix * A, const matrix * B) {
+  uint i,j;
   if (A->size1 != B->size1)
     printf("error: m-dimensions must match for matrix memcpy\n");
   else if (A->size2 != B->size2)
@@ -222,8 +233,8 @@ void __matrix_memcpy_mm(matrix * A, const matrix * B) {
     if (A->rowmajor == B->rowmajor)  
       memcpy(A->data, B->data, A->size1 * A->size2 * sizeof(ok_float));
     else
-      for (uint i = 0; i < A->size1; ++i)
-        for (uint j = 0; j < A->size2; ++j)
+      for (i = 0; i < A->size1; ++i)
+        for (j = 0; j < A->size2; ++j)
           __matrix_set(A, i, j, __matrix_get(B, i , j));
   }
 }
@@ -237,8 +248,9 @@ void __matrix_memcpy_am(ok_float * A, const matrix * B) {
 }
 
 void __matrix_print(const matrix * A) {
-  for (uint i = 0; i < A->size1; ++i) {
-    for (uint j = 0; j < A->size2; ++j)
+  uint i,j;
+  for (i = 0; i < A->size1; ++i) {
+    for (j = 0; j < A->size2; ++j)
       printf("%e ", __matrix_get(A, i, j));
     printf("\n");
   }

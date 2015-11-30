@@ -12,4 +12,4 @@ GPU_TAG='gpu' if GPU_FLAG else 'cpu'
 
 FLOAT_CAST = float32 if FLOAT_FLAG else float64
 
-OK_HOME = '/Users/Baris/Documents/Thesis/modules/optkit/'
+OK_HOME = '/home/baris/optkit/'

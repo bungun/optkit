@@ -115,11 +115,11 @@ void function_vector_print(FunctionVector * f){
 
 void ProxEvalVector(const FunctionVector * f, ok_float rho, 
 			  const vector * x_in, vector * x_out) {
-	
+	uint i;	
 	#ifdef _OPENMP
 	#pragma omp parallel for
 	#endif
-	for (uint i = 0; i < f->size; ++i){
+	for (i = 0; i < f->size; ++i){
 		x_out->data[i * x_out->stride] = ProxEval(&f->objectives[i], 
 			x_in->data[i * x_in->stride], rho);
 	}
@@ -128,11 +128,11 @@ void ProxEvalVector(const FunctionVector * f, ok_float rho,
 
 ok_float FuncEvalVector(const FunctionVector * f, const vector * x) {
 	ok_float sum = 0;
-
+	uint i;
 	#ifdef _OPENMP
 	#pragma omp parallel for reduction(+:sum)
 	#endif
-	for (uint i = 0; i < f->size; ++i)
+	for (i = 0; i < f->size; ++i)
 		sum += FuncEval(&f->objectives[i], x->data[i * x->stride]);
 	return sum;
 }

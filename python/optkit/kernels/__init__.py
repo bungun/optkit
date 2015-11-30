@@ -1,2 +1,2 @@
 from optkit.kernels.linsys import *
-from optkit.kernels.prox import *
+from optkit.kernels.proximal import *

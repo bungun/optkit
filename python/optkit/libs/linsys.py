@@ -3,10 +3,11 @@ from optkit.types import ok_float, ok_float_p
 from optkit.types.lowlevel import vector_p, matrix_p, c_uint_p
 from optkit.defs import SPARSE_TAG as MATRIX__,  GPU_TAG as DEVICE__, \
 						FLOAT_TAG as PRECISION__, OK_HOME
+import os
 
-
-oklib = CDLL('{}build/libok_{}_{}{}.dylib'.format(
-	OK_HOME,DEVICE__,MATRIX__,PRECISION__))
+ext = "dylib" if os.uname()[0] == "Darwin" else "so"
+oklib = CDLL('{}build/libok_{}_{}{}.{}'.format(
+	OK_HOME,DEVICE__,MATRIX__,PRECISION__,ext))
 
 
 

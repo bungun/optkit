@@ -36,7 +36,7 @@ def normalize_system(A, Proj, d, e):
 
 	if not A.normalized:
 		normA = estimate_norm(A.mat) 
-		div(normA, A)
+		div(normA, A.mat)
 		A.normalized = True
 		if not Proj.normalized:
 			Warning("A normalized, Projector_A non-normalized")

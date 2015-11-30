@@ -89,7 +89,7 @@ class SolverMatrix(object):
 							"a numpy.ndarray or optkit.Matrix\n."
 							"Provided: {}".format(type(A)))
 		if isinstance(A, ndarray): 
-			self.mat = Matrix(A, copy=True)
+			self.mat = Matrix(A)
 		elif isinstance(A, Matrix): 
 			self.mat = A
 

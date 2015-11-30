@@ -72,9 +72,11 @@ STATICLIB=$(PREFIX_OUT)$(STATICTARG)$(PRECISION).o
 PROXLIB=$(PREFIX_OUT)$(PROXTARG)$(PRECISION).o
 
 
-.PHONY: default, lib, cpu_dense 
+.PHONY: default, libok, libprox, libs 
 #, cpu_sparse, gpu_dense, gpu_sparse
 default: cpu_dense
+
+libs: libok libprox
 
 libok: $(STATICTARG)
 	mkdir -p $(OUT)

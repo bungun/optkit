@@ -1,9 +1,9 @@
 from optkit import Vector, FunctionVector
-from optkit.kernels import prox as proxops
+from optkit.kernels import proximal as proxops
 import numpy as np
 
 def prox_test():
-
+	print proxops
 	f = FunctionVector(5)
 	proxops.print_function_vector(f)
 	print f.h_

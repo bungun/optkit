@@ -5,9 +5,11 @@ from optkit.types.lowlevel import c_uint_p, function_p, \
 from optkit.defs import GPU_TAG as DEVICE__, \
 						FLOAT_TAG as PRECISION__, OK_HOME
 
+import os
 
-proxlib = CDLL('{}build/libprox_{}{}.dylib'.format(
-	OK_HOME,DEVICE__,PRECISION__))
+ext = "dylib" if os.uname()[0] == "Darwin" else "so"
+proxlib = CDLL('{}build/libprox_{}{}.{}'.format(
+	OK_HOME,DEVICE__,PRECISION__,ext))
 
 
 # Function Vector 
