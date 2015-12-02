@@ -1,3 +1,4 @@
+from optkit.defs import FLOAT_CAST
 from optkit.types import Vector
 from optkit.kernels import *
 from optkit.projector.direct import *
@@ -89,9 +90,9 @@ class SolverMatrix(object):
 							"a numpy.ndarray or optkit.Matrix\n."
 							"Provided: {}".format(type(A)))
 		if isinstance(A, ndarray): 
-			self.orig = A
+			self.orig = FLOAT_CAST(A)
 		elif isinstance(A, Matrix): 
-			self.orig = A.py
+			self.orig = FLOAT_CAST(A.py)
 
 		self.mat = Matrix(np.copy(self.orig))
 		self.shape = A.shape

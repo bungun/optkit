@@ -38,8 +38,8 @@ class Vector(object):
 			if istypedtuple(x,1,int):
 				data = zeros(x,dtype=FLOAT_CAST)				
 			else:
-				data = FLOAT_CAST(x[0])
-
+				data = zeros(len(x[0]),dtype=FLOAT_CAST)
+				data[:]=x[0][:]
 
 			self.py = data
 			self.c = make_cvector(self.py, copy_data = GPU_FLAG)
@@ -102,7 +102,8 @@ class Matrix(object):
 		self.sync_required = GPU_FLAG
 		if len(A)==1 or istypedtuple(A,2,int):
 			if len(A)==1:
-				data = FLOAT_CAST(A[0])
+				data = zeros(A[0].shape,dtype=FLOAT_CAST)
+				data[:]=A[0][:]
 			else:
 				data = zeros(A,dtype=FLOAT_CAST)
 
