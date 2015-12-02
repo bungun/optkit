@@ -274,6 +274,7 @@ __DEVICE__ ok_float ProxEval(const FunctionObj *f_obj,
 	const ok_float a = f_obj->a, b = f_obj->b, c = f_obj->c, 
 				   d = f_obj->d, e = f_obj->e;
 
+
 	v = a * (v * rho - d) / (e + rho) - b;
 	rho = (e + rho) / (c * a * a);
 
@@ -289,11 +290,14 @@ __DEVICE__ ok_float ProxEval(const FunctionObj *f_obj,
 	else if (f_obj->h == FnLogistic) v = ProxLogistic(v, rho);
 	else if (f_obj->h == FnMaxNeg0) v = ProxMaxNeg0(v, rho);
 	else if (f_obj->h == FnMaxPos0) v = ProxMaxPos0(v, rho);
+  else if (f_obj->h == FnNegLog) v = ProxNegLog(v, rho);  
 	else if (f_obj->h == FnRecipr) v = ProxRecipr(v, rho);
 	else if (f_obj->h == FnSquare) v = ProxSquare(v, rho);
 	else v = ProxZero(v, rho);
 
 	return (v + b) / a;
+
+
 }
 
 
@@ -376,11 +380,11 @@ __DEVICE__ inline ok_float FuncZero(ok_float x) {
 }
 
 /* Evaluates the function f. */
-__DEVICE__ inline ok_float FuncEval(const FunctionObj *f_obj, ok_float x) {
+__DEVICE__ ok_float FuncEval(const FunctionObj *f_obj, ok_float x) {
+  
   ok_float dx = f_obj->d * x;
 	ok_float ex = f_obj->e * x * x / 2;
   x = f_obj->a * x - f_obj->b;
-
 
 	if (f_obj->h == FnAbs) x = FuncAbs(x);
 	else if (f_obj->h == FnNegEntr) x = FuncNegEntr(x);
@@ -394,11 +398,12 @@ __DEVICE__ inline ok_float FuncEval(const FunctionObj *f_obj, ok_float x) {
 	else if (f_obj->h == FnLogistic) x = FuncLogistic(x);
 	else if (f_obj->h == FnMaxNeg0) x = FuncMaxNeg0(x);
 	else if (f_obj->h == FnMaxPos0) x = FuncMaxPos0(x);
+  else if (f_obj->h == FnNegLog) x = FuncNegLog(x);
 	else if (f_obj->h == FnRecipr) x = FuncRecipr(x);
 	else if (f_obj->h == FnSquare) x = FuncSquare(x);
 	else x = FuncZero(x);
 
-	return f_obj->c * x + dx * ex;
+	return f_obj->c * x + dx + ex;
 }
 
 
