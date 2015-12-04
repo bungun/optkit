@@ -1,8 +1,26 @@
 from optkit.kernels.linsys.core import *
+from optkit.types import Vector,Matrix
 import numpy as np
+import sys 
 
 def dense_l2_equilibration(A, A_out, d, e):
-	assert A.shape == A_out.shape
+	try:
+		assert isinstance(A, (np.ndarray,Matrix))
+		assert isinstance(A_out,Matrix)
+		assert isinstance(d,Vector)
+		assert isinstance(e,Vector)
+	except AssertionError:
+		print sys.exc_info()[0]
+		raise TypeError("Incorrect arguments to equilibration call",e)
+
+	try:
+		assert A.shape == A_out.shape
+		assert (d.size,e.size) == A.shape
+	except AssertionError:
+		print sys.exc_info()[0]
+		raise ValueError("Incompatible arguments to equilibration call",e)
+
+
 	copy(A,A_out)
 
 	m,n = A_out.shape
@@ -29,13 +47,28 @@ def dense_l2_equilibration(A, A_out, d, e):
 
 
 def sinkhornknopp_equilibration(A, A_out, d, e):
-	assert A.shape == A_out.shape
+	try:
+		assert isinstance(A, (np.ndarray,Matrix))
+		assert isinstance(A_out,Matrix)
+		assert isinstance(d,Vector)
+		assert isinstance(e,Vector)
+	except AssertionError:
+		print sys.exc_info()[0]
+		raise TypeError("Incorrect arguments to equilibration call",e)
+
+	try:
+		assert A.shape == A_out.shape
+		assert (d.size,e.size) == A.shape
+	except AssertionError:
+		print sys.exc_info()[0]
+		raise ValueError("Incompatible arguments to equilibration call",e)
 
 	NUMITER=10
 	(m,n) = A_out.shape
 
 	copy(A, A_out)
 	set_all(1,d)
+
 
 
 	sqrtm = m**0.5
@@ -56,7 +89,7 @@ def sinkhornknopp_equilibration(A, A_out, d, e):
 		e.py[:]**=-1
 		sync(e,python_to_C=True)
 
-		gemv('N',1,A,e,0,d)
+		gemv('N',1,A_out,e,0,d)
 
 		d.py[:]**=-1
 		sync(d,python_to_C=True)

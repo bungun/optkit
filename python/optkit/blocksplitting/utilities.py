@@ -6,6 +6,13 @@ from optkit.equilibration.methods import *
 from numpy import inf, sqrt
 from toolz import curry
 from numpy.linalg import norm
+import sys
+
+def blockdot(bv1,bv2):
+	return dot(bv1.vec,bv2.vec)
+
+def blockcopy(bv_src,bv_dest):
+	return copy(bv_src.vec,bv_dest.vec)
 
 def overrelax(alpha, z12, z, z_out, overwrite=True):
 	if alpha != 1:
@@ -16,20 +23,26 @@ def overrelax(alpha, z12, z, z_out, overwrite=True):
 
 
 def estimate_norm(A, *args):
-	Warning("esimate_norm not implemented, returning norm=1")
+	Warning("estimate_norm not implemented, returning norm=1")
 	return 1.
 
-def equilibrate(A, d, e):
+def equilibrate(A, d, e, method='sinkhorn'):
+	if not isinstance(A,SolverMatrix):
+		raise ValueError("Argument `A` must be of type `SolverMatrix`")
+
+
 	m,n = A.shape
-	dense_l2_equilibration(A.orig,A.mat, d, e)
+	if method=='densel2':
+		dense_l2_equilibration(A.orig,A.mat,d,e)
+	else:
+		sinkhornknopp_equilibration(A.orig,A.mat,d,e)
 	A.equilibrated = True
 
-def normalize_system(A, normA, d, e):
+def normalize_system(A, d, e, normA=1.):
 
 	(m,n)=A.shape
-
 	if not A.normalized:
-		normA = estimate_norm(A.mat) 
+		normA = estimate_norm(A.mat)/sqrt(A.mat.mindim)
 		div(normA, A.mat)
 		A.normalized = True
 
@@ -46,9 +59,8 @@ def scale_functions(f, g, d, e):
 
 def update_objective(f, g, rho, admm_vars, obj):
 	z=admm_vars
-	axpby_inplace(-1,z.primal12.vec, 1, z.primal.vec, z.temp.vec)
-	obj.gap = rho*abs(dot(z.primal12.vec,z.temp.vec))
-	obj.p = eval(f, z.primal.y) + eval(g, z.primal.x)
+	obj.gap = rho*abs(dot(z.primal12.vec,z.dual12.vec))
+	obj.p = eval(f, z.primal12.y) + eval(g, z.primal12.x)
 	obj.d = obj.p - obj.gap
 
 def update_residuals(A, rho, admm_vars, obj, eps, res):
@@ -138,13 +150,14 @@ def initialize_variables(A, rho, admm_vars, x0, nu0):
 		z.temp.x.py[:]=x0[:]
 		sync(z.temp.x, python_to_C=1)
 		gemv('N', 1, A, z.temp.x, 0, z.temp.y)
-		z.primal.copy(z.temp)
+		z.primal.copy_from(z.temp)
 	if nu0 is not None:
 		z.temp.y.py[:]=nu0[:]
 		sync(z.temp.y, python_to_C=1)
 		gemv('T', -1, A, z.temp.y, 0, z.temp.x)
 		mul(-1./rho, z.temp.vec)
-		z.dual.copy(z.temp)
+		z.dual.copy_from(z.temp)
+
 
 
 @curry 
@@ -154,28 +167,30 @@ def prox_eval(f,g,rho,admm_vars):
 	prox(f, rho, z.temp.y, z.primal12.y)
 	prox(g, rho, z.temp.x, z.primal12.x)
 
-
-		
+@curry		
 def project_primal(Proj, admm_vars, alpha=None):
 	z=admm_vars
-	if alpha != None: overrelax(alpha, z.primal12, z.primal, z.temp)
-	else: blockcopy(z.primal12, z.temp)
+	if alpha != None: overrelax(alpha, z.primal12, z.prev, z.temp)
+	else: z.temp.copy_from(z.primal12)
 	Proj(z.temp.x, z.temp.y, z.primal.x, z.primal.y)
 
 
 def update_dual(admm_vars, alpha=None):
 	z=admm_vars
+
+	z.dual12.copy_from(z.primal12)
+	axpy(-1, z.prev.vec, z.dual12.vec)
+	axpy(1, z.dual.vec, z.dual12.vec)
+	
 	if alpha != None: overrelax(alpha,z.primal12,z.prev,z.dual,
 								overwrite=False)
 	axpy(-1, z.primal.vec, z.dual.vec)
-	blockcopy(z.primal12, z.dual12)
-	axpy(-1, z.prev.vec, z.dual12.vec)
-	axpy(1, z.dual.vec, z.dual12.vec)
+
 
 def unscale_output(rho, admm_vars, output_vars):
 	z=admm_vars
 	out=output_vars
-	z.temp.copy(z.primal12)
+	z.temp.copy_from(z.primal12)
 	mul(z.de.x, z.temp.x)
 	div(z.de.y, z.temp.y)
 	sync(z.temp.vec)
@@ -183,7 +198,7 @@ def unscale_output(rho, admm_vars, output_vars):
 	out.y[:]=z.temp.y.py[:]
 
 
-	z.temp.copy(z.dual12)
+	z.temp.copy_from(z.dual12)
 	mul(-rho, z.temp.vec)
 	div(z.de.x, z.temp.x)
 	mul(z.de.y, z.temp.y)
@@ -192,5 +207,5 @@ def unscale_output(rho, admm_vars, output_vars):
 	out.nu[:]=z.temp.y.py[:]
 
 def store_final_iteration(admm_vars):
-	admm_vars.primal.copy(admm_vars.primal12)
+	admm_vars.primal.copy_from(admm_vars.primal12)
 	

@@ -59,6 +59,21 @@ class Vector(object):
 	def __del__(self):
 		if self.on_gpu: release_cvector(self.c)
 
+	def isvalid(self):
+		for item in ['on_gpu','sync_required','size','c','py']:
+			assert self.__dict__.has_key(item)
+			assert self.__dict__[item] is not None
+		if self.on_gpu:
+			assert self.sync_required
+		assert isinstance(self.py,np.ndarray)
+		assert len(self.py.shape)==1
+		assert self.py.size==self.size
+		assert isinstance(self.c,ok_vector)
+		assert self.c.size == self.size
+		assert self.c.data is not None
+		return True
+
+
 class Matrix(object):
 	def __init__(self, *A):
 
@@ -131,6 +146,27 @@ class Matrix(object):
 
 	def __del__(self):
 		if self.on_gpu: release_cmatrix(self.c)
+
+
+	def isvalid(self):
+		for item in ['on_gpu','sync_required','shape','size1',
+					'size2','skinny','mindim','c','py']:
+			assert self.__dict__.has_key(item)
+			assert self.__dict__[item] is not None
+		if self.on_gpu:
+			assert self.sync_required
+		assert self.shape == (self.size1,self.size2)
+		assert self.skinny == (self.size1 >= self.size2)
+		assert self.mindim == min(self.size1,self.size2)
+		assert isinstance(self.py,np.ndarray)
+		assert self.py.shape == self.shape
+		assert isinstance(self.c,ok_matrix)
+		assert self.c.size1 == self.size1
+		assert self.c.size2 == self.size2
+		assert self.c.rowmajor
+		assert self.c.data is not None
+		return True
+
 
 class Range(object):
 	def __init__(self, ubound, idx1, idx2=None):

@@ -27,7 +27,7 @@ def admm_loop(A, Proj, Prox, admm_vars, settings, info, stopping_conditions):
 	while not (err or converged or k==settings.maxiter):
 		k+=1
 
-		z.prev.copy(z.primal)				# z 	= z.1
+		z.prev.copy_from(z.primal)			# z 	= z.1
 		Prox(settings.rho,z)				# z.12 	= prox(z - zt)
 		project_primal(Proj,z,
 						alpha=alpha)		# z.1 	= proj(z.12 + zt)
@@ -83,8 +83,11 @@ def pogs(A,f,g, solver_state=None, **options):
 		Proj = solver_state.Proj
 	else: 
 		Proj = DirectProjector(A.mat, normalize=True)		
+		A.normalized=True
 
-	normalize_system(A, Proj, d, e)
+
+
+	normalize_system(A, d, e, Proj.normA)
 	scale_functions(f,g,d,e)				
 
 	Prox = prox_eval(f,g) 						

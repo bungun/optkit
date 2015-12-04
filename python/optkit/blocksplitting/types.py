@@ -1,11 +1,11 @@
 from optkit.defs import FLOAT_CAST
 from optkit.types import Vector
+from optkit.utils.pyutils import var_assert
 from optkit.kernels import *
 from optkit.projector.direct import *
-from numpy import nan, inf, ndarray, zeros, sqrt
+from numpy import nan, inf, ndarray, zeros
 from operator import add 
 
-# TODO: lazy evaluation with Toolz?
 class BlockVector(object):
 	def __init__(self,m,n):
 		# let m,n be ints or int tuples
@@ -15,12 +15,49 @@ class BlockVector(object):
 		self.vec = Vector(m+n)
 		(self.x,self.y) = splitview(self.vec, m)
 #
-	def copy(self, other):
+	def isvalid(self):
+		assert isinstance(self.size,int)
+		for s in self.blocksizes:
+			assert isinstance(s,int)
+		assert sum(self.blocksizes)==self.size
+		assert isinstance(self.vec,Vector)
+		assert self.vec.isvalid()
+		assert self.vec.size==self.size
+		assert isinstance(self.x,Vector)
+		assert isinstance(self.y,Vector)
+		assert self.x.isvalid()
+		assert self.y.isvalid()
+		assert self.x.size==blocksizes[0]
+		assert self.y.size==blocksizes[1]
+		return True
+
+
+	def dot(self,other):
+		if isinstance(other, Vector):
+			return dot(self.vec,other)
+		elif isinstance(other, BlockVector):
+			return dot(self.vec,other.vec)
+		else: raise TypeError("copy_from(BlockVector, x) only defined "
+							  "for x of types optkit.Vector "
+							  "or BlockVector.\n Provided: "
+							  "{}".format(type(other)))
+
+	def copy_to(self, other):
+		if isinstance(other, Vector):
+			copy(self.vec,other)
+		elif isinstance(other, BlockVector):
+			copy(self.vec,other.vec)
+		else: raise TypeError("copy_from(BlockVector, x) only defined "
+							  "for x of types optkit.Vector "
+							  "or BlockVector.\n Provided: "
+							  "{}".format(type(other)))
+
+	def copy_from(self, other):
 		if isinstance(other, Vector):
 			copy(other, self.vec)
 		elif isinstance(other, BlockVector):
 			copy(other.vec, self.vec)
-		else: raise TypeError("copy(BlockVector, x) only defined "
+		else: raise TypeError("copy_from(BlockVector, x) only defined "
 							  "for x of types optkit.Vector "
 							  "or BlockVector.\n Provided: "
 							  "{}".format(type(other)))
@@ -79,6 +116,8 @@ class BlockVector(object):
 	def __str__(self):
 		return reduce(add,["\n\t\t{}: {}".format(k,self.__dict__[k]) for k in self.__dict__])
 
+
+
 class BlockMatrix(object):
 	pass
 
@@ -94,13 +133,23 @@ class SolverMatrix(object):
 		elif isinstance(A, Matrix): 
 			self.orig = FLOAT_CAST(A.py)
 
-		self.mat = Matrix(np.copy(self.orig))
+		self.mat = Matrix(self.orig)
 		self.shape = A.shape
 		self.equilibrated = False
 		self.normalized = False
 		self.norm = nan
 	def __str__(self):
 		return str(self.__dict__)
+	def isvalid(self):
+		assert isinstance(self.orig,ndarray)
+		assert isinstance(self.mat, optkit.Matrix)
+		assert self.mat.isvalid()
+		for item in ['shape','equilibrated','normalized','norm']:
+			assert self.__dict__.has_key(item)
+			assert self.__dict__[item] is not None
+		assert self.shape == self.mat.shape
+		assert self.shape == self.orig.shape
+		return True
 
 class SolverState(object):
 	def __init__(self, *data):
@@ -119,7 +168,15 @@ class SolverState(object):
 	def __str__(self):
 		return str(self.__dict__)
 
-
+	def isvalid(self):
+		for item in ['A','Proj','z']:
+			assert self.__dict__.has_key(item)
+		assert self.A is None != var_assert(self.A,type=SolverMatrix)
+		assert self.Proj is None != var_assert(self.Proj,type=Projector)
+		assert self.z is None != var_assert(self.z,type=ProblemVariables)
+		assert self.A.shape == self.Proj.A.shape
+		assert self.A.shape == self.z.blocksizes
+		return True
 
 
 class ProblemVariables(object):
@@ -135,7 +192,18 @@ class ProblemVariables(object):
 		self.blocksizes=(m,n)
 	def __str__(self):
 		return reduce(add,["\n\t{}: {}".format(k,self.__dict__[k]) for k in self.__dict__])
-
+	def isvalid(self):
+		assert isinstance(self.size,int)
+		assert isinstance(self.blocksizes,tuple)
+		for s in self.blocksizes:
+			assert isinstance(s,int)
+		for item in ['primal','primal12','dual','dual12',
+					'prev','temp','de']:
+			assert self.__dict__.has_key(item)
+			assert var_assert(self.__dict__[item],type=BlockVector)
+			assert self.__dict__[item].size==self.size
+			assert self.__dict__[item].blocksizes==self.blocksizes			
+		return True
 class OutputVariables(object):
 	def __init__(self,m,n):
 		self.x = np.zeros(n)
@@ -144,6 +212,14 @@ class OutputVariables(object):
 		self.nu = np.zeros(m)
 	def __str__(self):
 		return reduce(add,["{}: {}\n".format(k,self.__dict__[k]) for k in self.__dict__])
+	def isvalid(self):
+		for item in ['x','y','mu','nu']:
+			assert self.__dict__.has_key(item)
+			assert var_assert(self.__dict__[item],type=ndarray)
+		assert self.x.size==self.mu.size
+		assert self.y.size==self.nu.size		
+		return True
+
 
 class Objectives(object):
 	def __init__(self):
@@ -152,6 +228,11 @@ class Objectives(object):
 		self.gap = inf
 	def __str__(self):
 		return str(self.__dict__)
+	def isvalid(self):
+		for item in ['p','d','gap']:
+			assert self.__dict__.has_key(item)
+			assert var_assert(self.__dict__[item],type=float)		
+		return True
 
 class Residuals(object):
 	def __init__(self):
@@ -160,19 +241,31 @@ class Residuals(object):
 		self.gap = inf
 	def __str__(self):
 		return str(self.__dict__)
+	def isvalid(self):
+		for item in ['p','d','gap']:
+			assert self.__dict__.has_key(item)
+			assert var_assert(self.__dict__[item],type=float)		
+		return True
+
 
 class Tolerances(object):
 	def __init__(self, m, n, **options):
-		self.p = 0
-		self.d = 0
-		self.gap = 0
+		self.p = 0.
+		self.d = 0.
+		self.gap = 0.
 		self.reltol = options['rtol'] if 'rtol' in options else 1e-3
 		self.abstol = options['atol'] if 'atol' in options else 1e-4
-		self.atolm = sqrt(m) * self.abstol
-		self.atoln = sqrt(n) * self.abstol
-		self.atolmn = sqrt(m*n) * self.abstol
+		self.atolm = m**0.5 * self.abstol
+		self.atoln = n**0.5 * self.abstol
+		self.atolmn = (m*n)**0.5 * self.abstol
 	def __str__(self):
 		return str(self.__dict__)
+	def isvalid(self):
+		for item in ['p','d','gap','reltol','abstol',
+					'atolm','atoln','atolmn']:
+			assert self.__dict__.has_key(item)
+			assert var_assert(self.__dict__[item],type=float)		
+		return True
 
 
 class AdaptiveRhoParameters(object):
@@ -190,7 +283,12 @@ class AdaptiveRhoParameters(object):
 		self.xi = 1.
 	def __str__(self):
 		return str(self.__dict__)
-
+	def isvalid(self):
+		for item in ['RHOMAX','RHOMIN','DELTAMAX','DELTAMIN',
+					'GAMMA','KAPPA','TAU','delta','l','u','xi']:
+			assert self.__dict__.has_key(item)
+			assert var_assert(self.__dict__[item],type=float)
+		return True
 
 
 class SolverInfo(object):
@@ -211,6 +309,14 @@ class SolverInfo(object):
 
 	def __str__(self):
 		return str(self.__dict__)
+
+	def isvalid(self):
+		for item in ['err','converged','k','obj','rho']:
+			assert self.__dict__.has_key(item)
+		assert var_assert(self.obj,self.rho,type=(float,int,long))
+		assert var_assert(self.converged,type=(bool,int,long))
+		assert var_assert(self.err,self.k,type=(int,long))
+		return True
 
 class SolverSettings(object):
 	ALPHA = 1.7
@@ -248,7 +354,19 @@ class SolverSettings(object):
 		pass
 	def __str__(self):
 		return str(self.__dict__)
-
+	def isvalid(self):
+		for item in ['ALPHA,','MAXITER','RHO','ATOL','RTOL',
+			'ADAPT','GAPSTOP','WARM','VERBOSE','alpha','maxiter',
+			'abstol','reltol','adaptive','gapstop','warmstart','verbose']:
+			assert self.__dict__.has_key(item)
+		assert var_assert(self.ALPHA,self.alpha,self.RHO,self.rho,
+						self.ATOL, self.abstol,self.RTOl,
+						self.reltol,type=(int,long,float))
+		assert var_assert(self.VERBOSE,self.verbose,type=(int,long))
+		assert var_assert(self.ADAPT,self.adaptive,self.GAPSTOP,
+						self.gapstop,self.WARM,self.warmstart,
+						type=(int,long,bool))
+		return True
 
 
 

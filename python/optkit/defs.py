@@ -13,6 +13,7 @@ GPU_TAG='gpu' if GPU_FLAG else 'cpu'
 
 FLOAT_CAST = float32 if FLOAT_FLAG else float64
 
+MACHINETOL = 1e-5 if FLOAT_FLAG else 1e-10
 
 
 

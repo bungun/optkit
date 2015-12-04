@@ -1,62 +1,91 @@
 import numpy as np
 from optkit.types import Matrix, Vector
-from  optkit.projector import DirectProjector
+from optkit.projector import DirectProjector
+from optkit.utils.pyutils import println, printvoid, var_assert
+from optkit.tests.defs import TEST_EPS
 
-def direct_proj_test(m,n,A=None,normalize=False):
-	A = Matrix(np.random.rand(m,n)) if A is None else A
+
+def direct_proj_test(m,n,A=None,normalize=False,PRINT=lambda x : None):
+	A = Matrix(np.random.rand(m,n)) if A is None else Matrix(A)
 	ProjA = DirectProjector(A,normalize=normalize)
+	assert var_assert(ProjA, type=DirectProjector)
 
 	x = Vector(np.random.rand(n))
 	y = Vector(np.random.rand(m))
 	x_out = Vector(n)
 	y_out = Vector(m)
+	assert var_assert(x,y,x_out,y_out,type=Vector)
 
-	print "RANDOM (x,y)"
-	print "||x||_2, {} \t ||y||_2: {}".format(
-		np.linalg.norm(x.py), np.linalg.norm(y.py))
-	print "||Ax-y||_2:"
-	print np.linalg.norm(y.py-A.py.dot(x.py))
+	PRINT("RANDOM (x,y)")
+	PRINT("||x||_2, {} \t ||y||_2: {}".format(
+		np.linalg.norm(x.py), np.linalg.norm(y.py)))
+	PRINT("||Ax-y||_2:")
+	PRINT(np.linalg.norm(y.py-A.py.dot(x.py)))
 
-	print "NORM A (from projector): ", ProjA.normA
+	PRINT("NORM A (from projector): ", ProjA.normA)
 	ProjA(x,y,x_out,y_out)
 
-	print "PROJECT:"
-	print "||x||_2, {} \t ||y||_2: {}".format(
-		np.linalg.norm(x_out.py), np.linalg.norm(y_out.py))
-	print "||Ax-y||_2:"
-	print np.linalg.norm(y_out.py-A.py.dot(x_out.py))
+	PRINT("PROJECT:")
+	PRINT("||x||_2, {} \t ||y||_2: {}".format(
+		np.linalg.norm(x_out.py), np.linalg.norm(y_out.py)))
+	PRINT("||Ax-y||_2:")
+	res = np.linalg.norm(y_out.py-A.py.dot(x_out.py))
+	assert res <= TEST_EPS
+	PRINT(res)
+	return True
+
+def projector_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
+	if m is None: m=1000
+	if n is None: n=3000
+	if isinstance(A_in,np.ndarray):
+		if len(A_in.shape)!=2:
+			A_in=None
+		else:
+			A_in = A_in if m>=n else A_in.T
+			(m,n)=A_in.shape
 
 
+	PRINT=println if VERBOSE_TEST else printvoid
 
-def test_projector():
+	PRINT("\n=============")
+	PRINT("BEGIN TESTING")
+	PRINT("=============")
 
-	print "\n============="
-	print "BEGIN TESTING"
-	print "============="
+	PRINT("\n\nDIRECT PROJECTOR")
+	PRINT("----------------\n\n")
 
-	print "\n\nDIRECT PROJECTOR"
-	print "----------------\n\n"
-
-	# fat matrix
-	print "\nFAT MATRIX"
-	print "----------\n"
-	(m,n) = (1000, 3000)
-	print "m: {}\tn: {}".format(m,n)
-	direct_proj_test(m,n)
 
 	# skinny matrix
-	print "\nSKINNY MATRIX"
-	print "-------------\n"
-	print "m: {}\tn: {}".format(n,m)
-	direct_proj_test(n,m)
+	PRINT("\nSKINNY MATRIX")
+	PRINT("-------------\n")
+	PRINT("m: {}\tn: {}".format(m,n))
+	assert direct_proj_test(m,n,A=A_in,PRINT=PRINT)
 
 
-	print "\n\nINDIRECT PROJECTOR"
-	print "------------------\n\n"
+	# fat matrix
+	PRINT("\nFAT MATRIX")
+	PRINT("----------\n")
+	PRINT("m: {}\tn: {}".format(n,m))
+	if isinstance(A_in,np.ndarray): A_in=A_in.T
+	assert direct_proj_test(n,m,A=A_in,PRINT=PRINT)
 
-	print "(NOT IMPLEMENTED)"
+
+	PRINT("\n\nINDIRECT PROJECTOR")
+	PRINT("------------------\n\n")
+
+	PRINT("(NOT IMPLEMENTED)")
 
 
-	print "\n==========="
-	print "END TESTING"
-	print "==========="
+	PRINT("\n===========")
+	PRINT("END TESTING")
+	PRINT("===========")
+	return True
+
+def test_projector(*args,**kwargs):
+	print "PROJECTOR TESTING \n\n\n\n"
+	verbose = '--verbose' in args
+	(m,n)=kwargs['shape'] if 'shape' in kwargs else (None,None)
+	A = np.load(kwargs['file']) if 'file' in kwargs else None
+	assert projector_test(m=m,n=n,A_in=A,VERBOSE_TEST=verbose)
+	print "...passed"
+	return True

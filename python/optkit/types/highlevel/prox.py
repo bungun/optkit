@@ -65,7 +65,16 @@ class FunctionVector(object):
 	def __del__(self):
 		if self.on_gpu: release_cfunctionvector(self.c)
 
-
+	def isvalid(self):
+		for item in ['c','h_','a_','b_','c_','d_','e_','size','on_gpu']:
+			assert self.__dict__.has_key(item)
+			assert self.__dict__[item] is not None
+		for item in ['h_','a_','b_','c_','d_','e_']:
+			assert isinstance(self.__dict__[item],ndarray)
+			assert len(self.__dict__[item].shape) == 1
+			assert self.__dict__[item].size == self.size 
+		assert self.size == self.c.size	
+		return True	
 
 
 

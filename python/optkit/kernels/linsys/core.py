@@ -5,6 +5,7 @@ from optkit.libs import oklib
 from optkit.defs import DIMCHECK_FLAG, TYPECHECK_FLAG
 from ctypes import c_void_p
 from numpy import ndarray 
+import sys
 # from toolz import curry
 
 # in-place operations
@@ -257,115 +258,122 @@ def dot(x,y, python=False,
 	if typecheck and not \
 		   (isinstance(x, Vector) and 
 			isinstance(y, Vector)):
-		raise TypeError("optkit.kernels.linsys.div(x,y) defined for : \n"
+		raise TypeError("optkit.kernels.linsys.dot(x,y) defined for : \n"
 			  "\t(optkit.Vector, optkit.Vector)")
-	else:
-		if dimcheck and y.size != x.size: 
-			raise ValueError("optkit.kernels.linsys.dot---"
-				   "incompatible Vector dimensions\n"
-				   "x: {}, y: {}".format(x.size, y.size))
-		else:
-			return oklib.__blas_dot(blas_handle, x.c,y.c)
+	
+	if dimcheck and y.size != x.size: 
+		raise ValueError("optkit.kernels.linsys.dot---"
+			   "incompatible Vector dimensions\n"
+			   "x: {}, y: {}".format(x.size, y.size))
+	return oklib.__blas_dot(blas_handle, x.c,y.c)
 
 def asum(x, python=False, typecheck=True):
 	if typecheck and not isinstance(x, Vector):
-		raise TypeError("optkit.kernels.linsys.div(x) defined for optkit.Vector")
+		raise TypeError("optkit.kernels.linsys.asum(x) defined for optkit.Vector")
 	else:
 		return oklib.__blas_asum(blas_handle, x.c)
 
+
 def nrm2(x, python=False, typecheck=True):
 	if typecheck and not isinstance(x, Vector):
-		raise TypeError("optkit.kernels.linsys.div(x) defined for optkit.Vector")
+		raise TypeError("optkit.kernels.linsys.nrm2(x) defined for optkit.Vector")
 	else:
 		return oklib.__blas_nrm2(blas_handle, x.c)
 
 def axpy(alpha, const_x, y, python=False, 
 		typecheck=TYPECHECK_FLAG, dimcheck=DIMCHECK_FLAG):
-	if typecheck and not \
-			(isinstance(alpha, (int,float)) and
-			 isinstance(const_x, Vector) and
-			 isinstance(y, Vector)):
-		raise TypeError ("optkit.kernels.linsys.axpy(alpha, x, y) defined for: \n"
-			   "\t(int/float, optkit.Vector, optkit.Vector)")
-	else:
-		if dimcheck and const_x.size != y.size:
+	if typecheck:
+		valid = isinstance(alpha, (int,float))
+		valid &= isinstance(const_x, Vector)
+		valid &= isinstance(y, Vector)
+		if not valid:
+			raise TypeError ("optkit.kernels.linsys.axpy(alpha, x, y) " 
+				"defined for: \n\t(int/float, optkit.Vector, optkit.Vector)")
+	if dimcheck and const_x.size != y.size:
 			raise ValueError("optkit.kernels.linsys.axpy---"
 				   "incompatible dimensions for y+=alpha x\n"
 				   "x: {}, y: {}".format(const_x.size, y.size))
-		else:
-			oklib.__blas_axpy(blas_handle, alpha, const_x.c, y.c)			
+	oklib.__blas_axpy(blas_handle, alpha, const_x.c, y.c)			
 
 def gemv(tA, alpha, A, x, beta, y, 
 		typecheck=TYPECHECK_FLAG, dimcheck=DIMCHECK_FLAG):
-	if typecheck and not \
-	 	   (isinstance(alpha, (int,float)) and
-			isinstance(A, Matrix) and  
-			isinstance(x, Vector) and
-			isinstance(beta, (int,float)) and
-			isinstance(y, Vector)):
-		raise TypeError("optkit.kernels.linsys.div(alpha, A, x, beta, y) defined for : \n"
-			  "\t(int/float, optkit.Matrix, optkit.Matrix," 
-			  " int/float, optkit.Matrix)")
-	else:
-		if dimcheck:
-			input_dim = A.size1 if tA=='T' else A.size2
-			output_dim = A.size2 if tA=='T' else A.size1
-			tsym = "^T" if tA=='T' else ""
-			if  tA == 'T':
-				dim_in = A.size1
-				dim_out = A.size2
-				tsym = "^T"
-			else:
-				dim_in = A.size2
-				dim_out = A.size1
-				tsym = ""
-			if (x.size!= dim_in or y.size != dim_out): 
-				raise ValueError("optkit.kernels.linsys.gemv---"
-				   "incompatible dimensions for y=A{} * x\n"
-				   "A: {},{}\n x: {}, y: {}".format(tsym,
-				   	A.size1, A.size2, x.size, y.size))
-				return 
+	if typecheck:
+		valid = isinstance(alpha, (int,float))
+		valid &= isinstance(A, Matrix)   
+		valid &= isinstance(x, Vector) 
+		valid &= isinstance(beta, (int,float))
+		valid &= isinstance(y, Vector)
+		if not valid:
+			raise TypeError(
+			"optkit.kernels.linsys.gemv(ta,alpha, A, x, beta, y) " 
+			"defined for : \n\t(str, int/float, optkit.Matrix, "
+			"optkit.Vector, int/float, optkit.Vector).\nProvided:"
+			"\n\t({},{},{},{},{},{})".format(type(tA),type(alpha),
+				type(A),type(x),type(beta),type(y)))
 
-		At = enums.CblasTrans if tA =='T' else enums.CblasNoTrans			
-		oklib.__blas_gemv(blas_handle, At, alpha, A.c, x.c, beta, y.c)
+	if dimcheck:
+		input_dim = A.size1 if tA=='T' else A.size2
+		output_dim = A.size2 if tA=='T' else A.size1
+		tsym = "^T" if tA=='T' else ""
+		if  tA == 'T':
+			dim_in = A.size1
+			dim_out = A.size2
+			tsym = "^T"
+		else:
+			dim_in = A.size2
+			dim_out = A.size1
+			tsym = ""
+		if (x.size!= dim_in or y.size != dim_out): 
+			raise ValueError("optkit.kernels.linsys.gemv---"
+			   "incompatible dimensions for y=A{} * x\n"
+			   "A: {},{}\n x: {}, y: {}".format(tsym,
+			   	A.size1, A.size2, x.size, y.size))
+			return 
+
+	At = enums.CblasTrans if tA =='T' else enums.CblasNoTrans			
+	oklib.__blas_gemv(blas_handle, At, alpha, A.c, x.c, beta, y.c)
 
 
 # TODO: split this allocating/non-allocating
 def gemm(tA, tB, alpha, A, B, beta, C, 
 		typecheck=TYPECHECK_FLAG, dimcheck=DIMCHECK_FLAG):
-	if typecheck and not \
-	       (isinstance(alpha, (int,float)) and
-			isinstance(A, Matrix) and  
-			isinstance(B, Matrix) and
-			isinstance(beta, (int,float)) and
-			isinstance(C, Matrix)): 
-		raise TypeError("optkit.kernels.linsys.gemm(alpha, A, B, beta, y) defined for : \n"
-			  "\t(int/float, optkit.Matrix, optkit.Matrix,"
-			  " int/float, optkit.Matrix)")
-	else:
-		if dimcheck:
-			outer_dim_L = A.size2 if tA=='T' else A.size1
-			inner_dim_L = A.size1 if tA=='T' else A.size2
-			inner_dim_R = B.size2 if tB=='T' else B.size1
-			outer_dim_R = B.size1 if tB=='T' else B.size2
-			tsymA = "^T" if tA=='T' else ""
-			tsymB = "^T" if tB=='T' else ""
+	if typecheck:
+		valid=isinstance(alpha, (int,float))
+		valid &= isinstance(A, Matrix)  
+		valid &= isinstance(B, Matrix) 
+		valid &= isinstance(beta, (int,float)) 
+		valid &= isinstance(C, Matrix)
+		if not valid: 
+			raise TypeError(
+			"optkit.kernels.linsys.gemm(tA,tB,alpha, A, B, beta, C) "
+			"defined for:\n\t(str,str,int/float, optkit.Matrix, " 
+			"optkit.Matrix, int/float, optkit.Matrix)\nProvided:" 
+			"\n\t({},{},{},{},{},{},{})".format(
+				type(tA),type(tB),type(alpha),type(A),
+				type(B),type(beta),type(C)))
+	if dimcheck:
+		outer_dim_L = A.size2 if tA=='T' else A.size1
+		inner_dim_L = A.size1 if tA=='T' else A.size2
+		inner_dim_R = B.size2 if tB=='T' else B.size1
+		outer_dim_R = B.size1 if tB=='T' else B.size2
+		tsymA = "^T" if tA=='T' else ""
+		tsymB = "^T" if tB=='T' else ""
 
 
-			if (C.size1 != outer_dim_L or \
-						 inner_dim_L != inner_dim_R or \
-						 C.size2 != outer_dim_R): 
-				raise ValueError("Error: optkit.kernels.linsys.gemm---"
-				   "incompatible dimensions for C=A{} * B{}\n"
-				   "A: {}x{}\nB: {}x{}\nC: {}x{}".format(
-				   	tsymA, tsymB, A.size1, A.size2, B.size1, 
-				   	B.size2, C.size1, C.size2))
-				return
+		if (C.size1 != outer_dim_L or \
+					 inner_dim_L != inner_dim_R or \
+					 C.size2 != outer_dim_R): 
+			raise ValueError("Error: optkit.kernels.linsys.gemm---"
+			   "incompatible dimensions for C=A{} * B{}\n"
+			   "A: {}x{}\nB: {}x{}\nC: {}x{}".format(
+			   	tsymA, tsymB, A.size1, A.size2, B.size1, 
+			   	B.size2, C.size1, C.size2))
+			return
 		
-		At = enums.CblasTrans if tA =='T' else enums.CblasNoTrans
-		Bt = enums.CblasTrans if tB =='T' else enums.CblasNoTrans
+	At = enums.CblasTrans if tA =='T' else enums.CblasNoTrans
+	Bt = enums.CblasTrans if tB =='T' else enums.CblasNoTrans
 
-		oklib.__blas_gemm(blas_handle, At, Bt, alpha, A.c, B.c, beta, C.c)
+	oklib.__blas_gemm(blas_handle, At, Bt, alpha, A.c, B.c, beta, C.c)
 
 def cholesky_factor(A, python=False, dimcheck=DIMCHECK_FLAG):
 	if not isinstance(A, Matrix):

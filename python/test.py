@@ -1,29 +1,41 @@
 import sys
 from optkit.tests import *
 
-def main(args,m=30,n=20):
-	print args
-	if '--linsys' in args: test_linsys()
-	if '--prox' in args: test_prox()
-	if '--proj' in args: test_projector()
-	if '--equil' in args: test_equil()
-	if '--norm' in args: test_normalizedprojector()
-	if '--block' in args: test_blocksplitting(m,n)
-	if '--pogs' in args: test_pogs(m,n)
+def main(*args, **kwargs):
+	passing = True
+	if '--linsys' in args: passing &= test_linsys(*args,**kwargs)
+	if '--prox' in args: passing &= test_prox(*args, **kwargs)
+	if '--proj' in args: passing &= test_projector(*args,**kwargs)
+	if '--equil' in args: passing &= test_equil(*args,**kwargs)
+	if '--norm' in args: passing &= test_normalizedprojector(*args,**kwargs)
+	if '--block' in args: passing &= test_blocksplitting(*args,**kwargs)
+	if '--pogs' in args: passing &= test_pogs(*args,**kwargs)
+	print "all tests complete"
+	if passing:
+		print "all tests passed"
 
 if __name__== "__main__":
 	args=[]
+	kwargs={}
+	reps=1
+
+	args += sys.argv
 	if '--all' in sys.argv: 
-		args+=['--linsys','--prox','--proj','--equil',
+		args+=['--linsys','--allsub','--prox','--proj','--equil',
 			'--norm','--block','--pogs']
-	else:
-		args+=sys.argv
 
 	if '--size' in sys.argv:
 		pos = sys.argv.index('--size')
 		if len(sys.argv) > pos + 2:
-			m=int(sys.argv[pos+1])
-			n=int(sys.argv[pos+2])
-			main(args,m,n)
-			exit()
-	main(args)	
+			kwargs['shape']=(int(sys.argv[pos+1]),int(sys.argv[pos+2]))
+	if '--file' in sys.argv:
+		pos = sys.argv.index('--file')
+		if len(sys.argv) > pos + 1:
+			kwargs['file']=str(sys.argv[pos+1])
+	if '--reps' in sys.argv:
+		pos = sys.argv.index('--reps')
+		if len(sys.argv) > pos + 1:
+			reps=int(sys.argv[pos+1])
+
+	for r in xrange(reps):
+		main(*args,**kwargs)	

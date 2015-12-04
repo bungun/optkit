@@ -1,98 +1,122 @@
 import numpy as np
+from optkit.utils.pyutils import println,printvoid
 from optkit.types import Matrix, Vector
 from optkit.kernels import copy
 from optkit.projector import DirectProjector
 from optkit.equilibration import *
 from optkit.tests.proj import direct_proj_test
+from optkit.tests.defs import TEST_EPS
 
 
+def normalize_and_project_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
+	if m is None: m=1000
+	if n is None: n=3000
+	if isinstance(A_in,np.ndarray):
+		if len(A_in.shape)!=2:
+			A_in=None
+		else:
+			A_in = A_in if m>=n else A_in.T
+			(m,n)=A_in.shape
 
-def test_normalizedprojector():
-	print "\n============="
-	print "BEGIN TESTING"
-	print "============="
+	if not isinstance(A_in,np.ndarray):
+		A_in = np.random.rand(m,n)
 
-	print "\n\nDIRECT PROJECTOR"
-	print "----------------\n\n"
+	PRINT=println if VERBOSE_TEST else printvoid
+
+
+	PRINT("\n=============")
+	PRINT("BEGIN TESTING")
+	PRINT("=============")
+
+	PRINT("\n\nDIRECT PROJECTOR")
+	PRINT("----------------\n\n")
 
 	# fat matrix
-	print "\nFAT MATRIX"
-	print "----------\n"
-	(m,n) = (1000, 3000)
-	A = Matrix(np.random.rand(m,n))
+	PRINT("\nFAT MATRIX")
+	PRINT("----------\n")
+	A = Matrix(A_in)
 	A_equil = Matrix(np.zeros_like(A.py))
 	d = Vector(m)
 	e = Vector(n)
 
-	print "m: {}\tn: {}".format(m,n)
-	print "\nORIGINAL MATRIX"
-	direct_proj_test(m,n,A)
+	PRINT("m: {}\tn: {}".format(m,n))
+	PRINT("\nORIGINAL MATRIX")
+	assert direct_proj_test(m,n,A.py,PRINT=PRINT)
 
 	copy(A,A_equil)
-	print "\nORIGINAL MATRIX, normalized"
-	direct_proj_test(m,n,A_equil,normalize=True)
+	PRINT("\nORIGINAL MATRIX, normalized")
+	assert direct_proj_test(m,n,A_equil.py,normalize=True,PRINT=PRINT)
 
 
-	print "\nL2-EQUILIBRATED MATRIX"
+	PRINT("\nL2-EQUILIBRATED MATRIX")
 	dense_l2_equilibration(A,A_equil,d,e)
-	direct_proj_test(m,n,A_equil)
+	assert direct_proj_test(m,n,A_equil.py,PRINT=PRINT)
 
-	print "\nL2-EQUILIBRATED MATRIX, normalized"
+	PRINT("\nL2-EQUILIBRATED MATRIX, normalized")
 	dense_l2_equilibration(A,A_equil,d,e)
-	direct_proj_test(m,n,A_equil,normalize=True)
+	assert direct_proj_test(m,n,A_equil.py,normalize=True,PRINT=PRINT)
 
 
-	print "\nSINKHORN-EQUILIBRATED MATRIX"
+	PRINT("\nSINKHORN-EQUILIBRATED MATRIX")
 	sinkhornknopp_equilibration(A,A_equil,d,e)
-	direct_proj_test(m,n,A_equil)	
+	assert direct_proj_test(m,n,A_equil.py,PRINT=PRINT)	
 
-	print "\nSINKHORN-EQUILIBRATED MATRIX, normalized"
+	PRINT("\nSINKHORN-EQUILIBRATED MATRIX, normalized")
 	sinkhornknopp_equilibration(A,A_equil,d,e)
-	direct_proj_test(m,n,A_equil,normalize=True)	
+	assert direct_proj_test(m,n,A_equil.py,normalize=True,PRINT=PRINT)	
 
 
 	# skinny matrix
-	print "\nSKINNY MATRIX"
-	print "-------------\n"
+	PRINT("\nSKINNY MATRIX")
+	PRINT("-------------\n")
 
 	(m,n) = (n,m)
-	A = Matrix(np.random.rand(m,n))
-	A_equil = Matrix(np.zeros_like(A.py))
-	d = Vector(m)
-	e = Vector(n)
 
-	print "m: {}\tn: {}".format(m,n)
-	print "\nORIGINAL MATRIX"
-	direct_proj_test(m,n,A)
+
+	PRINT("m: {}\tn: {}".format(m,n))
+	PRINT("\nORIGINAL MATRIX")
+	assert direct_proj_test(m,n,A.py.T,PRINT=PRINT)
 
 	copy(A,A_equil)
-	print "\nORIGINAL MATRIX, normalized"
-	direct_proj_test(m,n,A_equil,normalize=True)
+	PRINT("\nORIGINAL MATRIX, normalized")
+	assert direct_proj_test(m,n,A_equil.py.T,normalize=True,PRINT=PRINT)
 
 
-	print "\nL2-EQUILIBRATED MATRIX"
+	PRINT("\nL2-EQUILIBRATED MATRIX")
 	dense_l2_equilibration(A,A_equil,d,e)
-	direct_proj_test(m,n,A_equil)
+	assert direct_proj_test(m,n,A_equil.py.T,PRINT=PRINT)
 
-	print "\nL2-EQUILIBRATED MATRIX, normalized"
+	PRINT("\nL2-EQUILIBRATED MATRIX, normalized")
 	dense_l2_equilibration(A,A_equil,d,e)
-	direct_proj_test(m,n,A_equil,normalize=True)
+	assert direct_proj_test(m,n,A_equil.py.T,normalize=True,PRINT=PRINT)
 
 
-	print "\nSINKHORN-EQUILIBRATED MATRIX"
+	PRINT("\nSINKHORN-EQUILIBRATED MATRIX")
 	sinkhornknopp_equilibration(A,A_equil,d,e)
-	direct_proj_test(m,n,A_equil)	
+	assert direct_proj_test(m,n,A_equil.py.T,PRINT=PRINT)	
 
-	print "\nSINKHORN-EQUILIBRATED MATRIX, normalized"
+	PRINT("\nSINKHORN-EQUILIBRATED MATRIX, normalized")
 	sinkhornknopp_equilibration(A,A_equil,d,e)
-	direct_proj_test(m,n,A_equil,normalize=True)	
+	assert direct_proj_test(m,n,A_equil.py.T,normalize=True,PRINT=PRINT)	
 
 
-	print "\n\nINDIRECT PROJECTOR"
-	print "------------------\n\n"
+	PRINT("\n\nINDIRECT PROJECTOR")
+	PRINT("------------------\n\n")
 
-	print "(NOT IMPLEMENTED)"
+	PRINT("(NOT IMPLEMENTED)")
 
-	print "\n==========="
-	print "END TESTING"
-	print "==========="
+	PRINT("\n===========")
+	PRINT("END TESTING")
+	PRINT("===========")
+	return True
+
+def test_normalizedprojector(*args,**kwargs):
+	print "NORMALIZED PROJECTOR TESTING\n\n\n\n"
+
+	verbose = '--verbose' in args
+	(m,n)=kwargs['shape'] if 'shape' in kwargs else (None,None)
+	A = np.load(kwargs['file']) if 'file' in kwargs else None
+	assert normalize_and_project_test(m=m,n=n,A_in=A,VERBOSE_TEST=verbose)
+
+	print "...passed"
+	return True

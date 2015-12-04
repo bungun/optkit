@@ -1,6 +1,7 @@
 from optkit.projector.base import Projector
 from optkit.types import Matrix, Vector
 from optkit.kernels.linsys import *
+from optkit.utils.pyutils import var_assert
 from toolz import curry
 import numpy as np
 
@@ -61,8 +62,13 @@ class DirectProjector(Projector):
 	def __str__(self):
 		return str(self.__dict__)
 
-
-
+	def isvalid(self):
+		assert var_assert(self.A,self.L,Matrix)
+		assert self.A.mindim == self.L.size1
+		assert self.A.mindim == self.L.size2		
+		assert isinstance(self.normA,float)
+		assert isinstance(self.normalized,(bool,int))
+		return True
 
 
 

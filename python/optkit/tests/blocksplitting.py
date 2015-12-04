@@ -1,26 +1,31 @@
 from optkit.types import Vector, Matrix
+from optkit.utils.proxutils import func_eval_python, prox_eval_python
+from optkit.utils.pyutils import println,printvoid,var_assert
 from optkit.kernels import *
 from optkit.projector.direct import *
 from optkit.blocksplitting import *
 from optkit.blocksplitting.algorithms import *
+from optkit.tests.defs import TEST_EPS,HLINE
 import numpy as np
-from operator import add
 
 
+def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
+	if m is None: m=30
+	if n is None: n=20
+	if isinstance(A_in,np.ndarray):
+		if len(A_in.shape)==2:
+			(m,n)=A_in.shape
+		else:
+			A_in=None
 
-def test_blocksplitting(*size, **kwargs):
 
-	HLINE  = reduce(add, ['-' for i in xrange(100)])
+	PRINT=println if VERBOSE_TEST else printvoid
+	PRINTVAR=ops.print_var if VERBOSE_TEST else printvoid
 
-
-	if len(size)==2:
-		(m,n)=int(size[0]),int(size[1])
+	if isinstance(A_in,np.ndarray):
+		A = Matrix(A_in)
 	else:
-		(m,n)=(30,20)
-
-	VERBOSE_TEST = 'printall' in kwargs
-		
-	A = Matrix(np.random.rand(m,n))
+		A = Matrix(np.random.rand(m,n))
 	f = FunctionVector(m, h='Abs', b=1)
 	g = FunctionVector(n, h='IndGe0')
 
@@ -36,259 +41,391 @@ def test_blocksplitting(*size, **kwargs):
 	d = z.de.y
 	e = z.de.x
 
-
-	print "\nPROBLEM SETUP METHODS"
-	print "=====================\n"
-
-	print "\nINPUT/OUTPUT"
-	print "------------\n"
-
-	print "\nPROBLEM DATA"
-	print "A object: ", A
-	if VERBOSE_TEST: print "A matrix: ", A.mat
+	assert var_assert(A,d,e,f,g,z,settings,info,output,selfchecking=True)
+	assert A.shape == (m,n)
+	assert A.shape == z.blocksizes
+	assert d.size == m
+	assert e.size == n
+	assert output.x.size == n
+	assert output.y.size == m
 
 
-	if VERBOSE_TEST:
-		print "\FUNCTION VECTORS"
-		print "f: ", f
-		print "g: ", g
+	PRINT("\nPROBLEM SETUP METHODS")
+	PRINT("=====================\n")
 
-	if VERBOSE_TEST:
-		print "\nPROBLEM VARIABLES"
-		print "z: ", z
+	PRINT("\nINPUT/OUTPUT")
+	PRINT("------------\n")
 
-	if VERBOSE_TEST:
-		print "\nEQUILIBRATION VARIABLES"
-		print "d: ", d
-		print "e: ", e
-
-	print "\nSOLVER STRUCTS"
-	print "settings: ", settings
-	print "info: ", info 
-
-	if VERBOSE_TEST:
-		print "\nOUTPUT VARIABLES"
-		print output
+	PRINT("\nPROBLEM DATA")
+	PRINT("A object: ", A)
+	PRINT("A matrix: ", A.mat)
 
 
-	print HLINE
-	print "\nPRECONDITION, PROJECTOR, PROX OPERATOR"
-	print "--------------------------------------\n"
+	PRINT("\FUNCTION VECTORS")
+	PRINT("f: ", f)
+	PRINT("g: ", g)
 
-	print "\nEQUILIBRATE"
+	PRINT("\nPROBLEM VARIABLES")
+	PRINT("z: ", z)
+
+	PRINT("\nEQUILIBRATION VARIABLES")
+	PRINT("d: ", d)
+	PRINT("e: ", e)
+
+	PRINT("\nSOLVER STRUCTS")
+	PRINT("settings: ", settings)
+	PRINT("info: ", info)
+
+	PRINT("\nOUTPUT VARIABLES")
+	PRINT(output)
+
+
+	PRINT(HLINE)
+	PRINT("\nPRECONDITION, PROJECTOR, PROX OPERATOR")
+	PRINT("--------------------------------------\n")
+
+
+	PRINT("\nEQUILIBRATE")
 	if not A.equilibrated: equilibrate(A, d, e)
-	if VERBOSE_TEST:
-		print "A: ", A
-		print "d: ", d
-		print "e: ", e
-	else:
-		print "...complete"
+	PRINT("A: ", A)
+	PRINT("d: ", d)
+	PRINT("e: ", e)
+	# allow 50% variation in row and column norms
+	row_norms=[np.linalg.norm(A.mat.py[i,:]) for i in xrange(A.shape[0])]
+	col_norms=[np.linalg.norm(A.mat.py[:,j]) for j in xrange(A.shape[1])]
+	assert np.min(row_norms)/np.max(row_norms) >= 0.5
+	assert np.min(col_norms)/np.max(col_norms) >= 0.5
 
-	print "\nPROJECTOR"
-	Proj = DirectProjector(A.mat, normalize=True)		
-	print "ProjA: ", Proj
+	PRINT("\nPROJECTOR")
+	Proj = DirectProjector(A.mat, normalize=True)	
+	A.normalized=True	
+	PRINT("ProjA: ", Proj)
+	assert var_assert(Proj,type=DirectProjector)
 
-	print "\nNORMALIZE A, Proj, d, e"
-	if VERBOSE_TEST:
-		print "BEFORE:"
-		print "A object: ", A
-		print "A matrix: ", A.mat
-		print "d: ", d
-		print "e: ", e
-	normalize_system(A, Proj, d, e)
-	if VERBOSE_TEST:
-		print "AFTER:"
-		print "A object: ", A
-		print "A matrix: ", A.mat
-		print "d: ", d
-		print "e: ", e
-	else:
-		print "...complete"
 
-	print "\nSCALE f, g"
-	if VERBOSE_TEST:
-		print "BEFORE"
-		print "f: ", f
-		print "g: ", g
+	PRINT("\nNORMALIZE A, Proj, d, e")
+	PRINT("BEFORE:")
+	PRINT("A object: ", A)
+	PRINT("A matrix: ", A.mat)
+	PRINT("d: ", d)
+	PRINT("e: ", e)
+
+
+	norm_de_before = np.linalg.norm(d.py)*np.linalg.norm(e.py)
+	normalize_system(A, d, e, normA=Proj.normA)
+	norm_de_after = np.linalg.norm(d.py)*np.linalg.norm(e.py)
+
+	# ||A||_2 == 1
+	assert abs(np.linalg.norm(A.mat.py)/(A.mat.mindim**0.5)-1) <= TEST_EPS
+
+
+	# ||d||*||e|| / ||1/sqrt(norm_A) * d||*||1/sqrt(norm_A) * e|| == norm_A
+	assert abs(norm_de_before/norm_de_after - Proj.normA) <= TEST_EPS
+
+	PRINT("AFTER:")
+	PRINT("A object: ", A)
+	PRINT("A matrix: ", A.mat)
+	PRINT("d: ", d)
+	PRINT("e: ", e)
+
+	PRINT("\nSCALE f, g")
+	PRINT("BEFORE")
+	PRINT("f: ", f)
+	PRINT("g: ", g)
+	
+	fa_=np.copy(f.a_)
+	fd_=np.copy(f.d_)
+	fe_=np.copy(f.e_)
+	ga_=np.copy(g.a_)
+	gd_=np.copy(g.d_)
+	ge_=np.copy(g.e_)
+	d_ = np.copy(d.py)
+	e_ = np.copy(e.py)
+
 	scale_functions(f,g,d,e)
-	if VERBOSE_TEST:
-		print "AFTER"
-		print "f: ", f
-		print "g: ", g
-	else:
-		print "...complete"
 
+	assert np.max(np.abs((fa_/d_-f.a_))) <= TEST_EPS
+	assert np.max(np.abs((fe_/d_-f.d_))) <= TEST_EPS
+	assert np.max(np.abs((fe_/d_-f.e_))) <= TEST_EPS
+	assert np.max(np.abs((ga_*e_-g.a_))) <= TEST_EPS
+	assert np.max(np.abs((gd_*e_-g.d_))) <= TEST_EPS
+	assert np.max(np.abs((ge_*e_-g.e_))) <= TEST_EPS
 
-	print HLINE
-	print "\nSCALED SYSTEM: PROJECTION TEST"
+	PRINT("AFTER")
+	PRINT("f: ", f)
+	PRINT("g: ", g)
+
+	PRINT(HLINE)
+	PRINT("\nSCALED SYSTEM: PROJECTION TEST")
+
 	x = Vector(np.random.rand(n))
 	y = Vector(np.random.rand(m))
 	x_out = Vector(n)
 	y_out = Vector(m)
+	var_assert(x,y,x_out,y_out,type=Vector)
 
-	print "RANDOM (x,y)"
-	print "||x||_2, {} \t ||y||_2: {}".format(
-		np.linalg.norm(x.py), np.linalg.norm(y.py))
-	print "||Ax-y||_2:"
-	print np.linalg.norm(y.py-A.mat.py.dot(x.py))
+	PRINT("RANDOM (x,y)")
+	PRINT("||x||_2, {} \t ||y||_2: {}".format(
+		np.linalg.norm(x.py), np.linalg.norm(y.py)))
+	PRINT("||Ax-y||_2:")
+	PRINT(np.linalg.norm(y.py-A.mat.py.dot(x.py)))
 
 	Proj(x,y,x_out,y_out)
 
-	print "PROJECT:"
-	print "||x||_2, {} \t ||y||_2: {}".format(
-		np.linalg.norm(x_out.py), np.linalg.norm(y_out.py))
-	print "||Ax-y||_2:"
-	print np.linalg.norm(y_out.py-A.mat.py.dot(x_out.py))
+	PRINT("PROJECT:")
+	PRINT("||x||_2, {} \t ||y||_2: {}".format(
+		np.linalg.norm(x_out.py), np.linalg.norm(y_out.py)))
+	PRINT("||Ax-y||_2:")
+	res = np.linalg.norm(y_out.py-A.mat.py.dot(x_out.py))
+	assert res <= TEST_EPS
+	PRINT(res)
 
 
-	print "\nPROXIMAL OPERATOR"
+	PRINT("\nPROXIMAL OPERATOR")
 	Prox = prox_eval(f,g)		
-	print "Prox: ", Prox	
+	PRINT("Prox: ", Prox)
 
-	print HLINE
-	print "\nVARIABLE MANIPULATION AND STORAGE"
-	print "---------------------------------\n"
+	PRINT(HLINE)
+	PRINT("\nVARIABLE MANIPULATION AND STORAGE")
+	PRINT("---------------------------------\n")
 
-	print "\nVARIABLE INITIALIZATION"
+	PRINT("\nVARIABLE INITIALIZATION")
 	initialize_variables(A.mat, settings.rho, z, x.py, y.py)
-	print "z primal", z.primal.vec
-	print "z dual", z.dual.vec
+	PRINT("z primal", z.primal.vec)
+	PRINT("z dual", z.dual.vec)
+	
 
-	print "\nVARIABLE UNSCALING"
+	assert np.max(np.abs((z.primal.x.py-x.py))) <= 0.
+	assert np.max(np.abs((z.dual.y.py+y.py/settings.rho))) <= TEST_EPS
+	res_p = np.linalg.norm(A.mat.py.dot(z.primal.x.py)-z.primal.y.py)
+	res_d = np.linalg.norm(A.mat.py.T.dot(z.dual.y.py)+z.dual.x.py)
+	assert res_p <= TEST_EPS
+	assert res_d <= TEST_EPS
+
+
+	PRINT("\nVARIABLE UNSCALING")
 	unscale_output(settings.rho, z, output)		
-	print "output vars:", output
+	assert np.max(np.abs((z.primal12.x.py*e_-output.x))) <= TEST_EPS
+	assert np.max(np.abs((z.primal12.y.py/d_-output.y))) <= TEST_EPS
+	assert np.max(np.abs((-settings.rho*z.dual12.x.py/e_-output.mu))) <= TEST_EPS
+	assert np.max(np.abs((-settings.rho*z.dual12.y.py*d_-output.nu))) <= TEST_EPS
+	PRINT("output vars:", output)
 
 
-	print "\nVARIABLE STORAGE"
+
+	PRINT("\nVARIABLE STORAGE")
 	solver_state=SolverState(A,Proj,z)
-	print solver_state
+	assert var_assert(solver_state)
+	PRINT(solver_state)
 
-	print HLINE
-	print HLINE
-	print "\nPROBLEM SOLVE METHODS"
-	print "=====================\n"
+	PRINT(HLINE)
+	PRINT(HLINE)
+	PRINT("\nPROBLEM SOLVE METHODS")
+	PRINT("=====================\n")
 
-	print "\nACCESS SETTINGS"
-	print "rho: ", settings.rho
-	print "alpha: ", settings.alpha
-	print "abs tol: ", settings.abstol
-	print "rel tol: ", settings.reltol
-	print "adpative rho: ", settings.adaptive
-	print "max iter: ", settings.maxiter
+	PRINT("\nACCESS SETTINGS")
+	PRINT("rho: ", settings.rho)
+	PRINT("alpha: ", settings.alpha)
+	PRINT("abs tol: ", settings.abstol)
+	PRINT("rel tol: ", settings.reltol)
+	PRINT("adpative rho: ", settings.adaptive)
+	PRINT("max iter: ", settings.maxiter)
 
-	print HLINE
-	print "\nMAKE OBJECTIVES, RESIDUALS, TOLERANCES"
+	PRINT(HLINE)
+	PRINT("\nMAKE OBJECTIVES, RESIDUALS, TOLERANCES")
 	obj = Objectives()
 	res = Residuals()
 	eps = Tolerances(m,n, atol=settings.abstol, rtol=settings.reltol)
-	print "Objectives: ", obj
-	print "Residuals: ", res
-	print "Tolerances: ", eps
+	assert var_assert(obj,res,eps)
+	PRINT("Objectives: ", obj)
+	PRINT("Residuals: ", res)
+	PRINT("Tolerances: ", eps)
 
-	print HLINE
-	print "\nMAKE ADAPTIVE RHO PARAMETERS"
+	PRINT(HLINE)
+	PRINT("\nMAKE ADAPTIVE RHO PARAMETERS")
 	rhopar = AdaptiveRhoParameters()
-	print "a.r. params: ", rhopar
+	assert var_assert(rhopar)
+	PRINT("a.r. params: ", rhopar)
 
-	print HLINE
-	print "\nITERATE: z_prev = z^k"
-	z.prev.copy(z.primal)
-	if VERBOSE_TEST:
-		print z.prev
-		print z.primal
-	else:
-		print "...complete"
+	PRINT(HLINE)
+	PRINT("\nITERATE: z_prev = z^k")
+	z.prev.copy_from(z.primal)
+	assert all(z.primal.vec.py-z.prev.vec.py==0)
+	PRINT(z.prev)
+	PRINT(z.primal)
 
-	print HLINE
-	print "\nPROX EVALUAION"
-	if VERBOSE_TEST:
-		print "BEFORE:"
-		print z.primal12
+	PRINT(HLINE)
+	PRINT("\nPROX EVALUAION")
+	PRINT("BEFORE:")
+	PRINT(z.primal12)
+	
+	xarg_ = z.primal.x.py-z.dual.x.py
+	yarg_ = z.primal.y.py-z.dual.y.py
+	xout_ = prox_eval_python(g,settings.rho,xarg_,func='IndGe0')
+	yout_ = prox_eval_python(f,settings.rho,yarg_,func='Abs')
+
 	Prox(settings.rho,z)
-	if VERBOSE_TEST:
-		print "AFTER"
-		print z.primal12
-	else: 
-		print "...complete"
 
-	print HLINE
-	print "\nPROJECTION"
-	if VERBOSE_TEST:
-		print "BEFORE:"
-		print z.primal
+	assert np.max(np.abs(z.primal12.x.py-xout_)) <= TEST_EPS
+	assert np.max(np.abs(z.primal12.y.py-yout_)) <= TEST_EPS
+
+	PRINT("AFTER")
+	PRINT(z.primal12)
+
+	PRINT(HLINE)
+	PRINT("\nPROJECTION")
+	PRINT("BEFORE:")
+	PRINT(z.primal)
+
+
+
 	project_primal(Proj,z,alpha=settings.alpha)
-	if VERBOSE_TEST:
-		print "AFTER"
-		print z.primal
-	else:
-		print "...complete"
+	assert np.linalg.norm(A.mat.py.dot(z.primal.x.py)-z.primal.y.py) <= TEST_EPS
+	assert np.linalg.norm(A.mat.py.T.dot(z.dual.y.py)+z.dual.x.py) <= TEST_EPS
 
-	print HLINE
-	print "\nDUAL UPDATE"
-	if VERBOSE_TEST:
-		print "BEFORE:"
-		print "Z_TILDE"
-		print z.dual
-		print "Z_TILDE_1/2"
-		print z.dual12
+	PRINT("AFTER")
+	PRINT(z.primal)
+
+	PRINT(HLINE)
+	PRINT("\nDUAL UPDATE")
+	PRINT("BEFORE:")
+	PRINT("Z_TILDE")
+	PRINT(z.dual)
+	PRINT("Z_TILDE_1/2")
+	PRINT(z.dual12)
+	
+	z_ = np.copy(z.prev.vec.py)
+	z1_= np.copy(z.primal.vec.py)
+	z12_ = np.copy(z.primal12.vec.py)
+	zt_ = np.copy(z.dual.vec.py)
+	zt1_ = zt_+(settings.alpha*z12_+(1-settings.alpha)*z_)-z1_
+	zt12_ = z12_-z_+zt_
 	update_dual(z,alpha=settings.alpha)
-	if VERBOSE_TEST:
-		print "AFTER"
-		print "Z_TILDE"
-		print z.dual
-		print "Z_TILDE_1/2"
-		print z.dual12 
-	else:
-		print "...complete"
+	assert all(np.abs(z.dual.vec.py-zt1_) <= TEST_EPS)
+	assert all(np.abs(z.dual12.vec.py-zt12_) <= TEST_EPS)
+
+	PRINT("AFTER")
+	PRINT("Z_TILDE")
+	PRINT(z.dual)
+	PRINT("Z_TILDE_1/2")
+	PRINT(z.dual12 )
 
 
-	print HLINE
-	print "\nCHECK CONVERGENCE:"
+	PRINT(HLINE)
+	PRINT("\nCHECK CONVERGENCE:")
 	converged = check_convergence(A,f,g,settings.rho,z,obj,res,eps,gapstop=settings.gapstop)	
-	print "Converged? ", converged 
+	
+	obj_py = func_eval_python(g,z.primal12.x.py,func='IndGe0')
+	obj_py += func_eval_python(f,z.primal12.y.py,func='Abs')
+	obj_gap_py = np.dot(z.primal12.vec.py, z.dual12.vec.py)
+	obj_dua_py = obj_py-abs(obj_gap_py)
+
+
+	assert abs(obj.p - obj_py) <= TEST_EPS
+	assert abs(obj.d - obj_dua_py) <= TEST_EPS 
+	assert abs(obj.gap - abs(obj_gap_py)) <= TEST_EPS
+
+	assert abs(eps.p - (eps.atolm+eps.reltol*np.linalg.norm(z.primal.y.py))) <= TEST_EPS
+	assert abs(eps.d - (eps.atoln+eps.reltol*np.linalg.norm(z.dual.x.py))) <= TEST_EPS
+	assert abs(eps.gap - (eps.atolmn+eps.reltol*obj_py)) <= TEST_EPS
+
+	res_p = np.linalg.norm(z.primal.vec.py-z.primal12.vec.py)
+	res_d = np.linalg.norm(z.primal.vec.py-z.prev.vec.py)
+	if res_d < eps.d and res_p < eps.p:
+		res_p = np.linalg.norm(A.mat.py.dot(z.primal12.x.py)-\
+							z.primal12.y.py)
+		if res_p < eps.p:
+			res_d = np.linalg.norm(A.mat.py.dot(z.dual12.y.py)+\
+							z.dual12.x.py)
+
+	assert abs(res.p - res_p) <= TEST_EPS
+	assert abs(res.d - res_d) <= TEST_EPS
+	assert abs(res.gap - abs(obj_gap_py)) <= TEST_EPS
+	
+	cvg_py = np.linalg.norm(A.mat.py.dot(z.primal12.x.py)-\
+							z.primal12.y.py) <= eps.p and \
+			np.linalg.norm(A.mat.py.dot(z.dual12.y.py)+ \
+							z.dual12.x.py) <= eps.d
+	assert cvg_py == converged
+
+	PRINT("Converged? ", converged )
 	
 
-	print HLINE
-	print "\nITERATION INFO:"
-	print header_string()
-	print iter_string(1, res, eps, obj)
+	PRINT(HLINE)
+	PRINT("\nITERATION INFO:")
+	PRINT(header_string())
+	PRINT(iter_string(1, res, eps, obj))
 
 
-	print HLINE
-	print "\nADAPT RHO"
-	print "Adaptive rho requested?", settings.adaptive
-	print "rho before:", settings.rho
-	if VERBOSE_TEST:
-		print "Z_TILDE before:", z.dual
+	PRINT(HLINE)
+	PRINT("\nADAPT RHO")
+	PRINT("Adaptive rho requested?", settings.adaptive)
+	PRINT("rho before:", settings.rho)
+	PRINT("Z_TILDE before:", z.dual)
+	z_before = np.copy(z.dual.vec.py)
+	rho_before = settings.rho
 	if settings.adaptive:
 		adapt_rho(z, rhopar, 0, settings, res, eps)
-	print "rho after:", settings.rho
-	if VERBOSE_TEST:
-		print "Z_TILDE after:", z.dual
+	z_after = np.copy(z.dual.vec.py)
+	rho_after = settings.rho
+	assert all(z_after/z_before-rho_before/rho_after <= TEST_EPS) or \
+			all(z_after/z_before-rho_before/rho_after <= TEST_EPS)
+	PRINT("rho after:", settings.rho)
+	PRINT("Z_TILDE after:", z.dual)
 
-
-	print HLINE
-	print "\nUPDATE INFO"
-	print "info before: ", info
+	PRINT(HLINE)
+	PRINT("\nUPDATE INFO")
+	PRINT("info before: ", info)
 	info.update(rho=settings.rho,obj=obj.p, converged=converged,err=0,k=0)
-	print "info after: ", info 
+	assert info.rho == settings.rho
+	assert info.obj == obj.p
+	assert info.converged == converged
+	assert info.err == 0
+	assert info.k == 0
+	PRINT("info after: ", info )
 
 
-
-	print HLINE
-	print HLINE
-	print "\nPOGS INNER LOOP ROUTINE"
-	print "-----------------------\n"
+	PRINT(HLINE)
+	PRINT(HLINE)
+	PRINT("\nPOGS INNER LOOP ROUTINE")
+	PRINT("-----------------------\n")
 	settings.maxiter=2000
-	print settings
+	PRINT(settings)
 	admm_loop(A.mat,Proj,Prox,z,settings,info, check_convergence(A.mat,f,g)) 	
-	print info
-
-	print HLINE
-	print HLINE
-	print "\nPOGS ROUTINE"
-	print "------------\n"
-	pogs(A.mat,f,g)
+	assert info.converged or info.k==settings.maxiter
+	PRINT(info)
 
 
+	PRINT(HLINE)
+	PRINT(HLINE)
+	PRINT("\nPOGS ROUTINE")
+	PRINT("------------\n")
 
+
+	A_copy = np.copy(A.mat.py)
+	info_, output_, solver = pogs(A.mat,f,g,
+		maxiter=settings.maxiter,reltol=settings.reltol)
+	assert var_assert(solver,type=SolverState)
+	assert var_assert(info_,type=SolverInfo)
+	assert var_assert(output_, type=OutputVariables)
+	assert info_.converged or info_.k==settings.maxiter
+
+	res_p = np.linalg.norm(A_copy.dot(output_.x)-output_.y)
+	res_d = np.linalg.norm(A_copy.T.dot(output_.nu)+output_.mu)
+
+	assert res_p/np.linalg.norm(output_.y) <= 10*settings.reltol
+	assert res_d/np.linalg.norm(output_.mu) <= 10*settings.reltol
+
+	return True
+
+def test_blocksplitting(*args, **kwargs):
+	print "BLOCK SPLITTING METHODS TESTING\n\n\n\n"
+	verbose = '--verbose' in args
+	(m,n)=kwargs['shape'] if 'shape' in kwargs else (None,None)
+	A = np.load(kwargs['file']) if 'file' in kwargs else None
+
+	assert blocksplitting_test(m=m,n=n,A_in=A,VERBOSE_TEST=verbose)
+
+	print "...passed"
+	return True
+	

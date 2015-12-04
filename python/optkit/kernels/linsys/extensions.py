@@ -1,5 +1,6 @@
 from optkit.types import Vector, Matrix
 from optkit.kernels.linsys.core import *
+from toolz import curry
 
 def splitview(z,dim_y,y_before_x=True):
 	N = z.size
@@ -49,8 +50,8 @@ def gramian(A):
 	gemm(t1, t2, 1, A, A, 0, AA) 	
 	return AA
 	
-def blockcopy(z_orig, z_dest):
-	copy(z_orig.vec, z_dest.vec)
 
-def blockdot(z1, z2):
-	return dot(z1.vec, z2.vec)
+@curry
+def gemv_curryable(tA,A,alpha,x,beta,y):
+	gemv(tA,alpha,A,x,beta,y)
+
