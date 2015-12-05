@@ -28,6 +28,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 		A = Matrix(np.random.rand(m,n))
 	f = FunctionVector(m, h='Abs', b=1)
 	g = FunctionVector(n, h='IndGe0')
+	A_orig = np.copy(A.py)
 
 	options = {}
 	solver_state = None
@@ -90,11 +91,12 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("A: ", A)
 	PRINT("d: ", d)
 	PRINT("e: ", e)
-	# allow 50% variation in row and column norms
-	row_norms=[np.linalg.norm(A.mat.py[i,:]) for i in xrange(A.shape[0])]
-	col_norms=[np.linalg.norm(A.mat.py[:,j]) for j in xrange(A.shape[1])]
-	assert np.min(row_norms)/np.max(row_norms) >= 0.5
-	assert np.min(col_norms)/np.max(col_norms) >= 0.5
+
+	xrand = np.random.rand(n)
+	Ax = A.mat.py.dot(xrand)
+	DAEx = d.py*A_orig.dot(e.py*xrand)
+	assert all(np.abs(Ax-DAEx)<= TEST_EPS)
+
 
 	PRINT("\nPROJECTOR")
 	Proj = DirectProjector(A.mat, normalize=True)	
@@ -114,6 +116,12 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	norm_de_before = np.linalg.norm(d.py)*np.linalg.norm(e.py)
 	normalize_system(A, d, e, normA=Proj.normA)
 	norm_de_after = np.linalg.norm(d.py)*np.linalg.norm(e.py)
+
+	xrand = np.random.rand(n)
+	Ax = A.mat.py.dot(xrand)
+	DAEx = d.py*A_orig.dot(e.py*xrand)
+	assert all(np.abs(Ax-DAEx)<= TEST_EPS)
+
 
 	# ||A||_2 == 1
 	assert abs(np.linalg.norm(A.mat.py)/(A.mat.mindim**0.5)-1) <= TEST_EPS

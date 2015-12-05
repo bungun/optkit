@@ -100,6 +100,7 @@ def sinkhornknopp_equilibration(A, A_out, d, e):
 		mul(fac,d)
 		div(fac,e)
 
+	sync(d,e)
 	# A_out = D*A*E
 	copy(A, A_out)
 	for i in xrange(m):

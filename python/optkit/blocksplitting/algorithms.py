@@ -5,7 +5,6 @@ from optkit.blocksplitting.types import *
 from optkit.blocksplitting.utilities import *
 from numpy import inf 
 
-
 def admm_loop(A, Proj, Prox, admm_vars, settings, info, stopping_conditions):
 	err=0
 	alpha=settings.alpha
@@ -31,7 +30,6 @@ def admm_loop(A, Proj, Prox, admm_vars, settings, info, stopping_conditions):
 		Prox(settings.rho,z)				# z.12 	= prox(z - zt)
 		project_primal(Proj,z,
 						alpha=alpha)		# z.1 	= proj(z.12 + zt)
-
 
 
 		update_dual(z,alpha=alpha)			# zt.1 	= zt.1 + z.12 - z.1

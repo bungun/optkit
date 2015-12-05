@@ -138,7 +138,7 @@ def view(x, *range_, **viewtype):
 	elif 'diag' in viewtype:
 		cview=make_cvector()
 		oklib.__matrix_diagonal(cview, x.c)
-		pyview = x.py.diagonal()
+		pyview = x.py.diagonal().copy()
 		return Vector(pyview, cview, sync_required=1)
 	else: 
 		raise TypeError(input_err)
