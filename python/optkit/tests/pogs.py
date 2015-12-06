@@ -42,9 +42,14 @@ def pogs_test(m=300,n=200,A_in=None, VERBOSE_TEST=True):
 		assert var_assert(output, type=OutputVariables)
 		assert info.converged or info.k==maxiter
 
+		A_ = solver_state.A.mat.py 
+		d = solver_state.z.de.y.py
+		e = solver_state.z.de.x.py
+		xrand = np.random.rand(n)
+		assert np.max(np.abs(d*A_copy.dot(e*xrand)-A_.dot(xrand)))
+
 		res_p = np.linalg.norm(A_copy.dot(output.x)-output.y)
 		res_d = np.linalg.norm(A_copy.T.dot(output.nu)+output.mu)
-
 
 		if FUNCKEY not in  ('Logistic','Exp'):
 			assert not info.converged or res_p <= TEST_EPS or res_p/np.linalg.norm(output.y) <= 10*reltol

@@ -239,12 +239,38 @@ void __matrix_memcpy_mm(matrix * A, const matrix * B) {
   }
 }
 
-void __matrix_memcpy_ma(matrix * A, const ok_float * B) {
+void __matrix_memcpy_ma(matrix * A, const ok_float * B, 
+  const CBLAS_ORDER_t rowmajor) {
+  uint i,j;
+  if (A->rowmajor == rowmajor)
     memcpy(A->data, B, A->size1 * A->size2 * sizeof(ok_float));
+  else {
+    if (rowmajor)
+      for (i = 0; i < A->size1; ++i)
+        for (j = 0; j < A->size2; ++j)
+          __matrix_set(A,i,j, B[i + j * A->size1]);
+  else
+    for (i = 0; i < A->size1; ++i)
+      for (j = 0; j < A->size2; ++j)
+          __matrix_set(A,i,j,B[i * A->size2 + j]);
+  }
 }
 
-void __matrix_memcpy_am(ok_float * A, const matrix * B) {
+void __matrix_memcpy_am(ok_float * A, const matrix * B,
+  const CBLAS_ORDER_t rowmajor) {
+  uint i,j;
+  if (B->rowmajor == rowmajor)
     memcpy(A, B->data, B->size1 * B->size2 * sizeof(ok_float));
+  else {
+    if (rowmajor)
+      for (i = 0; i < B->size1; ++i)
+        for (j = 0; j < B->size2; ++j)
+          A[i + j * B->size1] = __matrix_get(B, i, j);
+  else
+      for (j = 0; j < B->size2; ++j)
+        for (i = 0; i < B->size1; ++i)
+          A[i * B->size2 + j] = __matrix_get(B, i, j);
+  }
 }
 
 void __matrix_print(const matrix * A) {

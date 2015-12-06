@@ -56,8 +56,8 @@ inline ok_float __matrix_get(const matrix * A, size_t i, size_t j);
 inline void __matrix_set(matrix * A, size_t i, size_t j, ok_float x);
 void __matrix_set_all(matrix * A, ok_float x);
 void __matrix_memcpy_mm(matrix * A, const matrix *B);
-void __matrix_memcpy_ma(matrix * A, const ok_float *B);
-void __matrix_memcpy_am(ok_float * A, const matrix *B);
+void __matrix_memcpy_ma(matrix * A, const ok_float *B, const CBLAS_ORDER_t ord);
+void __matrix_memcpy_am(ok_float * A, const matrix *B, const CBLAS_ORDER_t ord);
 void __matrix_print(const matrix * A);
 void __matrix_scale(matrix * A, ok_float x);
 

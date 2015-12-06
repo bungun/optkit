@@ -12,17 +12,17 @@ ok_float_p = POINTER(ok_float)
 
 # enums
 class OKEnums(object):
-	CblasRowMajor = c_uint(101)
-	CblasColMajor = c_uint(102)
-	CblasNoTrans = c_uint(111)
-	CblasTrans = c_uint(112)
-	CblasConjTrans = c_uint(113)
-	CblasUpper = c_uint(121)
-	CblasLower = c_uint(122)
-	CblasNonUnit = c_uint(131)
-	CblasUnit = c_uint(132)
-	CblasLeft = c_uint(141)
-	CblasRight = c_uint(142)
+	CblasRowMajor = c_uint(101).value
+	CblasColMajor = c_uint(102).value
+	CblasNoTrans = c_uint(111).value
+	CblasTrans = c_uint(112).value
+	CblasConjTrans = c_uint(113).value
+	CblasUpper = c_uint(121).value
+	CblasLower = c_uint(122).value
+	CblasNonUnit = c_uint(131).value
+	CblasUnit = c_uint(132).value
+	CblasLeft = c_uint(141).value
+	CblasRight = c_uint(142).value
 	def __init__(self):
 		pass
 

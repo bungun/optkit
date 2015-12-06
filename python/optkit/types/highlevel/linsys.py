@@ -79,19 +79,21 @@ class Matrix(object):
 
 		# args are (int, int)
 		valid = istypedtuple(A,2,int)
-		if len(A)==1:
-			# args are (ndarray)
-			if isinstance(A[0],ndarray):
-				# ndarray is matrix
-				valid |= len(A[0].shape)==2
-		if len(A)==2:
-			# args are (ndarray, ok_matrix)
-			if isinstance(A[0],ndarray) and isinstance(A[1],ok_matrix):
-				# ndarray is matrix
-				if len(A[0].shape)==2:
-					# ndarray and ok-matrix compatibly sized
-					valid |= A[0].shape[0]==A[1].size1 and \
-							 A[0].shape[1]==A[1].size2			
+		if not valid:
+			if len(A)==1:
+				# args are (ndarray)
+				if isinstance(A[0],ndarray):
+					# ndarray is matrix
+					valid |= len(A[0].shape)==2
+			elif len(A)==2:
+				# args are (ndarray, ok_matrix)
+				if isinstance(A[0],ndarray) and isinstance(A[1],ok_matrix):
+					# ndarray is matrix
+					if len(A[0].shape)==2:
+						# ndarray and ok-matrix compatibly sized
+						valid |= A[0].shape[0]==A[1].size1 and \
+								 A[0].shape[1]==A[1].size2			
+			
 
 		if not valid:
 			print ("optkit.Matrix must be initialized with\n"

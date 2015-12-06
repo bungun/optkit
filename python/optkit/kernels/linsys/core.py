@@ -62,7 +62,9 @@ def copy(orig, dest, python=False):
 	elif isinstance(orig, ndarray) and isinstance(dest,Matrix):
 		if orig.shape != dest.shape: raise ValueError(
 			"incompatible array shapes for copy")
-		oklib.__matrix_memcpy_ma(dest.c,ndarray_pointer(orig))
+		order = enums.CblasRowMajor if orig.flags.c_contiguous else \
+				enums.CblasColMajor
+		oklib.__matrix_memcpy_ma(dest.c,ndarray_pointer(orig), order)
 	else:
 		raise TypeError("optkit.kernels.linsys.copy(dest, orig) defined "
 			  "only when arguments are type:\n\t"

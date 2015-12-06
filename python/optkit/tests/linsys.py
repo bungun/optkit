@@ -1,4 +1,5 @@
 from optkit import *
+from optkit.types.lowlevel import ok_enums
 from optkit.utils.pyutils import println,printvoid,var_assert
 from optkit.libs import oklib
 from optkit.kernels import core as ops
@@ -240,6 +241,19 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	ops.sync(A)
 	assert array_compare(A.py,A_, eps=TEST_EPS)
 
+	PRINT("Allocation from row-major numpy ndarray")
+	A2_ = np.ndarray(shape=(m,n),order='C')
+	for i in xrange(m*n):
+		A2_.itemset(i,i)
+	A2 = Matrix(A2_)
+	assert array_compare(A2.py, A2_, eps=0.)
+
+	PRINT("Allocation from column-major numpy ndarray")
+	A3_ = np.ndarray(shape=(m,n),order='F')
+	for i in xrange(m*n):
+		A3_.itemset(i,i)
+	A3 = Matrix(A3_)
+	assert array_compare(A3.py, A3_, eps=0.)
 
 	PRINT("\nMatrix views:")
 
@@ -357,6 +371,7 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	assert MAT_ASSERT(B)
 	B_ = np.copy(B.py)
 
+
 	PRINT("numpy value:")
 	PRINT(B.py)
 	PRINT("c value:")
@@ -382,7 +397,7 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	PRINTVAR(C)
 
 
-	PRINT("\nCopy")
+	PRINT("\nMatrix->Matrix Copy")
 	PRINT("---variable `D` = 0^({}x{})---".format(n,n))
 	D=Matrix(np.zeros_like(B.py))
 	assert MAT_ASSERT(D)
@@ -402,6 +417,33 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 
 	PRINT(D.py)
 	PRINTVAR(D)
+
+	PRINT("\nndarray->Matrix Copy")
+
+	PRINT("Copy: row-major numpy ndarray->row-major Matrix")
+	A2_*=2.4
+	ops.copy(A2_,A2)
+	ops.sync(A2)
+	assert array_compare(A2.py,A2_,eps=0.)
+
+	PRINT("Copy: col-major numpy ndarray->row-major Matrix")
+	A3_*=2.7
+	ops.copy(A3_,A2)
+	ops.sync(A3)
+	assert array_compare(A2.py,A3_,eps=0.)
+
+	# PRINT("Copy: row-major numpy ndarray->col-major Matrix")
+	# A3_ = np.copy(A3.py)
+	# A3 *= 0.76
+	# ops.copy(A3_,A2)
+	# ops.sync(A2)
+	# assert array_compare(A2.py,A3_,eps=0.)
+
+
+	# PRINT("Copy: col-major numpy ndarray->col-major Matrix")
+	# ops.copy(A3_,A3)
+	# ops.sync(A3)
+	# assert array_compare(A3.py,A3_,eps=0.)
 
 	return True
 

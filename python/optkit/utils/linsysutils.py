@@ -27,15 +27,16 @@ def make_cmatrix(A=None, copy_data=True):
 	if A is None:
 		return ok_matrix(0,0,0,None,enums.CblasRowMajor)
 	elif isinstance(A, ndarray) and len(A.shape)==2:
-		# ASSUMES DATA IS ROW-MAJOR
 		(m,n) = A.shape
-		A_ = ok_matrix(0,0,0,None,enums.CblasRowMajor)
+		order = enums.CblasRowMajor if A.flags.c_contiguous else \
+				enums.CblasColMajor
+		A_ = ok_matrix(0,0,0,None,order)
 		if not copy_data:
 			oklib.__matrix_view_array(A_, ndarray_pointer(A), 
-										m, n, enums.CblasRowMajor)
+										m, n, order)
 		else:
-			oklib.__matrix_calloc(A_, m, n, enums.CblasRowMajor)
-			oklib.__matrix_memcpy_ma(A_, ndarray_pointer(A))
+			oklib.__matrix_calloc(A_, m, n, order)
+			oklib.__matrix_memcpy_ma(A_, ndarray_pointer(A), order)
 		return A_
 	else:
 		return None
