@@ -19,29 +19,43 @@ ifeq ($(shell uname -s), Darwin)
 LDFLAGS_+= -framework Accelerate
 CULDFLAGS_+= -L/usr/local/cuda/lib 
 SHARED=dylib
+ifdef USE_OPENMP
+CXXFLAGS += -fopenmp=libopenmp
+endif
 else
 LDFLAGS_+= -lblas
 CULDFLAGS_+= -L/usr/local/cuda/lib64 
 SHARED=so
+ifdef USE_OPENMP
+CXXFLAGS += -fopenmp
+endif
 endif
 
 CULDFLAGS_+= -lcudart -lcublas -lcusparse
 
+
 # make options
-GPU=0
-SPARSE=0
+ifndef SPARSE
+SPARSE = 0
+endif
+
+ifndef GPU
+GPU = 0
+endif
 
 # compiler options
-FLOAT=0
-
+ifndef FLOAT
+FLOAT = 0
+endif
 
 # optional compiler flags 
 OPT_FLAGS=
 ifneq ($(FLOAT), 0)
-OPT_FLAGS += -D=$(FLOAT) # use floats rather than doubles
+OPT_FLAGS += -DFLOAT # use floats rather than doubles
 endif
 
 CXXFLAGS += $(OPT_FLAGS)
+CUXXFLAGS += $(OPT_FLAGS)
 
 
 # make switches
@@ -55,32 +69,45 @@ ifneq ($(GPU), 0)
 LDFLAGS=$(CULDFLAGS_)
 DEVICETAG=gpu
 else
+ifneq ($(SPARSE), 0)
+LDFLAGS_+= -lSuiteSparse
+endif
 LDFLAGS=$(LDFLAGS_)
 DEVICETAG=cpu
 endif
 
-ifneq ($(SPARSE), 0)
-MATRIXTAG=sparse
-else
-MATRIXTAG=dense
-endif
 
-STATICTARG=$(DEVICETAG)_$(MATRIXTAG)
+
+
+
+DENSETARG=$(DEVICETAG)_dense
+SPARSETARG=$(DEVICETAG)_sparse
+LINSYSTARGS=$(DENSETARG)
+ifneq ($(SPARSE), 0)
+LINSYSTARGS+= $(SPARSETARG)
+endif
 PROXTARG=$(DEVICETAG)_prox
 
 STATICLIB=$(PREFIX_OUT)$(STATICTARG)$(PRECISION).o
 PROXLIB=$(PREFIX_OUT)$(PROXTARG)$(PRECISION).o
 
 
-.PHONY: default, libok, libprox, libs 
-#, cpu_sparse, gpu_dense, gpu_sparse
+.PHONY: default, libs, libok, libok_dense, libok_sparse, libprox  
 default: cpu_dense
 
 libs: libok libprox
 
-libok: $(STATICTARG)
+libok: $(LINSYSTARGS)
+
+libok_dense: 
 	mkdir -p $(OUT)
-	$(CXX) $(CXXFLAGS) -shared -o $(OUT)$@_$(STATICTARG)$(PRECISION).$(SHARED) $(STATICLIB) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -shared -o \
+	$(OUT)$@_$(DENSETARG)$(PRECISION).$(SHARED) $(STATICLIB) $(LDFLAGS)
+
+libok_sparse:
+	# mkdir -p $(OUT)
+	# $(CXX) $(CXXFLAGS) -shared -o \
+	# $(OUT)$@_$(SPARSETARG)$(PRECISION).$(SHARED) $(STATICLIB) $(LDFLAGS)
 
 libprox: $(PROXTARG)
 	mkdir -p $(OUT)

@@ -48,8 +48,6 @@ def admm_loop(A, Proj, Prox, admm_vars, settings, info, stopping_conditions):
 	if not converged and k==settings.maxiter:
 		print "reached max iter={}".format(settings.maxiter)
 
-	print k
-	print settings.rho
 	info.update(rho=settings.rho,obj=obj.p,converged=converged,err=err, k=k)
 
 

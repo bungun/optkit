@@ -1,18 +1,25 @@
 import sys
 from optkit.tests import *
 
+
+
 def main(*args, **kwargs):
-	passing = True
-	if '--linsys' in args: passing &= test_linsys(*args,**kwargs)
-	if '--prox' in args: passing &= test_prox(*args, **kwargs)
-	if '--proj' in args: passing &= test_projector(*args,**kwargs)
-	if '--equil' in args: passing &= test_equil(*args,**kwargs)
-	if '--norm' in args: passing &= test_normalizedprojector(*args,**kwargs)
-	if '--block' in args: passing &= test_blocksplitting(*args,**kwargs)
-	if '--pogs' in args: passing &= test_pogs(*args,**kwargs)
-	print "all tests complete"
-	if passing:
-		print "all tests passed"
+	tests = []
+	passing = 0
+	if '--linsys' in args: tests.append(test_linsys)
+	if '--prox' in args: tests.append(test_prox)
+	if '--proj' in args: tests.append(test_projector)
+	if '--equil' in args: tests.append(test_equil)
+	if '--norm' in args: tests.append(test_normalizedprojector)
+	if '--block' in args: tests.append(test_blocksplitting)
+	if '--pogs' in args: test.append(test_pogs)
+	for t in tests: passing += t(*args, **kwargs)
+	print "{}/{} tests passed".format(passing, len(tests))
+	if len(tests)==0:
+		print str("no tests specified:\nuse optional arguments:\n"
+			"--linsys,\n--prox,\n--proj,\n--equil,\n"
+			"--norm,\n--block,\n\n--pogs,\nor\n--all\n to specify tests.")
+
 
 if __name__== "__main__":
 	args=[]

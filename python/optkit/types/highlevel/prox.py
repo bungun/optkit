@@ -25,36 +25,55 @@ class FunctionVector(object):
 		self.c = make_cfunctionvector(self.size)
 
 	def set(self, **params):
+		start = int(params['start']) if 'start' in params else None
+		end = int(params['end']) if 'end' in params else None
+		range_length = len(self.a_[start:end])
+		if  range_length == 0: 
+			raise ValueError('index range [{}:{}] results in length-0 array '
+				'when python array slicing applied to a FunctionVector '
+				' of length {}.'.format(start,end,self.size)
+		for item in ['a', 'b', 'c', 'd', 'e', 'h']:
+			if item in params:
+				if isinstance(params[item],ndarray):
+					if len(params[item]) != range_length
+						raise ValueError('keyword argument {} of type {} '
+							'is incomptably sized with the requested '
+							'FunctionVector slice [{}:{}]'.format(
+							item, type(params(item), start, end)
+
+
+		#TODO: support complex slicing
+
 		if 'h' in params:
 			if isinstance(params['h'],(int,str)):
-				self.h_[:]=fcn_enums.safe_enum(params['h'])
+				self.h_[start:end]=fcn_enums.safe_enum(params['h'])
 			elif isinstance(params['h'],ndarray):
-				self.h_[:]=map(lambda v : fcn_enums.safe_enum(v), params['h'])
+				self.h_[start:end]=map(lambda v : fcn_enums.safe_enum(v), params['h'])
 		if 'a' in params:
 			if isinstance(params['a'],(int,float)):
-				self.a_[:]=params['a']
+				self.a_[start:end]=params['a']
 			elif isinstance(params['a'],ndarray):
-				self.a_[:]=params['a'][:]
+				self.a_[start:end]=params['a'][:]
 		if 'b' in params:
 			if isinstance(params['b'],(int,float)):
-				self.b_[:]=params['b']
+				self.b_[start:end]=params['b']
 			elif isinstance(params['b'],ndarray):
-				self.b_[:]=params['b'][:]
+				self.b_[start:end]=params['b'][:]
 		if 'c' in params:
 			if isinstance(params['c'],(int,float)):
-				self.c_[:]=max(params['c'],0)
+				self.c_[start:end]=max(params['c'],0)
 			elif isinstance(params['c'],ndarray):
-				self.c_[:]=map(lambda v : max(v,0),params['c'])
+				self.c_[start:end]=map(lambda v : max(v,0),params['c'])
 		if 'd' in params:
 			if isinstance(params['d'],(int,float)):
-				self.d_[:]=params['d']
+				self.d_[start:end]=params['d']
 			elif isinstance(params['d'],ndarray):
-				self.d_[:]=params['d'][:]
+				self.d_[start:end]=params['d'][:]
 		if 'e' in params:
 			if isinstance(params['e'],(int,float)):
-				self.e_[:]=max(params['e'],0)
+				self.e_[start:end]=max(params['e'],0)
 			elif isinstance(params['e'],ndarray):
-				self.e_[:]=map(lambda v : max(v,0),params['e'][:])
+				self.e_[start:end]=map(lambda v : max(v,0),params['e'][:])
 
 	def __str__(self):
 		return str("size: {}\nc pointer: {}\non GPU?: {}\n"
