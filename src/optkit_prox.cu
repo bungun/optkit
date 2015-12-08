@@ -1,50 +1,6 @@
 #include "optkit_prox.h"
 #include "optkit_defs_gpu.h"
 
-#include <thrust/device_vector.h>
-#include <thrust/functional.h>
-#include <thrust/inner_product.h>
-#include <thrust/reduce.h>
-#include <thrust/execution_policy.h>
-
-
-/* strided iterator from thrust:: examples. */
-template <typename Iterable>
-class strided_range {
- public:
-  typedef typename thrust::iterator_difference<It>::type diff_t;
-
-  struct StrideF : public thrust::unary_function<diff_t, diff_t> {
-    diff_t stride;
-    StrideF(diff_t stride) : stride(stride) { }
-    __host__ __device__
-    diff_t operator()(const diff_t& i) const { 
-      return stride * i;
-    }
-  };
-
-  typedef typename thrust::counting_iterator<diff_t> CountingIt;
-  typedef typename thrust::transform_iterator<StrideF, CountingIt> TransformIt;
-  typedef typename thrust::permutation_iterator<Iterable, TransformIt> PermutationIt;
-  typedef PermutationIt strided_iterator_t;
-
-  /* construct strided_range for the range [first,last). */
-  strided_range(Iterable first, Iterable last, diff_t stride)
-      : first(first), last(last), stride(stride) { }
- 
-  strided_iterator_t begin() const {
-    return PermutationIt(first, TransformIt(CountingIt(0), StrideF(stride)));
-  }
-
-  strided_iterator_t end() const {
-    return begin() + ((last - first) + (stride - 1)) / stride;
-  }
-  
- protected:
-  Iterable first;
-  Iterable last;
-  diff_t stride;
-};
 
 
 /* CUDA helper kernels */

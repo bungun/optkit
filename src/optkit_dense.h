@@ -34,6 +34,7 @@ void __vector_sub(vector * v1, const vector * v2);
 void __vector_mul(vector * v1, const vector * v2);
 void __vector_div(vector * v1, const vector * v2);
 void __vector_add_constant(vector *v, const ok_float x);
+void __vector_pow(vector *v, const ok_float x);
 
 /* MATRIX defition and methods */
 
@@ -65,7 +66,7 @@ int matrix_order_compat(const matrix * A, const matrix * B, const char * nm_A,
                  const char * nm_B, const char * nm_routine){
 
   if (A->rowmajor == B->rowmajor) return 1;
-  printf("OPTKIT ERROR (%s) matrices %s and %s must have same row layout.\n", 
+  printf("OPTKIT ERROR (%s) matrices %s and %s must have same layout.\n", 
          nm_routine, nm_A, nm_B);
   return 0;
 }

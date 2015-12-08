@@ -1,5 +1,4 @@
 #include "optkit_dense.h"
-#include "gsl_cblas.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,7 +54,7 @@ void __vector_subvector(vector * v_out, vector * v_in, size_t offset, size_t n) 
 
 void __vector_view_array(vector * v, ok_float * base, size_t n) {
 	if (!__vector_exists(v)) return;
-		v->size=n;
+	v->size=n;
 	v->stride=1;
 	v->data=base;
 }
@@ -70,7 +69,6 @@ void __vector_memcpy_vv(vector * v1, const vector * v2) {
       			__vector_set(v1, i, __vector_get(v2,i));
   	}
 }
-
 
 void __vector_memcpy_va(vector * v, const ok_float *y) {
 	uint i;
@@ -91,7 +89,6 @@ void __vector_memcpy_av(ok_float *x, const vector *v) {
 			x[i] = __vector_get(v,i);
 	}
 }
-
 
 void __vector_print(const vector * v) {
 	uint i;
@@ -132,6 +129,12 @@ void __vector_add_constant(vector * v, const ok_float x) {
   uint i;
   for (i = 0; i < v->size; ++i)
     v->data[i * v->stride] += x;
+}
+
+void __vector_pow(vector * v, const ok_float x) {
+  uint i;
+  for (i = 0; i < v->size; ++i)
+    v->data[i * v->stride] = pow(v->data[i * v->stride], x);
 }
 
 

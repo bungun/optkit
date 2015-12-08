@@ -29,10 +29,6 @@ typedef enum CBLAS_DIAG CBLAS_DIAG_t;
 typedef enum CBLAS_SIDE CBLAS_SIDE_t;
 
 
-
-
-
-
 #ifndef FLOAT
     #define CBLAS(x) cblas_d ## x
     typedef double ok_float;
