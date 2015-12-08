@@ -12,7 +12,7 @@ def main(*args, **kwargs):
 	if '--equil' in args: tests.append(test_equil)
 	if '--norm' in args: tests.append(test_normalizedprojector)
 	if '--block' in args: tests.append(test_blocksplitting)
-	if '--pogs' in args: test.append(test_pogs)
+	if '--pogs' in args: tests.append(test_pogs)
 	for t in tests: passing += t(*args, **kwargs)
 	print "{}/{} tests passed".format(passing, len(tests))
 	if len(tests)==0:

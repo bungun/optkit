@@ -16,8 +16,15 @@
 extern "C" {
 #endif
 
+#ifdef OK_DEBUG
+#define PRINT_DEBUG printf
+#else
+#define PRINT_DEBUG
+#endif
+
+
 #define OK_NULL 0
-#define ok_free(x) free(x); x=OK_NULL; printf("variable freed\n")
+#define ok_free(x) free(x); x=OK_NULL; PRINT_DEBUG("variable freed\n")
 
 
 typedef unsigned int uint;

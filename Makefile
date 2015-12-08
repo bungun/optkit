@@ -77,19 +77,17 @@ DEVICETAG=cpu
 endif
 
 
-
-
-
 DENSETARG=$(DEVICETAG)_dense
 SPARSETARG=$(DEVICETAG)_sparse
-LINSYSTARGS=$(DENSETARG)
+LINSYSLIBS=libok_dense
 ifneq ($(SPARSE), 0)
-LINSYSTARGS+= $(SPARSETARG)
+LINSYSLIBS+= libok_sparse
 endif
 PROXTARG=$(DEVICETAG)_prox
 
-STATICLIB=$(PREFIX_OUT)$(STATICTARG)$(PRECISION).o
-PROXLIB=$(PREFIX_OUT)$(PROXTARG)$(PRECISION).o
+DENSESTATIC=$(PREFIX_OUT)$(DENSETARG)$(PRECISION).o
+SPARSESTATIC=$(PREFIX_OUT)$(STATICTARG)$(PRECISION).o
+PROXSTATIC=$(PREFIX_OUT)$(PROXTARG)$(PRECISION).o
 
 
 .PHONY: default, libs, libok, libok_dense, libok_sparse, libprox  
@@ -97,21 +95,22 @@ default: cpu_dense
 
 libs: libok libprox
 
-libok: $(LINSYSTARGS)
+libok: $(LINSYSLIBS)
 
-libok_dense: 
+libok_dense: $(DENSETARG)
 	mkdir -p $(OUT)
 	$(CXX) $(CXXFLAGS) -shared -o \
-	$(OUT)$@_$(DENSETARG)$(PRECISION).$(SHARED) $(STATICLIB) $(LDFLAGS)
+	$(OUT)libok_$(DENSETARG)$(PRECISION).$(SHARED) $(DENSESTATIC) $(LDFLAGS)
 
 libok_sparse:
+# libok_sparse: $(SPARSETARG)
 	# mkdir -p $(OUT)
 	# $(CXX) $(CXXFLAGS) -shared -o \
-	# $(OUT)$@_$(SPARSETARG)$(PRECISION).$(SHARED) $(STATICLIB) $(LDFLAGS)
+	# $(OUT)$libok_$(SPARSETARG)$(PRECISION).$(SHARED) $(SPARSESTATIC) $(LDFLAGS)
 
 libprox: $(PROXTARG)
 	mkdir -p $(OUT)
-	$(CXX) $(CXXFLAGS) -shared -o $(OUT)$@_$(DEVICETAG)$(PRECISION).$(SHARED) $(PROXLIB) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -shared -o $(OUT)$@_$(DEVICETAG)$(PRECISION).$(SHARED) $(PROXSTATIC) $(LDFLAGS)
 
 cpu_dense: $(SRC)optkit_dense.c $(SRC)optkit_dense.h
 	mkdir -p $(OUT)

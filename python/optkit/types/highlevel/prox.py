@@ -31,15 +31,15 @@ class FunctionVector(object):
 		if  range_length == 0: 
 			raise ValueError('index range [{}:{}] results in length-0 array '
 				'when python array slicing applied to a FunctionVector '
-				' of length {}.'.format(start,end,self.size)
+				' of length {}.'.format(start,end,self.size))
 		for item in ['a', 'b', 'c', 'd', 'e', 'h']:
 			if item in params:
-				if isinstance(params[item],ndarray):
-					if len(params[item]) != range_length
+				if isinstance(params[item],(list, ndarray)):
+					if len(params[item]) != range_length:
 						raise ValueError('keyword argument {} of type {} '
 							'is incomptably sized with the requested '
 							'FunctionVector slice [{}:{}]'.format(
-							item, type(params(item), start, end)
+							item, type(params(item), start, end)))
 
 
 		#TODO: support complex slicing
@@ -47,32 +47,32 @@ class FunctionVector(object):
 		if 'h' in params:
 			if isinstance(params['h'],(int,str)):
 				self.h_[start:end]=fcn_enums.safe_enum(params['h'])
-			elif isinstance(params['h'],ndarray):
+			elif isinstance(params['h'],(list, ndarray)):
 				self.h_[start:end]=map(lambda v : fcn_enums.safe_enum(v), params['h'])
 		if 'a' in params:
 			if isinstance(params['a'],(int,float)):
 				self.a_[start:end]=params['a']
-			elif isinstance(params['a'],ndarray):
+			elif isinstance(params['a'],(list, ndarray)):
 				self.a_[start:end]=params['a'][:]
 		if 'b' in params:
 			if isinstance(params['b'],(int,float)):
 				self.b_[start:end]=params['b']
-			elif isinstance(params['b'],ndarray):
+			elif isinstance(params['b'],(list, ndarray)):
 				self.b_[start:end]=params['b'][:]
 		if 'c' in params:
 			if isinstance(params['c'],(int,float)):
 				self.c_[start:end]=max(params['c'],0)
-			elif isinstance(params['c'],ndarray):
+			elif isinstance(params['c'],(list, ndarray)):
 				self.c_[start:end]=map(lambda v : max(v,0),params['c'])
 		if 'd' in params:
 			if isinstance(params['d'],(int,float)):
 				self.d_[start:end]=params['d']
-			elif isinstance(params['d'],ndarray):
+			elif isinstance(params['d'],(list, ndarray)):
 				self.d_[start:end]=params['d'][:]
 		if 'e' in params:
 			if isinstance(params['e'],(int,float)):
 				self.e_[start:end]=max(params['e'],0)
-			elif isinstance(params['e'],ndarray):
+			elif isinstance(params['e'],(list, ndarray)):
 				self.e_[start:end]=map(lambda v : max(v,0),params['e'][:])
 
 	def __str__(self):
