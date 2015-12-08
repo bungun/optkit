@@ -1,0 +1,14 @@
+#TODO:
+-add FunctionVector sync to pogs() call
+-test/finalize setup.py
+-add test for vector_pow
+-OMP parallelization for C vector operations
+-move equilibration from Python to C[/CUDA]
+-GPU Dense Linear Algebra
+-CPU Sparse Linear Algebra
+-GPU Sparse Linear Algebra
+-Back-end encapsulation
+-Back-end switching
+-Python Sparse Linear Algebra bindings
+-Warm start unit tests
+-Cone solver
