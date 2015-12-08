@@ -23,6 +23,23 @@ class FunctionVector(object):
 		self.set(**params)
 		self.on_gpu = GPU_FLAG
 		self.c = make_cfunctionvector(self.size)
+		if 'f' in params:
+			self.copy_from(params['f'])
+
+	def copy_from(self, fv):
+		if not isinstance(fv, FunctionVector):
+			raise TypeError("FunctionVector copy() requires "
+				"FunctionVector input")
+		if not fv.size==self.size:
+			raise ValueError("Incompatible dimensions")
+		self.h_[:]=fv.h_[:]
+		self.a_[:]=fv.a_[:]
+		self.b_[:]=fv.b_[:]
+		self.c_[:]=fv.c_[:]
+		self.d_[:]=fv.d_[:]
+		self.e_[:]=fv.e_[:]
+
+
 
 	def set(self, **params):
 		start = int(params['start']) if 'start' in params else None

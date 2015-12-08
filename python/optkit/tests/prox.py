@@ -77,5 +77,25 @@ def test_prox(*args, **kwargs):
 			assert f.b_[-(i+1)] == 3-i
 
 
+		# copy
+		f1 = FunctionVector(m)
+		f1.copy_from(f)
+		assert all(f.a_-f1.a_ == 0)
+		assert all(f.b_-f1.b_ == 0)
+		assert all(f.c_-f1.c_ == 0)
+		assert all(f.d_-f1.d_ == 0)
+		assert all(f.e_-f1.e_ == 0)
+		assert all(f.h_-f1.h_ == 0)
+
+		# copy initalizer
+		f2 = FunctionVector(m, f=f)
+		assert all(f.a_-f1.a_ == 0)
+		assert all(f.b_-f1.b_ == 0)
+		assert all(f.c_-f1.c_ == 0)
+		assert all(f.d_-f1.d_ == 0)
+		assert all(f.e_-f1.e_ == 0)
+		assert all(f.h_-f1.h_ == 0)		
+
+
 	print "...passed"
 	return True
