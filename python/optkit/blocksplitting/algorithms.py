@@ -4,11 +4,14 @@ from optkit.projector.direct import *
 from optkit.blocksplitting.types import *
 from optkit.blocksplitting.utilities import *
 from numpy import inf 
+from numpy.linalg import norm
 
 def admm_loop(A, Proj, Prox, admm_vars, settings, info, stopping_conditions):
 	err=0
 	alpha=settings.alpha
-	PRINT_ITER = 1000/(10**settings.verbose)
+	PRINT_ITER = 10000/(10**settings.verbose)
+	if settings.verbose == 0: 
+		PRINT_ITER = settings.maxiter * 2
 
 	(m,n)=(A.size1,A.size2)
 	obj = Objectives() 							
@@ -37,7 +40,8 @@ def admm_loop(A, Proj, Prox, admm_vars, settings, info, stopping_conditions):
 
 		converged = stopping_conditions(	# stopping criteria
 			settings.rho,z, obj,res,eps,
-			gapstop=settings.gapstop)	
+			gapstop=settings.gapstop,
+			force_exact=(settings.resume and k==1))	
 
 		if settings.verbose > 0 and (k % PRINT_ITER == 0 or converged):								
 			print(iter_string(k,res,eps,obj))
@@ -59,6 +63,10 @@ def pogs(A,f,g, solver_state=None, **options):
 	assert f.size == m
 	assert g.size == n
 
+	# scope-specific copies of function vector
+	f = FunctionVector(m, f=f)
+	g = FunctionVector(n, f=g)
+
 	settings = SolverSettings(**options)
 	info = SolverInfo()
 	output = OutputVariables(m,n)
@@ -66,6 +74,14 @@ def pogs(A,f,g, solver_state=None, **options):
 	if solver_state is not None:
 		A = solver_state.A
 		z = solver_state.z
+		if not 'rho' in options and solver_state.rho is not None:
+			settings.update(rho=solver_state.rho,resume=True) 
+
+		if settings.debug:
+			print_feasibility_conditions(A, z, msg="REBOOT CONDITIONS")
+
+
+
 	else:
 		A = SolverMatrix(A)
 		z = ProblemVariables(m,n)
@@ -80,10 +96,8 @@ def pogs(A,f,g, solver_state=None, **options):
 	else: 
 		Proj = DirectProjector(A.mat, normalize=True)		
 		A.normalized=True
+		normalize_system(A, d, e, Proj.normA)
 
-
-
-	normalize_system(A, d, e, Proj.normA)
 	scale_functions(f,g,d,e)				
 
 	Prox = prox_eval(f,g) 						
@@ -91,9 +105,12 @@ def pogs(A,f,g, solver_state=None, **options):
 
 	x0=nu0=None
 	if settings.warmstart:					# get initial guess
+		# check_warmstart_settings(**options)
 		x0 = options['x0'] if 'x0' in options else None
 		nu0 = options['nu0'] if 'nu0' in options else None
-		initialize_variables(A.mat, settings.rho, z, x0, nu0)
+		if x0 is not None or nu0 is not None:
+			initialize_variables(A.mat, settings.rho, z, x0, nu0)
+
 
 	admm_loop(A.mat,Proj,Prox,z,settings,info,conditions) # execute ADMM loop
 
@@ -102,7 +119,7 @@ def pogs(A,f,g, solver_state=None, **options):
 
 
 	# TODO: update solver state if it exists already
-	if solver_state is None: solver_state = SolverState(A,z,Proj)
+	if solver_state is None: solver_state = SolverState(A,z,Proj,info.rho)
 
 	return info, output, solver_state
 

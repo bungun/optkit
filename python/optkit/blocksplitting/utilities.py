@@ -63,7 +63,7 @@ def update_objective(f, g, rho, admm_vars, obj):
 	obj.p = eval(f, z.primal12.y) + eval(g, z.primal12.x)
 	obj.d = obj.p - obj.gap
 
-def update_residuals(A, rho, admm_vars, obj, eps, res):
+def update_residuals(A, rho, admm_vars, obj, eps, res, force_exact=False):
 	z=admm_vars
 	axpby_inplace(-1, z.primal.vec, 1, z.prev.vec, z.temp.vec)
 	res.d = nrm2(z.temp.vec)
@@ -71,7 +71,7 @@ def update_residuals(A, rho, admm_vars, obj, eps, res):
 	res.p = nrm2(z.temp.vec)
 	res.gap = obj.gap
 
-	if res.p < eps.p and res.d < eps.d:
+	if (res.p < eps.p and res.d < eps.d) or force_exact:
 		copy(z.primal12.y, z.temp.y)
 		gemv('N',1,A,z.primal12.x,-1,z.temp.y)
 		res.p = nrm2(z.temp.y)
@@ -100,14 +100,15 @@ def update_tolerances(admm_vars, eps, obj):
 	eps.gap = eps.atolmn + eps.reltol * abs(obj.p)
 
 @curry
-def check_convergence(A,f,g,rho,admm_vars,obj,res,eps,gapstop=False):
+def check_convergence(A,f,g,rho,admm_vars,obj,res,eps,
+	gapstop=False, force_exact=False):
 	z=admm_vars
 	# compute gap, objective and tolerances.
 	update_objective(f, g, rho, z, obj)
 	update_tolerances(z, eps, obj)
 
     # calculate residuals (exact only if necessary).
-	exact=update_residuals(A, rho, z, obj, eps, res)
+	exact=update_residuals(A, rho, z, obj, eps, res, force_exact=force_exact)
 
 	# evaluate stopping criteria.
 	return exact and \
@@ -142,6 +143,27 @@ def adapt_rho(admm_vars, adaptive_rho_parameters, k, settings, res, eps):
 		params.delta = max(params.delta / params.GAMMA, params.DELTAMIN)
 
 
+def check_warmstart_settings(**options):
+	if 'no_warn' in options: return;
+	args = []
+	if 'x0' in options: args.append('x_guess')
+	if 'nu0' in options: args.append('nu_guess')
+	if 'rho' in options: args.append('rho')
+	msg = str('\nWarning---recommended warm start configurations:\n'
+		'Specify:'
+		'\n\t(x_guess) [good],'
+		'\n\t(x_guess, nu_guess) [better], or'
+		'\n\t(x_guess, nu_guess, rho) [best].'
+		'\nProvided:'
+		'\n\t{}\n'.format(tuple(args)))
+	if 'x0' in options and not ('nu0' in options and 'rho' in options):
+		print "HERE1"
+		print msg
+	elif 'nu0' in options and not ('x0' in options and 'rho' in options):
+		print "HERE2"
+		print msg
+
+
 
 
 def initialize_variables(A, rho, admm_vars, x0, nu0):
@@ -149,14 +171,35 @@ def initialize_variables(A, rho, admm_vars, x0, nu0):
 	if x0 is not None:
 		z.temp.x.py[:]=x0[:]
 		sync(z.temp.x, python_to_C=1)
+		div(z.de.x, z.temp.x)
 		gemv('N', 1, A, z.temp.x, 0, z.temp.y)
 		z.primal.copy_from(z.temp)
+		z.primal12.copy_from(z.temp)
+
 	if nu0 is not None:
 		z.temp.y.py[:]=nu0[:]
 		sync(z.temp.y, python_to_C=1)
+		div(z.de.y, z.temp.y)
 		gemv('T', -1, A, z.temp.y, 0, z.temp.x)
 		mul(-1./rho, z.temp.vec)
 		z.dual.copy_from(z.temp)
+
+def print_feasibility_conditions(A, admm_vars, msg):
+	z=admm_vars
+	print msg
+	print "||x||", norm(z.primal.x.py)
+	print "||y||", norm(z.primal.y.py)
+	print "||Ax-y||", norm(A.mat.py.dot(z.primal.x.py)-z.primal.y.py)
+	print "||nu||", norm(z.dual.y.py)
+	print "||mu||", norm(z.dual.x.py)
+	print "||A'nu+mu||", norm(A.mat.py.T.dot(z.dual.y.py)+z.dual.x.py)
+	"--"
+	print "||x12||", norm(z.primal12.y.py)
+	print "||y12||", norm(z.primal12.x.py)
+	print "||Ax12-y12||", norm(A.mat.py.dot(z.primal12.x.py)-z.primal12.y.py)
+	print "||nu12||", norm(z.dual12.y.py)
+	print "||mu12||", norm(z.dual12.x.py)
+	print "||A'nu12+mu12||", norm(A.mat.py.T.dot(z.dual12.y.py)+z.dual12.x.py)
 
 
 

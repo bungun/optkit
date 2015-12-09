@@ -160,20 +160,23 @@ class SolverState(object):
 				self.Proj=item
 			if isinstance(item,ProblemVariables):
 				self.z=item
+			if isinstance(item,float):
+				self.rho=item
 		if not 'A' in self.__dict__: self.A=None
 		if not 'Proj' in self.__dict__: self.Proj=None
 		if not 'z' in self.__dict__: self.z=None
-
+		if not 'rho' in self.__dict__: self.rho=None
 
 	def __str__(self):
 		return str(self.__dict__)
 
 	def isvalid(self):
-		for item in ['A','Proj','z']:
+		for item in ['A','Proj','z','rho']:
 			assert self.__dict__.has_key(item)
 		assert self.A is None != var_assert(self.A,type=SolverMatrix)
 		assert self.Proj is None != var_assert(self.Proj,type=Projector)
 		assert self.z is None != var_assert(self.z,type=ProblemVariables)
+		assert self.rho is None != var_assert(self.rho,type=float)
 		assert self.A.shape == self.Proj.A.shape
 		assert self.A.shape == self.z.blocksizes
 		return True
@@ -300,7 +303,6 @@ class SolverInfo(object):
 		self.rho = None
 
 	def update(self, **info):
-		print info
 		if 'err' in info: self.err = info['err']
 		if 'converged' in info: self.converged = info['converged']
 		if 'k' in info: self.k = info['k']
@@ -328,6 +330,8 @@ class SolverSettings(object):
 	GAPSTOP = False
 	WARM = False
 	VERBOSE = 2
+	RESUME = False
+	DEBUG = False
 	def __init__(self, **options):
 		self.alpha = self.ALPHA
 		self.maxiter = self.MAXITER
@@ -338,6 +342,8 @@ class SolverSettings(object):
 		self.gapstop = self.GAPSTOP
 		self.warmstart = self.WARM
 		self.verbose = self.VERBOSE
+		self.resume = self.RESUME 
+		self.debug = self.DEBUG
 		self.update(**options)
 	def update(self, **options):
 		if 'alpha' in options: self.alpha = options['alpha'] 
@@ -349,6 +355,8 @@ class SolverSettings(object):
 		if 'gapstop' in options: self.gapstop = options['gapstop']  
 		if 'warmstart' in options: self.warmstart = options['warmstart'] 
 		if 'verbose' in options: self.verbose = options['verbose'] 
+		if 'resume' in options: self.resume = options['resume']
+		if 'debug' in options: self.debug = options['debug']
 		self.validate()
 	def validate(self):
 		pass
@@ -356,8 +364,9 @@ class SolverSettings(object):
 		return str(self.__dict__)
 	def isvalid(self):
 		for item in ['ALPHA,','MAXITER','RHO','ATOL','RTOL',
-			'ADAPT','GAPSTOP','WARM','VERBOSE','alpha','maxiter',
-			'abstol','reltol','adaptive','gapstop','warmstart','verbose']:
+			'ADAPT','GAPSTOP','WARM','VERBOSE', 'RESUME', 'DEBUG',
+			'alpha','maxiter', 'abstol','reltol','adaptive',
+			'gapstop','warmstart', 'verbose', 'resume', 'debug']:
 			assert self.__dict__.has_key(item)
 		assert var_assert(self.ALPHA,self.alpha,self.RHO,self.rho,
 						self.ATOL, self.abstol,self.RTOl,
@@ -365,7 +374,8 @@ class SolverSettings(object):
 		assert var_assert(self.VERBOSE,self.verbose,type=(int,long))
 		assert var_assert(self.ADAPT,self.adaptive,self.GAPSTOP,
 						self.gapstop,self.WARM,self.warmstart,
-						type=(int,long,bool))
+						self.RESUME, self.resume, self.DEBUG,
+						self.debug, type=(int,long,bool))
 		return True
 
 

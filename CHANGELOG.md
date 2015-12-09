@@ -1,5 +1,5 @@
 #TODO:
--add FunctionVector sync to pogs() call
+-pogs() result printing
 -test/finalize setup.py
 -add test for vector_pow
 -OMP parallelization for C vector operations
@@ -10,5 +10,4 @@
 -Back-end encapsulation
 -Back-end switching
 -Python Sparse Linear Algebra bindings
--Warm start unit tests
 -Cone solver
