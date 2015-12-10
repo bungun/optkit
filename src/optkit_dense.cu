@@ -173,8 +173,7 @@ void
 __vector_memcpy_vv(vector * v1, const vector * v2) {
   uint grid_dim;
   if ( v1->stride == 1 && v2->stride == 1) {
-    cudaMemcpy(v1->data, v2->data, v1->size * sizeof(ok_float),
-      cudaMemcpyDefault);
+    ok_memcpy_gpu(v1->data, v2->data, v1->size * sizeof(ok_float));
   } else {
     grid_dim = calc_grid_dim(v1->size);
     __strided_memcpy<<<grid_dim, kBlockSize>>>(v1->data, v1->stride,
@@ -186,23 +185,21 @@ void
 __vector_memcpy_va(vector * v, const ok_float *y) {
   uint i;
   if (v->stride == 1) {
-    memcpy(v->data, y, v->size * sizeof(ok_float));
+    ok_memcpy_gpu(v->data, y, v->size * sizeof(ok_float));
   } else {
     for (i = 0; i < v->size; ++i)
-      cudaMemcpy(v->data + i, y + i, v->size * sizeof(ok_float),
-       cudaMemcpyDefault);
+      ok_memcpy_gpu(v->data + i, y + i, v->size * sizeof(ok_float));
   }
 }
 
 void 
 __vector_memcpy_av(ok_float *x, const vector *v) {
-  uint i;  
+  uint i; 
   if (v->stride ==1) {
-    memcpy(x, v->data, v->size * sizeof(ok_float));
+    ok_memcpy_gpu(x, v->data, v->size * sizeof(ok_float));
   } else {
     for (i = 0; i < v->size; ++i)
-      cudaMemcpy(x + i, v->data + i, v->size * sizeof(ok_float),
-       cudaMemcpyDefault);      
+      ok_memcpy_gpu(x + i, v->data + i, v->size * sizeof(ok_float));      
   }
 }
 
@@ -221,31 +218,37 @@ __vector_print(const vector * v) {
 void 
 __vector_scale(vector * v, ok_float x) {
   __thrust_vector_scale(v, x);
+  CUDA_CHECK_ERR;
 }
 
 void 
 __vector_add(vector * v1, const vector * v2) {
   __thrust_vector_add(v1, v2);
+  CUDA_CHECK_ERR;
 }
 
 void 
 __vector_sub(vector * v1, const vector * v2) {
   __thrust_vector_sub(v1, v2);
+  CUDA_CHECK_ERR;
 }
 
 void 
 __vector_mul(vector * v1, const vector * v2) {
   __thrust_vector_mul(v1, v2);
+  CUDA_CHECK_ERR;
 }
 
 void 
 __vector_div(vector * v1, const vector * v2) {
   __thrust_vector_div(v1, v2);
+  CUDA_CHECK_ERR;
 }
 
 void 
 __vector_add_constant(vector * v, const ok_float x) {
   __thrust_vector_add_constant(v, x);
+  CUDA_CHECK_ERR;
 }
 
 void 
@@ -428,14 +431,13 @@ __matrix_memcpy_ma(matrix * A, const ok_float * B,
   ok_float * row, * col;
 
   if (rowmajor == A->rowmajor) {
-    cudaMemcpy(A->data, B, A->size1 * A->size2 * sizeof(ok_float),
-      cudaMemcpyDefault);
+    ok_memcpy_gpu(A->data, B, A->size1 * A->size2 * sizeof(ok_float));
   } else if (rowmajor == CblasColMajor) {
     /* A row major, B column major */
     ok_alloc_gpu(col, A->size1);
     grid_dim = calc_grid_dim(A->size1);
     for (j = 0; j < A->size2; ++j){
-      cudaMemcpy(col, B + j * A->size1, A->size1, cudaMemcpyDefault);
+      ok_memcpy_gpu(col, B + j * A->size1, A->size1);
       __strided_memcpy<<<grid_dim, kBlockSize>>>(A->data + j,
         A->tda, col, 1, A->size1);
     }
@@ -444,7 +446,7 @@ __matrix_memcpy_ma(matrix * A, const ok_float * B,
     ok_alloc_gpu(row, A->size2);
     grid_dim = calc_grid_dim(A->size2);
     for (i = 0; i < A->size1; ++j){
-      cudaMemcpy(col, B + i * A->size1, A->size1, cudaMemcpyDefault);
+      ok_memcpy_gpu(col, B + i * A->size1, A->size1);
       __strided_memcpy<<<grid_dim, kBlockSize>>>(A->data + i,
         A->tda, row, 1, A->size2);
     }
@@ -458,8 +460,7 @@ __matrix_memcpy_am(ok_float * A, const matrix * B,
   uint i, j, grid_dim;
   ok_float * row, * col;
   if (rowmajor == B->rowmajor) {
-    cudaMemcpy(A, B->data, B->size1 * B->size2 * sizeof(ok_float),
-      cudaMemcpyDefault);
+    ok_memcpy_gpu(A, B->data, B->size1 * B->size2 * sizeof(ok_float));
   } else if (rowmajor == CblasRowMajor) {
     /* A row major, B column major */
     ok_alloc_gpu(row, B->size2);
@@ -467,7 +468,7 @@ __matrix_memcpy_am(ok_float * A, const matrix * B,
     for (i = 0; i < B->size1; ++i){
       __strided_memcpy<<<grid_dim, kBlockSize>>>(row, 1, 
         B->data + i, B->tda, B->size2);
-      cudaMemcpy(A + i * B->size2, row, B->size2, cudaMemcpyDefault);
+      ok_memcpy_gpu(A + i * B->size2, row, B->size2);
     }
     ok_free_gpu(row);
   } else {
@@ -477,7 +478,7 @@ __matrix_memcpy_am(ok_float * A, const matrix * B,
     for (j = 0; j < B->size2; ++j){
       __strided_memcpy<<<grid_dim, kBlockSize>>>(col, 1,
         B->data + j, B->tda, B->size1);
-      cudaMemcpy(A + j * B->size1, col, B->size1, cudaMemcpyDefault);
+      ok_memcpy_gpu(A + j * B->size1, col, B->size1);
     }
   }
   CUDA_CHECK_ERR;
@@ -529,8 +530,12 @@ __blas_check_handle(void * handle){
 
 void 
 __blas_make_handle(void * handle){
-  cublasHandle_t * hdl = (cublasHandle_t *) handle;
-  cublasCreate(hdl);
+  cublasStatus_t status;
+  status = cublasCreate((cublasHandle_t *) handle);
+  if (status != CUBLAS_STATUS_SUCCESS){
+    printf("CUBLAS initialization failed\n");
+    handle = OK_NULL;
+  }
 }
 
 void 

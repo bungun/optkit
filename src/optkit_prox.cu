@@ -168,7 +168,7 @@ function_vector_from_multiarray(FunctionVector * f, Function_t * h,
 
 void 
 function_vector_memcpy_va(FunctionVector * f, FunctionObj * h){
-	cudaMemcpy(f->objectives, h, f->size * sizeof(FunctionObj), cudaMemcpyDefault);
+	ok_memcpy_gpu(f->objectives, h, f->size * sizeof(FunctionObj));
 }
 
 
@@ -187,17 +187,17 @@ function_vector_memcpy_vmulti(FunctionVector * f, Function_t *h,
 	a_dev = b_dev = c_dev = d_dev = e_dev = OK_NULL;
 
 	if (h != OK_NULL)
-		cudaMemcpy(h_dev, h, f->size * sizeof(Function_t), cudaMemcpyDefault);
+		ok_memcpy_gpu(h_dev, h, f->size * sizeof(Function_t));
 	if (a != OK_NULL)
-		cudaMemcpy(a_dev, a, f->size * sizeof(ok_float), cudaMemcpyDefault);
+		ok_memcpy_gpu(a_dev, a, f->size * sizeof(ok_float));
 	if (b != OK_NULL)
-		cudaMemcpy(b_dev, b, f->size * sizeof(ok_float), cudaMemcpyDefault);
+		ok_memcpy_gpu(b_dev, b, f->size * sizeof(ok_float));
 	if (c != OK_NULL)
-		cudaMemcpy(c_dev, c, f->size * sizeof(ok_float), cudaMemcpyDefault);
+		ok_memcpy_gpu(c_dev, c, f->size * sizeof(ok_float));
 	if (d != OK_NULL)
-		cudaMemcpy(d_dev, d, f->size * sizeof(ok_float), cudaMemcpyDefault);
+		ok_memcpy_gpu(d_dev, d, f->size * sizeof(ok_float));
 	if (e != OK_NULL)
-		cudaMemcpy(e_dev, e, f->size * sizeof(ok_float), cudaMemcpyDefault);
+		ok_memcpy_gpu(e_dev, e, f->size * sizeof(ok_float));
 
 	__set_fn_vector_from_multi<<<grid_dim, kBlockSize>>>(f->objectives, 
 		a_dev, b_dev, c_dev, d_dev, e_dev, h_dev, f->size);
@@ -208,7 +208,7 @@ function_vector_memcpy_vmulti(FunctionVector * f, Function_t *h,
 void function_vector_print(FunctionVector * f){
 	size_t i;
 	FunctionObj * obj_host = (FunctionObj *) malloc(f->size * sizeof(FunctionObj));
-	cudaMemcpy(obj_host, f->objectives, f->size, cudaMemcpyDefault);
+	ok_memcpy_gpu(obj_host, f->objectives, f->size);
 	for (i = 0; i < f->size; ++i)
 		printf("h: %i, a: %0.2e, b: %0.2e, c: %0.2e, d: %0.2e, e: %0.2e\n", 
 				(int) obj_host[i].h, obj_host[i].a, obj_host[i].b, 
@@ -231,7 +231,7 @@ FuncEvalVector(const FunctionVector * f, const vector * x){
 	ok_alloc_gpu(res_dev, sizeof(ok_float));
 	FuncEval_GPU(f->objectives, x->data, x->stride, 
 		f->size, res_dev);
-	cudaMemcpy(&res, res_dev, sizeof(ok_float), cudaMemcpyDefault);
+	ok_memcpy_gpu(&res, res_dev, sizeof(ok_float));
 	return res;
 }
 

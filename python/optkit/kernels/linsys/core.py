@@ -103,7 +103,7 @@ def view(x, *range_, **viewtype):
 		pyview = x.py[rng.idx1:rng.idx2]
 		cview = make_cvector()
 		oklib.__vector_subvector(cview, x.c, rng.idx1, rng.elements)
-		return Vector(pyview, cview)
+		return Vector(pyview, cview, is_view=1)
 	elif isinstance(x, Matrix) and \
 		 len(range_) == 2 and  \
 		 istypedtuple(range_,2,tuple):
@@ -121,7 +121,7 @@ def view(x, *range_, **viewtype):
 		oklib.__matrix_submatrix(cview,x.c, 
 								 rng1.idx1, rng2.idx1, 
 								 rng1.elements, rng2.elements)		
-		return Matrix(pyview, cview)
+		return Matrix(pyview, cview, is_view=1)
 	elif isinstance(x,Matrix) and len(range_) == 1:
 		idx = range_[0]
 		cview=make_cvector()
@@ -136,12 +136,12 @@ def view(x, *range_, **viewtype):
 			if not 'row' in viewtype:
 				Warning("keyword argument `row=1`, `col=1` or `diag=1` "
 				  "not provided, assuming row view")
-		return Vector(pyview,cview)			
+		return Vector(pyview,cview, is_view=1)			
 	elif 'diag' in viewtype:
 		cview=make_cvector()
 		oklib.__matrix_diagonal(cview, x.c)
 		pyview = x.py.diagonal().copy()
-		return Vector(pyview, cview, sync_required=1)
+		return Vector(pyview, cview, sync_required=1, is_view=1)
 	else: 
 		raise TypeError(input_err)
 		return None

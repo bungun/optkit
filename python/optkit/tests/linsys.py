@@ -35,6 +35,15 @@ def test_lowlevelvectorcalls(VERBOSE_TEST=True):
 	oklib.__vector_free(w)
 	return True
 
+def test_lowlevelmatrixcalls(VERBOSE_TEST=True):
+
+	A = make_cmatrix()
+	oklib.__matrix_calloc(A, 10,  10, ok_enums.CblasRowMajor)
+	if VERBOSE_TEST:
+		oklib.__matrix_print(A)
+	oklib.__matrix_free(A)
+	return True
+
 
 def test_vector_methods(n=3,VERBOSE_TEST=True):
 	if n is None: n = 3
@@ -167,6 +176,7 @@ def test_vector_methods(n=3,VERBOSE_TEST=True):
 	ops.mul(2,c)
 	ops.sync(c)
 	c_ *=2
+
 	assert array_compare(a.py,a_, eps=TEST_EPS)
 	assert array_compare(c.py,c_, eps=TEST_EPS)
 
@@ -700,7 +710,7 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 
 def test_linsys(*args,**kwargs):
 	print "LINSYS METHODS TESTING\n\n\n\n"
-	test = 0
+	tests = 0
 	args = list(args)
 	verbose = '--verbose' in args
 	(m,n)=kwargs['shape'] if 'shape' in kwargs else (None,None)
@@ -708,11 +718,14 @@ def test_linsys(*args,**kwargs):
 
 
 	if '--allsub' in args:
-		args+=['--veclow','--vec','--mat','--blas','--linalg']
+		args+=['--lowvec','--lowmat','--vec','--mat','--blas','--linalg']
 
-	if '--veclow' in args:
+	if '--lowvec' in args:
 		tests += 1
 		assert test_lowlevelvectorcalls(VERBOSE_TEST=verbose)
+	if '--lowmat' in args:
+		tests += 1
+		assert test_lowlevelmatrixcalls(VERBOSE_TEST=verbose)
 	if '--vec' in args:
 		tests += 1
 		assert test_vector_methods(n=n,VERBOSE_TEST=verbose)
@@ -727,6 +740,12 @@ def test_linsys(*args,**kwargs):
 		assert test_linalg_methods(n=n,A_in=A,VERBOSE_TEST=verbose)
 
 	print "{} sub-tests completed".format(tests)
+	if tests == 0:
+		print str("no linear systems tests specified."
+			"\nuse optional arguments:\n"
+			"--lowvec,\n'--lowmat',\n--vec,\n--mat,\n--blas,\n"
+			"--linalg,\nor\n--allsub\n to specify tests.")
+
 
 	print "...passed"
 	return True

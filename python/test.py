@@ -16,9 +16,9 @@ def main(*args, **kwargs):
 	for t in tests: passing += t(*args, **kwargs)
 	print "{}/{} tests passed".format(passing, len(tests))
 	if len(tests)==0:
-		print str("no tests specified:\nuse optional arguments:\n"
+		print str("no tests specified.\nuse optional arguments:\n"
 			"--linsys,\n--prox,\n--proj,\n--equil,\n"
-			"--norm,\n--block,\n\n--pogs,\nor\n--all\n to specify tests.")
+			"--norm,\n--block,\n--pogs,\nor\n--all\n to specify tests.")
 
 
 if __name__== "__main__":

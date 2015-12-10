@@ -35,6 +35,11 @@ const unsigned int kMaxGridSize = 65535u;
     CUDA_CHECK_ERR; \
   } while (0)
 
+#define ok_memcpy_gpu(x, y, n) \
+  do { \
+    cudaMemcpy(x, y, n, cudaMemcpyDefault); \
+    CUDA_CHECK_ERR; \
+  } while (0)
 
 #define ok_free_gpu(x) \
   do { \

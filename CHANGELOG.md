@@ -6,6 +6,7 @@ v0.0.1
 -test/finalize setup.py
 -GPU Dense Linear Algebra
 -GPU separable prox
+-automate testing with nose2
 
 v0.0.2
 -Back-end encapsulation

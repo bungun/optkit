@@ -202,9 +202,8 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("z primal", z.primal.vec)
 	PRINT("z dual", z.dual.vec)
 	
-
-	assert np.max(np.abs((z.primal.x.py-x.py))) <= 0.
-	assert np.max(np.abs((z.dual.y.py+y.py/settings.rho))) <= TEST_EPS
+	assert np.max(np.abs((z.primal.x.py-(x.py/z.de.x.py)))) <= 0.
+	assert np.max(np.abs((z.dual.y.py+(y.py/z.de.y.py)/settings.rho))) <= TEST_EPS
 	res_p = np.linalg.norm(A.mat.py.dot(z.primal.x.py)-z.primal.y.py)
 	res_d = np.linalg.norm(A.mat.py.T.dot(z.dual.y.py)+z.dual.x.py)
 	assert res_p <= TEST_EPS

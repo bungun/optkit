@@ -6,7 +6,7 @@ from optkit.utils import make_cvector, make_cmatrix, \
 from numpy import zeros, ndarray
 
 class Vector(object):
-	def __init__(self, *x, **syncargs):
+	def __init__(self, *x, **flags):
 		valid = istypedtuple(x,1,int)
 		if len(x)==1:
 			if isinstance(x[0],ndarray):
@@ -25,6 +25,7 @@ class Vector(object):
 					"-one 1-dimensional `numpy.ndarray` and"
 					" one `optkit.types.lowlevel.ok_vector` with"
 					" compatible dimensions)")
+			self.is_view = None
 			self.on_gpu = None
 			self.sync_required = None
 			self.py = None
@@ -32,8 +33,9 @@ class Vector(object):
 			self.size = None
 			return
 
-		self.on_gpu = GPU_FLAG
-		self.sync_required = GPU_FLAG
+		self.is_view = 'is_view' in flags
+		self.on_gpu = GPU_FLAG 
+		self.sync_required = GPU_FLAG 
 		if len(x)==1:
 			if istypedtuple(x,1,int):
 				data = zeros(x,dtype=FLOAT_CAST)				
@@ -48,7 +50,7 @@ class Vector(object):
 			self.py=x[0]
 			self.c=x[1]
 			self.size=x[1].size
-			self.sync_required = 'sync_required' in syncargs
+			self.sync_required |= 'sync_required' in flags
 
 	def __str__(self):
 		return str("PY: {},\nC: {},\nSIZE: {}\n"
@@ -57,10 +59,11 @@ class Vector(object):
 					  	self.on_gpu, self.sync_required))
 
 	def __del__(self):
+		if self.is_view: return
 		if self.on_gpu: release_cvector(self.c)
 
 	def isvalid(self):
-		for item in ['on_gpu','sync_required','size','c','py']:
+		for item in ['on_gpu','sync_required','is_view','size','c','py']:
 			assert self.__dict__.has_key(item)
 			assert self.__dict__[item] is not None
 		if self.on_gpu:
@@ -75,7 +78,7 @@ class Vector(object):
 
 
 class Matrix(object):
-	def __init__(self, *A):
+	def __init__(self, *A, **flags):
 
 		# args are (int, int)
 		valid = istypedtuple(A,2,int)
@@ -102,6 +105,7 @@ class Matrix(object):
 					"-one 2-dimensional `numpy.ndarray` and"
 					" one `optkit.types.lowlevel.ok_matrix`"
 					" of compatible sizes.")
+			self.is_view = None
 			self.on_gpu = None
 			self.sync_required = None
 			self.py = None
@@ -114,7 +118,7 @@ class Matrix(object):
 			return
 
 
-
+		self.is_view = 'is_view' in flags
 		self.on_gpu = GPU_FLAG
 		self.sync_required = GPU_FLAG
 		if len(A)==1 or istypedtuple(A,2,int):
@@ -147,6 +151,7 @@ class Matrix(object):
 
 
 	def __del__(self):
+		if self.is_view: return
 		if self.on_gpu: release_cmatrix(self.c)
 
 
