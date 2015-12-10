@@ -269,7 +269,7 @@ __DEVICE__ inline ok_float ProxZero(ok_float v, ok_float rho) {
 }
 
 // Evaluates the proximal operator of f.
-__DEVICE__ ok_float ProxEval(const FunctionObj *f_obj, 
+__DEVICE__ ok_float ProxEval(const FunctionObj * f_obj, 
 									ok_float v, ok_float rho) {
 	const ok_float a = f_obj->a, b = f_obj->b, c = f_obj->c, 
 				   d = f_obj->d, e = f_obj->e;
@@ -380,7 +380,7 @@ __DEVICE__ inline ok_float FuncZero(ok_float x) {
 }
 
 /* Evaluates the function f. */
-__DEVICE__ ok_float FuncEval(const FunctionObj *f_obj, ok_float x) {
+__DEVICE__ ok_float FuncEval(const FunctionObj * f_obj, ok_float x) {
   
   ok_float dx = f_obj->d * x;
 	ok_float ex = f_obj->e * x * x / 2;

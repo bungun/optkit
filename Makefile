@@ -11,7 +11,7 @@ LDFLAGS_=-lstdc++ -lm
 
 # CUDA Flags
 CUXX=nvcc
-CUXXFLAGS=-arch=sm_50 -Xcompiler -fPIC
+CUXXFLAGS=-arch=sm_50 -Xcompiler -fPIC -I. -I./include 
 CULDFLAGS_=-lstdc++ -lm
 
 # Check system args

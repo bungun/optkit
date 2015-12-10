@@ -43,6 +43,7 @@ typedef enum CBLAS_SIDE CBLAS_SIDE_t;
     #ifndef NAN
 	    #define NAN ((ok_float)0x7ff8000000000000) 
     #endif
+    #define OK_FLOAT_MAX FLT_MAX
 #else
     #define CBLAS(x) cblas_s ## x
     typedef float ok_float;
@@ -50,6 +51,7 @@ typedef enum CBLAS_SIDE CBLAS_SIDE_t;
     #ifndef NAN
 	    #define NAN ((ok_float)0x7fc00000) 
     #endif
+    #define OK_FLOAT_MAX DBL_MAX
 #endif
 
 #ifndef INFINITY
