@@ -184,7 +184,7 @@ def initialize_variables(A, rho, admm_vars, x0, nu0):
 		mul(-1./rho, z.temp.vec)
 		z.dual.copy_from(z.temp)
 
-def print_feasibility_conditions(A, admm_vars, msg):
+def print_feasibility_conditions(A, admm_vars, msg=None):
 	z=admm_vars
 	print msg
 	print "||x||", norm(z.primal.x.py)

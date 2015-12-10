@@ -700,6 +700,7 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 
 def test_linsys(*args,**kwargs):
 	print "LINSYS METHODS TESTING\n\n\n\n"
+	test = 0
 	args = list(args)
 	verbose = '--verbose' in args
 	(m,n)=kwargs['shape'] if 'shape' in kwargs else (None,None)
@@ -710,15 +711,22 @@ def test_linsys(*args,**kwargs):
 		args+=['--veclow','--vec','--mat','--blas','--linalg']
 
 	if '--veclow' in args:
+		tests += 1
 		assert test_lowlevelvectorcalls(VERBOSE_TEST=verbose)
 	if '--vec' in args:
+		tests += 1
 		assert test_vector_methods(n=n,VERBOSE_TEST=verbose)
 	if '--mat' in args:
+		tests += 1
 		assert test_matrix_methods(m=m,n=n,VERBOSE_TEST=verbose)
 	if '--blas' in args:
+		tests += 1
 		assert test_blas_methods(m=m,n=n,A_in=A,VERBOSE_TEST=verbose)
 	if '--linalg' in args:
+		tests += 1
 		assert test_linalg_methods(n=n,A_in=A,VERBOSE_TEST=verbose)
+
+	print "{} sub-tests completed".format(tests)
 
 	print "...passed"
 	return True

@@ -281,6 +281,7 @@ __set_matrix_all(matrix * A, ok_float x) {
     A->tda, A->size1, A->size2, A->rowmajor);
 }
 
+
 __global__ void
 __matrix_add_constant_diag(ok_float * data, ok_float x, size_t tda){
   uint i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -386,6 +387,10 @@ __matrix_view_array(matrix * A, const ok_float *base, size_t n1,
   A->tda = (ord == CblasRowMajor) ? n2 : n1;
   A->data = (ok_float *) base;
   A->rowmajor = ord;
+}
+
+void __matrix_set_all(matrix * A, ok_float x) {
+  __set_matrix_all(A, x);
 }
 
 
@@ -803,6 +808,13 @@ __block_trsv(ok_float * A, uint iter, uint n,
       __get_matrix(A, global_row, global_col + i, tda, rowmajor) =
           __get_matrix(A12, row, i, kSmTda, rowmajor);
   }
+}
+
+
+/* __host__ (i.e., CPU) method for Non-block Cholesky decomposition */
+/* replaced by __global__ (i.e., GPU) method `__block_chol()` above */
+void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
+  printf("Method `linalg_cholesky_decomp_noblk()` not implemented for GPU\n");
 }
 
 
