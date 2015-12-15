@@ -3,7 +3,7 @@ from optkit.utils import ndarray_pointer, make_cvector, make_cmatrix, \
 							istypedtuple
 from optkit.libs import oklib
 from optkit.defs import DIMCHECK_FLAG, TYPECHECK_FLAG
-from ctypes import c_void_p
+from ctypes import c_void_p, byref
 from numpy import ndarray 
 import sys
 # from toolz import curry
@@ -26,9 +26,10 @@ import sys
 # 		self.lib.__blas_destroy_handle(self.blas_handle)
 
 blas_handle = c_void_p()
-oklib.__blas_make_handle(blas_handle)
+oklib.__blas_make_handle(byref(blas_handle))
 # oklib.__blas_destroy_handle(blas_handle)
 # ok_ctx = LinAlgContext(oklib)
+
 
 
 def elemwise_inverse():
@@ -230,14 +231,19 @@ def sync(*vars, **py2c):
 			if not x.sync_required: return
 			if isinstance(x,Vector):
 				if python_to_C:
-					oklib.__vector_memcpy_va(x.c, ndarray_pointer(x.py))
+					oklib.__vector_memcpy_va(x.c, ndarray_pointer(x.py),
+						x.py.strides[0]/x.py.itemsize)
 				else:
-					oklib.__vector_memcpy_av(ndarray_pointer(x.py), x.c)
+					oklib.__vector_memcpy_av(ndarray_pointer(x.py), x.c, 
+						x.py.strides[0]/x.py.itemsize)
 			else:
+				order = enums.CblasRowMajor if x.py.flags.c_contiguous \
+					else enums.CblasColMajor
+
 				if python_to_C:
-					oklib.__vector_memcpy_ma(x.c, ndarray_pointer(x.py))
+					oklib.__matrix_memcpy_ma(x.c, ndarray_pointer(x.py), order)
 				else:
-					oklib.__vector_memcpy_am(ndarray_pointer(x.py), x.c)
+					oklib.__matrix_memcpy_am(ndarray_pointer(x.py), x.c, order)
 
 
 def print_var(x, python=False):
@@ -267,7 +273,7 @@ def dot(x,y, python=False,
 		raise ValueError("optkit.kernels.linsys.dot---"
 			   "incompatible Vector dimensions\n"
 			   "x: {}, y: {}".format(x.size, y.size))
-	return oklib.__blas_dot(blas_handle, x.c,y.c)
+ 	return oklib.__blas_dot(blas_handle, x.c,y.c)
 
 def asum(x, python=False, typecheck=True):
 	if typecheck and not isinstance(x, Vector):

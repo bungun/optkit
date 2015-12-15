@@ -1,6 +1,8 @@
 #TODO:
 
 v0.0.1
+-move asserts after verbose prints in testing
+-error checking throughout
 -32/64-bit flags & checks in python bindings
 -pogs() result printing
 -test/finalize setup.py

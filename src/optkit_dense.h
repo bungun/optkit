@@ -25,8 +25,8 @@ void __vector_set_all(vector * v, ok_float x);
 void __vector_subvector(vector * v_out, vector * v_in, size_t offset, size_t n);
 void __vector_view_array(vector * v, ok_float * base, size_t n);
 void __vector_memcpy_vv(vector * v1, const vector * v2);
-void __vector_memcpy_va(vector * v, const ok_float * y);
-void __vector_memcpy_av(ok_float * x, const vector * v);
+void __vector_memcpy_va(vector * v, const ok_float * y, size_t stride_y);
+void __vector_memcpy_av(ok_float * x, const vector * v, size_t stride_x);
 void __vector_print(const vector *v);
 void __vector_scale(vector * v, ok_float x);
 void __vector_add(vector * v1, const vector * v2);
@@ -59,7 +59,7 @@ void __matrix_set_all(matrix * A, ok_float x);
 void __matrix_memcpy_mm(matrix * A, const matrix *B);
 void __matrix_memcpy_ma(matrix * A, const ok_float *B, const CBLAS_ORDER_t ord);
 void __matrix_memcpy_am(ok_float * A, const matrix *B, const CBLAS_ORDER_t ord);
-void __matrix_print(const matrix * A);
+void __matrix_print(matrix * A);
 void __matrix_scale(matrix * A, ok_float x);
 
 int matrix_order_compat(const matrix * A, const matrix * B, const char * nm_A, 

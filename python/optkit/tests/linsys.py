@@ -5,21 +5,39 @@ from optkit.libs import oklib
 from optkit.kernels import core as ops
 from optkit.tests.defs import TEST_EPS
 import numpy as np
-from ctypes import c_void_p
+from ctypes import c_void_p, byref
+from operator import and_
+from toolz import curry 
 
 VEC_ASSERT = lambda *v : var_assert(*v,type=Vector)
 MAT_ASSERT = lambda *A : var_assert(*A,type=Matrix)
+
+@curry 
+def rel_compare(eps, first, second):
+	if first == 0 and second == 0: return True
+	return abs(first-second)/max(abs(first), abs(second)) < eps
 
 def array_compare(a1,a2,eps=0.):
 	assert isinstance(a1,np.ndarray)
 	assert isinstance(a2,np.ndarray)
 	assert np.squeeze(a1).shape == np.squeeze(a2).shape
-	return np.max(np.abs(a1-a2)) <= eps
+
+	# check absolute tolerance
+	valid = np.max(np.abs(a1-a2)) <= eps
+
+	# check relative tolerance
+	if not valid and eps > 0:
+		rcomp = rel_compare(eps)
+		valid |= reduce(and_, map(rcomp, 
+			[a1.item(i) for i in xrange(a1.size)],
+			[a2.item(i) for i in xrange(a2.size)]))
+
+	return valid
 
 def test_lowlevelvectorcalls(VERBOSE_TEST=True):
 
 	blas_handle = c_void_p()
-	oklib.__blas_make_handle(blas_handle)
+	oklib.__blas_make_handle(byref(blas_handle))
 
 	v = make_cvector()
 	w = make_cvector()
@@ -85,8 +103,7 @@ def test_vector_methods(n=3,VERBOSE_TEST=True):
 	PRINTVAR(a)
 
 	PRINT("python to c")
-	# TODO - return/print pointers
-	# orig_pointer = a.c.data
+	orig_pointer = a.c.data
 	ops.sync(a,python_to_C=1)
 	# assert a.c.data == orig_pointer
 	PRINT(a.py)
@@ -227,8 +244,8 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	# modify clone to match change to data in CPU case
 	if not A.on_gpu: A_ += 1
 
-	orig_pointer = A.py.ctypes._as_parameter_.value
 	# load C value to python (expect overwrite in GPU case)
+	orig_pointer = A.py.ctypes._as_parameter_.value
 	ops.sync(A)
 	assert A.py.ctypes._as_parameter_.value == orig_pointer
 	assert array_compare(A.py,A_, eps=TEST_EPS)
@@ -277,9 +294,10 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 
 	PRINT("a_col +=3.5")
 	ops.add(3.5,a_col)
-	ops.sync(a_col)
+	ops.sync(a_col) 	
 	ac_ += 3.5
-	assert array_compare(a_col.py,ac_, eps=TEST_EPS)
+
+	assert array_compare(a_col.py, ac_, eps=TEST_EPS)
 	assert array_compare(A.py,A_, eps=TEST_EPS)
 
 	PRINT("a_col:")
@@ -325,7 +343,7 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	ops.div(2.1,a_diag)
 	ad_ /= 2.1
 	assert all(ad_ == 0) or not array_compare(a_diag.py,ad_, eps=TEST_EPS)
-	assert all(ad_ == 0) or not array_compare(A.py,A_, eps=TEST_EPS)
+	assert all(ad_ == 0) or A.sync_required or not array_compare(A.py,A_, eps=TEST_EPS)
 
 
 	PRINT("a_diag:")
@@ -336,7 +354,7 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	PRINT(A.py)
 
 	PRINT("\nsync diagonal")
-	ops.sync(a_diag)
+	ops.sync(a_diag, A)
 	for i in xrange(min(m,n)):
 		A_[i,i] /= 2.1
 
@@ -439,7 +457,7 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	PRINT("Copy: col-major numpy ndarray->row-major Matrix")
 	A3_*=2.7
 	ops.copy(A3_,A2)
-	ops.sync(A3)
+	ops.sync(A2)
 	assert array_compare(A2.py,A3_,eps=0.)
 
 	# PRINT("Copy: row-major numpy ndarray->col-major Matrix")
@@ -577,6 +595,31 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	PRINTVAR(d)
 	PRINT(d.py)
 
+	PRINT("\nBLAS trsv")
+	# random lower triangular matrix L
+	L_ = np.random.rand(n,n)
+	xrand_ = np.random.rand(n)
+	for i in xrange(n):
+		# diagonal entries ~1 (keep condition number reasonable)
+		L_[i,i]/=10**np.log(n)
+		L_[i,i]+=1.
+		# upper triangle = 0
+		for j in xrange(n):
+			if j>i: L_[i,j]*=0
+
+	xrand = Vector(xrand_)
+	L = Matrix(L_)
+
+	PRINT("y = inv(L) * x [py]")
+	pysol = np.linalg.solve(L_,xrand_)
+	PRINT("y = inv(L) * x [c]")
+	oklib.__blas_trsv(ops.blas_handle, ok_enums.CblasLower, 
+		ok_enums.CblasNoTrans, ok_enums.CblasNonUnit,  L.c, xrand.c)
+	ops.sync(xrand)
+
+	assert array_compare(xrand.py, pysol, eps=TEST_EPS);
+	PRINT(pysol)
+	PRINTVAR(xrand)
 
 
 	PRINT("\nLEVEL 3")
@@ -605,7 +648,47 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	PRINTVAR(B)
 	PRINT(B.py)
 
+	PRINT("\n BLAS syrk")
+	PRINT("0.5B += 0.2A^TA")
+	B_ *= 0
+	B_ += 0.2*A_.T.dot(A_) 
+	oklib.__blas_syrk(ops.blas_handle, ok_enums.CblasLower,
+		ok_enums.CblasTrans, 0.2, A.c, 0, B.c)
+	ops.sync(A,B)
+
+	for i in xrange(n):
+		for j in xrange(n):
+			if j<=i: continue
+			B_[i,j]*=0
+			B.py[i,j]*=0
+
+	assert array_compare(A.py,A_, eps=0.)
+	assert array_compare(B.py,B_, eps=TEST_EPS)
+	PRINT(B_)
+	PRINTVAR(B)
+
+
+	if not B.on_gpu:
+		PRINT("\n BLAS trsm")
+		PRINT("inv(L)*B")
+		ops.sync(L)
+		L_ = np.copy(L.py)
+		B_ = np.linalg.inv(L_).dot(B_)
+		oklib.__blas_trsm(ops.blas_handle, ok_enums.CblasLeft, 
+			ok_enums.CblasLower, ok_enums.CblasNoTrans, 
+			ok_enums.CblasNonUnit,
+			1., L.c, B.c)
+		ops.sync(B)
+
+		assert array_compare(B.py,B_, eps=TEST_EPS)
+		PRINT(B_)
+		PRINTVAR(B)
+
+
 	return True
+
+
+
 
 def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 	if n is None: n=10
@@ -660,6 +743,7 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 
 
 	PRINT("\nCholesky factorization")
+	PRINT("original array:")
 	PRINTVAR(E)
 		
 	ops.cholesky_factor(E)
@@ -676,6 +760,7 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 			if j > i: continue
 			L_c[i,j]=E.py[i,j]
 
+
 	PRINT(L_py - L_c)
 	assert array_compare(L_py,L_c, eps=TEST_EPS)
 
@@ -688,22 +773,13 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 	ops.cholesky_solve(E, x)
 	ops.sync(x)
 
+	assert array_compare(x.py, pysol, eps=TEST_EPS)
+
 	PRINT("after")
 	PRINT(x.py)
 
 	PRINT("solve diff (C - py)")
 	PRINT(x.py - pysol)
-
-	res = np.max(np.abs(x.py-pysol))
-	tol = TEST_EPS
-	while res>tol:
-		tol*=10
-	try:
-		assert tol < 1e-2
-	except:			
-		print "Python and C cholesky solve results disagree:"
-		print "||x_c-x_py||_infty = {}", res
-
 
 
 	return True
@@ -739,11 +815,12 @@ def test_linsys(*args,**kwargs):
 		tests += 1
 		assert test_linalg_methods(n=n,A_in=A,VERBOSE_TEST=verbose)
 
-	print "{} sub-tests completed".format(tests)
+	terminal_char = '' if tests == 1 else 's'
+	print "{} sub-test{} completed".format(tests, terminal_char)
 	if tests == 0:
 		print str("no linear systems tests specified."
 			"\nuse optional arguments:\n"
-			"--lowvec,\n'--lowmat',\n--vec,\n--mat,\n--blas,\n"
+			"--lowvec,\n--lowmat,\n--vec,\n--mat,\n--blas,\n"
 			"--linalg,\nor\n--allsub\n to specify tests.")
 
 

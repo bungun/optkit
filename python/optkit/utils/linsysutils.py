@@ -15,7 +15,7 @@ def make_cvector(x=None, copy_data=True):
 			oklib.__vector_view_array(x_, ndarray_pointer(x), x.size)
 		else:
 			oklib.__vector_calloc(x_, x.size)
-			oklib.__vector_memcpy_va(x_, ndarray_pointer(x))	 
+			oklib.__vector_memcpy_va(x_, ndarray_pointer(x), 1)	 
 		return x_
 	else:
 		return None
@@ -49,6 +49,6 @@ def release_cvector(x):
 
 def release_cmatrix(A):
 	if isinstance(A, ok_matrix):
-		oklib.__matrix_free(x)
+		oklib.__matrix_free(A)
 
 

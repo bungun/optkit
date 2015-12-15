@@ -24,7 +24,7 @@ extern "C" {
 
 
 #define OK_NULL 0
-#define ok_free(x) free(x); x=OK_NULL; PRINT_DEBUG("variable freed\n")
+#define ok_free(x) free(x); x=OK_NULL
 
 
 typedef unsigned int uint;

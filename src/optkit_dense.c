@@ -70,23 +70,23 @@ void __vector_memcpy_vv(vector * v1, const vector * v2) {
   	}
 }
 
-void __vector_memcpy_va(vector * v, const ok_float *y) {
+void __vector_memcpy_va(vector * v, const ok_float *y, size_t stride_y) {
 	uint i;
-	if (v->stride == 1) {
+	if (v->stride == 1 && stride_y == 1) {
 		memcpy(v->data, y, v->size * sizeof(ok_float));
 	} else {
 		for (i = 0; i < v->size; ++i)
-			__vector_set(v, i, y[i]);
+			__vector_set(v, i, y[i * stride_y]);
 	}
 }
 
-void __vector_memcpy_av(ok_float *x, const vector *v) {
+void __vector_memcpy_av(ok_float *x, const vector *v, size_t stride_x) {
 	uint i;
-	if (v->stride ==1) {
+	if (v->stride ==1 && stride_x == 1) {
 		memcpy(x, v->data, v->size * sizeof(ok_float));
 	} else {
 		for (i = 0; i < v->size; ++i)
-			x[i] = __vector_get(v,i);
+			x[i * stride_x] = __vector_get(v,i);
 	}
 }
 
@@ -276,7 +276,7 @@ void __matrix_memcpy_am(ok_float * A, const matrix * B,
   }
 }
 
-void __matrix_print(const matrix * A) {
+void __matrix_print(matrix * A) {
   uint i,j;
   for (i = 0; i < A->size1; ++i) {
     for (j = 0; j < A->size2; ++j)
