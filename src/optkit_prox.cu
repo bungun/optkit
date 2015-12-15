@@ -84,16 +84,16 @@ ProxEval_GPU(const FunctionObj * f, ok_float rho,
 }
 
 /* vectorwise function evaluation using thrust::binary_function */
-void 
+ok_float 
 FuncEval_GPU(const FunctionObj * f, const ok_float * x, 
-	size_t stride, size_t n, ok_float * res) {
+	size_t stride, size_t n) {
 	strided_range<thrust::device_ptr<const FunctionObj> > f_strided(
 		thrust::device_pointer_cast(f),
 		thrust::device_pointer_cast(f + n), 1);
 	strided_range<thrust::device_ptr<const ok_float> > x_strided(
 		thrust::device_pointer_cast(x),
 		thrust::device_pointer_cast(x + stride * n), stride);
-	* res = thrust::inner_product(f_strided.begin(), f_strided.end(),
+	return thrust::inner_product(f_strided.begin(), f_strided.end(),
       							 x_strided.begin(), (ok_float) 0, 
       							 thrust::plus<ok_float>(), FuncEvalF());
 }
@@ -151,8 +151,8 @@ function_vector_free(FunctionVector * f){
 
 void function_vector_view_array(FunctionVector * f, 
                                 FunctionObj * h, size_t n){
-	f->size=n;
-	f->objectives= (FunctionObj *) h;
+	f->size = n;
+	f->objectives = (FunctionObj *) h;
 }
 
 void 
@@ -160,7 +160,7 @@ function_vector_from_multiarray(FunctionVector * f, Function_t * h,
 									 ok_float * a, ok_float * b, 
 									 ok_float * c, ok_float * d, 
 									 ok_float * e, size_t n){
-	f->size=n;
+	f->size = n;
 	function_vector_alloc(f, n);
 	function_vector_memcpy_vmulti(f, h, a, b, c, d, e);
 }
@@ -187,33 +187,45 @@ function_vector_memcpy_vmulti(FunctionVector * f, Function_t *h,
 	a_dev = b_dev = c_dev = d_dev = e_dev = OK_NULL;
 
 	if (h != OK_NULL)
+		ok_alloc_gpu(h_dev, f->size * sizeof(Function_t));
 		ok_memcpy_gpu(h_dev, h, f->size * sizeof(Function_t));
 	if (a != OK_NULL)
+		ok_alloc_gpu(a_dev, f->size * sizeof(ok_float));		
 		ok_memcpy_gpu(a_dev, a, f->size * sizeof(ok_float));
 	if (b != OK_NULL)
+		ok_alloc_gpu(b_dev, f->size * sizeof(ok_float));		
 		ok_memcpy_gpu(b_dev, b, f->size * sizeof(ok_float));
 	if (c != OK_NULL)
+		ok_alloc_gpu(c_dev, f->size * sizeof(ok_float));		
 		ok_memcpy_gpu(c_dev, c, f->size * sizeof(ok_float));
 	if (d != OK_NULL)
+		ok_alloc_gpu(d_dev, f->size * sizeof(ok_float));		
 		ok_memcpy_gpu(d_dev, d, f->size * sizeof(ok_float));
 	if (e != OK_NULL)
+		ok_alloc_gpu(e_dev, f->size * sizeof(ok_float));		
 		ok_memcpy_gpu(e_dev, e, f->size * sizeof(ok_float));
 
 	__set_fn_vector_from_multi<<<grid_dim, kBlockSize>>>(f->objectives, 
 		a_dev, b_dev, c_dev, d_dev, e_dev, h_dev, f->size);
+
+	if (h_dev != OK_NULL) ok_free_gpu(h_dev);
+	if (a_dev != OK_NULL) ok_free_gpu(a_dev);
+	if (b_dev != OK_NULL) ok_free_gpu(b_dev);
+	if (c_dev != OK_NULL) ok_free_gpu(c_dev);
+	if (d_dev != OK_NULL) ok_free_gpu(d_dev);
+	if (e_dev != OK_NULL) ok_free_gpu(e_dev);
 
 }
 
 
 void function_vector_print(FunctionVector * f){
 	size_t i;
-	FunctionObj * obj_host = (FunctionObj *) malloc(f->size * sizeof(FunctionObj));
-	ok_memcpy_gpu(obj_host, f->objectives, f->size);
+	FunctionObj obj_host[f->size];
+	ok_memcpy_gpu(&obj_host, f->objectives, f->size * sizeof(FunctionObj));
 	for (i = 0; i < f->size; ++i)
 		printf("h: %i, a: %0.2e, b: %0.2e, c: %0.2e, d: %0.2e, e: %0.2e\n", 
 				(int) obj_host[i].h, obj_host[i].a, obj_host[i].b, 
 				obj_host[i].c, obj_host[i].d, obj_host[i].e);
-	ok_free(obj_host);
 }
 
 
@@ -226,13 +238,8 @@ ProxEvalVector(const FunctionVector * f, ok_float rho,
 
 ok_float 
 FuncEvalVector(const FunctionVector * f, const vector * x){
-	ok_float res;
-	ok_float * res_dev;
-	ok_alloc_gpu(res_dev, sizeof(ok_float));
-	FuncEval_GPU(f->objectives, x->data, x->stride, 
-		f->size, res_dev);
-	ok_memcpy_gpu(&res, res_dev, sizeof(ok_float));
-	return res;
+	return FuncEval_GPU(f->objectives, x->data, x->stride, 
+		f->size);
 }
 
 
