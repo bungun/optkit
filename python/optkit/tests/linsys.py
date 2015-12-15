@@ -115,69 +115,69 @@ def test_vector_methods(n=3,VERBOSE_TEST=True):
 	ops.add(1,a)
 	ops.sync(a)
 	a_ += 1
-	assert array_compare(a.py,a_, eps=TEST_EPS)
-
 	PRINTVAR(a)
+	assert array_compare(a.py,a_, eps=TEST_EPS)
 
 	PRINT("\nScalar multiplication: a *= 5")
 	ops.mul(5,a)
 	ops.sync(a)
 	a_ *= 5
-	assert array_compare(a.py,a_, eps=TEST_EPS)
-
 	PRINTVAR(a)
+	assert array_compare(a.py,a_, eps=TEST_EPS)
 
 	PRINT("\nScalar division: a /= 2.3")
 	ops.div(2.3,a)
 	ops.sync(a)
 	a_ /= 2.3
-	assert array_compare(a.py,a_, eps=TEST_EPS)
-
 	PRINTVAR(a)
+	assert array_compare(a.py,a_, eps=TEST_EPS)
 
 	b_ = np.random.rand(n)
 	PRINT("\nAllocation (from numpy array {})".format(b_))
 	PRINT("---variable `b`---")
 	b=Vector(np.copy(b_))
+	PRINTVAR(b)
 	assert VEC_ASSERT(b)
 	assert array_compare(b.py,b_, eps=TEST_EPS)
-	PRINTVAR(b)
+
 
 	PRINT("\nElementwise vector addition: a += b")
 	ops.add(b,a)
 	ops.sync(a,b)
 	a_ += b_
-	assert array_compare(a.py,a_, eps=TEST_EPS)
-	assert array_compare(b.py,b_, eps=TEST_EPS)
 	PRINT("a:")
 	PRINTVAR(a)
 	PRINT("b:")
 	PRINTVAR(b)
+	assert array_compare(a.py,a_, eps=TEST_EPS)
+	assert array_compare(b.py,b_, eps=TEST_EPS)
 
 
 	PRINT("\nElementwise vector multiplication: a *= b")
 	ops.mul(b,a)
 	ops.sync(a,b)
 	a_ *= b_
+	PRINTVAR(a)
 	assert array_compare(a.py,a_, eps=TEST_EPS)
 	assert array_compare(b.py,b_, eps=TEST_EPS)
-	PRINTVAR(a)
+
 
 	PRINT("\nElementwise vector division: a /= b")
 	ops.div(b,a)
 	ops.sync(a,b)
 	a_ /= b_
+	PRINTVAR(a)
 	assert array_compare(a.py,a_, eps=TEST_EPS)
 	assert array_compare(b.py,b_, eps=TEST_EPS)
-	PRINTVAR(a)
+
 
 	PRINT("\nElementwise vector subtraction: a-= b")
 	ops.sub(b,a)
 	ops.sync(a,b)
 	a_ -= b_
+	PRINTVAR(a)
 	assert array_compare(a.py,a_, eps=TEST_EPS)
 	assert array_compare(b.py,b_, eps=TEST_EPS)
-	PRINTVAR(a)
 
 
 	PRINT("\nView")
@@ -186,21 +186,29 @@ def test_vector_methods(n=3,VERBOSE_TEST=True):
 	c=ops.view(a,(0,2))
 	ops.sync(c)
 	c_ = a_[0:2]
-	assert array_compare(c.py,c_, eps=0.)
 	PRINTVAR(c)
+	assert array_compare(c.py,c_, eps=0.)
 
 	PRINT("a_view *=2")
 	ops.mul(2,c)
 	ops.sync(c)
 	c_ *=2
 
-	assert array_compare(a.py,a_, eps=TEST_EPS)
-	assert array_compare(c.py,c_, eps=TEST_EPS)
-
 	PRINT("a_view:")
 	PRINTVAR(c)
 	PRINT("a:")
 	PRINTVAR(a)	
+	assert array_compare(a.py,a_, eps=TEST_EPS)
+	assert array_compare(c.py,c_, eps=TEST_EPS)
+
+
+	PRINT("Set all")
+	val = 0.2
+	ops.set_all(val, a)
+	ops.sync(a)
+	PRINTVAR(a)
+	PRINT(a.py)
+	assert all(a.py == 0.2)
 
 	return True
 
@@ -247,10 +255,10 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	# load C value to python (expect overwrite in GPU case)
 	orig_pointer = A.py.ctypes._as_parameter_.value
 	ops.sync(A)
-	assert A.py.ctypes._as_parameter_.value == orig_pointer
-	assert array_compare(A.py,A_, eps=TEST_EPS)
 	PRINT(A.py)
 	PRINTVAR(A)
+	assert A.py.ctypes._as_parameter_.value == orig_pointer
+	assert array_compare(A.py,A_, eps=TEST_EPS)
 
 	PRINT("python to c")
 	PRINT("A += 1 (Python)")
@@ -297,15 +305,15 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	ops.sync(a_col) 	
 	ac_ += 3.5
 
-	assert array_compare(a_col.py, ac_, eps=TEST_EPS)
-	assert array_compare(A.py,A_, eps=TEST_EPS)
-
 	PRINT("a_col:")
 	PRINTVAR(a_col)
 	PRINT(a_col.py)
 	PRINT("A:")
 	PRINTVAR(A)
 	PRINT(A.py)
+	assert array_compare(a_col.py, ac_, eps=TEST_EPS)
+	assert array_compare(A.py,A_, eps=TEST_EPS)
+
 
 	PRINT("\n---variable `a_row`---")
 	PRINT("row view: A[1]:")
@@ -319,10 +327,6 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	ops.sub(5.34,a_row)
 	ops.sync(a_row)
 	ar_ -= 5.34
-	assert array_compare(a_row.py,ar_, eps=TEST_EPS)
-	assert array_compare(A.py,A_, eps=TEST_EPS)
-
-
 
 	PRINT("a_row:")
 	PRINTVAR(a_row)
@@ -330,6 +334,9 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	PRINT("A:")
 	PRINTVAR(A)
 	PRINT(A.py)
+	assert array_compare(a_row.py,ar_, eps=TEST_EPS)
+	assert array_compare(A.py,A_, eps=TEST_EPS)
+
 
 	PRINT("\n---variable `a_diag'---")
 	PRINT("diag view: A:")
@@ -342,30 +349,26 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	PRINT("a_diag /=2.1")
 	ops.div(2.1,a_diag)
 	ad_ /= 2.1
-	assert all(ad_ == 0) or not array_compare(a_diag.py,ad_, eps=TEST_EPS)
-	assert all(ad_ == 0) or A.sync_required or not array_compare(A.py,A_, eps=TEST_EPS)
-
-
 	PRINT("a_diag:")
 	PRINTVAR(a_diag)
 	PRINT(a_diag.py)
 	PRINT("A:")
 	PRINTVAR(A)
 	PRINT(A.py)
+	assert all(ad_ == 0) or not array_compare(a_diag.py,ad_, eps=TEST_EPS)
+	assert all(ad_ == 0) or A.sync_required or not array_compare(A.py,A_, eps=TEST_EPS)
+
 
 	PRINT("\nsync diagonal")
 	ops.sync(a_diag, A)
 	for i in xrange(min(m,n)):
 		A_[i,i] /= 2.1
 
-
-	assert array_compare(a_diag.py,ad_, eps=TEST_EPS)
-	assert array_compare(A.py,A_, eps=TEST_EPS)
-
-
 	PRINT("a_diag:")
 	PRINTVAR(a_diag)
 	PRINT(a_diag.py)
+	assert array_compare(a_diag.py,ad_, eps=TEST_EPS)
+	assert array_compare(A.py,A_, eps=TEST_EPS)
 
 
 	PRINT("\nsubmatrix")
@@ -381,9 +384,6 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	ops.div(3.5,a_sub)
 	ops.sync(a_sub)
 	as_ /= 3.5
-	assert array_compare(a_sub.py,as_, eps=TEST_EPS)
-	assert array_compare(A.py,A_, eps=TEST_EPS)
-
 
 	PRINT("a_sub:")
 	PRINTVAR(a_sub)
@@ -391,6 +391,8 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	PRINT("A:")
 	PRINTVAR(A)
 	PRINT(A.py)
+	assert array_compare(a_sub.py,as_, eps=TEST_EPS)
+	assert array_compare(A.py,A_, eps=TEST_EPS)
 
 
 	PRINT("\nAllocation (from {} by {} np.random.rand array)".format(n,n))
@@ -410,10 +412,10 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	ops.mul(2.,B)
 	ops.sync(B)
 	B_ *= 2.
-	assert array_compare(B.py,B_, eps=TEST_EPS)
 
 	PRINT(B.py)
 	PRINTVAR(B)
+	assert array_compare(B.py,B_, eps=TEST_EPS)
 
 
 	PRINT("\nAllocation (from {}x{} np.random.rand array)".format(m,n))
@@ -438,13 +440,13 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	ops.copy(B,D)
 	ops.sync(B,D)
 	D_[:]=B_[:]
+
+	PRINT(D.py)
+	PRINTVAR(D)
 	assert array_compare(B.py,D.py, eps=0.)
 	assert array_compare(B.py,B_, eps=TEST_EPS)
 	assert array_compare(D.py,D_, eps=TEST_EPS)
 
-
-	PRINT(D.py)
-	PRINTVAR(D)
 
 	PRINT("\nndarray->Matrix Copy")
 
@@ -526,23 +528,23 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	PRINT("\nVector-vector dot products")
 	PRINT("(a,b)")
 	res = ops.dot(a,b)
-	assert abs(res-np.dot(a_,b_)) <= TEST_EPS
 	PRINT(res)
+	assert abs(res-np.dot(a_,b_)) <= TEST_EPS
 
 	PRINT("\n(a,a)")
 	res =ops.dot(a,a)
-	assert abs(res-np.dot(a_,a_)) <= TEST_EPS
 	PRINT(res)
+	assert abs(res-np.dot(a_,a_)) <= TEST_EPS
 
 	PRINT("\n2-norm: ||a||_2")
 	res = ops.nrm2(a)
-	assert abs(res-np.linalg.norm(a_,2)) <= TEST_EPS
 	PRINT(res)
+	assert abs(res-np.linalg.norm(a_,2)) <= TEST_EPS
 
 	PRINT("\n1-norm: ||a||_1")
 	res=ops.asum(a)
-	assert abs(res-np.linalg.norm(a_,1)) <= TEST_EPS
 	PRINT(res)
+	assert abs(res-np.linalg.norm(a_,1)) <= TEST_EPS
 
 
 	PRINT("\nBLAS axpy:")
@@ -554,9 +556,9 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	ops.axpy(3,a,b)
 	ops.sync(a,b)
 	b_ += 3*a_
+	PRINTVAR(b)
 	assert array_compare(a.py,a_, eps=TEST_EPS)
 	assert array_compare(b.py,b_, eps=TEST_EPS)
-	PRINTVAR(b)
 
 	PRINT("\nLEVEL 2")
 
@@ -566,12 +568,12 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	d = Vector(np.random.rand(m))
 	assert VEC_ASSERT(d)
 	d_ = np.copy(d.py)
-	assert array_compare(d.py,d_, eps=0.)
 
 	PRINT("d:")
 	PRINTVAR(d)
 	PRINT("a:")
 	PRINTVAR(a)
+	assert array_compare(d.py,d_, eps=0.)
 
 
 
@@ -579,21 +581,21 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	ops.gemv('N',2.5,A,a,0,d)
 	ops.sync(A,a,d)
 	d_ = 2.5*A_.dot(a_)
+	PRINTVAR(d)
+	PRINT(d.py)
 	assert array_compare(A.py,A_, eps=0.)
 	assert array_compare(a.py,a_, eps=0.)
 	assert array_compare(d.py,d_, eps=TEST_EPS)
-	PRINTVAR(d)
-	PRINT(d.py)
 
 	PRINT("d := 3Aa + 2d")
 	ops.gemv('N',3,A,a,2,d)
 	ops.sync(A,a,d)
 	d_ = 3*A_.dot(a_)+2*d_
+	PRINTVAR(d)
+	PRINT(d.py)
 	assert array_compare(A.py,A_, eps=0.)
 	assert array_compare(a.py,a_, eps=0.)
 	assert array_compare(d.py,d_, eps=TEST_EPS)
-	PRINTVAR(d)
-	PRINT(d.py)
 
 	PRINT("\nBLAS trsv")
 	# random lower triangular matrix L
@@ -617,9 +619,9 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 		ok_enums.CblasNoTrans, ok_enums.CblasNonUnit,  L.c, xrand.c)
 	ops.sync(xrand)
 
-	assert array_compare(xrand.py, pysol, eps=TEST_EPS);
 	PRINT(pysol)
 	PRINTVAR(xrand)
+	assert array_compare(xrand.py, pysol, eps=TEST_EPS);
 
 
 	PRINT("\nLEVEL 3")
@@ -634,19 +636,19 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	ops.gemm('T','N',2.13,A,A,1.05,B)
 	ops.sync(A,B)
 	B_ = 2.13*A_.T.dot(A_) + 1.05*B_
-	assert array_compare(A.py,A_, eps=0.)
-	assert array_compare(B.py,B_, eps=TEST_EPS)
 	PRINTVAR(B)
 	PRINT(B.py)
+	assert array_compare(A.py,A_, eps=0.)
+	assert array_compare(B.py,B_, eps=TEST_EPS)
 
 	PRINT("B := A^TA")
 	ops.gemm('T','N',1,A,A,0,B)
 	ops.sync(A,B)
 	B_ = A_.T.dot(A_)
-	assert array_compare(A.py,A_, eps=0.)
-	assert array_compare(B.py,B_, eps=TEST_EPS)
 	PRINTVAR(B)
 	PRINT(B.py)
+	assert array_compare(A.py,A_, eps=0.)
+	assert array_compare(B.py,B_, eps=TEST_EPS)
 
 	PRINT("\n BLAS syrk")
 	PRINT("0.5B += 0.2A^TA")
@@ -662,10 +664,10 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 			B_[i,j]*=0
 			B.py[i,j]*=0
 
-	assert array_compare(A.py,A_, eps=0.)
-	assert array_compare(B.py,B_, eps=TEST_EPS)
 	PRINT(B_)
 	PRINTVAR(B)
+	assert array_compare(A.py,A_, eps=0.)
+	assert array_compare(B.py,B_, eps=TEST_EPS)
 
 
 	if not B.on_gpu:
@@ -680,9 +682,9 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 			1., L.c, B.c)
 		ops.sync(B)
 
-		assert array_compare(B.py,B_, eps=TEST_EPS)
 		PRINT(B_)
 		PRINTVAR(B)
+		assert array_compare(B.py,B_, eps=TEST_EPS)
 
 
 	return True
@@ -773,13 +775,12 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 	ops.cholesky_solve(E, x)
 	ops.sync(x)
 
-	assert array_compare(x.py, pysol, eps=TEST_EPS)
-
 	PRINT("after")
 	PRINT(x.py)
 
 	PRINT("solve diff (C - py)")
 	PRINT(x.py - pysol)
+	assert array_compare(x.py, pysol, eps=TEST_EPS)
 
 
 	return True

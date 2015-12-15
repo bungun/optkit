@@ -6,11 +6,7 @@ from optkit.defs import DIMCHECK_FLAG, TYPECHECK_FLAG
 from ctypes import c_void_p, byref
 from numpy import ndarray 
 import sys
-# from toolz import curry
 
-# in-place operations
-
-# TODO: gpu version
 # TODO: wrap in class---takes lib as init argument
 # TODO: change functions to templates with lib
 
@@ -382,6 +378,8 @@ def gemm(tA, tB, alpha, A, B, beta, C,
 	Bt = enums.CblasTrans if tB =='T' else enums.CblasNoTrans
 
 	oklib.__blas_gemm(blas_handle, At, Bt, alpha, A.c, B.c, beta, C.c)
+
+
 
 def cholesky_factor(A, python=False, dimcheck=DIMCHECK_FLAG):
 	if not isinstance(A, Matrix):

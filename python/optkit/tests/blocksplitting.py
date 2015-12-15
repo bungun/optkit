@@ -197,26 +197,29 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("\nVARIABLE MANIPULATION AND STORAGE")
 	PRINT("---------------------------------\n")
 
-	PRINT("\nVARIABLE INITIALIZATION")
+	PRINT("\nVARIABLE INITIALIZATION (i.e., WARM START)")
 	initialize_variables(A.mat, settings.rho, z, x.py, y.py)
 	PRINT("z primal", z.primal.vec)
 	PRINT("z dual", z.dual.vec)
+
+	res_p = np.linalg.norm(A.mat.py.dot(z.primal.x.py)-z.primal.y.py)
+	res_d = np.linalg.norm(A.mat.py.T.dot(z.dual.y.py)+z.dual.x.py)
+	PRINT("primal feasibility at step k=0: ", res_p)
+	PRINT("dual feasibility at step k=0: ", res_p)
 	
 	assert np.max(np.abs((z.primal.x.py-(x.py/z.de.x.py)))) <= 0.
 	assert np.max(np.abs((z.dual.y.py+(y.py/z.de.y.py)/settings.rho))) <= TEST_EPS
-	res_p = np.linalg.norm(A.mat.py.dot(z.primal.x.py)-z.primal.y.py)
-	res_d = np.linalg.norm(A.mat.py.T.dot(z.dual.y.py)+z.dual.x.py)
 	assert res_p <= TEST_EPS
 	assert res_d <= TEST_EPS
 
 
 	PRINT("\nVARIABLE UNSCALING")
 	unscale_output(settings.rho, z, output)		
+	PRINT("output vars:", output)
 	assert np.max(np.abs((z.primal12.x.py*e_-output.x))) <= TEST_EPS
 	assert np.max(np.abs((z.primal12.y.py/d_-output.y))) <= TEST_EPS
 	assert np.max(np.abs((-settings.rho*z.dual12.x.py/e_-output.mu))) <= TEST_EPS
 	assert np.max(np.abs((-settings.rho*z.dual12.y.py*d_-output.nu))) <= TEST_EPS
-	PRINT("output vars:", output)
 
 
 
@@ -257,9 +260,9 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT(HLINE)
 	PRINT("\nITERATE: z_prev = z^k")
 	z.prev.copy_from(z.primal)
-	assert all(z.primal.vec.py-z.prev.vec.py==0)
 	PRINT(z.prev)
 	PRINT(z.primal)
+	assert all(z.primal.vec.py-z.prev.vec.py==0)
 
 	PRINT(HLINE)
 	PRINT("\nPROX EVALUAION")

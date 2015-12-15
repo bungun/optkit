@@ -33,7 +33,7 @@ def dense_l2_equilibration(A, A_out, d, e):
 			val **=-0.5
 			d.py[i]=val
 			mul(val,a)
-		sync(d,python_to_C=True)
+		sync(d, python_to_C=True)
 	else:
 		set_all(1,d)
 		for j in xrange(n):
@@ -43,6 +43,8 @@ def dense_l2_equilibration(A, A_out, d, e):
 			val **=-0.5
 			e.py[j]=val
 			mul(val,a)
+		sync(e, python_to_C=True)
+
 
 
 
@@ -67,7 +69,7 @@ def sinkhornknopp_equilibration(A, A_out, d, e):
 	(m,n) = A_out.shape
 
 	copy(A, A_out)
-	set_all(1,d)
+	set_all(1, d)
 
 
 
@@ -85,11 +87,13 @@ def sinkhornknopp_equilibration(A, A_out, d, e):
 	# d = 1./ A_out e
 	for k in xrange(NUMITER):
 		gemv('T',1,A_out,d,0,e)
+		sync(e)
 
 		e.py[:]**=-1
 		sync(e,python_to_C=True)
 
 		gemv('N',1,A_out,e,0,d)
+		sync(d)
 
 		d.py[:]**=-1
 		sync(d,python_to_C=True)

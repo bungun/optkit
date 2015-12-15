@@ -2,6 +2,7 @@ import numpy as np
 from optkit.types import Matrix, Vector
 from optkit.utils.pyutils import println,printvoid, var_assert
 from optkit.equilibration import *
+from optkit.kernels import core as linops
 from optkit.tests.defs import TEST_EPS
 from operator import and_
 
@@ -21,6 +22,7 @@ def dense_equil_test(equil_method,A_in=None,VERBOSE_TEST=True):
 	A_out = Matrix(np.zeros_like(A.py))
 	A_orig= np.copy(A.py)
 
+
 	PRINT("m: {}\tn: {}".format(m1,n1))
 
 	d = Vector(m1)
@@ -33,15 +35,30 @@ def dense_equil_test(equil_method,A_in=None,VERBOSE_TEST=True):
 
 	PRINT("row norms A:")
 	for i in xrange(m1):
-		PRINT(i, ": ", np.linalg.norm(A.py[i,:]))
+		PRINT("{}: {}".format(i, np.linalg.norm(A.py[i,:])))
 	PRINT("column norms A:")
 	for j in xrange(n1):
-		PRINT(j, ": ", np.linalg.norm(A.py[:,j]))
+		PRINT("{}: {}".format(j, np.linalg.norm(A.py[:,j])))
 
 	PRINT("d: ", d.py)
 	PRINT("e: ", e.py)
-	equil_method(A,A_out,d,e)
-	PRINT("\AFTER")
+	equil_method(A, A_out, d, e)
+	linops.sync(A, A_out, d, e)
+
+
+	PRINT("\nAFTER")
+
+
+	PRINT("row {}-norms A:".format(PNORM))
+	for i in xrange(m1):
+		PRINT("{}: {}".format(i, np.linalg.norm(A_out.py[i,:],PNORM)))
+	PRINT("column {}-norms A:".format(PNORM))
+	for j in xrange(n1):
+		PRINT("{}: {}".format(j, np.linalg.norm(A_out.py[:,j],PNORM)))
+
+
+	PRINT("d: ", d.py)
+	PRINT("e: ", e.py)
 
 	# equilibration should only change output matrix
 	assert reduce(and_,map(lambda x: x==0, [dij for di \
@@ -51,15 +68,6 @@ def dense_equil_test(equil_method,A_in=None,VERBOSE_TEST=True):
 	# verify A_out = DAE
 	xrand = np.random.rand(n1)
 	assert all((A_out.py.dot(xrand)-d.py*A_orig.dot(e.py*xrand)) <= TEST_EPS)
-
-
-
-	PRINT("row {}-norms A:".format(PNORM))
-	for i in xrange(m1):
-		PRINT(i, ": ", np.linalg.norm(A_out.py[i,:],PNORM))
-	PRINT("column {}-norms A:".format(PNORM))
-	for j in xrange(n1):
-		PRINT(j, ": ", np.linalg.norm(A_out.py[:,j],PNORM))
 
 
 	PRINT("FAT MATRIX")
@@ -88,15 +96,27 @@ def dense_equil_test(equil_method,A_in=None,VERBOSE_TEST=True):
 
 	PRINT("row {}-norms A:".format(PNORM))
 	for i in xrange(m2):
-		PRINT(i, ": ", np.linalg.norm(B.py[i,:],PNORM))
+		PRINT("{}: {}".format(i, np.linalg.norm(B.py[i,:],PNORM)))
 	PRINT("column {}-norms A:".format(PNORM))
 	for j in xrange(n2):
-		PRINT(j, ": ", np.linalg.norm(B.py[:,j],PNORM))
+		PRINT("{}: {}".format(j, np.linalg.norm(B.py[:,j],PNORM)))
 
 	PRINT("d: ", d.py)
 	PRINT("e: ", e.py)
-	equil_method(B,B_out,d,e)
+	equil_method(B, B_out, d, e)
+	linops.sync(B, B_out, d, e)
 
+	PRINT("\nAFTER")
+
+	PRINT("row norms A:")
+	for i in xrange(m2):
+		PRINT("{}: {}".format(i, np.linalg.norm(B_out.py[i,:])))
+	PRINT("column norms A:")
+	for j in xrange(n2):
+		PRINT("{}: {}".format(j, np.linalg.norm(B_out.py[:,j])))
+
+	PRINT("d: ", d.py)
+	PRINT("e: ", e.py)
 
 	# equilibration should only change output matrix
 	assert reduce(and_,map(lambda x: x==0, [dij for \
@@ -106,20 +126,6 @@ def dense_equil_test(equil_method,A_in=None,VERBOSE_TEST=True):
 	# verify B_out = DBE
 	xrand = np.random.rand(n2)
 	assert all((B_out.py.dot(xrand)-d.py*B_orig.dot(e.py*xrand)) <= TEST_EPS)
-
-
-
-	PRINT("\AFTER")
-
-	PRINT("row norms A:")
-	for i in xrange(m2):
-		PRINT(i, ": ", np.linalg.norm(B_out.py[i,:]))
-	PRINT("column norms A:")
-	for j in xrange(n2):
-		PRINT(j, ": ", np.linalg.norm(B_out.py[:,j]))
-
-	PRINT("d: ", d.py)
-	PRINT("e: ", e.py)
 
 
 	return True

@@ -301,6 +301,8 @@ class SolverInfo(object):
 		self.k = 0
 		self.obj = inf
 		self.rho = None
+		self.setup_time = inf
+		self.solve_time = inf
 
 	def update(self, **info):
 		if 'err' in info: self.err = info['err']
@@ -311,6 +313,21 @@ class SolverInfo(object):
 
 	def __str__(self):
 		return str(self.__dict__)
+
+	def print_status(self):
+		if self.err > 0:
+			status_string = "Error"
+		elif self.converged:
+			status_string = "Converged"
+		else:
+			status_string = "Inaccurate"
+		print "***********************************************"
+		print "\tSOLVER STATUS: ", status_string
+		print "\tOBJECTIVE: ", self.obj
+		print "\tITERATIONS: ", self.k
+		print "\tSETUP TIME: ", self.setup_time
+		print "\tSOLVE TIME: ", self.solve_time
+		print "***********************************************\n"
 
 	def isvalid(self):
 		for item in ['err','converged','k','obj','rho']:

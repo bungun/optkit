@@ -5,6 +5,7 @@ from optkit.blocksplitting.types import *
 from optkit.blocksplitting.utilities import *
 from numpy import inf 
 from numpy.linalg import norm
+from time import time
 
 def admm_loop(A, Proj, Prox, admm_vars, settings, info, stopping_conditions):
 	err=0
@@ -59,6 +60,8 @@ def admm_loop(A, Proj, Prox, admm_vars, settings, info, stopping_conditions):
 def pogs(A,f,g, solver_state=None, **options):
 	err = 0
 
+	t_start = time()							# start setup timer
+
 	(m,n) = A.shape
 	assert f.size == m
 	assert g.size == n
@@ -112,14 +115,22 @@ def pogs(A,f,g, solver_state=None, **options):
 			initialize_variables(A.mat, settings.rho, z, x0, nu0)
 
 
-	admm_loop(A.mat,Proj,Prox,z,settings,info,conditions) # execute ADMM loop
+	info.setup_time = t_start - time()		# stop setup timer
+	
+	t_start = time() 						# start solver timer
 
+	admm_loop(A.mat,Proj,Prox,z,settings,info,conditions) # execute ADMM loop
+	
+	info.solve_time = t_start - time() 		# stop solver timer
 									
 	unscale_output(info.rho, z, output)		# unscale system
 
 
 	# TODO: update solver state if it exists already
 	if solver_state is None: solver_state = SolverState(A,z,Proj,info.rho)
+
+	if settings.verbose > 0: info.print_status
+
 
 	return info, output, solver_state
 

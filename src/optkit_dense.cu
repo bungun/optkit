@@ -86,8 +86,8 @@ extern "C" {
 /* VECTOR helper methods for CUDA */
 __global__ void 
 __set_vector(ok_float * data, ok_float val, size_t stride, size_t size) {
-  uint i, tid = blockIdx.x * blockDim.x + threadIdx.x;
-  for (i = tid; i < size; i += gridDim.x * blockDim.x)
+  uint i, thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+  for (i = thread_id; i < size; i += gridDim.x * blockDim.x)
     data[i * stride] = val;
 }
 
