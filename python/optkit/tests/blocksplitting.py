@@ -20,7 +20,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 
 	PRINT=println if VERBOSE_TEST else printvoid
-	PRINTVAR=ops.print_var if VERBOSE_TEST else printvoid
+	PRINTVAR=print_var if VERBOSE_TEST else printvoid
 
 	if isinstance(A_in,np.ndarray):
 		A = Matrix(A_in)
@@ -88,6 +88,9 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 	PRINT("\nEQUILIBRATE")
 	if not A.equilibrated: equilibrate(A, d, e)
+	A.sync()
+	sync(d, e)
+
 	PRINT("A: ", A)
 	PRINT("d: ", d)
 	PRINT("e: ", e)
@@ -101,6 +104,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("\nPROJECTOR")
 	Proj = DirectProjector(A.mat, normalize=True)	
 	A.normalized=True	
+	A.sync()
 	PRINT("ProjA: ", Proj)
 	assert var_assert(Proj,type=DirectProjector)
 
@@ -115,6 +119,8 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 	norm_de_before = np.linalg.norm(d.py)*np.linalg.norm(e.py)
 	normalize_system(A, d, e, normA=Proj.normA)
+	A.sync()
+	sync(d, e)
 	norm_de_after = np.linalg.norm(d.py)*np.linalg.norm(e.py)
 
 	xrand = np.random.rand(n)
@@ -179,6 +185,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT(np.linalg.norm(y.py-A.mat.py.dot(x.py)))
 
 	Proj(x,y,x_out,y_out)
+	sync(x, y, x_out, y_out)
 
 	PRINT("PROJECT:")
 	PRINT("||x||_2, {} \t ||y||_2: {}".format(
@@ -199,6 +206,8 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 	PRINT("\nVARIABLE INITIALIZATION (i.e., WARM START)")
 	initialize_variables(A.mat, settings.rho, z, x.py, y.py)
+	z.sync()
+
 	PRINT("z primal", z.primal.vec)
 	PRINT("z dual", z.dual.vec)
 
@@ -260,6 +269,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT(HLINE)
 	PRINT("\nITERATE: z_prev = z^k")
 	z.prev.copy_from(z.primal)
+	sync(z.prev.vec, z.primal.vec)
 	PRINT(z.prev)
 	PRINT(z.primal)
 	assert all(z.primal.vec.py-z.prev.vec.py==0)
@@ -275,6 +285,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	yout_ = prox_eval_python(f,settings.rho,yarg_,func='Abs')
 
 	Prox(settings.rho,z)
+	z.sync()
 
 	assert np.max(np.abs(z.primal12.x.py-xout_)) <= TEST_EPS
 	assert np.max(np.abs(z.primal12.y.py-yout_)) <= TEST_EPS
@@ -290,6 +301,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 
 	project_primal(Proj,z,alpha=settings.alpha)
+	z.sync()
 	assert np.linalg.norm(A.mat.py.dot(z.primal.x.py)-z.primal.y.py) <= TEST_EPS
 	assert np.linalg.norm(A.mat.py.T.dot(z.dual.y.py)+z.dual.x.py) <= TEST_EPS
 
@@ -311,6 +323,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	zt1_ = zt_+(settings.alpha*z12_+(1-settings.alpha)*z_)-z1_
 	zt12_ = z12_-z_+zt_
 	update_dual(z,alpha=settings.alpha)
+	z.sync()
 	assert all(np.abs(z.dual.vec.py-zt1_) <= TEST_EPS)
 	assert all(np.abs(z.dual12.vec.py-zt12_) <= TEST_EPS)
 
@@ -376,6 +389,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	rho_before = settings.rho
 	if settings.adaptive:
 		adapt_rho(z, rhopar, 0, settings, res, eps)
+		z.sync()
 	z_after = np.copy(z.dual.vec.py)
 	rho_after = settings.rho
 	assert all(z_after/z_before-rho_before/rho_after <= TEST_EPS) or \

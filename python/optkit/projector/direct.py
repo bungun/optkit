@@ -9,6 +9,7 @@ import numpy as np
 # forms chol(I+A'A) or chol(I+AA')
 def make_projector(A, normalize=True):
 	L = gramian(A) # L = A'A or AA'
+	sync(L)	
 
 	normA = 1.
 	mean_diag = asum(diag(L))/A.mindim

@@ -48,6 +48,7 @@ def gramian(A):
 	(t1,t2) = ('T','N') if A.skinny else ('N','T')
 	AA = Matrix(A.mindim,A.mindim)
 	gemm(t1, t2, 1, A, A, 0, AA) 	
+	sync(AA)
 	return AA
 	
 

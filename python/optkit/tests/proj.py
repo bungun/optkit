@@ -1,5 +1,6 @@
 import numpy as np
 from optkit.types import Matrix, Vector
+from optkit.kernels.linsys.core import sync
 from optkit.projector import DirectProjector
 from optkit.utils.pyutils import println, printvoid, var_assert
 from optkit.tests.defs import TEST_EPS
@@ -9,6 +10,7 @@ def direct_proj_test(m,n,A=None,normalize=False,PRINT=lambda x : None):
 	A = Matrix(np.random.rand(m,n)) if A is None else Matrix(A)
 	ProjA = DirectProjector(A,normalize=normalize)
 	assert var_assert(ProjA, type=DirectProjector)
+	sync(A) #(since potentially modified by projector normalization)
 
 	x = Vector(np.random.rand(n))
 	y = Vector(np.random.rand(m))
@@ -23,15 +25,16 @@ def direct_proj_test(m,n,A=None,normalize=False,PRINT=lambda x : None):
 	PRINT(np.linalg.norm(y.py-A.py.dot(x.py)))
 
 	PRINT("NORM A (from projector): ", ProjA.normA)
-	ProjA(x,y,x_out,y_out)
+	ProjA(x, y, x_out, y_out)
+	sync(x, y, x_out, y_out)
 
 	PRINT("PROJECT:")
 	PRINT("||x||_2, {} \t ||y||_2: {}".format(
 		np.linalg.norm(x_out.py), np.linalg.norm(y_out.py)))
 	PRINT("||Ax-y||_2:")
 	res = np.linalg.norm(y_out.py-A.py.dot(x_out.py))
-	assert res <= TEST_EPS
 	PRINT(res)
+	assert res <= TEST_EPS
 	return True
 
 def projector_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):

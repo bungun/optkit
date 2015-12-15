@@ -15,6 +15,7 @@
 - automate testing with nose2
 - license
 - cite POGS
+- storage for equilibrated matrices and factorized projectors
 
 ###v0.0.2 (targets)
 - Back-end encapsulation

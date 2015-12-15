@@ -169,16 +169,14 @@ def check_warmstart_settings(**options):
 def initialize_variables(A, rho, admm_vars, x0, nu0):
 	z=admm_vars
 	if x0 is not None:
-		z.temp.x.py[:]=x0[:]
-		sync(z.temp.x, python_to_C=1)
+		copy(x0, z.temp.x)
 		div(z.de.x, z.temp.x)
 		gemv('N', 1, A, z.temp.x, 0, z.temp.y)
 		z.primal.copy_from(z.temp)
 		z.primal12.copy_from(z.temp)
 
 	if nu0 is not None:
-		z.temp.y.py[:]=nu0[:]
-		sync(z.temp.y, python_to_C=1)
+		copy(nu0, z.temp.y)
 		div(z.de.y, z.temp.y)
 		gemv('T', -1, A, z.temp.y, 0, z.temp.x)
 		mul(-1./rho, z.temp.vec)

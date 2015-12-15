@@ -116,6 +116,10 @@ class BlockVector(object):
 	def __str__(self):
 		return reduce(add,["\n\t\t{}: {}".format(k,self.__dict__[k]) for k in self.__dict__])
 
+	def sync(self, py2c=False):
+		if py2c: sync(self.vec, python_to_C = True)
+		else: sync(self.vec)
+
 
 
 class BlockMatrix(object):
@@ -138,8 +142,10 @@ class SolverMatrix(object):
 		self.equilibrated = False
 		self.normalized = False
 		self.norm = nan
+
 	def __str__(self):
 		return str(self.__dict__)
+
 	def isvalid(self):
 		assert isinstance(self.orig,ndarray)
 		assert isinstance(self.mat, optkit.Matrix)
@@ -150,6 +156,10 @@ class SolverMatrix(object):
 		assert self.shape == self.mat.shape
 		assert self.shape == self.orig.shape
 		return True
+
+	def sync(self, py2c=False):
+		sync(self.mat)
+
 
 class SolverState(object):
 	def __init__(self, *data):
@@ -193,8 +203,10 @@ class ProblemVariables(object):
 		self.de = BlockVector(m,n)
 		self.size=m+n
 		self.blocksizes=(m,n)
+
 	def __str__(self):
 		return reduce(add,["\n\t{}: {}".format(k,self.__dict__[k]) for k in self.__dict__])
+
 	def isvalid(self):
 		assert isinstance(self.size,int)
 		assert isinstance(self.blocksizes,tuple)
@@ -207,6 +219,17 @@ class ProblemVariables(object):
 			assert self.__dict__[item].size==self.size
 			assert self.__dict__[item].blocksizes==self.blocksizes			
 		return True
+
+	def sync(self, py2c=False):
+		self.primal.sync(py2c)
+		self.dual.sync(py2c)
+		self.primal12.sync(py2c)
+		self.dual12.sync(py2c)
+		self.prev.sync(py2c)
+		self.temp.sync(py2c)
+		self.de.sync(py2c)
+
+
 class OutputVariables(object):
 	def __init__(self,m,n):
 		self.x = np.zeros(n)

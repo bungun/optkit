@@ -55,7 +55,8 @@ def copy(orig, dest, python=False):
 	elif isinstance(orig, ndarray) and isinstance(dest,Vector):
 		if orig.size != dest.size: raise ValueError(
 			"incompatible array shapes for copy")
-		oklib.__vector_memcpy_va(dest.c,ndarray_pointer(orig))
+		oklib.__vector_memcpy_va(dest.c,ndarray_pointer(orig),
+			orig.strides[0]/orig.itemsize)
 	elif isinstance(orig, ndarray) and isinstance(dest,Matrix):
 		if orig.shape != dest.shape: raise ValueError(
 			"incompatible array shapes for copy")

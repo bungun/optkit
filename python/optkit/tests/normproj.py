@@ -1,7 +1,7 @@
 import numpy as np
 from optkit.utils.pyutils import println,printvoid
 from optkit.types import Matrix, Vector
-from optkit.kernels import copy
+from optkit.kernels import copy, sync
 from optkit.projector import DirectProjector
 from optkit.equilibration import *
 from optkit.tests.proj import direct_proj_test
@@ -44,24 +44,29 @@ def normalize_and_project_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	assert direct_proj_test(m,n,A.py,PRINT=PRINT)
 
 	copy(A,A_equil)
+	sync(A_equil)
 	PRINT("\nORIGINAL MATRIX, normalized")
 	assert direct_proj_test(m,n,A_equil.py,normalize=True,PRINT=PRINT)
 
 
 	PRINT("\nL2-EQUILIBRATED MATRIX")
 	dense_l2_equilibration(A,A_equil,d,e)
+	sync(A_equil)
 	assert direct_proj_test(m,n,A_equil.py,PRINT=PRINT)
 
 	PRINT("\nL2-EQUILIBRATED MATRIX, normalized")
 	dense_l2_equilibration(A,A_equil,d,e)
+	sync(A_equil)
 	assert direct_proj_test(m,n,A_equil.py,normalize=True,PRINT=PRINT)
 
 
 	PRINT("\nSINKHORN-EQUILIBRATED MATRIX")
 	sinkhornknopp_equilibration(A,A_equil,d,e)
+	sync(A_equil)
 	assert direct_proj_test(m,n,A_equil.py,PRINT=PRINT)	
 
 	PRINT("\nSINKHORN-EQUILIBRATED MATRIX, normalized")
+	sync(A_equil)
 	sinkhornknopp_equilibration(A,A_equil,d,e)
 	assert direct_proj_test(m,n,A_equil.py,normalize=True,PRINT=PRINT)	
 
@@ -78,25 +83,30 @@ def normalize_and_project_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	assert direct_proj_test(m,n,A.py.T,PRINT=PRINT)
 
 	copy(A,A_equil)
+	sync(A_equil)
 	PRINT("\nORIGINAL MATRIX, normalized")
 	assert direct_proj_test(m,n,A_equil.py.T,normalize=True,PRINT=PRINT)
 
 
 	PRINT("\nL2-EQUILIBRATED MATRIX")
 	dense_l2_equilibration(A,A_equil,d,e)
+	sync(A_equil)
 	assert direct_proj_test(m,n,A_equil.py.T,PRINT=PRINT)
 
 	PRINT("\nL2-EQUILIBRATED MATRIX, normalized")
 	dense_l2_equilibration(A,A_equil,d,e)
+	sync(A_equil)
 	assert direct_proj_test(m,n,A_equil.py.T,normalize=True,PRINT=PRINT)
 
 
 	PRINT("\nSINKHORN-EQUILIBRATED MATRIX")
 	sinkhornknopp_equilibration(A,A_equil,d,e)
+	sync(A_equil)
 	assert direct_proj_test(m,n,A_equil.py.T,PRINT=PRINT)	
 
 	PRINT("\nSINKHORN-EQUILIBRATED MATRIX, normalized")
 	sinkhornknopp_equilibration(A,A_equil,d,e)
+	sync(A_equil)
 	assert direct_proj_test(m,n,A_equil.py.T,normalize=True,PRINT=PRINT)	
 
 
