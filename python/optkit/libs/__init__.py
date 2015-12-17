@@ -1,2 +1,2 @@
-from optkit.libs.linsys import oklib
-from optkit.libs.prox import proxlib
+from optkit.libs.linsys import DenseLinsysLibs
+from optkit.libs.prox import ProxLibs

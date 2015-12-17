@@ -1,1 +1,1 @@
-from optkit.projector.direct import DirectProjector
+from optkit.projector.direct import DirectProjectorFactory

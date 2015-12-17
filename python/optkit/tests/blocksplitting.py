@@ -1,14 +1,22 @@
-from optkit.types import Vector, Matrix
+from optkit.api import *
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
-from optkit.utils.pyutils import println,printvoid,var_assert
-from optkit.kernels import *
-from optkit.projector.direct import *
-from optkit.blocksplitting import *
-from optkit.blocksplitting.algorithms import *
+from optkit.utils.pyutils import println, printvoid, var_assert
 from optkit.tests.defs import TEST_EPS,HLINE
 import numpy as np
 
 
+ProblemVariables = pogs.types.ProblemVariables
+SolverMatrix = pogs.types.SolverMatrix
+SolverState = pogs.types.SolverState
+SolverSettings = pogs.types.SolverSettings
+SolverInfo = pogs.types.SolverInfo
+OutputVariables = pogs.types.OutputVariables
+Objectives = pogs.types.Objectives
+Residuals = pogs.types.Residuals
+Tolerances = pogs.types.Tolerances
+AdaptiveRhoParameters = pogs.types.AdaptiveRhoParameters
+
+	
 def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	if m is None: m=30
 	if n is None: n=20
@@ -87,7 +95,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 
 	PRINT("\nEQUILIBRATE")
-	if not A.equilibrated: equilibrate(A, d, e)
+	if not A.equilibrated: pogs.utils.equilibrate(A, d, e)
 	A.sync()
 	sync(d, e)
 
@@ -118,7 +126,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 
 	norm_de_before = np.linalg.norm(d.py)*np.linalg.norm(e.py)
-	normalize_system(A, d, e, normA=Proj.normA)
+	pogs.utils.normalize_system(A, d, e, normA=Proj.normA)
 	A.sync()
 	sync(d, e)
 	norm_de_after = np.linalg.norm(d.py)*np.linalg.norm(e.py)
@@ -156,7 +164,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	d_ = np.copy(d.py)
 	e_ = np.copy(e.py)
 
-	scale_functions(f,g,d,e)
+	pogs.utils.scale_functions(f,g,d,e)
 
 	assert np.max(np.abs((fa_/d_-f.a_))) <= TEST_EPS
 	assert np.max(np.abs((fe_/d_-f.d_))) <= TEST_EPS
@@ -197,7 +205,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 
 	PRINT("\nPROXIMAL OPERATOR")
-	Prox = prox_eval(f,g)		
+	Prox = pogs.utils.prox_eval(f,g)		
 	PRINT("Prox: ", Prox)
 
 	PRINT(HLINE)
@@ -205,7 +213,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("---------------------------------\n")
 
 	PRINT("\nVARIABLE INITIALIZATION (i.e., WARM START)")
-	initialize_variables(A.mat, settings.rho, z, x.py, y.py)
+	pogs.utils.initialize_variables(A.mat, settings.rho, z, x.py, y.py)
 	z.sync()
 
 	PRINT("z primal", z.primal.vec)
@@ -223,7 +231,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 
 	PRINT("\nVARIABLE UNSCALING")
-	unscale_output(settings.rho, z, output)		
+	pogs.utils.unscale_output(settings.rho, z, output)		
 	PRINT("output vars:", output)
 	assert np.max(np.abs((z.primal12.x.py*e_-output.x))) <= TEST_EPS
 	assert np.max(np.abs((z.primal12.y.py/d_-output.y))) <= TEST_EPS
@@ -300,7 +308,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 
 
-	project_primal(Proj,z,alpha=settings.alpha)
+	pogs.utils.project_primal(Proj, z, alpha=settings.alpha)
 	z.sync()
 	assert np.linalg.norm(A.mat.py.dot(z.primal.x.py)-z.primal.y.py) <= TEST_EPS
 	assert np.linalg.norm(A.mat.py.T.dot(z.dual.y.py)+z.dual.x.py) <= TEST_EPS
@@ -322,7 +330,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	zt_ = np.copy(z.dual.vec.py)
 	zt1_ = zt_+(settings.alpha*z12_+(1-settings.alpha)*z_)-z1_
 	zt12_ = z12_-z_+zt_
-	update_dual(z,alpha=settings.alpha)
+	pogs.utils.update_dual(z,alpha=settings.alpha)
 	z.sync()
 	assert all(np.abs(z.dual.vec.py-zt1_) <= TEST_EPS)
 	assert all(np.abs(z.dual12.vec.py-zt12_) <= TEST_EPS)
@@ -336,7 +344,8 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 	PRINT(HLINE)
 	PRINT("\nCHECK CONVERGENCE:")
-	converged = check_convergence(A,f,g,settings.rho,z,obj,res,eps,gapstop=settings.gapstop)	
+	converged = pogs.utils.check_convergence(A,f,g,
+		settings.rho,z,obj,res,eps,gapstop=settings.gapstop)	
 	
 	obj_py = func_eval_python(g,z.primal12.x.py,func='IndGe0')
 	obj_py += func_eval_python(f,z.primal12.y.py,func='Abs')
@@ -376,8 +385,8 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 	PRINT(HLINE)
 	PRINT("\nITERATION INFO:")
-	PRINT(header_string())
-	PRINT(iter_string(1, res, eps, obj))
+	PRINT(pogs.utils.header_string())
+	PRINT(pogs.utils.iter_string(1, res, eps, obj))
 
 
 	PRINT(HLINE)
@@ -388,7 +397,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	z_before = np.copy(z.dual.vec.py)
 	rho_before = settings.rho
 	if settings.adaptive:
-		adapt_rho(z, rhopar, 0, settings, res, eps)
+		pogs.utils.adapt_rho(z, rhopar, 0, settings, res, eps)
 		z.sync()
 	z_after = np.copy(z.dual.vec.py)
 	rho_after = settings.rho
@@ -415,7 +424,8 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("-----------------------\n")
 	settings.maxiter=2000
 	PRINT(settings)
-	admm_loop(A.mat,Proj,Prox,z,settings,info, check_convergence(A.mat,f,g)) 	
+	pogs.admm_loop(A.mat,Proj,Prox,z,settings,info, 
+		pogs.utils.check_convergence(A.mat,f,g)) 	
 	assert info.converged or info.k==settings.maxiter
 	PRINT(info)
 

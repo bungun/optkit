@@ -3,8 +3,10 @@
 - CPU/GPU dense linear algebra (32/64-bit)
 - CPU/GPU (separable) prox (32/64-bit)
 - Sinkhorn-Knopp matrix equilibration (see http://arxiv.org/abs/1503.08366)
-- Dense/Direct graph projection
+- Direct (dense) graph projection
 - Dense, fully-separable implementation of POGS block splitting algorithm (see http://foges.github.io/pogs/ and http://arxiv.org/abs/1503.08366)
+- I/O for saving solver state (equilbrated matrix, projector factorization, iterates)
+
 
 
 #TODO:
@@ -15,11 +17,13 @@
 - automate testing with nose2
 - license
 - cite POGS
-- storage for equilibrated matrices and factorized projectors
+- testing for storage for equilibrated matrices and factorized projectors
+- README.md
+- thorough commenting
 
 ###v0.0.2 (targets)
-- Back-end encapsulation
-- Back-end switching
+- Back-end encapsulation 
+- Back-end switching (make functions into objects? running list of functions? make back-end into argument?)
 
 #ROADMAP:
 ###v0.1
@@ -51,4 +55,8 @@
 
 ###v1.0
 - Cone solver
+
+###v++
+- suppress [y, mu, nu] from output
+- block clustering in c/cuda
 

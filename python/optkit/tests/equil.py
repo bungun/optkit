@@ -1,14 +1,14 @@
-import numpy as np
-from optkit.types import Matrix, Vector
-from optkit.utils.pyutils import println,printvoid, var_assert
-from optkit.equilibration import *
-from optkit.kernels import core as linops
+from optkit.api import *
+from optkit.utils.pyutils import println, printvoid, var_assert
 from optkit.tests.defs import TEST_EPS
 from operator import and_
+import numpy as np
 
-def dense_equil_test(equil_method,A_in=None,VERBOSE_TEST=True):
+
+
+def dense_equil_test(equil_method, A_in=None, VERBOSE_TEST=True):
 	PRINT = println if VERBOSE_TEST else printvoid
-	PNORM = 1 if equil_method==sinkhornknopp_equilibration else 2
+	PNORM = 1 if equil_method == sinkhornknopp_equilibration else 2
 
 
 	PRINT("SKINNY MATRIX")
@@ -43,7 +43,7 @@ def dense_equil_test(equil_method,A_in=None,VERBOSE_TEST=True):
 	PRINT("d: ", d.py)
 	PRINT("e: ", e.py)
 	equil_method(A, A_out, d, e)
-	linops.sync(A, A_out, d, e)
+	sync(A, A_out, d, e)
 
 
 	PRINT("\nAFTER")
@@ -104,7 +104,7 @@ def dense_equil_test(equil_method,A_in=None,VERBOSE_TEST=True):
 	PRINT("d: ", d.py)
 	PRINT("e: ", e.py)
 	equil_method(B, B_out, d, e)
-	linops.sync(B, B_out, d, e)
+	sync(B, B_out, d, e)
 
 	PRINT("\nAFTER")
 
@@ -147,4 +147,3 @@ def test_equil(*args,**kwargs):
 	assert dense_equil_test(sinkhornknopp_equilibration,A_in=A,VERBOSE_TEST=verbose)
 	print "...passed"
 	return True
-

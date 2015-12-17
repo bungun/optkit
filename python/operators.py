@@ -680,7 +680,3 @@ BlockInverseOperator(M::BlockOperator)
 class BlockProjector(object):
 	def __init__(self):
 		pass	
-
-
-
-

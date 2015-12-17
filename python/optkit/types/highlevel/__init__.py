@@ -1,2 +1,2 @@
-from optkit.types.highlevel.linsys import Vector, Matrix, Range
-from optkit.types.highlevel.prox import FunctionVector
+from optkit.types.highlevel.linsys import HighLevelLinsysTypes, Range
+from optkit.types.highlevel.prox import HighLevelProxTypes

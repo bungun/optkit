@@ -1,14 +1,96 @@
 from ctypes import c_float, c_double, c_int, c_uint, c_size_t, \
 					POINTER, Structure, c_void_p
-from optkit.defs import FLOAT_FLAG
-from numpy import dtype
+from numpy import float32, float64, ndarray
 
-ok_float = c_float if FLOAT_FLAG else c_double
 
-# pointers to C types
-c_int_p = POINTER(c_int)
-c_uint_p = POINTER(c_uint)
-ok_float_p = POINTER(ok_float)
+class LowLevelTypes(object):
+	def __init__(self, single_precision=False):
+		self.change_precision(single_precision=single_precision)
+
+	def change_precision(self, single_precision=False):
+		self.ok_float = c_float if single_precision else c_double
+		self.FLOAT_CAST = float32 if single_precision else float64
+
+
+		# pointers to C types
+		self.c_int_p = POINTER(c_int)
+		self.c_uint_p = POINTER(c_uint)
+		self.ok_float_p = POINTER(self.ok_float)
+
+
+		# low-level optkit types
+		# ----------------------
+
+		# vector struct
+		class ok_vector(Structure):
+			_fields_ = [('size', c_size_t),('stride', c_size_t),('data', self.ok_float_p)]
+
+		self.vector = ok_vector
+		# vector pointer
+		self.vector_p = POINTER(self.vector)
+
+		# matrix struct
+		class ok_matrix(Structure):
+			_fields_ = [('size1',c_size_t),
+						('size2',c_size_t),
+						('tda',c_size_t),
+						('data',self.ok_float_p),
+						('rowmajor',c_uint)]
+		self.matrix = ok_matrix
+
+		# matrix pointer
+		self.matrix_p = POINTER(self.matrix)
+
+		# function struct
+		class ok_function(Structure):
+			_fields_ = [('h', c_uint),
+						('a', self.ok_float),
+						('b', self.ok_float),
+						('c', self.ok_float),
+						('d', self.ok_float),
+						('e', self.ok_float)]
+		self.function = ok_function
+
+		# function pointer
+		self.function_p = POINTER(self.function)
+
+		# function vector struct
+		class ok_function_vector(Structure):
+			_fields_ = [('size',c_size_t),
+						('objectives',self.function_p)]
+		self.function_vector = ok_function_vector
+
+		# function vector pointer
+		self.function_vector_p = POINTER(self.function_vector)
+
+
+		def ndarray_pointer(x, function = False):
+			if not isinstance(x, ndarray):
+				raise TypeError("input to method `ndarray_pointer "
+					  "must be a NumPy array. \n "
+					  "Input type: {}".format(type(x)))
+				return None
+			if not function:
+				if x.dtype != self.FLOAT_CAST:
+					raise TypeError("input to method `ndarray_pointer` " 
+					  "must be a NumPy array of type {} when keyword argument"
+					  "`function` is set to `False` or not provided.\n "
+					  "Input array type: {}".format(self.FLOAT_CAST, x.dtype))
+					return None
+				else: return x.ctypes.data_as(self.ok_float_p)
+			elif function:
+				if x.dtype != c_uint:
+					raise TypeError("input to method `ndarray_pointer` " 
+						  "must be a NumPy array of type {} when keyword argument"
+						  "`function` is set to `True`.\n "
+						  "Input array type: {}".format(c_uint, x.dtype))
+					return None
+				else: 
+					return x.ctypes.data_as(self.c_uint_p)
+
+		self.ndarray_pointer = ndarray_pointer
+	
+
 
 # enums
 class OKEnums(object):
@@ -77,53 +159,6 @@ class OKFunctionEnums(object):
 				   "Setting `h` = Zero")
 			return c_uint(0).value
 
+ok_lowtypes = LowLevelTypes()
 ok_enums = OKEnums()
 ok_function_enums = OKFunctionEnums()
-
-
-# low-level optkit types
-# ----------------------
-
-# vector struct
-class ok_vector(Structure):
-	_fields_ = [('size', c_size_t),('stride', c_size_t),('data', ok_float_p)]
-
-# vector pointer
-vector_p = POINTER(ok_vector)
-
-# matrix struct
-class ok_matrix(Structure):
-	_fields_ = [('size1',c_size_t),
-				('size2',c_size_t),
-				('tda',c_size_t),
-				('data',ok_float_p),
-				('rowmajor',c_uint)]
-
-# matrix pointer
-matrix_p = POINTER(ok_matrix)
-
-# function struct
-class ok_function(Structure):
-	_fields_ = [('h', c_uint),
-				('a', ok_float),
-				('b', ok_float),
-				('c', ok_float),
-				('d', ok_float),
-				('e', ok_float)]
-
-# function pointer
-function_p = POINTER(ok_function)
-
-class ok_function_vector(Structure):
-	_fields_ = [('size',c_size_t),
-				('objectives',function_p)]
-
-# function vector pointer
-function_vector_p = POINTER(ok_function_vector)
-
-
-
-
-
-
-

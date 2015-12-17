@@ -1,14 +1,13 @@
-import numpy as np
-from optkit.types import Matrix, Vector
-from optkit.kernels.linsys.core import sync
-from optkit.projector import DirectProjector
+from optkit.api import *
 from optkit.utils.pyutils import println, printvoid, var_assert
 from optkit.tests.defs import TEST_EPS
+import numpy as np
+
 
 
 def direct_proj_test(m,n,A=None,normalize=False,PRINT=lambda x : None):
 	A = Matrix(np.random.rand(m,n)) if A is None else Matrix(A)
-	ProjA = DirectProjector(A,normalize=normalize)
+	ProjA = DirectProjector(A, normalize=normalize)
 	assert var_assert(ProjA, type=DirectProjector)
 	sync(A) #(since potentially modified by projector normalization)
 

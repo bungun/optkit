@@ -1,1 +1,1 @@
-from methods import dense_l2_equilibration, sinkhornknopp_equilibration
+from methods import EquilibrationMethods

@@ -1,36 +1,45 @@
-from optkit.defs import MACHINETOL
-from optkit.types import ok_function_vector, ok_function_enums as fcn_enums
-from optkit.libs import proxlib
-from optkit.utils import ndarray_pointer
-from numpy import log, exp, cos, arccos, abs, sign, inf, nan
-# from numpy import ndarray
+from optkit.types import ok_function_enums as fcn_enums
+from numpy import log, exp, cos, arccos, sign, inf, nan
 
-# low-level utilities
-def make_cfunctionvector(n=None):
-	if n is None:
-		return ok_function_vector(0,None)
-	elif isinstance(n, int):
-		f_ = ok_function_vector(0,None)
-		proxlib.function_vector_calloc(f_, n)
-		return f_
-	else:
-		return None
-		# TODO: error message (type, dims)
+"""
+low-level utilities
+"""
+class UtilMakeCFunctionVector(object):
+	def __init__(self, lowtypes, proxlib):
+		self.lowtypes = lowtypes
+		self.proxlib = proxlib
+	def __call__(self, n=None):
+		if n is None:
+			return self.lowtypes.function_vector(0,None)
+		elif isinstance(n, int):
+			f_ = self.lowtypes.function_vector(0,None)
+			self.proxlib.function_vector_calloc(f_, n)
+			return f_
+		else:
+			return None
+			# TODO: error message (type, dims)		
 
-def release_cfunctionvector(f):
-	if isinstance(f, ok_function_vector):
-		proxlib.function_vector_free(f)
+class UtilReleaseCFunctionVector(object):
+	def __init__(self, lowtypes, proxlib):
+		self.lowtypes = lowtypes
+		self.proxlib = proxlib
+	def __call__(self, n=None):
+		if isinstance(f, self.lowtypes.function_vector):
+			self.proxlib.function_vector_free(f)
 
 
+"""
+Python function/prox eval
+"""
 # ref: http://keithbriggs.info/software/LambertW.c
 def lambertw(x):
 	EM1 = 0.3678794411714423215955237701614608
   	E = 2.7182818284590452353602874713526625
-  	if x==inf or x==nan or x<-EM1:
+  	if x == inf or x == nan or x < -EM1:
   		raise ValueError("bad argument ({}) to lambertw.\n"
   						"dom[lambert w]=[-{},infty)".format(
   						x,EM1))
-  	elif x==0: 
+  	elif x == 0: 
   		return 0
   	elif x < -EM1 + 1e-4:
   		q = x + EM1
@@ -65,55 +74,55 @@ def lambertw(x):
 # ref: http://math.stackexchange.com/questions/60376 */
 def cubicsolve(p,q,r):
 	s = p/3.
-	a = -pow(s,2)+q/3.
-	b = pow(s,3)-s*q/2.+r/2.
-	a3 = pow(a,3)
-	b2 = pow(b,2)
-	if a3+b2 >=0:
-		A = pow(pow(a3+b2,0.5)-b,1/3.)
-		return -s -a/A + A
+	a = -pow(s, 2) + q/3.
+	b = pow(s, 3) - s * q/2. + r/2.
+	a3 = pow(a, 3)
+	b2 = pow(b, 2)
+	if a3 + b2 >= 0:
+		A = pow(pow(a3 + b2, 0.5) - b, 1/3.)
+		return -s - a/A + A
 	else:
-		A = pow(-a3,0.5)
+		A = pow(-a3, 0.5)
 		B = arccos(-b/A)
-		C = pow(A,1/3.)
+		C = pow(A, 1/3.)
 		return -s + (C - a/C) * cos(B/3)
 
 def proxlog(xi,rhoi):
 	# initial guess based on piecewise approximation
 	if xi < -2.5:
-		x=xi
-	elif xi > 2.5+1./rhoi:
-		x=xi-1./rhoi
+		x = xi
+	elif xi > 2.5 + 1./rhoi:
+		x = xi - 1./rhoi
 	else:
-		x=(rhoi*xi-0.5)/(0.2+rhoi)
+		x = (rhoi * xi - 0.5)/(0.2 + rhoi)
 
 	# Newton iteration
 	l = xi - 1./rhoi
 	u = xi
 	for i in xrange(5):
 		t = 1./(1 + exp(-x))
-		f = t + rhoi*(x-xi)
+		f = t + rhoi * (x-xi)
 		g = t - t**2 + rhoi
 		if (f < 0):
-			l=x
+			l = x
 		else:
-			u=x
-		x-=f/g
-		x=max(min(x,u),l)
+			u = x
+		x -= f/g
+		x = max(min(x, u), l)
 
 
 	# guarded method if not converged
 	i=0
-	while i<100 and u-l > MACHINETOL:
-		g = 1./(rhoi*(1+exp(-x))) + (x-xi)
-		if g>0:
-			l=max(l,x-g)
-			u=x
+	while i < 100 and u-l > 1e-10:
+		g = 1./(rhoi*(1 + exp(-x))) + (x - xi)
+		if g > 0:
+			l = max(l, x-g)
+			u = x
 		else:
-			u=min(u,x-g)
-			l=x
-		x = (u+l)/2
-		i+=1
+			u = min(u, x-g)
+			l = x
+		x = (u + l)/2.
+		i += 1
 
 	return x
 
@@ -181,7 +190,7 @@ def prox_eval_python(f,rho,x,func='Square'):
 	elif func=='MaxPos0':
 		fprox = lambda xi, rhoi : xi-1./rhoi if xi >= 1./rhoi else min(xi,0)
 	elif func=='NegLog':
-		fprox = lambda xi, rhoi : (xi + (xi**2 + 4 / rhoi)**0.5) / 2
+		fprox = lambda xi, rhoi : (xi + (xi**2 + 4/rhoi)**0.5)/2
 	elif func=='Recipr':
 		fprox = lambda xi, rhoi : cubicsolve(-max(xi,0),0,-1./rhoi)
 	elif func=='Square':
@@ -191,7 +200,7 @@ def prox_eval_python(f,rho,x,func='Square'):
 	else:
 		fprox = lambda xi, rhoi : xi
 
-	x_out[:] = map(fprox, x_out[:], f.e_ + rho / (f.c_*f.a_**2))
+	x_out[:] = map(fprox, x_out[:], f.e_ + rho/(f.c_*f.a_**2))
 
 	x_out += f.b_
 	x_out /= f.a_

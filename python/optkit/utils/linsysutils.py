@@ -1,54 +1,64 @@
-from optkit.types import ok_enums as enums, ok_float_p, \
-					     ok_vector, ok_matrix
-from optkit.defs import FLOAT_CAST
-from optkit.libs import oklib
-from optkit.utils import ndarray_pointer
+from optkit.types import ok_enums as enums
 from numpy import ndarray
 
 # low-level utilities
-def make_cvector(x=None, copy_data=True):
-	if x is None:
-		return ok_vector(0,0,None)
-	elif isinstance(x, ndarray) and len(x.shape)==1:
-		x_ = ok_vector(0,0,None)
-		if not copy_data:
-			oklib.__vector_view_array(x_, ndarray_pointer(x), x.size)
+class UtilMakeCVector(object):
+	def __init__(self, lowtypes, denselib):
+		self.lowtypes = lowtypes
+		self.denselib = denselib
+		self.ndarray_pointer = lowtypes.ndarray_pointer
+	def __call__(self, x=None, copy_data=True):
+		if x is None:
+			return self.lowtypes.vector(0,0,None)
+		elif isinstance(x, ndarray) and len(x.shape)==1:
+			x_ = self.lowtypes.vector(0,0,None)
+			if not copy_data:
+				self.denselib.vector_view_array(x_, self.ndarray_pointer(x), x.size)
+			else:
+				self.denselib.vector_calloc(x_, x.size)
+				self.denselib.vector_memcpy_va(x_, self.ndarray_pointer(x), 1)	 
+			return x_
 		else:
-			oklib.__vector_calloc(x_, x.size)
-			oklib.__vector_memcpy_va(x_, ndarray_pointer(x), 1)	 
-		return x_
-	else:
-		return None
-		# TODO: error message (type, dims)
+			return None
+			# TODO: error message (type, dims)
 
+class UtilMakeCMatrix(object):
+	def __init__(self, lowtypes, denselib):
+		self.lowtypes = lowtypes
+		self.denselib = denselib
+		self.ndarray_pointer = lowtypes.ndarray_pointer
+	def __call__(self, A=None, copy_data=True):	
 
-def make_cmatrix(A=None, copy_data=True):
-
-	if A is None:
-		return ok_matrix(0,0,0,None,enums.CblasRowMajor)
-	elif isinstance(A, ndarray) and len(A.shape)==2:
-		(m,n) = A.shape
-		order = enums.CblasRowMajor if A.flags.c_contiguous else \
-				enums.CblasColMajor
-		A_ = ok_matrix(0,0,0,None,order)
-		if not copy_data:
-			oklib.__matrix_view_array(A_, ndarray_pointer(A), 
-										m, n, order)
+		if A is None:
+			return self.lowtypes.matrix(0,0,0,None,enums.CblasRowMajor)
+		elif isinstance(A, ndarray) and len(A.shape)==2:
+			(m,n) = A.shape
+			order = enums.CblasRowMajor if A.flags.c_contiguous else \
+					enums.CblasColMajor
+			A_ = self.lowtypes.matrix(0,0,0,None,order)
+			if not copy_data:
+				self.denselib.matrix_view_array(A_, self.ndarray_pointer(A), 
+											m, n, order)
+			else:
+				self.denselib.matrix_calloc(A_, m, n, order)
+				self.denselib.matrix_memcpy_ma(A_, self.ndarray_pointer(A), order)
+			return A_
 		else:
-			oklib.__matrix_calloc(A_, m, n, order)
-			oklib.__matrix_memcpy_ma(A_, ndarray_pointer(A), order)
-		return A_
-	else:
-		return None
-		# TODO: error message (type, dims)
+			return None
+			# TODO: error message (type, dims)
 
+class UtilReleaseCVector(object):
+	def __init__(self, lowtypes, denselib):
+		self.lowtypes = lowtypes
+		self.denselib = denselib
+	def __call__(self, x):
+		if isinstance(x, self.lowtypes.vector):
+			self.denselib.vector_free(x)
 
-def release_cvector(x):
-	if isinstance(x, ok_vector):
-		oklib.__vector_free(x)
-
-def release_cmatrix(A):
-	if isinstance(A, ok_matrix):
-		oklib.__matrix_free(A)
-
-
+class UtilReleaseCMatrix(object):
+	def __init__(self, lowtypes, denselib):
+		self.lowtypes = lowtypes
+		self.denselib = denselib
+	def __call__(self, A):
+		if isinstance(A, self.lowtypes.matrix):
+			self.denselib.matrix_free(A)

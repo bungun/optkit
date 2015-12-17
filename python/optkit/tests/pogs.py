@@ -1,11 +1,15 @@
-from optkit import Matrix, FunctionVector, pogs
+from optkit.api import *
 from optkit.types import ok_function_enums
-from optkit.blocksplitting.types import *
-from optkit.utils.pyutils import println,printvoid,var_assert
+from optkit.utils.pyutils import println, printvoid, var_assert
 from optkit.tests.defs import HLINE, TEST_EPS
 import numpy as np
-from operator import add
 from numpy.linalg import norm
+
+SolverState = pogs.types.SolverState
+SolverInfo = pogs.types.SolverInfo
+OutputVariables = pogs.types.OutputVariables
+
+
 
 def warmstart_test(m=300, n=200, A_in=None, VERBOSE_TEST=True):
 	if m is None: m=300
@@ -180,11 +184,11 @@ def pogs_test(m=300,n=200,A_in=None, VERBOSE_TEST=True):
 
 		f = FunctionVector(m, h=FUNCKEY, b=1)
 		g = FunctionVector(n, h='IndGe0')
-		info, output, solver_state = pogs(A,f,g,
-			reltol=reltol,maxiter=maxiter,verbose=verbose)
+		info, output, solver_state = pogs(A, f, g,
+			reltol=reltol, maxiter=maxiter, verbose=verbose)
 
-		assert var_assert(solver_state,type=SolverState)
-		assert var_assert(info,type=SolverInfo)
+		assert var_assert(solver_state, type=SolverState)
+		assert var_assert(info, type=SolverInfo)
 		assert var_assert(output, type=OutputVariables)
 		assert info.converged or info.k==maxiter
 
@@ -233,6 +237,3 @@ def test_pogs(*args, **kwargs):
 	warmstart_test(m=n, n=m, A_in=A, VERBOSE_TEST=verbose)
 	print "...passed"
 	return True
-
-
-

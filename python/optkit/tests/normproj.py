@@ -1,25 +1,22 @@
-import numpy as np
+from optkit.api import *
 from optkit.utils.pyutils import println,printvoid
-from optkit.types import Matrix, Vector
-from optkit.kernels import copy, sync
-from optkit.projector import DirectProjector
-from optkit.equilibration import *
 from optkit.tests.proj import direct_proj_test
 from optkit.tests.defs import TEST_EPS
+import numpy as np
 
 
 def normalize_and_project_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	if m is None: m=1000
 	if n is None: n=3000
-	if isinstance(A_in,np.ndarray):
-		if len(A_in.shape)!=2:
-			A_in=None
+	if isinstance(A_in, np.ndarray):
+		if len(A_in.shape) != 2:
+			A_in = None
 		else:
-			A_in = A_in if m>=n else A_in.T
-			(m,n)=A_in.shape
+			A_in = A_in if m >= n else A_in.T
+			(m,n) = A_in.shape
 
-	if not isinstance(A_in,np.ndarray):
-		A_in = np.random.rand(m,n)
+	if not isinstance(A_in, np.ndarray):
+		A_in = np.random.rand(m, n)
 
 	PRINT=println if VERBOSE_TEST else printvoid
 
