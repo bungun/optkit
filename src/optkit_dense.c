@@ -1,5 +1,6 @@
 #include "optkit_dense.h"
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -64,10 +65,10 @@ void vector_memcpy_vv(vector * v1, const vector * v2) {
 	uint i;
  	if ( v1->stride == 1 && v2->stride == 1) {
 		memcpy(v1->data, v2->data, v1->size * sizeof(ok_float));
-	} else {
-  		for (i = 0; i < v1->size; ++i)
-      			__vector_set(v1, i, __vector_get(v2,i));
-  	}
+  } else {
+    for (i = 0; i < v1->size; ++i)
+    			__vector_set(v1, i, __vector_get(v2,i));
+	}
 }
 
 void vector_memcpy_va(vector * v, const ok_float *y, size_t stride_y) {
@@ -223,7 +224,7 @@ inline void __matrix_set(matrix *A, size_t i, size_t j, ok_float x){
 }
 
 void matrix_set_all(matrix * A, ok_float x) {
-	memset(A->data, x, A->size1 * A->size2 * sizeof(ok_float)); 
+  memset(A->data, x, A->size1 * A->size2 * sizeof(ok_float));
 }
 
 void matrix_memcpy_mm(matrix * A, const matrix * B) {
@@ -235,7 +236,7 @@ void matrix_memcpy_mm(matrix * A, const matrix * B) {
   else{ 
     if (A->rowmajor == B->rowmajor)  
       memcpy(A->data, B->data, A->size1 * A->size2 * sizeof(ok_float));
-    else
+    else    
       for (i = 0; i < A->size1; ++i)
         for (j = 0; j < A->size2; ++j)
           __matrix_set(A, i, j, __matrix_get(B, i , j));
@@ -248,14 +249,14 @@ void matrix_memcpy_ma(matrix * A, const ok_float * B,
   if (A->rowmajor == rowmajor)
     memcpy(A->data, B, A->size1 * A->size2 * sizeof(ok_float));
   else {
-    if (rowmajor)
+    if (rowmajor == CblasRowMajor)
       for (i = 0; i < A->size1; ++i)
         for (j = 0; j < A->size2; ++j)
-          __matrix_set(A,i,j, B[i + j * A->size1]);
-  else
-    for (i = 0; i < A->size1; ++i)
-      for (j = 0; j < A->size2; ++j)
-          __matrix_set(A,i,j,B[i * A->size2 + j]);
+          __matrix_set(A,i,j, B[i * A->size2 + j]);
+    else
+      for (i = 0; i < A->size1; ++i)
+        for (j = 0; j < A->size2; ++j)
+            __matrix_set(A,i,j,B[i + j * A->size1]);
   }
 }
 
@@ -316,8 +317,8 @@ inline int __blas_check_handle(void * linalg_handle){
   }
 }
 
-void blas_make_handle(void * linalg_handle){
-  linalg_handle = OK_NULL;
+void blas_make_handle(void ** linalg_handle){
+  *linalg_handle = OK_NULL;
 }
 
 void blas_destroy_handle(void * linalg_handle){

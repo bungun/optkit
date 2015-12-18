@@ -5,9 +5,6 @@ from numpy import float32, float64, ndarray
 
 class LowLevelTypes(object):
 	def __init__(self, single_precision=False):
-		self.change_precision(single_precision=single_precision)
-
-	def change_precision(self, single_precision=False):
 		self.ok_float = c_float if single_precision else c_double
 		self.FLOAT_CAST = float32 if single_precision else float64
 
@@ -159,6 +156,5 @@ class OKFunctionEnums(object):
 				   "Setting `h` = Zero")
 			return c_uint(0).value
 
-ok_lowtypes = LowLevelTypes()
 ok_enums = OKEnums()
 ok_function_enums = OKFunctionEnums()

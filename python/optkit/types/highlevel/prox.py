@@ -6,12 +6,14 @@ from numpy import ones, zeros, ndarray
 
 class HighLevelProxTypes(object):
 	def __init__(self, backend):
+		backend = backend
 		ON_GPU = backend.device == 'gpu'
 		make_cfunctionvector = backend.make_cfunctionvector
 		release_cfunctionvector = backend.release_cfunctionvector
 
 		class FunctionVector(object):
 			def __init__(self, n, **params):
+				backend.__LIBGUARD_ON__ = True
 				if not isinstance(n,int):
 					raise ValueError("optkit.FunctionVector must be initialized "
 						"with:\n -one `int`")

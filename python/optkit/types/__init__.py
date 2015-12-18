@@ -1,1 +1,1 @@
-from optkit.types.lowlevel import ok_lowtypes, ok_enums, ok_function_enums
+from optkit.types.lowlevel import LowLevelTypes, ok_enums, ok_function_enums

@@ -2,7 +2,6 @@ import sys
 from optkit.tests import *
 
 
-
 def main(*args, **kwargs):
 	tests = []
 	passing = 0

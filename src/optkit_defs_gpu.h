@@ -49,12 +49,12 @@ const unsigned int kMaxGridSize = 65535u;
   } while(0)
 
 #ifndef FLOAT
-    #define CUBLAS(x) CUDA_CHECK_ERR; cublasD ## x; CUDA_CHECK_ERR
-    #define CUSPARSE(x) CUDA_CHECK_ERR; cusparseD ## x; CUDA_CHECK_ERR
+    #define CUBLAS(x) CUDA_CHECK_ERR; cublasD ## x
+    #define CUSPARSE(x) CUDA_CHECK_ERR; cusparseD ## x
     #define OK_CUDA_NAN CUDART_NAN
 #else
-    #define CUBLAS(x) CUDA_CHECK_ERR; cublasS ## x; CUDA_CHECK_ERR
-    #define CUSPARSE(x) CUDA_CHECK_ERR; cusparseS ## x; CUDA_CHECK_ERR
+    #define CUBLAS(x) CUDA_CHECK_ERR; cublasS ## x
+    #define CUSPARSE(x) CUDA_CHECK_ERR; cusparseS ## x
     #define OK_CUDA_NAN CUDART_NAN_F
 #endif
 

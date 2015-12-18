@@ -1,4 +1,4 @@
-import os
+from os import path, popen, uname
 from sys import platform
 from setuptools import setup
 from setuptools.command.install import   install
@@ -9,8 +9,8 @@ from multiprocessing import cpu_count
 USE_OPENMP=False
 COMPILE_CPU_SPARSE=False
 COMPILE_GPU_SPARSE=False
-BASEPATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),'..')
-LIBPATH = os.path.join(BASEPATH, 'build')
+BASEPATH = path.abspath(path.join(path.dirname(path.abspath(__file__)),'..'))
+LIBPATH = path.join(BASEPATH, 'build')
 LONG_DESC='`optkit` provides a Python interface for CPU and GPU \
 (dense/sparse) linear algebra, enabling the composition of C- or \
 CUDA C-based optimization routines in a Python environment.'
@@ -19,8 +19,8 @@ CUDA C-based optimization routines in a Python environment.'
 
 class OptkitBuild(build):
   def run(self):
-    NVCC = os.popen("which nvcc").read()!=""
-    EXT = ".dylib" if os.uname()[0] == "Darwin" else ".so"
+    NVCC = popen("which nvcc").read()!=""
+    EXT = "dylib" if uname()[0] == "Darwin" else "so"
 
     # run original build code
     build.run(self)
@@ -32,20 +32,24 @@ class OptkitBuild(build):
     devices = ['cpu', 'gpu'] if NVCC else ['cpu']
     precisions = ['32', '64'] 
 
+
     for prec in precisions:
         for dev in devices:
             sparse = COMPILE_GPU_SPARSE if dev=='gpu' else COMPILE_CPU_SPARSE
-            cmd = [ 'make -e libs' ]
-            cmd.extend(['FLOAT={}'.format(int(prec=='32'))])
-            cmd.extend(['GPU={}'.format(int(dev=='gpu'))])
-            cmd.extend(['SPARSE={}'.format(int(sparse))])
-            if USE_OPENMP: cmd.extend(['USE_OPENMP'])
+            cmd = [ 'make', 'libs' ]
+            cmd.extend([ 'FLOAT={}'.format(int(prec=='32')) ])
+            cmd.extend([ 'GPU={}'.format(int(dev=='gpu')) ])
+            cmd.extend([ 'SPARSE={}'.format(int(sparse)) ])
+            if USE_OPENMP: cmd.extend([ 'USE_OPENMP=1' ])
+
 
             # run Make for each condition (make CPU/GPU, 32/64)
             def compile():
               call(cmd, cwd=BASEPATH)
 
             self.execute(compile, [], message)
+
+
 
     CPU_LIBS = []
     GPU_LIBS = []
@@ -58,8 +62,9 @@ class OptkitBuild(build):
                 '\n\tDEVICE: {}\n\tPRECISION: {}\n\t MATRICES {}'.format(
                 device, precision, matrices))
             for matrix in matrices:
-                libs.append('libok_{}_{}{}'.format(device, matrix, precision))
-                libs.append('libprox_{}{}'.format(device, precision))
+                libs.append('libok_{}_{}{}.{}'.format(device, matrix, 
+                    precision, EXT))
+                libs.append('libprox_{}{}.{}'.format(device, precision, EXT))
         if device =='gpu':
             GPU_LIBS = libs
         else:
@@ -72,7 +77,7 @@ class OptkitBuild(build):
     # copy resulting tool to library build folder
     self.mkpath(self.build_lib)
     for target in target_files:
-          self.copy_file(os.join(LIBPATH,target), self.build_lib)
+          self.copy_file(path.join(LIBPATH,target), self.build_lib)
 
 
 class OptkitInstall(install):
@@ -99,13 +104,15 @@ setup(
     url='http://github.com/bungun/optkit/',
     package_dir={'optkit': 'optkit'},
     packages=['optkit', 
-              'optkit.types',
               'optkit.libs',
               'optkit.utils',
+              'optkit.types',
+              'optkit.types.highlevel',
               'optkit.kernels',
+              'optkit.kernels.linsys',
               'optkit.projector',
               'optkit.equilibration',
-              'optkit.blocksplitting',
+              'optkit.pogs',
               'optkit.tests'],
     license='GPLv3',
     zip_safe=False,

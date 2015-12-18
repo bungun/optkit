@@ -1,4 +1,5 @@
 from optkit.api import *
+from optkit.api import backend
 from optkit.types.lowlevel import ok_enums
 from optkit.utils.pyutils import println, printvoid, var_assert
 from optkit.tests.defs import TEST_EPS
@@ -19,7 +20,7 @@ def rel_compare(eps, first, second):
 	if first == 0 and second == 0: return True
 	return abs(first - second) / max(abs(first), abs(second)) < eps
 
-def array_compare(a1,a2,eps=0.):
+def array_compare(a1,a2,eps=0.,expect=True):
 	assert isinstance(a1,np.ndarray)
 	assert isinstance(a2,np.ndarray)
 	assert np.squeeze(a1).shape == np.squeeze(a2).shape
@@ -33,6 +34,11 @@ def array_compare(a1,a2,eps=0.):
 		valid |= reduce(and_, map(rcomp, 
 			[a1.item(i) for i in xrange(a1.size)],
 			[a2.item(i) for i in xrange(a2.size)]))
+
+	if expect and not valid:
+		print "ARRAY MISMATCH GREATER THAN TOLERANCE {}:".format(eps)
+		print "ARRAY 1\n", a1
+		print "ARRAY 2\n", a2
 
 	return valid
 
@@ -353,8 +359,10 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	PRINT("A:")
 	PRINTVAR(A)
 	PRINT(A.py)
-	assert all(ad_ == 0) or not array_compare(a_diag.py,ad_, eps=TEST_EPS)
-	assert all(ad_ == 0) or A.sync_required or not array_compare(A.py,A_, eps=TEST_EPS)
+	assert all(ad_ == 0) or not array_compare(a_diag.py,ad_, 
+		eps=TEST_EPS, expect=False)
+	assert all(ad_ == 0) or A.sync_required or not array_compare(A.py,A_, 
+		eps=TEST_EPS, expect=False)
 
 
 	PRINT("\nsync diagonal")

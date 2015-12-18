@@ -1,7 +1,8 @@
 from ctypes import CDLL, c_int, c_uint, c_size_t, c_void_p
 from subprocess import check_output
-from os import path, uname
+from os import path, uname, getenv
 from numpy import float32
+from site import getsitepackages
 
 class DenseLinsysLibs(object):
 	def __init__(self):
@@ -9,6 +10,7 @@ class DenseLinsysLibs(object):
 		local_c_build = path.abspath(path.join(path.dirname(__file__),
 			'..', '..', '..', 'build'))
 		search_results = ""
+		use_local = getenv('OPTKIT_USE_LOCALLIBS', 0)
 
 		# NB: no windows support
 		ext = "dylib" if uname()[0] == "Darwin" else "so"
@@ -16,16 +18,17 @@ class DenseLinsysLibs(object):
 			for precision in ['32', '64']:
 				lib_tag = '{}{}'.format(device, precision)
 				lib_name = 'libok_{}_dense{}.{}'.format(device, precision, ext)
-				lib_path = check_output(['locate', path.join('packages', lib_name)])
-				if lib_path == '':
+				lib_path = getsitepackages()[0]
+				if not use_local and path.exists(path.join(lib_path, lib_name)):
+					lib_path = path.join(lib_path, lib_name)
+				else:
 					lib_path = path.join(local_c_build, lib_name)
-				elif lib_path[-1]=='\n': 
-					lib_path=lib_path[:-1]
+
 				try:
 					lib = CDLL(lib_path)
 					self.libs[lib_tag]=lib
 				except (OSError, IndexError):
-					search_results += str("library {} not found at {}.".format(
+					search_results += str("library {} not found at {}.\n".format(
 						lib_name, lib_path))
 					self.libs[lib_tag]=None
 

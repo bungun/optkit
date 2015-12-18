@@ -1,7 +1,8 @@
 from ctypes import CDLL, c_int, c_uint, c_size_t, c_void_p
 from subprocess import check_output
-from os import path, uname
+from os import path, uname, getenv
 from numpy import float32
+from site import getsitepackages
 
 class ProxLibs(object):
 	def __init__(self):
@@ -9,6 +10,7 @@ class ProxLibs(object):
 		local_c_build = path.abspath(path.join(path.dirname(__file__),
 			'..', '..', '..', 'build'))
 		search_results = ""
+		use_local = getenv('OPTKIT_USE_LOCALLIBS', 0)
 
 
 		# NB: no windows support
@@ -17,11 +19,12 @@ class ProxLibs(object):
 			for precision in ['32', '64']:
 				lib_tag = '{}{}'.format(device, precision)
 				lib_name = 'libprox_{}{}.{}'.format(device, precision, ext)
-				lib_path = check_output(['locate', path.join('packages', lib_name)])
-				if lib_path == '':
+				lib_path = getsitepackages()[0]
+				if not use_local and path.exists(path.join(lib_path, lib_name)):
+					lib_path = path.join(lib_path, lib_name)
+				else:
 					lib_path = path.join(local_c_build, lib_name)
-				elif lib_path[-1]=='\n': 
-					lib_path=lib_path[:-1]
+
 				try:
 					lib = CDLL(lib_path)
 					self.libs[lib_tag]=lib

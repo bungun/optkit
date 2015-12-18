@@ -1,6 +1,14 @@
 from optkit.pogs.types import PogsTypes
 from optkit.pogs.utilities import PogsKernels
-from time import time
+from sys import version_info
+
+version = version_info[0]+0.1*version_info[1]
+if version >= 3.3:
+	from time import process_time as timer
+else:
+	from time import clock as timer
+
+version_info[0]+0.1*version_info[1]
 
 class POGSDirectSolver(object):
 	def __init__(self, backend, kernels, vector_type, matrix_type, 
@@ -109,7 +117,7 @@ class POGSDirectSolver(object):
 
 		#-----------------------------------------------
 		# start setup timer
-		t_start = time()						
+		t_start = timer()						
 
 		# get & check problem dimensions
 		(m,n) = A.shape
@@ -171,18 +179,18 @@ class POGSDirectSolver(object):
 				initialize_variables(A.mat, settings.rho, z, x0, nu0)
 
 		# stop setup timer
-		info.setup_time = t_start - time()		
+		info.setup_time = timer() - t_start		
 		#-----------------------------------------------	
 
 		#-----------------------------------------------
 		# solve
 
-		t_start = time() 						
+		t_start = timer() 						
 
 		self.admm_loop(A.mat, Proj, Prox, z, 
 			settings, info, conditions) 		
 		
-		info.solve_time = t_start - time() 		
+		info.solve_time = timer() - t_start		
 		
 		#-----------------------------------------------
 

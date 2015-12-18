@@ -355,8 +355,8 @@ class PogsTypes(object):
 				print "\t SOLVER STATUS: ", status_string
 				print "\t OBJECTIVE: ", self.obj
 				print "\t ITERATIONS: ", self.k
-				print "\t SETUP TIME: ", self.setup_time
-				print "\t SOLVE TIME: ", self.solve_time
+				print "\t SETUP TIME: {:0.2e} seconds".format(self.setup_time)
+				print "\t SOLVE TIME: {:0.2e} seconds".format(self.solve_time)
 				print "\t PRIMAL FEASIBILITY: ", "||Ax-y||/||y|| {:0.2e}".format(
 					norm(A.dot(output.x)-output.y)/norm(output.y))
 				print "\t DUAL FEASIBILITY: ", "||A'nu+mu||/||mu|| {:0.2e}".format(

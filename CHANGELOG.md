@@ -1,37 +1,33 @@
-#FEATURES:
-###v0.0.0
+###v0.1 (targets)
+- TODO: GPU vector_pow()
+- TODO: add test for vector_pow()
+- TODO: move equilibration from Python to C[/CUDA]
+- TODO: OMP parallelization for C vector operations
+
+
+###v0.0.2 (next release)
+- TODO: error checking throughout GPU calls (and mirrored for CPU)
+- TODO: automate testing with nose2
+- TODO: license
+- TODO: cite POGS
+- TODO: testing for storage for equilibrated matrices and factorized projectors
+- TODO: documentation
+- TODO: thorough commenting
+- TODO: option to suppress [y, mu, nu] from solver output
+
+
+###v0.0.1 (current)
 - CPU/GPU dense linear algebra (32/64-bit)
 - CPU/GPU (separable) prox (32/64-bit)
 - Sinkhorn-Knopp matrix equilibration (see http://arxiv.org/abs/1503.08366)
 - Direct (dense) graph projection
 - Dense, fully-separable implementation of POGS block splitting algorithm (see http://foges.github.io/pogs/ and http://arxiv.org/abs/1503.08366)
 - I/O for saving solver state (equilbrated matrix, projector factorization, iterates)
+- Backend switching
 
 
-
-#TODO:
-###v0.0.1 (next release)
-- error checking throughout GPU calls (and mirrored for CPU)
-- 32/64-bit flags & checks in python bindings
-- test/finalize setup.py
-- automate testing with nose2
-- license
-- cite POGS
-- testing for storage for equilibrated matrices and factorized projectors
-- README.md
-- thorough commenting
-
-###v0.0.2 (targets)
-- Back-end encapsulation 
-- Back-end switching (make functions into objects? running list of functions? make back-end into argument?)
 
 #ROADMAP:
-###v0.1
-- GPU vector_pow()
-- add test for vector_pow()
-- OMP parallelization for C vector operations
-- move equilibration from Python to C[/CUDA]
-
 ###v0.2
 - CPU Sparse Linear Algebra
 - Python Sparse Linear Algebra bindings
@@ -57,6 +53,5 @@
 - Cone solver
 
 ###v++
-- suppress [y, mu, nu] from output
 - block clustering in c/cuda
 

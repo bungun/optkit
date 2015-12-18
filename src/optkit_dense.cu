@@ -516,12 +516,12 @@ matrix_scale(matrix *A, ok_float x) {
   if (A->rowmajor == CblasRowMajor)
     for(i = 0; i < A->size1; ++i){
       matrix_row(&row_col, A, i);
-      __vector_scale(&row_col, x);
+      vector_scale(&row_col, x);
     }
   else{
     for(i = 0; i < A->size2; ++i){
       matrix_column(&row_col, A, i);
-      __vector_scale(&row_col, x);
+      vector_scale(&row_col, x);
     }
   }
 }
@@ -568,6 +568,7 @@ blas_axpy(void * linalg_handle, ok_float alpha,
   CUBLAS(axpy)(*(cublasHandle_t *) linalg_handle,
    (int) x->size, &alpha, x->data, (int) x->stride, 
    y->data, (int) y->stride);
+  CUDA_CHECK_ERR;
 }
 
 ok_float 
@@ -576,6 +577,7 @@ blas_nrm2(void * linalg_handle, const vector *x) {
   if ( !__blas_check_handle(linalg_handle) ) return get_cuda_nan();
   CUBLAS(nrm2)(*(cublasHandle_t *) linalg_handle, 
     (int) x->size, x->data, (int) x->stride, &result);
+  CUDA_CHECK_ERR;
   return result;
 }
 
@@ -584,6 +586,7 @@ blas_scal(void * linalg_handle, const ok_float alpha, vector *x) {
   if ( !__blas_check_handle(linalg_handle) ) return;
   CUBLAS(scal)(*(cublasHandle_t *) linalg_handle, 
     (int) x->size, &alpha, x->data, (int) x->stride);
+  CUDA_CHECK_ERR;
 }
 
 ok_float 
@@ -592,18 +595,19 @@ blas_asum(void * linalg_handle, const vector * x) {
   if ( !__blas_check_handle(linalg_handle) ) return get_cuda_nan();
   CUBLAS(asum)(*(cublasHandle_t *) linalg_handle, 
     (int) x->size, x->data, (int) x->stride, &result);
+  CUDA_CHECK_ERR;
   return result;
 }
 
 ok_float 
-blas_dot(void * linalg_handle, 
-                    const vector * x, const vector * y) {
+blas_dot(void * linalg_handle, const vector * x, const vector * y) {
   
   ok_float result = (ok_float) 0;
   if ( !__blas_check_handle(linalg_handle) ) return get_cuda_nan();
   CUBLAS(dot)(*(cublasHandle_t *) linalg_handle,
     (int) x->size, x->data, (int) x->stride, 
     y->data, (int) y->stride, &result);
+  CUDA_CHECK_ERR;
   return result;
 }
 
@@ -629,6 +633,7 @@ blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t Trans,
   CUBLAS(gemv)(*(cublasHandle_t *) linalg_handle, tA, s1, s2, 
     &alpha, A->data, (int) A->tda, x->data, (int) x->stride, 
     &beta, y->data, (int) y->stride);
+  CUDA_CHECK_ERR;
 }
 
 void 
@@ -653,6 +658,7 @@ blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo,
   if ( !__blas_check_handle(linalg_handle) ) return;
   CUBLAS(trsv)(*(cublasHandle_t *) linalg_handle, ul, tA, di, 
     (int) A->size1, A->data, (int) A->tda, x->data, (int) x->stride); 
+  CUDA_CHECK_ERR;
 }
 
 /* BLAS LEVEL 3 */

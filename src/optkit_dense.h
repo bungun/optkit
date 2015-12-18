@@ -3,7 +3,7 @@
 
 #include "optkit_defs.h"
 
-#ifdef cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -71,7 +71,7 @@ int matrix_order_compat(const matrix * A, const matrix * B, const char * nm_A,
 /* BLAS routines */
 
 /* BLAS context */
-void blas_make_handle(void * linalg_handle);
+void blas_make_handle(void ** linalg_handle);
 void blas_destroy_handle(void * linalg_handle);
 
 
@@ -114,7 +114,7 @@ void linalg_cholesky_svx(void * linalg_handle, const matrix * L,
 
 
 
-#ifdef cplusplus
+#ifdef __cplusplus
 }
 #endif
 

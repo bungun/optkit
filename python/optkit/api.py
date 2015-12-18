@@ -5,6 +5,7 @@ from optkit.kernels import LinsysCoreKernels, LinsysExtensionKernels, \
 from optkit.projector import DirectProjectorFactory
 from optkit.equilibration import EquilibrationMethods
 from optkit.pogs import POGSDirectSolver
+from os import getenv
 
 """
 Backend handle
@@ -70,7 +71,7 @@ pogs = None
 """
 Backend switching
 """
-def set_backend(GPU=False, single_precision=False):
+def set_backend(GPU=False, double=True):
 	# Backend
 	global backend
 
@@ -131,7 +132,8 @@ def set_backend(GPU=False, single_precision=False):
 	global pogs
 
 	# change backend
-	backend.change(GPU=GPU, single_precision=single_precision)
+	backend.change(GPU=GPU, double=double)
+	
 
 	# reset types
 	linsys_type_factory = HighLevelLinsysTypes(backend)
@@ -225,15 +227,11 @@ def set_backend(GPU=False, single_precision=False):
 INITIALIZATION BEHAVIOR:
 """
 
-set_backend(backend.device=='gpu', backend.precision=='32')
+
+default_device = getenv('OPTKIT_DEFAULT_DEVICE', 'cpu')
+default_precision = getenv('OPTKIT_DEFAULT_FLOATBITS', '64')
+
+set_backend(GPU=(default_device == 'gpu'), 
+	double=(default_precision == '64'))
 
 
-"""
-Cleanup
-"""
-del OKBackend
-del HighLevelLinsysTypes, HighLevelProxTypes
-del LinsysCoreKernels, LinsysExtensionKernels, ProxKernels
-del DirectProjectorFactory
-del EquilibrationMethods
-del POGSDirectSolver

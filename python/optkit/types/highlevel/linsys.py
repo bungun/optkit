@@ -3,6 +3,7 @@ from numpy import zeros, ndarray
 
 class HighLevelLinsysTypes(object):
 	def __init__(self, backend):
+		backend = backend
 		ON_GPU = backend.device == 'gpu'
 		lowtypes = backend.lowtypes
 		make_cvector = backend.make_cvector
@@ -12,6 +13,8 @@ class HighLevelLinsysTypes(object):
 
 		class Vector(object):
 			def __init__(self, *x, **flags):
+				backend.__LIBGUARD_ON__ = True
+
 				valid = istypedtuple(x, 1, int)
 				if len(x)==1:
 					if isinstance(x[0],ndarray):
@@ -85,6 +88,8 @@ class HighLevelLinsysTypes(object):
 		self.Vector = Vector
 
 		class Matrix(object):
+			backend.__LIBGUARD_ON__ = True
+
 			def __init__(self, *A, **flags):
 
 				# args are (int, int)

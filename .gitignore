@@ -1,5 +1,8 @@
 CHANGELOG.html
 README.html
+build/
+python/build/
+*.egg-info
 
 *.DS_Store
 test

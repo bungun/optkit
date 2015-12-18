@@ -54,6 +54,7 @@ typedef enum CBLAS_SIDE CBLAS_SIDE_t;
     #define OK_FLOAT_MAX DBL_MAX
 #endif
 
+
 #ifndef INFINITY
 #define INFINITY NAN
 #endif
