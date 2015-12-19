@@ -23,7 +23,7 @@ class UtilReleaseCFunctionVector(object):
 	def __init__(self, lowtypes, proxlib):
 		self.lowtypes = lowtypes
 		self.proxlib = proxlib
-	def __call__(self, n=None):
+	def __call__(self, f):
 		if isinstance(f, self.lowtypes.function_vector):
 			self.proxlib.function_vector_free(f)
 
