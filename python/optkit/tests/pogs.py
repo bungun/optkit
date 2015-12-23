@@ -1,7 +1,7 @@
 from optkit.api import *
 from optkit.types import ok_function_enums
 from optkit.utils.pyutils import println, printvoid, var_assert
-from optkit.tests.defs import HLINE, TEST_EPS
+from optkit.tests.defs import HLINE, TEST_EPS, MAT_ORDER, rand_arr
 import numpy as np
 from numpy.linalg import norm
 
@@ -20,12 +20,14 @@ def warmstart_test(m=300, n=200, A_in=None, VERBOSE_TEST=True):
 		else:
 			A_in=None
 
+	print '(m = {}, n = {})'.format(m, n)
+
 	PRINT=println #if VERBOSE_TEST else printvoid
 	verbose=2 if VERBOSE_TEST else 0
 
 	maxiter=2000
 	reltol=1e-3
-	A = np.random.rand(m,n) if A_in is None else A_in
+	A = rand_arr(m,n) if A_in is None else A_in
 	f = FunctionVector(m, h='Square', b=1)
 	g = FunctionVector(n, h='IndGe0')
 
@@ -174,7 +176,7 @@ def pogs_test(m=300,n=200,A_in=None, VERBOSE_TEST=True):
 	PRINT(mat_kind)
 	PRINT("m: {}, n: {}".format(m,n))
 
-	A = Matrix(np.random.rand(m,n)) if A_in is None else Matrix(A_in) 
+	A = Matrix(rand_arr(m,n)) if A_in is None else Matrix(A_in) 
 	A_copy = np.copy(A.py)
 	maxiter=2000
 	reltol=1e-3
@@ -195,7 +197,7 @@ def pogs_test(m=300,n=200,A_in=None, VERBOSE_TEST=True):
 		A_ = solver_state.A.mat.py 
 		d = solver_state.z.de.y.py
 		e = solver_state.z.de.x.py
-		xrand = np.random.rand(n)
+		xrand = rand_arr(n)
 		assert np.max(np.abs(d*A_copy.dot(e*xrand)-A_.dot(xrand)))
 
 		res_p = np.linalg.norm(A_copy.dot(output.x)-output.y)
@@ -234,6 +236,8 @@ def test_pogs(*args, **kwargs):
 	# if isinstance(A,np.ndarray): A=A.T
 	# pogs_test(m=n,n=m,A_in=A,VERBOSE_TEST=verbose)
 
+	warmstart_test(m=m, n=n, A_in=A, VERBOSE_TEST=verbose)
+	if isinstance(A,np.ndarray): A=A.T
 	warmstart_test(m=n, n=m, A_in=A, VERBOSE_TEST=verbose)
 	print "...passed"
 	return True

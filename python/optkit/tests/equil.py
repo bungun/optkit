@@ -1,6 +1,6 @@
 from optkit.api import *
 from optkit.utils.pyutils import println, printvoid, var_assert
-from optkit.tests.defs import TEST_EPS
+from optkit.tests.defs import TEST_EPS, MAT_ORDER, rand_arr
 from operator import and_
 import numpy as np
 
@@ -18,7 +18,7 @@ def dense_equil_test(equil_method, A_in=None, VERBOSE_TEST=True):
 		(m1,n1) = A.shape
 	else:
 		(m1,n1) = (50, 30)
-		A = Matrix(np.random.rand(m1,n1))
+		A = Matrix(rand_arr(m1,n1))
 	A_out = Matrix(np.zeros_like(A.py))
 	A_orig= np.copy(A.py)
 
@@ -66,7 +66,7 @@ def dense_equil_test(equil_method, A_in=None, VERBOSE_TEST=True):
 
 
 	# verify A_out = DAE
-	xrand = np.random.rand(n1)
+	xrand = rand_arr(n1)
 	assert all((A_out.py.dot(xrand)-d.py*A_orig.dot(e.py*xrand)) <= TEST_EPS)
 
 
@@ -78,7 +78,7 @@ def dense_equil_test(equil_method, A_in=None, VERBOSE_TEST=True):
 		(m2,n2) = B.shape
 	else:
 		(m2,n2) = (30, 50)
-		B = Matrix(np.random.rand(m2,n2))
+		B = Matrix(rand_arr(m2,n2))
 	B_out = Matrix(np.zeros_like(B.py))
 	B_orig = np.copy(B.py)
 
@@ -124,7 +124,7 @@ def dense_equil_test(equil_method, A_in=None, VERBOSE_TEST=True):
 
 
 	# verify B_out = DBE
-	xrand = np.random.rand(n2)
+	xrand = rand_arr(n2)
 	assert all((B_out.py.dot(xrand)-d.py*B_orig.dot(e.py*xrand)) <= TEST_EPS)
 
 

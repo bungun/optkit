@@ -113,6 +113,13 @@ void function_vector_print(FunctionVector * f){
 				f->objectives[i].d, f->objectives[i].e);
 }
 
+ok_float * function_vector_get_parameteraddress(FunctionVector *f, 
+  int ade){
+	if (ade == 0) return &(f->objectives[0].a);
+	else if (ade == 1) return &(f->objectives[0].d);
+	else return &(f->objectives[0].e);
+}
+
 void ProxEvalVector(const FunctionVector * f, ok_float rho, 
 			  const vector * x_in, vector * x_out) {
 	uint i;	

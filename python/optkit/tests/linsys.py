@@ -2,7 +2,7 @@ from optkit.api import *
 from optkit.api import backend
 from optkit.types.lowlevel import ok_enums
 from optkit.utils.pyutils import println, printvoid, var_assert
-from optkit.tests.defs import TEST_EPS
+from optkit.tests.defs import TEST_EPS, MAT_ORDER, rand_arr
 import numpy as np
 from ctypes import c_void_p, byref
 from operator import and_
@@ -136,7 +136,7 @@ def test_vector_methods(n=3,VERBOSE_TEST=True):
 	PRINTVAR(a)
 	assert array_compare(a.py,a_, eps=TEST_EPS)
 
-	b_ = np.random.rand(n)
+	b_ = rand_arr(n)
 	PRINT("\nAllocation (from numpy array {})".format(b_))
 	PRINT("---variable `b`---")
 	b=Vector(np.copy(b_))
@@ -315,6 +315,7 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	PRINT("A:")
 	PRINTVAR(A)
 	PRINT(A.py)
+
 	assert array_compare(a_col.py, ac_, eps=TEST_EPS)
 	assert array_compare(A.py,A_, eps=TEST_EPS)
 
@@ -401,9 +402,9 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	assert array_compare(A.py,A_, eps=TEST_EPS)
 
 
-	PRINT("\nAllocation (from {} by {} np.random.rand array)".format(n,n))
+	PRINT("\nAllocation (from {} by {} rand_arr array)".format(n,n))
 	PRINT("---variable `B`---")
-	B=Matrix(np.random.rand(n,n))
+	B=Matrix(rand_arr(n,n))
 	assert MAT_ASSERT(B)
 	B_ = np.copy(B.py)
 
@@ -424,9 +425,9 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	assert array_compare(B.py,B_, eps=TEST_EPS)
 
 
-	PRINT("\nAllocation (from {}x{} np.random.rand array)".format(m,n))
+	PRINT("\nAllocation (from {}x{} rand_arr array)".format(m,n))
 	PRINT("---variable `C`---")
-	C=Matrix(np.random.rand(m,n))
+	C=Matrix(rand_arr(m,n))
 	assert MAT_ASSERT(C)
 
 	PRINT(C.py)
@@ -456,13 +457,13 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 
 	PRINT("\nndarray->Matrix Copy")
 
-	PRINT("Copy: row-major numpy ndarray->row-major Matrix")
+	PRINT("Copy: row-major numpy ndarray -> Matrix")
 	A2_*=2.4
 	copy(A2_,A2)
 	sync(A2)
 	assert array_compare(A2.py,A2_,eps=0.)
 
-	PRINT("Copy: col-major numpy ndarray->row-major Matrix")
+	PRINT("Copy: col-major numpy ndarray -> Matrix")
 	A3_*=2.7
 	copy(A3_,A2)
 	sync(A2)
@@ -508,15 +509,15 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	PRINT("------------")
 
 
-	a=Vector(np.random.rand(n))
-	b=Vector(np.random.rand(n))
+	a=Vector(rand_arr(n))
+	b=Vector(rand_arr(n))
 	if isinstance(A_in,np.ndarray):
 		A = Matrix(A_in)
 		# A=Matrix(m,n)
 		# A.py[:]=A_in[:]
 	else:
-		A=Matrix(np.random.rand(m,n))
-	B=Matrix(np.random.rand(n,n))
+		A=Matrix(rand_arr(m,n))
+	B=Matrix(rand_arr(n,n))
 	a_ = np.copy(a.py)
 	b_ = np.copy(b.py)
 	A_ = np.copy(A.py)
@@ -570,8 +571,8 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 
 	PRINT("\nBLAS gemv:")
 	PRINT("---variable `d`---")
-	PRINT("\nAllocation (from {}x1 np.random.rand array)".format(m))
-	d = Vector(np.random.rand(m))
+	PRINT("\nAllocation (from {}x1 rand_arr array)".format(m))
+	d = Vector(rand_arr(m))
 	assert VEC_ASSERT(d)
 	d_ = np.copy(d.py)
 
@@ -605,8 +606,8 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 
 	PRINT("\nBLAS trsv")
 	# random lower triangular matrix L
-	L_ = np.random.rand(n,n)
-	xrand_ = np.random.rand(n)
+	L_ = rand_arr(n,n)
+	xrand_ = rand_arr(n)
 	for i in xrange(n):
 		# diagonal entries ~1 (keep condition number reasonable)
 		L_[i,i]/=10**np.log(n)
@@ -717,14 +718,14 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 	PRINT("--------------")
 
 	PRINT("---variable `E`---")
-	PRINT("\nAllocation from {} by {} np.random.rand array".format(n,n))
+	PRINT("\nAllocation from {} by {} rand_arr array".format(n,n))
 	if isinstance(A_in,np.ndarray):
 		if A_in.shape[0]>=A_in.shape[1]:
 			E = Matrix(np.dot(A_in.T,A_in))
 		else:
 			E = Matrix(np.dot(A_in,A_in.T))
 	else:
-		F = np.random.rand(n,n)
+		F = rand_arr(n,n)
 		E = Matrix(np.dot(F,F.T))
 	assert MAT_ASSERT(E)
 	E_ = np.copy(E.py)
@@ -733,8 +734,8 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 
 
 	PRINT("---variable `x`---")
-	PRINT("\nAllocation (from {}x1 np.random.rand array)".format(n))
-	x = Vector(np.random.rand(n))
+	PRINT("\nAllocation (from {}x1 rand_arr array)".format(n))
+	x = Vector(rand_arr(n))
 	assert VEC_ASSERT(x)
 	x_ = np.copy(x.py)
 	PRINT(x.py)

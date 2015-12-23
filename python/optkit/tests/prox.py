@@ -2,7 +2,7 @@ from optkit.api import *
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
 from optkit.utils.pyutils import println, printvoid, var_assert
 from optkit.types import ok_function_enums
-from optkit.tests.defs import TEST_EPS
+from optkit.tests.defs import TEST_EPS, MAT_ORDER, rand_arr
 import numpy as np
 from numpy import inf,nan
 
@@ -43,8 +43,8 @@ def test_prox(*args, **kwargs):
 		rho = 1.
 
 
-		x = Vector(np.random.rand(m))
-		x_out = Vector(np.random.rand(m))
+		x = Vector(rand_arr(m))
+		x_out = Vector(rand_arr(m))
 		x_orig = np.copy(x.py)
 		
 		assert VEC_ASSERT(x, x_out)

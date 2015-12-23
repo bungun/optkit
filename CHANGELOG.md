@@ -1,4 +1,4 @@
-###v0.1 (targets)
+	###v0.1 (targets)
 - TODO: GPU vector_pow()
 - TODO: add test for vector_pow()
 - TODO: move equilibration from Python to C[/CUDA]

@@ -1,7 +1,7 @@
 from optkit.api import *
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
 from optkit.utils.pyutils import println, printvoid, var_assert
-from optkit.tests.defs import TEST_EPS,HLINE
+from optkit.tests.defs import TEST_EPS, HLINE, MAT_ORDER, rand_arr
 import numpy as np
 
 
@@ -16,6 +16,9 @@ Residuals = pogs.types.Residuals
 Tolerances = pogs.types.Tolerances
 AdaptiveRhoParameters = pogs.types.AdaptiveRhoParameters
 
+
+
+
 	
 def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	if m is None: m=30
@@ -26,6 +29,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 		else:
 			A_in=None
 
+	print '(m = {}, n = {})'.format(m, n)
 
 	PRINT=println if VERBOSE_TEST else printvoid
 	PRINTVAR=print_var if VERBOSE_TEST else printvoid
@@ -33,7 +37,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	if isinstance(A_in,np.ndarray):
 		A = Matrix(A_in)
 	else:
-		A = Matrix(np.random.rand(m,n))
+		A = Matrix(rand_arr(m,n))
 	f = FunctionVector(m, h='Abs', b=1)
 	g = FunctionVector(n, h='IndGe0')
 	A_orig = np.copy(A.py)
@@ -103,7 +107,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("d: ", d)
 	PRINT("e: ", e)
 
-	xrand = np.random.rand(n)
+	xrand = rand_arr(n)
 	Ax = A.mat.py.dot(xrand)
 	DAEx = d.py*A_orig.dot(e.py*xrand)
 	assert all(np.abs(Ax-DAEx)<= TEST_EPS)
@@ -131,7 +135,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	sync(d, e)
 	norm_de_after = np.linalg.norm(d.py)*np.linalg.norm(e.py)
 
-	xrand = np.random.rand(n)
+	xrand = rand_arr(n)
 	Ax = A.mat.py.dot(xrand)
 	DAEx = d.py*A_orig.dot(e.py*xrand)
 	assert all(np.abs(Ax-DAEx)<= TEST_EPS)
@@ -180,8 +184,8 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT(HLINE)
 	PRINT("\nSCALED SYSTEM: PROJECTION TEST")
 
-	x = Vector(np.random.rand(n))
-	y = Vector(np.random.rand(m))
+	x = Vector(rand_arr(n))
+	y = Vector(rand_arr(m))
 	x_out = Vector(n)
 	y_out = Vector(m)
 	var_assert(x,y,x_out,y_out,type=Vector)
@@ -289,8 +293,11 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	
 	xarg_ = z.primal.x.py-z.dual.x.py
 	yarg_ = z.primal.y.py-z.dual.y.py
+
+
 	xout_ = prox_eval_python(g,settings.rho,xarg_,func='IndGe0')
 	yout_ = prox_eval_python(f,settings.rho,yarg_,func='Abs')
+
 
 	Prox(settings.rho,z)
 	z.sync()
@@ -448,7 +455,8 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	res_d = np.linalg.norm(A_copy.T.dot(output_.nu)+output_.mu)
 
 	assert res_p/np.linalg.norm(output_.y) <= 10*settings.reltol
-	assert res_d/np.linalg.norm(output_.mu) <= 10*settings.reltol
+	assert res_d/np.linalg.norm(output_.mu) <= 10*settings.reltol or \
+		np.linalg.norm(output_.mu) <= TEST_EPS
 
 	return True
 
@@ -459,6 +467,9 @@ def test_blocksplitting(*args, **kwargs):
 	A = np.load(kwargs['file']) if 'file' in kwargs else None
 
 	assert blocksplitting_test(m=m,n=n,A_in=A,VERBOSE_TEST=verbose)
+	if isinstance(A, np.ndarray): A = A.T
+	assert blocksplitting_test(m=n,n=m,A_in=A,VERBOSE_TEST=verbose)
+
 
 	print "...passed"
 	return True

@@ -14,9 +14,10 @@ extern "C" {
 
 
 
+
 /* List of functions supported by the proximal operator library. */
 enum Function { 
-                FnZero, 		   /* f(x) = 0 */
+                FnZero, 		 /* f(x) = 0 */
 				        FnAbs,       /* f(x) = |x| */
                 FnExp,       /* f(x) = e^x */
                 FnHuber,     /* f(x) = huber(x) */
@@ -63,17 +64,19 @@ void function_vector_memcpy_vmulti(FunctionVector * f, Function_t * h,
                                      ok_float * c, ok_float * d, 
                                      ok_float * e);
 void function_vector_print(FunctionVector *f);
+ok_float * function_vector_get_parameteraddress(FunctionVector *f, 
+  int ade);
 
 __DEVICE__ inline void checkvexity(FunctionObj * f);
-__DEVICE__ inline ok_float Abs(ok_float x) { return fabs(x); }
-__DEVICE__ inline ok_float Acos(ok_float x) { return acos(x); }
-__DEVICE__ inline ok_float Cos(ok_float x) { return cos(x); }
-__DEVICE__ inline ok_float Exp(ok_float x) { return exp(x); }
-__DEVICE__ inline ok_float Log(ok_float x) { return log(x); }
-__DEVICE__ inline ok_float Max(ok_float x, ok_float y) { return fmax(x, y); }
-__DEVICE__ inline ok_float Min(ok_float x, ok_float y) { return fmin(x, y); }
-__DEVICE__ inline ok_float Pow(ok_float x, ok_float y) { return pow(x, y); }
-__DEVICE__ inline ok_float Sqrt(ok_float x) { return sqrt(x); }
+__DEVICE__ inline ok_float Abs(ok_float x) { return MATH(fabs)(x); }
+__DEVICE__ inline ok_float Acos(ok_float x) { return MATH(acos)(x); }
+__DEVICE__ inline ok_float Cos(ok_float x) { return MATH(cos)(x); }
+__DEVICE__ inline ok_float Exp(ok_float x) { return MATH(exp)(x); }
+__DEVICE__ inline ok_float Log(ok_float x) { return MATH(log)(x); }
+__DEVICE__ inline ok_float Max(ok_float x, ok_float y) { return MATH(fmax)(x, y); }
+__DEVICE__ inline ok_float Min(ok_float x, ok_float y) { return MATH(fmin)(x, y); }
+__DEVICE__ inline ok_float Pow(ok_float x, ok_float y) { return MATH(pow)(x, y); }
+__DEVICE__ inline ok_float Sqrt(ok_float x) { return MATH(sqrt)(x); }
 
 
 __DEVICE__ inline ok_float MaxPos(ok_float x) {

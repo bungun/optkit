@@ -119,6 +119,7 @@ class POGSDirectSolver(object):
 		# start setup timer
 		t_start = timer()						
 
+
 		# get & check problem dimensions
 		(m,n) = A.shape
 		try:

@@ -16,21 +16,23 @@ class DenseLinsysLibs(object):
 		ext = "dylib" if uname()[0] == "Darwin" else "so"
 		for device in ['gpu', 'cpu']:
 			for precision in ['32', '64']:
-				lib_tag = '{}{}'.format(device, precision)
-				lib_name = 'libok_{}_dense{}.{}'.format(device, precision, ext)
-				lib_path = getsitepackages()[0]
-				if not use_local and path.exists(path.join(lib_path, lib_name)):
-					lib_path = path.join(lib_path, lib_name)
-				else:
-					lib_path = path.join(local_c_build, lib_name)
+				for order in ['', 'col_', 'row_']:
+					lib_tag = '{}{}{}'.format(order, device, precision)
+					lib_name = 'libok_dense_{}{}{}.{}'.format(
+						order, device, precision, ext)
+					lib_path = getsitepackages()[0]
+					if not use_local and path.exists(path.join(lib_path, lib_name)):
+						lib_path = path.join(lib_path, lib_name)
+					else:
+						lib_path = path.join(local_c_build, lib_name)
 
-				try:
-					lib = CDLL(lib_path)
-					self.libs[lib_tag]=lib
-				except (OSError, IndexError):
-					search_results += str("library {} not found at {}.\n".format(
-						lib_name, lib_path))
-					self.libs[lib_tag]=None
+					try:
+						lib = CDLL(lib_path)
+						self.libs[lib_tag]=lib
+					except (OSError, IndexError):
+						search_results += str("library {} not found at {}.\n".format(
+							lib_name, lib_path))
+						self.libs[lib_tag]=None
 
 		if all([self.libs[k] is None for k in self.libs]):
 			raise ValueError('No backend libraries were located:\n{}'.format(
@@ -39,7 +41,9 @@ class DenseLinsysLibs(object):
 	def get(self, lowtypes, GPU=False):
 		device = 'gpu' if GPU else 'cpu'
 		precision = '32' if lowtypes.FLOAT_CAST == float32 else '64'
-		lib_key = '{}{}'.format(device, precision)
+		lib_key = '{}'.format(lowtypes.order)
+		if lib_key != '': lib_key += '_'
+		lib_key += '{}{}'.format(device, precision)
 
 		if self.libs[lib_key] is not None:
 			lib = self.libs[lib_key]

@@ -43,6 +43,12 @@ __set_fn_vector(FunctionObj * objs,
 		};
 }
 
+__global__ __fv_get_param(FunctionObj * f, int ade, ok_float * param){
+	if (ade == 0) param = &(f[0].a);
+	else if (ade == 1) param = &(f[0].d);
+	else param = &(f[0].e);
+}
+
 /* CUDA C++ implementation with thrust:: */
 
 /* thrust::binary function defining elementwise prox evaluation*/
@@ -228,6 +234,15 @@ void function_vector_print(FunctionVector * f){
 				obj_host[i].c, obj_host[i].d, obj_host[i].e);
 }
 
+
+
+ok_float * 
+function_vector_get_parameteraddress(FunctionVector *f, int ade){
+	ok_float * param;
+
+	 __fv_get_param(f->objectives, ade, param);
+	return param;
+}
 
 void 
 ProxEvalVector(const FunctionVector * f, ok_float rho,

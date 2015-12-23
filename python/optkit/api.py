@@ -71,7 +71,8 @@ pogs = None
 """
 Backend switching
 """
-def set_backend(GPU=False, double=True):
+def set_backend(GPU=False, double=True, force_rowmajor=False,
+	force_colmajor=False):
 	# Backend
 	global backend
 
@@ -132,7 +133,8 @@ def set_backend(GPU=False, double=True):
 	global pogs
 
 	# change backend
-	backend.change(GPU=GPU, double=double)
+	backend_name=backend.change(GPU=GPU, double=double, 
+		force_rowmajor=force_rowmajor, force_colmajor=force_colmajor)
 	
 
 	# reset types
@@ -220,7 +222,7 @@ def set_backend(GPU=False, double=True):
 		FunctionVector, DirectProjector, equil_methods)
 
 
-	print "optkit backend set to {}{}".format(backend.device, backend.precision)
+	print "optkit backend set to {}".format(backend.libname)
 
 
 """
@@ -230,8 +232,13 @@ INITIALIZATION BEHAVIOR:
 
 default_device = getenv('OPTKIT_DEFAULT_DEVICE', 'cpu')
 default_precision = getenv('OPTKIT_DEFAULT_FLOATBITS', '64')
+default_order = getenv('OPTKIT_DEFAULT_ORDER', '')
+
+print "DEFAULT ORDER", default_order
 
 set_backend(GPU=(default_device == 'gpu'), 
-	double=(default_precision == '64'))
+	double=(default_precision == '64'),
+	force_rowmajor=(default_order == 'row'),
+	force_colmajor=(default_order == 'col'))
 
 

@@ -2,12 +2,11 @@ from ctypes import c_float, c_double, c_int, c_uint, c_size_t, \
 					POINTER, Structure, c_void_p
 from numpy import float32, float64, ndarray
 
-
 class LowLevelTypes(object):
-	def __init__(self, single_precision=False):
+	def __init__(self, single_precision=False, order=''):
 		self.ok_float = c_float if single_precision else c_double
-		self.FLOAT_CAST = float32 if single_precision else float64
-
+		self.order = order
+ 		self.FLOAT_CAST = float32 if single_precision else float64
 
 		# pointers to C types
 		self.c_int_p = POINTER(c_int)

@@ -38,6 +38,7 @@ typedef enum CBLAS_SIDE CBLAS_SIDE_t;
 
 #ifndef FLOAT
     #define CBLAS(x) cblas_d ## x
+    #define MATH(x) x 
     typedef double ok_float;
     #define MACHINETOL (ok_float) 10e-10
     #ifndef NAN
@@ -46,6 +47,7 @@ typedef enum CBLAS_SIDE CBLAS_SIDE_t;
     #define OK_FLOAT_MAX FLT_MAX
 #else
     #define CBLAS(x) cblas_s ## x
+    #define MATH(x) x ## f
     typedef float ok_float;
     #define MACHINETOL (ok_float) 10e-5
     #ifndef NAN
@@ -53,6 +55,18 @@ typedef enum CBLAS_SIDE CBLAS_SIDE_t;
     #endif
     #define OK_FLOAT_MAX DBL_MAX
 #endif
+
+
+#if defined(OPTKIT_ROWMAJOR)
+#define OPTKIT_ORDER 101
+#elif defined(OPTKIT_COLMAJOR)
+#define OPTKIT_ORDER 102
+#else
+#undef OPTKIT_ORDER
+#endif
+
+#define kZero (ok_float) 0
+#define kOne (ok_float) 1
 
 
 #ifndef INFINITY

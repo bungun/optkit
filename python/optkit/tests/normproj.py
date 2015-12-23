@@ -1,7 +1,7 @@
 from optkit.api import *
 from optkit.utils.pyutils import println,printvoid
 from optkit.tests.proj import direct_proj_test
-from optkit.tests.defs import TEST_EPS
+from optkit.tests.defs import TEST_EPS, MAT_ORDER, rand_arr
 import numpy as np
 
 
@@ -16,7 +16,7 @@ def normalize_and_project_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 			(m,n) = A_in.shape
 
 	if not isinstance(A_in, np.ndarray):
-		A_in = np.random.rand(m, n)
+		A_in = rand_arr(m, n)
 
 	PRINT=println if VERBOSE_TEST else printvoid
 

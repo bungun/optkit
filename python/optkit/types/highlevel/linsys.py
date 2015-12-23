@@ -17,10 +17,10 @@ class HighLevelLinsysTypes(object):
 
 				valid = istypedtuple(x, 1, int)
 				if len(x)==1:
-					if isinstance(x[0],ndarray):
+					if isinstance(x[0], ndarray):
 						valid |= len(x[0].shape) == 1
 				elif len(x)==2:
-					if isinstance(x[0],ndarray) and isinstance(x[1], lowtypes.vector):
+					if isinstance(x[0], ndarray) and isinstance(x[1], lowtypes.vector):
 						valid |= ( len(x[0].shape) == 1 and \
 									len(x[0]) == x[1].size)			
 
@@ -45,6 +45,7 @@ class HighLevelLinsysTypes(object):
 				self.is_view = 'is_view' in flags
 				self.on_gpu = ON_GPU
 				self.sync_required = ON_GPU 
+
 				if len(x) == 1:
 					if istypedtuple(x, 1, int):
 						data = zeros(x, dtype=lowtypes.FLOAT_CAST)				
@@ -56,6 +57,10 @@ class HighLevelLinsysTypes(object):
 					self.c = make_cvector(self.py, copy_data = ON_GPU)
 					self.size = self.py.size
 				else:
+					# --------------------------------------------- #
+					# python and C arrays provided to constructor, 	#
+					# used for constructing views					#
+					# --------------------------------------------- #
 					self.py = x[0]
 					self.c = x[1]
 					self.size = x[1].size
@@ -88,9 +93,9 @@ class HighLevelLinsysTypes(object):
 		self.Vector = Vector
 
 		class Matrix(object):
-			backend.__LIBGUARD_ON__ = True
 
 			def __init__(self, *A, **flags):
+				backend.__LIBGUARD_ON__ = True
 
 				# args are (int, int)
 				valid = istypedtuple(A,2,int)
@@ -129,22 +134,30 @@ class HighLevelLinsysTypes(object):
 					self.mindim = None
 					return
 
+				order = 'F' if backend.layout == 'col' else 'C'
 
 				self.is_view = 'is_view' in flags
 				self.on_gpu = ON_GPU
 				self.sync_required = ON_GPU
 				if len(A)==1 or istypedtuple(A,2,int):
 					if len(A)==1:
-						data = zeros(A[0].shape,dtype=lowtypes.FLOAT_CAST)
+						data = zeros(A[0].shape,dtype=lowtypes.FLOAT_CAST, 
+							order=order)
 						data[:]=A[0][:]
 					else:
-						data = zeros(A,dtype=lowtypes.FLOAT_CAST)
+						data = zeros(A,dtype=lowtypes.FLOAT_CAST,
+							order=order)
 
 					self.py = data
 					self.c = make_cmatrix(self.py, copy_data = ON_GPU)
 					self.size1 = self.py.shape[0]
 					self.size2 = self.py.shape[1]
 				else:
+
+					# --------------------------------------------- #
+					# python and C arrays provided to constructor, 	#
+					# used for constructing views					#
+					# --------------------------------------------- #
 					self.py = A[0]
 					self.c = A[1]
 					self.size1 = A[1].size1

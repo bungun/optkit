@@ -25,6 +25,7 @@ if __name__== "__main__":
 	kwargs={}
 	reps=1
 
+
 	args += sys.argv
 	if '--all' in sys.argv: 
 		args+=['--linsys','--allsub','--prox','--proj','--equil',
@@ -44,4 +45,4 @@ if __name__== "__main__":
 			reps=int(sys.argv[pos+1])
 
 	for r in xrange(reps):
-		main(*args,**kwargs)	
+		main(*args,**kwargs)

@@ -16,7 +16,6 @@ typedef struct vector {
 } vector;
 
 
-void vector_alloc(vector * v, size_t n);
 void vector_calloc(vector * v, size_t n);
 void vector_free(vector * v);
 void vector_set_all(vector * v, ok_float x);
@@ -32,6 +31,9 @@ void vector_sub(vector * v1, const vector * v2);
 void vector_mul(vector * v1, const vector * v2);
 void vector_div(vector * v1, const vector * v2);
 void vector_add_constant(vector *v, const ok_float x);
+void vector_abs(vector *v);
+void vector_recip(vector *v);
+void vector_sqrt(vector *v);
 void vector_pow(vector *v, const ok_float x);
 
 /* MATRIX defition and methods */
@@ -43,6 +45,7 @@ typedef struct matrix {
 } matrix;
 
 
+
 void matrix_alloc(matrix * A, size_t m, size_t n, CBLAS_ORDER_t ord);
 void matrix_calloc(matrix * A, size_t m, size_t n, CBLAS_ORDER_t ord);
 void matrix_free(matrix * A);
@@ -50,6 +53,7 @@ void matrix_submatrix(matrix * A_sub, matrix * A, size_t i, size_t j, size_t n1,
 void matrix_row(vector * row, matrix * A, size_t i);
 void matrix_column(vector * col, matrix * A, size_t j);
 void matrix_diagonal(vector * diag, matrix * A);
+void matrix_cast_vector(vector * v, matrix * A);
 void matrix_view_array(matrix * A, const ok_float * base, size_t n1, size_t n2, CBLAS_ORDER_t ord);
 void matrix_set_all(matrix * A, ok_float x);
 void matrix_memcpy_mm(matrix * A, const matrix *B);
@@ -57,15 +61,7 @@ void matrix_memcpy_ma(matrix * A, const ok_float *B, const CBLAS_ORDER_t ord);
 void matrix_memcpy_am(ok_float * A, const matrix *B, const CBLAS_ORDER_t ord);
 void matrix_print(matrix * A);
 void matrix_scale(matrix * A, ok_float x);
-
-int matrix_order_compat(const matrix * A, const matrix * B, const char * nm_A, 
-                 const char * nm_B, const char * nm_routine){
-
-  if (A->rowmajor == B->rowmajor) return 1;
-  printf("OPTKIT ERROR (%s) matrices %s and %s must have same layout.\n", 
-         nm_routine, nm_A, nm_B);
-  return 0;
-}
+void matrix_abs(matrix * A);
 
 
 /* BLAS routines */
@@ -76,12 +72,13 @@ void blas_destroy_handle(void * linalg_handle);
 
 
 /* BLAS LEVEL 1 */
-void blas_axpy(void * linalg_handle, ok_float alpha, const vector *x, vector *y);
+void blas_axpy(void * linalg_handle, ok_float alpha, const vector * x, vector * y);
 ok_float blas_nrm2(void * linalg_handle, const vector *x);
-void blas_scal(void * linalg_handle, const ok_float alpha, vector *x);
-ok_float blas_asum(void * linalg_handle, const vector *x);
-ok_float blas_dot(void * linalg_handle, const vector *x, const vector *y);
-
+void blas_scal(void * linalg_handle, const ok_float alpha, vector * x);
+ok_float blas_asum(void * linalg_handle, const vector * x);
+ok_float blas_dot(void * linalg_handle, const vector * x, const vector * y);
+void blas_dot_inplace(void * linalg_handle, const vector * x, 
+  const vector * y, ok_float * deviceptr_result);
 
 /* BLAS LEVEL 2 */
 void blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t TransA, 
@@ -118,5 +115,5 @@ void linalg_cholesky_svx(void * linalg_handle, const matrix * L,
 }
 #endif
 
-#endif  // OPTKIT_DENSE_H_GUARD
+#endif  /* OPTKIT_DENSE_H_GUARD */
 

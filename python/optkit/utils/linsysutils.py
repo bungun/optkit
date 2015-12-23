@@ -33,15 +33,26 @@ class UtilMakeCMatrix(object):
 			return self.lowtypes.matrix(0,0,0,None,enums.CblasRowMajor)
 		elif isinstance(A, ndarray) and len(A.shape)==2:
 			(m,n) = A.shape
+			if self.lowtypes.order == 'col' and not A.flags.f_contiguous:
+				A_ = ndarray(shape=(m,n), order='F')
+				A_[:] = A[:]
+				A = A_
+			elif self.lowtypes.order == 'row' and not A.flags.c_contiguous:
+				A = ndarray(shape=(m,n), order='C')
+				A_[:] = A[:]
+				A = A_
+
 			order = enums.CblasRowMajor if A.flags.c_contiguous else \
 					enums.CblasColMajor
+
 			A_ = self.lowtypes.matrix(0,0,0,None,order)
 			if not copy_data:
 				self.denselib.matrix_view_array(A_, self.ndarray_pointer(A), 
-											m, n, order)
+					m, n, order)
 			else:
 				self.denselib.matrix_calloc(A_, m, n, order)
-				self.denselib.matrix_memcpy_ma(A_, self.ndarray_pointer(A), order)
+				self.denselib.matrix_memcpy_ma(A_, self.ndarray_pointer(A), 
+					order)
 			return A_
 		else:
 			return None
