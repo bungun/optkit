@@ -14,6 +14,7 @@ def dense_equil_test(equil_method, A_in=None, VERBOSE_TEST=True):
 	PRINT("SKINNY MATRIX")
 
 	if A_in is not None:
+		if A_in.shape[1] > A_in.shape[0]: A_in = A_in.T
 		A = Matrix(A_in)
 		(m1,n1) = A.shape
 	else:

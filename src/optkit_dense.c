@@ -173,13 +173,13 @@ void matrix_alloc(matrix * A, size_t m, size_t n, CBLAS_ORDER_t ord) {
   A->size2 = n;
   A->data = (ok_float *) malloc(m * n * sizeof(ok_float));
 #ifndef OPTKIT_ORDER
-  A->tda = (ord == CblasRowMajor) ? n : m;
+  A->ld = (ord == CblasRowMajor) ? n : m;
   A->rowmajor = ord;
 #elif OPTKIT_ORDER == 101
-  A->tda = n;
+  A->ld = n;
   A->rowmajor = CblasRowMajor;
 #else
-  A->tda = m;
+  A->ld = m;
   A->rowmajor = CblasColMajor;
 #endif
 }
@@ -201,13 +201,13 @@ void matrix_submatrix(matrix * A_sub, matrix * A, size_t i, size_t j, size_t n1,
   if (!__matrix_exists(A)) return;
   A_sub->size1 = n1;
   A_sub->size2 = n2;
-  A_sub->tda = A->tda;
+  A_sub->ld = A->ld;
   #ifndef OPTKIT_ORDER
-  A_sub->data = (A->rowmajor == CblasRowMajor) ? A->data + (i * A->tda) + j : A->data + i + (j * A->tda);
+  A_sub->data = (A->rowmajor == CblasRowMajor) ? A->data + (i * A->ld) + j : A->data + i + (j * A->ld);
   #elif OPTKIT_ORDER == 101
-  A_sub->data = A->data + (i * A->tda) + j;
+  A_sub->data = A->data + (i * A->ld) + j;
   #else
-  A_sub->data = A->data + i + (j * A->tda);
+  A_sub->data = A->data + i + (j * A->ld);
   #endif
   A_sub->rowmajor = A->rowmajor;
 }
@@ -218,13 +218,13 @@ void matrix_row(vector * row, matrix * A, size_t i) {
   if (!__matrix_exists(A)) return;
   row->size = A->size2;
   #ifndef OPTKIT_ORDER
-  row->stride = (A->rowmajor == CblasRowMajor) ? 1 : A->tda;
-  row->data = (A->rowmajor == CblasRowMajor) ? A->data + (i * A->tda) : A->data + i;
+  row->stride = (A->rowmajor == CblasRowMajor) ? 1 : A->ld;
+  row->data = (A->rowmajor == CblasRowMajor) ? A->data + (i * A->ld) : A->data + i;
   #elif OPTKIT_ORDER == 101
   row->stride = 1;
-  row->data = A->data + (i * A->tda);
+  row->data = A->data + (i * A->ld);
   #else
-  row->stride = A->tda;
+  row->stride = A->ld;
   row->data = A->data + i;
   #endif
 }
@@ -234,14 +234,14 @@ void matrix_column(vector * col, matrix *A, size_t j) {
   if (!__matrix_exists(A)) return;
   col->size = A->size1;
   #ifndef OPTKIT_ORDER
-  col->stride = (A->rowmajor == CblasRowMajor) ? A->tda : 1;
-  col->data = (A->rowmajor == CblasRowMajor) ? A->data + j : A->data + (j * A->tda);
+  col->stride = (A->rowmajor == CblasRowMajor) ? A->ld : 1;
+  col->data = (A->rowmajor == CblasRowMajor) ? A->data + j : A->data + (j * A->ld);
   #elif OPTKIT_ORDER == 101
-  col->stride = A->tda;
+  col->stride = A->ld;
   col->data = A->data + j;
   #else
   col->stride = 1;
-  col->data = A->data + (j * A->tda);
+  col->data = A->data + (j * A->ld);
   #endif  
 
 }
@@ -250,7 +250,7 @@ void matrix_diagonal(vector * diag, matrix * A) {
   if (!__vector_exists(diag)) return;
   if (!__matrix_exists(A)) return;
   diag->data = A->data;
-  diag->stride = A->tda + 1;
+  diag->stride = A->ld + 1;
   diag->size = (size_t) (A->size1 <= A->size2) ? A->size1 : A->size2;
 }
 
@@ -268,13 +268,13 @@ void matrix_view_array(matrix * A, const ok_float *base, size_t n1, size_t n2, C
   A->size2 = n2;
   A->data = (ok_float *) base;
   #ifndef OPTKIT_ORDER
-  A->tda = (ord == CblasRowMajor) ? n2 : n1;
+  A->ld = (ord == CblasRowMajor) ? n2 : n1;
   A->rowmajor = ord;
   #elif OPTKIT_ORDER == 101
-  A->tda = n2;
+  A->ld = n2;
   A->rowmajor = CblasRowMajor;
   #else
-  A->tda = n1;
+  A->ld = n1;
   A->rowmajor = CblasColMajor;
   #endif
 }
@@ -282,13 +282,13 @@ void matrix_view_array(matrix * A, const ok_float *base, size_t n1, size_t n2, C
 inline ok_float __matrix_get(const matrix * A, size_t i, size_t j) {
   #ifndef OPTKIT_ORDER
   if (A->rowmajor == CblasRowMajor)
-    return A->data[i * A->tda + j];
+    return A->data[i * A->ld + j];
   else
-    return A->data[i + j * A->tda];
+    return A->data[i + j * A->ld];
   #elif OPTKIT_ORDER == 101
-  return A->data[i * A->tda + j];
+  return A->data[i * A->ld + j];
   #else
-  return A->data[i + j * A->tda];
+  return A->data[i + j * A->ld];
   #endif
 
 }
@@ -296,13 +296,13 @@ inline ok_float __matrix_get(const matrix * A, size_t i, size_t j) {
 inline void __matrix_set(matrix *A, size_t i, size_t j, ok_float x){
   #ifndef OPTKIT_ORDER
   if (A->rowmajor == CblasRowMajor)
-    A->data[i * A->tda + j] = x;
+    A->data[i * A->ld + j] = x;
   else
-    A->data[i + j * A->tda] = x;
+    A->data[i + j * A->ld] = x;
   #elif OPTKIT_ORDER == 101
-  A->data[i * A->tda + j] = x;
+  A->data[i * A->ld + j] = x;
   #else
-  A->data[i + j * A->tda] = x;
+  A->data[i + j * A->ld] = x;
   #endif
 
 }
@@ -531,7 +531,7 @@ void blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t TransA,
   if ( !__blas_check_handle(linalg_handle) ) return;
   #endif
   CBLAS(gemv)(A->rowmajor, TransA, (int) A->size1, (int) A->size2, 
-              alpha, A->data, (int) A->tda, x->data, (int) x->stride, 
+              alpha, A->data, (int) A->ld, x->data, (int) x->stride, 
               beta, y->data, (int) y->stride);
 }
 
@@ -543,7 +543,7 @@ void blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo,
   if ( !__blas_check_handle(linalg_handle) ) return;
   #endif
   CBLAS(trsv)(A->rowmajor, Uplo, TransA, Diag, (int) A->size1, 
-              A->data, (int) A->tda, x->data, (int) x->stride); 
+              A->data, (int) A->ld, x->data, (int) x->stride); 
 }
 
 /* BLAS LEVEL 3 */
@@ -562,7 +562,7 @@ void blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo,
   if ( __matrix_order_compat(A, C, "A", "C", "blas_syrk") )
   #endif
     CBLAS(syrk)(A->rowmajor, Uplo, Trans, (int) C->size2 , k, alpha, 
-                A->data, (int) A->tda, beta, C->data, (int) C->tda);
+                A->data, (int) A->ld, beta, C->data, (int) C->ld);
   
 }
 
@@ -582,7 +582,7 @@ void blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t TransA,
         __matrix_order_compat(A, C, "A", "C", "blas_gemm") )
   #endif
     CBLAS(gemm)(A->rowmajor, TransA, TransB, (int) C->size1, (int) C->size2, NA, alpha, 
-                A->data, (int) A->tda, B->data, (int) B->tda, beta, C->data, (int) C->tda);
+                A->data, (int) A->ld, B->data, (int) B->ld, beta, C->data, (int) C->ld);
 
 }
 
@@ -598,7 +598,7 @@ void blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side,
   if ( __matrix_order_compat(A, B, "A", "B", "blas_trsm") )
   #endif
     CBLAS(trsm)(A->rowmajor, Side, Uplo, TransA, Diag,(int) B->size1, (int) B->size2, 
-                alpha, A->data,(int) A->tda, B->data, (int) B->tda);
+                alpha, A->data,(int) A->ld, B->data, (int) B->ld);
 
 }
 

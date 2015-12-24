@@ -7,20 +7,19 @@ extern "C" {
 /* Direct Projector methods */
 void 
 direct_projector_alloc(direct_projector * P, matrix * A){
-	size_t mindim = (A->size1 >= A->size2) ? A->size1 : A->size2;
+	size_t mindim = (A->size1 < A->size2) ? A->size1 : A->size2;
 
 	P->A = A;
 	P->L = (matrix *) malloc( sizeof(matrix) );
 	matrix_calloc(P->L, mindim, mindim, A->rowmajor);
-	P->skinny = (uint) mindim == A->size1;
+	P->skinny = (uint) mindim == A->size2;
 	P->normalized = 0;
 }
 
 void 
 direct_projector_free(direct_projector * P){ 
-	matrix_free(P->L); 
+	matrix_free(P->L);
 	P->A = OK_NULL;
-	ok_free(P);
 }
 
 void 
@@ -30,13 +29,10 @@ direct_projector_initialize(void * linalg_handle, direct_projector * P,
 	vector diag = (vector){0, 0, OK_NULL};
 	ok_float mean_diag = kZero;
 
-	if (P->skinny)
-		blas_gemm(linalg_handle, CblasTrans, CblasNoTrans, 
+	if (P->skinny) blas_gemm(linalg_handle, CblasTrans, CblasNoTrans, 
 			kOne, P->A, P->A, kZero, P->L);
-	else
-		blas_gemm(linalg_handle, CblasNoTrans, CblasTrans, 
-			kOne, P->A, P->A, kZero, P->L);
-
+	else blas_gemm(linalg_handle, CblasNoTrans, CblasTrans, 
+		kOne, P->A, P->A, kZero, P->L);
 
 	matrix_diagonal(&diag, P->L);
 	mean_diag = blas_asum(linalg_handle, &diag) / (ok_float) P->L->size1;
@@ -46,8 +42,14 @@ direct_projector_initialize(void * linalg_handle, direct_projector * P,
 		matrix_scale(P->L, kOne / mean_diag);
 		matrix_scale(P->A, kOne / P->normA);
 	}
-
 	P->normalized = normalize;
+
+
+	vector_add_constant(&diag, kOne);
+	linalg_cholesky_decomp(linalg_handle, P->L);
+
+
+
 }
 
 void 

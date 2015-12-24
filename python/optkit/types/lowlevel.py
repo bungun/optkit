@@ -29,7 +29,7 @@ class LowLevelTypes(object):
 		class ok_matrix(Structure):
 			_fields_ = [('size1',c_size_t),
 						('size2',c_size_t),
-						('tda',c_size_t),
+						('ld',c_size_t),
 						('data',self.ok_float_p),
 						('rowmajor',c_uint)]
 		self.matrix = ok_matrix

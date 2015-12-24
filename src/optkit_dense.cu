@@ -375,7 +375,7 @@ __matrix_set_all(matrix * A, ok_float x) {
   dim3 grid_dim(grid_dimx, grid_dimy, 1u);
   dim3 block_dim(kBlockSize, kBlockSize - 1, 1u);
   __matrix_set<<<grid_dim, block_dim>>>(A->data, x, 
-    A->tda, A->size1, A->size2, A->rowmajor);
+    A->ld, A->size1, A->size2, A->rowmajor);
   CUDA_CHECK_ERR;
 }
 
@@ -420,13 +420,13 @@ matrix_alloc(matrix * A, size_t m, size_t n, CBLAS_ORDER_t ord) {
   A->size2 = n;
   ok_alloc_gpu(A->data, m * n * sizeof(ok_float));
   #ifndef OPTKIT_ORDER
-  A->tda = (ord == CblasRowMajor) ? n : m;
+  A->ld = (ord == CblasRowMajor) ? n : m;
   A->rowmajor = ord;
   #elif OPTKIT_ORDER == 101
-  A->tda = n;
+  A->ld = n;
   A->rowmajor = CblasRowMajor;
   #else
-  A->tda = m;
+  A->ld = m;
   A->rowmajor = CblasColMajor;
   #endif
 }
@@ -451,13 +451,13 @@ matrix_submatrix(matrix * A_sub, matrix * A, size_t i, size_t j, size_t n1, size
   __matrix_exists(A_sub);
   A_sub->size1 = n1;
   A_sub->size2 = n2;
-  A_sub->tda = A->tda;
+  A_sub->ld = A->ld;
   #ifndef OPTKIT_ORDER
-  A_sub->data = (A->rowmajor == CblasRowMajor) ? A->data + (i * A->tda) + j : A->data + i + (j * A->tda);
+  A_sub->data = (A->rowmajor == CblasRowMajor) ? A->data + (i * A->ld) + j : A->data + i + (j * A->ld);
   #elif OPTKIT_ORDER == 101
-  A_sub->data = A->data + (i * A->tda) + j;
+  A_sub->data = A->data + (i * A->ld) + j;
   #else
-  A_sub->data = A->data + i + (j * A->tda);
+  A_sub->data = A->data + i + (j * A->ld);
   #endif
   A_sub->rowmajor = A->rowmajor;
 }
@@ -467,13 +467,13 @@ matrix_submatrix_gen(matrix * A, size_t i, size_t j, size_t n1, size_t n2){
   return (matrix){
     .size1 = n1,
     .size2 = n2,
-    .tda = A->tda,
+    .ld = A->ld,
     #ifndef OPTKIT_ORDER
-    .data = (A->rowmajor == CblasRowMajor) ? A->data + (i * A->tda) + j : A->data + i + (j * A->tda),
+    .data = (A->rowmajor == CblasRowMajor) ? A->data + (i * A->ld) + j : A->data + i + (j * A->ld),
     #elif OPTKIT_ORDER == 101
-    .data = A->data + (i * A->tda) + j,
+    .data = A->data + (i * A->ld) + j,
     #else
-    .data = A->data + i + (j * A->tda),
+    .data = A->data + i + (j * A->ld),
     #endif
     .rowmajor = A->rowmajor
   };
@@ -486,13 +486,13 @@ matrix_row(vector * row, matrix * A, size_t i) {
   row->size = A->size2;
 
   #ifndef OPTKIT_ORDER
-  row->stride = (A->rowmajor == CblasRowMajor) ? 1 : A->tda;
-  row->data = (A->rowmajor == CblasRowMajor) ? A->data + (i * A->tda) : A->data + i;
+  row->stride = (A->rowmajor == CblasRowMajor) ? 1 : A->ld;
+  row->data = (A->rowmajor == CblasRowMajor) ? A->data + (i * A->ld) : A->data + i;
   #elif OPTKIT_ORDER == 101
   row->stride = 1;
-  row->data = A->data + (i * A->tda);
+  row->data = A->data + (i * A->ld);
   #else
-  row->stride = A->tda;
+  row->stride = A->ld;
   row->data = A->data + i; 
   #endif
 }
@@ -502,14 +502,14 @@ matrix_column(vector * col, matrix *A, size_t j) {
   if (!__vector_exists(col)) return;
   col->size = A->size1;
   #ifndef OPTKIT_ORDER 
-  col->stride = (A->rowmajor == CblasRowMajor) ? A->tda : 1; 
-  col->data = (A->rowmajor == CblasRowMajor) ? A->data + j : A->data + (j * A->tda); 
+  col->stride = (A->rowmajor == CblasRowMajor) ? A->ld : 1; 
+  col->data = (A->rowmajor == CblasRowMajor) ? A->data + j : A->data + (j * A->ld); 
   #elif OPTKIT_ORDER == 101
-  col->stride = A->tda;
+  col->stride = A->ld;
   col->data = A->data + j; 
   #else
   col->stride = 1; 
-  col->data = A->data + (j * A->tda); 
+  col->data = A->data + (j * A->ld); 
   #endif
 }
 
@@ -517,7 +517,7 @@ void
 matrix_diagonal(vector * diag, matrix *A) {
   if (!__vector_exists(diag)) return;
   diag->data = A->data;
-  diag->stride = A->tda + 1;
+  diag->stride = A->ld + 1;
   diag->size = (size_t) (A->size1 <= A->size2) ? A->size1 : A->size2;
 }
 
@@ -537,13 +537,13 @@ matrix_view_array(matrix * A, const ok_float *base, size_t n1,
   A->data = (ok_float *) base;
 
   #ifndef OPTKIT_ORDER
-  A->tda = (ord == CblasRowMajor) ? n2 : n1;
+  A->ld = (ord == CblasRowMajor) ? n2 : n1;
   A->rowmajor = ord;
   #elif OPTKIT_ORDER == 101
-  A->tda = n2;
+  A->ld = n2;
   A->rowmajor = CblasRowMajor;
   #else
-  A->tda = n1;
+  A->ld = n1;
   A->rowmajor = CblasColMajor;
   #endif
 }
@@ -571,13 +571,13 @@ matrix_memcpy_mm(matrix * A, const matrix * B) {
       grid_dim = calc_grid_dim(A->size1);
       for (i = 0; i < A->size1; ++i)
         __strided_memcpy<<<grid_dim, kBlockSize>>>(A->data + i * A->size2, 
-          1, B->data + i, A->tda, A->size2);
+          1, B->data + i, A->ld, A->size2);
     } else {
       /* A column major, B row major */
       grid_dim = calc_grid_dim(A->size2);
       for (j= 0; j < A->size2; ++j)
         __strided_memcpy<<<grid_dim, kBlockSize>>>(A->data + j * A->size1, 
-          1, B->data + j, A->tda, A->size1);
+          1, B->data + j, A->ld, A->size1);
     }
     #else
     ok_memcpy_gpu(A->data, B->data, A->size1 * A->size2 * sizeof(ok_float));
@@ -601,7 +601,7 @@ matrix_memcpy_ma(matrix * A, const ok_float * B,
     for (j = 0; j < A->size2; ++j){
       ok_memcpy_gpu(col, B + j * A->size1, A->size1 * sizeof(ok_float));
       __strided_memcpy<<<grid_dim, kBlockSize>>>(A->data + j,
-        A->tda, col, 1, A->size1);
+        A->ld, col, 1, A->size1);
     }
   } else {
     /* A column major, B row major */
@@ -610,7 +610,7 @@ matrix_memcpy_ma(matrix * A, const ok_float * B,
     for (i = 0; i < A->size1; ++j){
       ok_memcpy_gpu(col, B + i * A->size1, A->size1 * sizeof(ok_float));
       __strided_memcpy<<<grid_dim, kBlockSize>>>(A->data + i,
-        A->tda, row, 1, A->size2);
+        A->ld, row, 1, A->size2);
     }
   }
   CUDA_CHECK_ERR;
@@ -629,7 +629,7 @@ matrix_memcpy_am(ok_float * A, const matrix * B,
     grid_dim = calc_grid_dim(B->size2);
     for (i = 0; i < B->size1; ++i){
       __strided_memcpy<<<grid_dim, kBlockSize>>>(row, 1, 
-        B->data + i, B->tda, B->size2);
+        B->data + i, B->ld, B->size2);
       ok_memcpy_gpu(A + i * B->size2, row, B->size2 * sizeof(ok_float));
     }
     ok_free_gpu(row);
@@ -639,7 +639,7 @@ matrix_memcpy_am(ok_float * A, const matrix * B,
     grid_dim = calc_grid_dim(B->size1);
     for (j = 0; j < B->size2; ++j){
       __strided_memcpy<<<grid_dim, kBlockSize>>>(col, 1,
-        B->data + j, B->tda, B->size1);
+        B->data + j, B->ld, B->size1);
       ok_memcpy_gpu(A + j * B->size1, col, B->size1 * sizeof(ok_float));
     }
   }
@@ -658,11 +658,11 @@ matrix_print(matrix * A) {
       if (A->rowmajor == CblasRowMajor)
         printf("%0.2e ", A_row_host[j]);
       else
-        printf("%0.2e ", A_row_host[j * A->tda]);
+        printf("%0.2e ", A_row_host[j * A->ld]);
       #elif OPTKIT_ORDER == 101
       printf("%0.2e ", A_row_host[j]);
       #else
-      printf("%0.2e ", A_row_host[j * A->tda]);      
+      printf("%0.2e ", A_row_host[j * A->ld]);      
       #endif
 
     printf("\n");
@@ -875,7 +875,7 @@ blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t Trans,
   if ( !__blas_check_handle(linalg_handle) ) return;
   #endif
   CUBLAS(gemv)(*(cublasHandle_t *) linalg_handle, tA, s1, s2, 
-    &alpha, A->data, (int) A->tda, x->data, (int) x->stride, 
+    &alpha, A->data, (int) A->ld, x->data, (int) x->stride, 
     &beta, y->data, (int) y->stride);
   CUDA_CHECK_ERR;
 }
@@ -912,7 +912,7 @@ blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo,
   if ( !__blas_check_handle(linalg_handle) ) return;
   #endif
   CUBLAS(trsv)(*(cublasHandle_t *) linalg_handle, ul, tA, di, 
-    (int) A->size1, A->data, (int) A->tda, x->data, (int) x->stride); 
+    (int) A->size1, A->data, (int) A->ld, x->data, (int) x->stride); 
   CUDA_CHECK_ERR;
 }
 
@@ -951,8 +951,8 @@ blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo,
   if ( __matrix_order_compat(A, C, "A", "C", "blas_syrk") )
   #endif
     CUBLAS(syrk)(*(cublasHandle_t *) linalg_handle, ul, tA, 
-      (int) C->size2 , k, &alpha, A->data, (int) A->tda,
-      &beta, C->data, (int) C->tda);
+      (int) C->size2 , k, &alpha, A->data, (int) A->ld,
+      &beta, C->data, (int) C->ld);
   
   CUDA_CHECK_ERR;
 }
@@ -998,8 +998,8 @@ blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t TransA,
         __matrix_order_compat(A, C, "A", "C", "blas_gemm") )
   #endif
     CUBLAS(gemm)(*(cublasHandle_t *) linalg_handle, tA, tB, 
-      s1, s2, k, &alpha, A->data, (int) A->tda, 
-      B->data, (int) B->tda, &beta, C->data, (int) C->tda);
+      s1, s2, k, &alpha, A->data, (int) A->ld, 
+      B->data, (int) B->ld, &beta, C->data, (int) C->ld);
   
   CUDA_CHECK_ERR;
 }
@@ -1018,7 +1018,7 @@ printf("Method `blas_trsm()` not implemented for GPU\n");
 
 /* cholesky decomposition of a single block */
 __global__ void 
-__block_chol(ok_float * A, uint iter, uint tda, uint rowmajor) {
+__block_chol(ok_float * A, uint iter, uint ld, uint rowmajor) {
   
   uint col, row, mat_dim, global_col, global_row, i;
   const uint kSmTda = kTileSize + 1u;
@@ -1033,7 +1033,7 @@ __block_chol(ok_float * A, uint iter, uint tda, uint rowmajor) {
   global_row = iter * kTileSize + row;
 
   __matrix_get(L, row, col, kSmTda, rowmajor) = 
-      __matrix_get(A, global_row, global_col, tda, rowmajor);
+      __matrix_get(A, global_row, global_col, ld, rowmajor);
   __syncthreads();
 
 
@@ -1058,13 +1058,13 @@ __block_chol(ok_float * A, uint iter, uint tda, uint rowmajor) {
   }
 
   if (row >= col)
-    __matrix_get(A, global_row, global_col, tda, rowmajor) = 
+    __matrix_get(A, global_row, global_col, ld, rowmajor) = 
         __matrix_get(L, row, col, kSmTda, rowmajor);
 }
 
 __global__ void 
 __block_trsv(ok_float * A, uint iter, uint n, 
-                             uint tda, uint rowmajor) {
+                             uint ld, uint rowmajor) {
   
   uint tile_idx, row, global_row, global_col, i, j;
   const uint kSmTda = kTileSize + 1u;
@@ -1079,14 +1079,14 @@ __block_trsv(ok_float * A, uint iter, uint n,
   // Load A -> L column-wise.
   for (i = 0; i < kTileSize; ++i)
     __matrix_get(L, row, i, kSmTda, rowmajor) =
-        __matrix_get(A, global_row, global_col + i, tda, rowmajor);
+        __matrix_get(A, global_row, global_col + i, ld, rowmajor);
 
   global_row = row + (iter + tile_idx + 1u) * kTileSize;
 
   if (global_row < n) {
     for (i = 0; i < kTileSize; ++i)
       __matrix_get(A12, row, i, kSmTda, rowmajor) = 
-          __matrix_get(A, global_row, global_col + i, tda, rowmajor);
+          __matrix_get(A, global_row, global_col + i, ld, rowmajor);
   }
   __syncthreads();
 
@@ -1104,7 +1104,7 @@ __block_trsv(ok_float * A, uint iter, uint n,
 
   if (global_row < n) {
     for (uint i = 0; i < kTileSize; ++i)
-      __matrix_get(A, global_row, global_col + i, tda, rowmajor) =
+      __matrix_get(A, global_row, global_col + i, ld, rowmajor) =
           __matrix_get(A12, row, i, kSmTda, rowmajor);
   }
 }
@@ -1148,7 +1148,7 @@ linalg_cholesky_decomp(void * linalg_handle, matrix * A) {
       matrix_print(&L11);
 #endif
 
-    __block_chol<<<1, block_dim, 0, stm>>>(A->data, i, (uint) A->tda,
+    __block_chol<<<1, block_dim, 0, stm>>>(A->data, i, (uint) A->ld,
                                   (uint) A->rowmajor == CblasRowMajor);
     CUDA_CHECK_ERR;
 
@@ -1171,7 +1171,7 @@ linalg_cholesky_decomp(void * linalg_handle, matrix * A) {
 #endif
 
       __block_trsv<<<grid_dim, kTileSize, 0, stm>>>(A->data, i, 
-                                  (uint) A->size1, (uint) A->tda,
+                                  (uint) A->size1, (uint) A->ld,
                                   (uint) A->rowmajor == CblasRowMajor);
 
       CUDA_CHECK_ERR;

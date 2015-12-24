@@ -16,9 +16,6 @@ Residuals = pogs.types.Residuals
 Tolerances = pogs.types.Tolerances
 AdaptiveRhoParameters = pogs.types.AdaptiveRhoParameters
 
-
-
-
 	
 def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	if m is None: m=30

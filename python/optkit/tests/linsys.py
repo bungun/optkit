@@ -1,12 +1,11 @@
 from optkit.api import *
 from optkit.api import backend
 from optkit.types.lowlevel import ok_enums
-from optkit.utils.pyutils import println, printvoid, var_assert
+from optkit.utils.pyutils import println, printvoid, \
+	var_assert, array_compare
 from optkit.tests.defs import TEST_EPS, MAT_ORDER, rand_arr
 import numpy as np
 from ctypes import c_void_p, byref
-from operator import and_
-from toolz import curry 
 
 VEC_ASSERT = lambda *v : var_assert(*v, type=Vector)
 MAT_ASSERT = lambda *A : var_assert(*A, type=Matrix)
@@ -14,33 +13,6 @@ MAT_ASSERT = lambda *A : var_assert(*A, type=Matrix)
 make_cvector = backend.make_cvector
 make_cmatrix = backend.make_cmatrix
 
-
-@curry 
-def rel_compare(eps, first, second):
-	if first == 0 and second == 0: return True
-	return abs(first - second) / max(abs(first), abs(second)) < eps
-
-def array_compare(a1,a2,eps=0.,expect=True):
-	assert isinstance(a1,np.ndarray)
-	assert isinstance(a2,np.ndarray)
-	assert np.squeeze(a1).shape == np.squeeze(a2).shape
-
-	# check absolute tolerance
-	valid = np.max(np.abs(a1-a2)) <= eps
-
-	# check relative tolerance
-	if not valid and eps > 0:
-		rcomp = rel_compare(eps)
-		valid |= reduce(and_, map(rcomp, 
-			[a1.item(i) for i in xrange(a1.size)],
-			[a2.item(i) for i in xrange(a2.size)]))
-
-	if expect and not valid:
-		print "ARRAY MISMATCH GREATER THAN TOLERANCE {}:".format(eps)
-		print "ARRAY 1\n", a1
-		print "ARRAY 2\n", a2
-
-	return valid
 
 def test_lowlevelvectorcalls(VERBOSE_TEST=True):
 

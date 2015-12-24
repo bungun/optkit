@@ -39,7 +39,7 @@ void vector_pow(vector *v, const ok_float x);
 /* MATRIX defition and methods */
 
 typedef struct matrix {
-  size_t size1, size2, tda;
+  size_t size1, size2, ld;
   ok_float *data;
   CBLAS_ORDER_t rowmajor;
 } matrix;

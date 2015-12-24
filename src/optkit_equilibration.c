@@ -61,9 +61,10 @@ dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out,
 		for (k = 0; k < m; ++k){
 			matrix_row(&a, A_out, k);
 			blas_dot_inplace(linalg_handle, &a, &a, d->data + k);
-			vector_sqrt(d);
-			vector_recip(d);
 		}
+		vector_sqrt(d);
+		vector_recip(d);
+		
 		for (k = 0; k < n; ++k) {
 			matrix_column(&a, A_out, k);
 			vector_mul(&a, d);
@@ -74,9 +75,10 @@ dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out,
 		for (k = 0; k < n; ++k){
 			matrix_column(&a, A_out, k);
 			blas_dot_inplace(linalg_handle, &a, &a, e->data + k);
-			vector_sqrt(e);
-			vector_recip(e);
 		}
+		vector_sqrt(e);
+		vector_recip(e);
+
 		for (k = 0; k < m; ++k) {
 			matrix_row(&a, A_out, k);
 			vector_mul(&a, e);

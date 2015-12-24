@@ -234,7 +234,6 @@ default_device = getenv('OPTKIT_DEFAULT_DEVICE', 'cpu')
 default_precision = getenv('OPTKIT_DEFAULT_FLOATBITS', '64')
 default_order = getenv('OPTKIT_DEFAULT_ORDER', '')
 
-print "DEFAULT ORDER", default_order
 
 set_backend(GPU=(default_device == 'gpu'), 
 	double=(default_precision == '64'),

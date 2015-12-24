@@ -24,6 +24,7 @@ __pogs_matrix_alloc(pogs_matrix * M, size_t m, size_t n, CBLAS_ORDER_t ord){
 void 
 __pogs_matrix_free(pogs_matrix * M){
 	PROJECTOR(free)(M->P);
+	ok_free(M->P);
 	matrix_free(M->A);
 	vector_free(M->d);
 	vector_free(M->e);
