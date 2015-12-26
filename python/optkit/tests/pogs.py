@@ -115,8 +115,14 @@ def warmstart_test(m=300, n=200, A_in=None, VERBOSE_TEST=True):
 	PRINT(HLINE)
 	PRINT("\nWARM START with solver state and 1.02x perturbed f(y)")
 	PRINT(HLINE)
-	f.c_[:m/2]*=1.02
-	f.c_[m/2:]/=1.02
+
+	f.pull()
+	fobj = f.tolist()
+	for i in xrange(0, m/2): fobj[i].c *= 1.02
+	for i in xrange(m/2, m): fobj[i].c /= 1.02
+	f.py[:]=fobj[:]
+	f.push()
+
 	info, _ , _  = pogs(A, f, g, solver_state=solver_state,
 		verbose = int(VERBOSE_TEST))
 	var_assert(info, type=SolverInfo)
@@ -126,8 +132,14 @@ def warmstart_test(m=300, n=200, A_in=None, VERBOSE_TEST=True):
 	PRINT(HLINE)
 	PRINT("\nWARM START with solver state and 1.1x perturbed f(y)")
 	PRINT(HLINE)
-	f.c_[:m/2]*=1.1
-	f.c_[m/2:]/=1.1
+
+	f.pull()
+	fobj = f.tolist()
+	for i in xrange(0, m/2): fobj[i].c *= 1.1
+	for i in xrange(m/2, m): fobj[i].c /= 1.1
+	f.py[:]=fobj[:]
+	f.push()
+
 	info, _ , _  = pogs(A, f, g, solver_state=solver_state,
 		verbose = int(VERBOSE_TEST))
 	var_assert(info, type=SolverInfo)
@@ -137,8 +149,15 @@ def warmstart_test(m=300, n=200, A_in=None, VERBOSE_TEST=True):
 	PRINT(HLINE)
 	PRINT("\nWARM START with solver state and 1.2x perturbed f(y)")
 	PRINT(HLINE)
-	f.c_[:m/2]*=1.2
-	f.c_[m/2:]/=1.2
+
+	f.pull()
+	fobj = f.tolist()
+	for i in xrange(0, m/2): fobj[i].c *= 1.2
+	for i in xrange(m/2, m): fobj[i].c /= 1.2
+	f.py[:]=fobj[:]
+	f.push()
+
+
 	info, _ , _  = pogs(A, f, g, solver_state=solver_state,
 		verbose = int(VERBOSE_TEST))
 	var_assert(info, type=SolverInfo)
@@ -149,8 +168,14 @@ def warmstart_test(m=300, n=200, A_in=None, VERBOSE_TEST=True):
 	PRINT("\nWARM START with solver state and 2x perturbed f(y)")
 	PRINT(HLINE)
 
-	f.c_[:m/2]*=2.
-	f.c_[m/2:]/=2.
+
+	f.pull()
+	fobj = f.tolist()
+	for i in xrange(0, m/2): fobj[i].c *= 2
+	for i in xrange(m/2, m): fobj[i].c /= 2
+	f.py[:]=fobj[:]
+	f.push()
+
 	info, _ , _  = pogs(A, f, g, solver_state=solver_state,
 		verbose = int(VERBOSE_TEST))
 	var_assert(info, type=SolverInfo)

@@ -52,6 +52,7 @@ from optkit.api import prox_eval
 
 # Projector types 
 from optkit.api import DirectProjector
+from optkit.api import DirectProjectorPy
 
 # Equilibration methods 
 from optkit.api import dense_l2_equilibration

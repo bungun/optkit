@@ -1,4 +1,4 @@
-#include "optkit_prox.h"
+ #include "optkit_prox.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,78 +31,16 @@ void function_vector_free(FunctionVector * f){
 void function_vector_view_array(FunctionVector * f, 
                                 FunctionObj * h, size_t n){
 	f->size=n;
-	f->objectives= (FunctionObj *) h;
+	f->objectives = (FunctionObj *) h;
 }
-
-void function_vector_from_multiarray(FunctionVector * f, Function_t * h, 
-									 ok_float * a, ok_float * b, 
-									 ok_float * c, ok_float * d, 
-									 ok_float * e, size_t n){
-	f->size=n;
-
-	function_vector_alloc(f, n);
-	function_vector_memcpy_vmulti(f, h, a, b, c, d, e);
-}
-
 
 void function_vector_memcpy_va(FunctionVector * f, FunctionObj * h){
 	memcpy(f->objectives, h, f->size * sizeof(FunctionObj));
 }
 
-void function_vector_memcpy_vmulti(FunctionVector * f, Function_t *h,
-									 ok_float * a, ok_float * b, 
-									 ok_float * c, ok_float * d, 
-									 ok_float * e){
-
-	size_t i;
-
-	if (h == OK_NULL){
-		#ifdef _OPENMP
-		#pragma omp parallel for
-		#endif
-		for (i = 0; i < f->size; ++i)
-			f->objectives[i] = (FunctionObj){FnZero,1,0,1,0,0};
-	} else if (a == OK_NULL) {
-		#ifdef _OPENMP
-		#pragma omp parallel for
-		#endif
-		for (i = 0; i < f->size; ++i)
-			f->objectives[i] = (FunctionObj){h[i],1,0,1,0,0};
-	} else if (b == OK_NULL) {
-		#ifdef _OPENMP
-		#pragma omp parallel for
-		#endif
-		for (i = 0; i < f->size; ++i)
-			f->objectives[i] = (FunctionObj){h[i],a[i],0,1,0,0};
-	} else if (c == OK_NULL) {
-		#ifdef _OPENMP
-		#pragma omp parallel for
-		#endif
-		for (i = 0; i < f->size; ++i)
-			f->objectives[i] = (FunctionObj){h[i],a[i],b[i],1,0,0};
-	} else if (d == OK_NULL) {
-		#ifdef _OPENMP
-		#pragma omp parallel for
-		#endif
-		for (i = 0; i < f->size; ++i)
-			f->objectives[i] = (FunctionObj){h[i],a[i],b[i],c[i],0,0};
-
-	} else if (e == OK_NULL) {
-		#ifdef _OPENMP
-		#pragma omp parallel for
-		#endif
-		for (i = 0; i < f->size; ++i)
-			f->objectives[i] = (FunctionObj){h[i],a[i],b[i],c[i],d[i],0};
-	} else {
-		#ifdef _OPENMP
-		#pragma omp parallel for
-		#endif
-		for (i = 0; i < f->size; ++i)
-			f->objectives[i] = (FunctionObj){h[i],a[i],b[i],c[i],d[i],e[i]};
-	}
-
+void function_vector_memcpy_av(FunctionObj * h, FunctionVector * f){
+	memcpy(h, f->objectives, f->size * sizeof(FunctionObj));
 }
-
 
 void function_vector_print(FunctionVector * f){
 	size_t i;

@@ -46,7 +46,6 @@ class ProxLibs(object):
 			lib = self.libs[lib_key]
 			ok_float = lowtypes.ok_float
 			ok_float_p = lowtypes.ok_float_p
-			c_uint_p = lowtypes.c_uint_p
 			vector_p = lowtypes.vector_p
 			function_p = lowtypes.function_p
 			function_vector_p = lowtypes.function_vector_p
@@ -57,27 +56,20 @@ class ProxLibs(object):
 			lib.function_vector_alloc.argtypes=[function_vector_p, c_size_t]
 			lib.function_vector_calloc.argtypes=[function_vector_p, c_size_t]
 			lib.function_vector_free.argtypes=[function_vector_p]
-			lib.function_vector_from_multiarray.argtypes=[function_vector_p, c_uint_p,
-															  ok_float_p, ok_float_p, 
-															  ok_float_p, ok_float_p, 
-															  ok_float_p, c_size_t]
-			lib.function_vector_memcpy_vmulti.argtypes=[function_vector_p, c_uint_p, 
-															ok_float_p, ok_float_p, 
-															ok_float_p, ok_float_p, 
-															ok_float_p]
+			lib.function_vector_memcpy_va.argtypes=[function_vector_p, function_p]
+			lib.function_vector_memcpy_av.argtypes=[function_p, function_vector_p]			
 			lib.function_vector_print.argtypes=[function_vector_p]
-
 
 			## return values
 			lib.function_vector_alloc.restype=None
 			lib.function_vector_calloc.restype=None
 			lib.function_vector_free.restype=None
-			lib.function_vector_from_multiarray.restype=None
-			lib.function_vector_memcpy_vmulti.restype=None
+			lib.function_vector_memcpy_va.restype = None
+			lib.function_vector_memcpy_av.restype = None			
 			lib.function_vector_print.restype=None
 
-			# Prox & Function
-			# ---------------
+			# Prox & Function evaluation
+			# --------------------------
 			## arguments
 			lib.ProxEvalVector.argtypes=[function_vector_p, ok_float, vector_p, vector_p]
 			lib.FuncEvalVector.argtypes=[function_vector_p, vector_p]

@@ -62,6 +62,9 @@ OPT_FLAGS=
 ifneq ($(FLOAT), 0)
 OPT_FLAGS += -DFLOAT # use floats rather than doubles
 endif
+ifdef OPTKIT_DEBUG_PYTHON
+OPT_FLAGS += -DOK_DEBUG_PYTHON
+endif
 
 ORDER=
 ifneq ($(ROWMAJOR), 0)
@@ -120,11 +123,13 @@ EQUILSTATIC=$(PREFIX_OUT)equil_$(DEVICETAG)$(PRECISION).o$
 POGSSTATIC=$(PREFIX_OUT)pogs_$(DEVICETAG)$(PRECISION).o
 
 POGS_STATIC_DEPS=$(POGSSTATIC) $(EQUILSTATIC) $(PROJSTATIC)
+POGS_STATIC_DEPS += $(DENSESTATIC) $(PROXSTATIC)
 PROJ_STATIC_DEPS=$(DENSESTATIC) $(PROJSTATIC)
 EQUIL_STATIC_DEPS=$(DENSESTATIC) $(EQUILSTATIC)
 ifneq ($(SPARSE), 0)
 PROJ_STATIC_DEPS += $(SPARSESTATIC)
 EQUIL_STATIC_DEPS += $(SPARSESTATIC)
+POGS_STATIC_DEPS+= $(SPARSESTATIC) 
 endif
 
 .PHONY: default, all, libs, libok, libok_dense, libok_sparse, libprox
@@ -144,8 +149,8 @@ libpogs_dense: pogs equil projector $(LINSYSLIBS) libprox
 	$(CXX) $(CXXFLAGS) -shared -o \
 	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED)  \
 	$(POGS_STATIC_DEPS) $(LDFLAGS) \
-	$(OUT)libok_dense_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
-	$(OUT)libprox_$(DEVICETAG)$(PRECISION).$(SHARED) 
+	# $(OUT)libok_dense_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
+	# $(OUT)libprox_$(DEVICETAG)$(PRECISION).$(SHARED) 
 
 
 libpogs_sparse: 
@@ -204,9 +209,9 @@ gpu_sparse: $(SRC)optkit_sparse.cu $(SRC)optkit_sparse.h
 	mkdir -p $(OUT)
 	$(CUXX) $(CUXXFLAGS) $< -c -o $(SPARSESTATIC)
 
-cpu_prox: $(SRC)optkit_prox.c $(SRC)optkit_prox.h
+cpu_prox: $(SRC)optkit_prox.cpp $(SRC)optkit_prox.h
 	mkdir -p $(OUT)
-	$(CXX) $(CXXFLAGS) $< -c -o $(PROXSTATIC)
+	g++ $(CXXFLAGS) $< -c -o $(PROXSTATIC)
 
 gpu_prox: $(SRC)optkit_prox.cu $(SRC)optkit_prox.h
 	mkdir -p $(OUT)

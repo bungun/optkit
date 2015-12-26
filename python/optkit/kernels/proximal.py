@@ -32,15 +32,18 @@ class ProxKernels(object):
 							"as second argument.\n Provided: {}\n".format(
 								type(v)))
 
+		fobj = f.tolist()
 		if mul:
-			f.a_ *= v.py
-			f.d_ *= v.py
-			f.e_ *= v.py
+			for i in xrange(f.size):
+				fobj[i].a *= v.py[i]
+				fobj[i].d *= v.py[i]
+				fobj[i].e *= v.py[i]
 		else:
-			f.a_ /= v.py
-			f.d_ /= v.py
-			f.e_ /= v.py
-
+			for i in xrange(f.size):
+				fobj[i].a /= v.py[i]
+				fobj[i].d /= v.py[i]
+				fobj[i].e /= v.py[i]
+		f.py[:]=fobj[:]
 
 	def push_function_vector(self, *function_vectors):
 		for f in function_vectors:
@@ -48,15 +51,9 @@ class ProxKernels(object):
 				raise TypeError("optkit.FunctionVector required.")
 
 			if self.devicecheck: self.device_compare(f)
+			f.push()
 
-
-			self.proxlib.function_vector_memcpy_vmulti(f.c,
-					self.ndarray_pointer(f.h_, function = True),
-					self.ndarray_pointer(f.a_, function = False),
-					self.ndarray_pointer(f.b_, function = False),
-					self.ndarray_pointer(f.c_, function = False),
-					self.ndarray_pointer(f.d_, function = False),
-					self.ndarray_pointer(f.e_, function = False))	
+	
 
 	def print_function_vector(self, f):
 		if not isinstance(f, self.FunctionVector):

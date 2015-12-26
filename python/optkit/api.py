@@ -56,6 +56,8 @@ func_eval = prox_eval = None
 Projectors
 """
 DirectProjector = None
+DirectProjectorPy = None
+
 
 """
 Equilibration methods
@@ -124,6 +126,7 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 
 	# Projector types
 	global DirectProjector
+	global DirectProjectorPy
 
 	# Equilibration methods
 	global dense_l2_equilibration
@@ -209,7 +212,7 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 
 	# reset algorithmic types
 	# (projection)
-	DirectProjector = DirectProjectorFactory(
+	DirectProjectorPy = DirectProjectorFactory(
 		base_kernels, Matrix).DirectProjector 
 
 	# (equilibration)
@@ -219,7 +222,7 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 
 	# (solver)
 	pogs = POGSDirectSolver(backend, base_kernels, Vector, Matrix, 
-		FunctionVector, DirectProjector, equil_methods)
+		FunctionVector, DirectProjectorPy, equil_methods)
 
 
 	print "optkit backend set to {}".format(backend.libname)

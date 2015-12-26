@@ -12,6 +12,7 @@ class PogsTypes(object):
 		Matrix = matrix_type
 		Projector = projector_type
 
+
 		class BlockVector(object):
 			def __init__(self,m,n):
 				# let m,n be ints or int tuples

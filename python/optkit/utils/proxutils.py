@@ -1,5 +1,6 @@
 from optkit.types import ok_function_enums as fcn_enums
-from numpy import log, exp, cos, arccos, sign, inf, nan
+from numpy import log, exp, cos, arccos, sign, inf, nan,\
+					 zeros, copy as np_copy
 
 """
 low-level utilities
@@ -128,81 +129,125 @@ def proxlog(xi,rhoi):
 
 
 
-def func_eval_python(f,x,func='Zero'):
-	if func=='Abs':
-		h = abs
-	elif func=='NegEntr':
-		h = lambda x : map(lambda xi: 0 if xi <= 0 else xi*log(xi), x)
-	elif func=='Exp':
-		h = exp
-	elif func=='Huber':
-		h = lambda x : (abs(x)-0.5)*(x>=1)+0.5*pow(x,2)*(x<1)
-	elif func=='Identity':
-		h = lambda x : x 
-	elif func in ('IndBox01','IndEq0','IndGe0','IndLe0','Zero'):
-		h = lambda x : 0*x
-	elif func=='Logistic':
-		h = lambda x: log(1+exp(x))
-	elif func=='MaxNeg0':
-		h = lambda x : -x*(x<0)
-	elif func=='MaxPos0':
-		h = lambda x :  x*(x>0)
-	elif func=='NegLog':
-		h = lambda x : -1*log(x)
-	elif func=='Recipr':
-		h = lambda x : pow(x,-1)*(x>=0)
-	elif func=='Square':
-		h = lambda x : 0.5*pow(x,2)
-	else:
-		h = lambda x : 0*x
+def enum_to_func(e):
+	if e == 0: return 'Zero'
+	if e == 1: return 'Abs'
+	if e == 2: return 'Exp'
+	if e == 3: return 'Huber'
+	if e == 4: return 'Identity'
+	if e == 5: return 'IndBox01'
+	if e == 6: return 'IndEq0'
+	if e == 7: return 'IndGe0'
+	if e == 8: return 'IndLe0'
+	if e == 9: return 'Logistic'
+	if e == 10: return 'MaxNeg0'
+	if e == 11: return 'MaxPos0'
+	if e == 12: return 'NegEntr'
+	if e == 13: return 'NegLog'
+	if e == 14: return 'Recipr'
+	if e == 15: return 'Square'
 
-	return f.c_.dot(h(f.a_*x-f.b_))+f.d_.dot(x)+0.5*f.e_.dot(x*x)
+# ------------------------------------------------------------- #
+# assumes f has a field f.py, an list of FunctionObject			#
+# instances, where each element has fields a, b, c, d and e of 	#
+# type float32/64 and a field h of type uint 					#
+# ------------------------------------------------------------- #
+def func_eval_python(f,x):
+
+	def ffunc(h, xi):
+	 	func = enum_to_func(h)
+		if func == 'Abs':
+			return abs(xi)
+		elif func == 'NegEntr':
+			return 0 if xi <= 0 else xi * log(xi)
+		elif func =='Exp':
+			return exp(xi)
+		elif func == 'Huber':
+			return abs(xi) - 0.5 if xi>=1 else 0.5 * xi * xi
+		elif func == 'Identity':
+			return xi
+		elif func in ('IndBox01','IndEq0','IndGe0','IndLe0','Zero'):
+			return 0
+		elif func == 'Logistic':
+			return log(1 + exp(xi))
+		elif func == 'MaxNeg0':
+			return -xi * (xi < 0)
+		elif func == 'MaxPos0':
+			return xi * (xi > 0)
+		elif func == 'NegLog':
+			return -1 * log(xi)
+		elif func == 'Recipr':
+			return (xi**-1) * (xi >= 0)
+		elif func == 'Square':
+			return 0.5 * xi**2
+		else:
+			return 0
+		return h
+
+	def feval(f_, x_):
+		xi = f_.a * x_ - f_.b
+		xi = ffunc(f_.h, xi)
+		return f_.c * x + f_.d * x_ + f_.e * x_ * x_
+
+	val = 0
+	for i, ff in enumerate(f):
+		xi = ff.a * x[i] - ff.b 
+		xi = ffunc(ff.h, xi)
+		val += ff.c * xi + ff.d * x[i] + ff.e * x[i] * x[i]
+	return val
 
 
-def prox_eval_python(f,rho,x,func='Square'):
-	x_out = f.a_*(rho*x-f.d_)
-	x_out /= (rho+f.e_)
-	x_out -= f.b_
 
-	if func=='Abs':
-		fprox = lambda xi, rhoi : max(xi-1./rhoi,0)+min(xi+1./rhoi,0)
-	elif func=='NegEntr':
-		fprox = lambda xi, rhoi : lambertw(exp(rhoi*xi-1)*rhoi)/rhoi
-	elif func=='Exp':
-		fprox = lambda xi, rhoi : xi-lambertw(exp(xi)/rhoi)
-	elif func=='Huber':
-		fprox = lambda xi, rhoi : xi*rhoi/(1.+rhoi) if abs(xi)<(1+1./rhoi) \
-									else xi-sign(xi)/rhoi
-	elif func=='Identity':
-		fprox = lambda xi, rhoi : xi - 1./rhoi
-	elif func=='IndBox01':
-		fprox = lambda xi, rhoi : min(max(xi,0),1)
-	elif func=='IndEq0':
-		fprox = lambda xi, rhoi : 0
-	elif func=='IndGe0':
-		fprox = lambda xi, rhoi : max(xi,0)
-	elif func=='IndLe0':
-		fprox = lambda xi, rhoi : min(xi,0)
-	elif func=='Logistic':
-		fprox = proxlog
-	elif func=='MaxNeg0':
-		fprox = lambda xi, rhoi : xi+1./rhoi if xi <= -1./rhoi else max(xi,0)
-	elif func=='MaxPos0':
-		fprox = lambda xi, rhoi : xi-1./rhoi if xi >= 1./rhoi else min(xi,0)
-	elif func=='NegLog':
-		fprox = lambda xi, rhoi : (xi + (xi**2 + 4/rhoi)**0.5)/2
-	elif func=='Recipr':
-		fprox = lambda xi, rhoi : cubicsolve(-max(xi,0),0,-1./rhoi)
-	elif func=='Square':
-		fprox = lambda xi, rhoi : rhoi * xi/(1.+rhoi)
-	elif func=='Zero':
-		fprox = lambda xi, rhoi : xi		
-	else:
-		fprox = lambda xi, rhoi : xi
+# ------------------------------------------------------------- #
+# assumes f has a field f.py, a list of FunctionObject			#
+# instances, where each element has fields a, b, c, d and e of 	#
+# type float32/64 and a field h of type uint 					#
+# ------------------------------------------------------------- #
+def prox_eval_python(f,rho,x):
+	def pfunc(h, xi, rhoi):
+	 	func = enum_to_func(h)
+		if func =='Abs':
+			return max(xi-1./rhoi,0)+min(xi+1./rhoi,0)
+		elif func == 'NegEntr':
+			return lambertw(exp(rhoi*xi-1)*rhoi)/rhoi
+		elif func == 'Exp':
+			return xi-lambertw(exp(xi)/rhoi)
+		elif func == 'Huber':
+			return xi*rhoi/(1.+rhoi) if abs(xi)<(1+1./rhoi) \
+										else xi-sign(xi)/rhoi
+		elif func == 'Identity':
+			return xi - 1./rhoi
+		elif func == 'IndBox01':
+			return min(max(xi,0),1)
+		elif func == 'IndEq0':
+			return 0
+		elif func == 'IndGe0':
+			return max(xi,0)
+		elif func == 'IndLe0':
+			return min(xi,0)
+		elif func == 'Logistic':
+			fprox = proxlog(xi, rhoi)
+		elif func == 'MaxNeg0':
+			return xi+1./rhoi if xi <= -1./rhoi else max(xi,0)
+		elif func == 'MaxPos0':
+			return xi-1./rhoi if xi >= 1./rhoi else min(xi,0)
+		elif func == 'NegLog':
+			return (xi + (xi**2 + 4/rhoi)**0.5)/2
+		elif func == 'Recipr':
+			return cubicsolve(-max(xi,0),0,-1./rhoi)
+		elif func == 'Square':
+			return rhoi * xi/(1.+rhoi)	
+		else:
+			return xi
+		return fprox
 
-	x_out[:] = map(fprox, x_out[:], f.e_ + rho/(f.c_*f.a_**2))
-
-	x_out += f.b_
-	x_out /= f.a_
+	def fprox(f_, x_):
+		x_ = f_.a * (x_ * rho - f_.d) / (f_.e + rho) - f_.b
+		rho_ = (f_.e + rho) / (f_.c * f_.a * f_.a)
+		x_ = pfunc(f_.h, x_, rho_)
+		return (x_ + f_.b) / f_.a
+		
+	x_out = zeros(len(f))
+	x_out[:] = map(fprox, f, x)
 
 	return x_out

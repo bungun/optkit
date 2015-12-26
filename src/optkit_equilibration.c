@@ -4,6 +4,9 @@
 extern "C" {
 #endif
 
+
+
+
 void 
 sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out, 
 	vector * d, vector * e, CBLAS_ORDER_t ord){
@@ -21,6 +24,7 @@ sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out,
 	}
 	matrix_memcpy_ma(A_out, A_in, ord);
 	matrix_abs(A_out);
+	vector_set_all(d, kOne);
 
 	/* repeat NUMITER times */
 	for (k = 0; k < NUMITER; ++k){
@@ -34,6 +38,7 @@ sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out,
 		vector_scale(d, fac);
 		vector_scale(e, (ok_float) 1/fac);
 	}
+
 	matrix_memcpy_ma(A_out, A_in, ord);
 	for (k = 0; k < m; ++k) {
 		matrix_row(&a, A_out, k);

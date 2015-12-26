@@ -111,11 +111,11 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 
 	PRINT("\nPROJECTOR")
-	Proj = DirectProjector(A.mat, normalize=True)	
+	Proj = DirectProjectorPy(A.mat, normalize=True)	
 	A.normalized=True	
 	A.sync()
 	PRINT("ProjA: ", Proj)
-	assert var_assert(Proj,type=DirectProjector)
+	assert var_assert(Proj,type=DirectProjectorPy)
 
 
 	PRINT("\nNORMALIZE A, Proj, d, e")
@@ -156,23 +156,37 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("f: ", f)
 	PRINT("g: ", g)
 	
-	fa_=np.copy(f.a_)
-	fd_=np.copy(f.d_)
-	fe_=np.copy(f.e_)
-	ga_=np.copy(g.a_)
-	gd_=np.copy(g.d_)
-	ge_=np.copy(g.e_)
-	d_ = np.copy(d.py)
-	e_ = np.copy(e.py)
+	fobj = f.tolist()
+	gobj = g.tolist()
+
+	fa_ = np.array([ff.a for ff in fobj])
+	fd_ = np.array([ff.d for ff in fobj])
+	fe_ = np.array([ff.e for ff in fobj])
+	ga_ = np.array([gg.a for gg in gobj])
+	gd_ = np.array([gg.d for gg in gobj])
+	ge_ = np.array([gg.e for gg in gobj])
+	d_  = np.copy(d.py)
+	e_  = np.copy(e.py)
 
 	pogs.utils.scale_functions(f,g,d,e)
+	f.pull()
 
-	assert np.max(np.abs((fa_/d_-f.a_))) <= TEST_EPS
-	assert np.max(np.abs((fe_/d_-f.d_))) <= TEST_EPS
-	assert np.max(np.abs((fe_/d_-f.e_))) <= TEST_EPS
-	assert np.max(np.abs((ga_*e_-g.a_))) <= TEST_EPS
-	assert np.max(np.abs((gd_*e_-g.d_))) <= TEST_EPS
-	assert np.max(np.abs((ge_*e_-g.e_))) <= TEST_EPS
+
+	fobj = f.tolist()
+	gobj = g.tolist()
+	fa_scal = np.array([ff.a for ff in fobj])
+	fd_scal = np.array([ff.d for ff in fobj])
+	fe_scal = np.array([ff.e for ff in fobj])
+	ga_scal = np.array([gg.a for gg in gobj])
+	gd_scal = np.array([gg.d for gg in gobj])
+	ge_scal = np.array([gg.e for gg in gobj])
+
+	assert np.max(np.abs((fa_ / d_ - fa_scal))) <= TEST_EPS
+	assert np.max(np.abs((fe_ / d_ - fd_scal))) <= TEST_EPS
+	assert np.max(np.abs((fe_ / d_ - fe_scal))) <= TEST_EPS
+	assert np.max(np.abs((ga_ * e_ - ga_scal))) <= TEST_EPS
+	assert np.max(np.abs((gd_ * e_ - gd_scal))) <= TEST_EPS
+	assert np.max(np.abs((ge_ * e_ - ge_scal))) <= TEST_EPS
 
 	PRINT("AFTER")
 	PRINT("f: ", f)
@@ -292,8 +306,8 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	yarg_ = z.primal.y.py-z.dual.y.py
 
 
-	xout_ = prox_eval_python(g,settings.rho,xarg_,func='IndGe0')
-	yout_ = prox_eval_python(f,settings.rho,yarg_,func='Abs')
+	xout_ = prox_eval_python(g.tolist(), settings.rho, xarg_)
+	yout_ = prox_eval_python(f.tolist(), settings.rho, yarg_)
 
 
 	Prox(settings.rho,z)
@@ -351,8 +365,8 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	converged = pogs.utils.check_convergence(A,f,g,
 		settings.rho,z,obj,res,eps,gapstop=settings.gapstop)	
 	
-	obj_py = func_eval_python(g,z.primal12.x.py,func='IndGe0')
-	obj_py += func_eval_python(f,z.primal12.y.py,func='Abs')
+	obj_py = func_eval_python(g.tolist(), z.primal12.x.py)
+	obj_py += func_eval_python(f.tolist(), z.primal12.y.py)
 	obj_gap_py = np.dot(z.primal12.vec.py, z.dual12.vec.py)
 	obj_dua_py = obj_py-abs(obj_gap_py)
 

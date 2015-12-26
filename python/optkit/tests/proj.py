@@ -7,8 +7,8 @@ import numpy as np
 
 def direct_proj_test(m,n,A=None,normalize=False,PRINT=lambda x : None):
 	A = Matrix(rand_arr(m,n)) if A is None else Matrix(A)
-	ProjA = DirectProjector(A, normalize=normalize)
-	assert var_assert(ProjA, type=DirectProjector)
+	ProjA = DirectProjectorPy(A, normalize=normalize)
+	assert var_assert(ProjA, type=DirectProjectorPy)
 	sync(A) #(since potentially modified by projector normalization)
 
 	x = Vector(rand_arr(n))

@@ -10,7 +10,6 @@ class LowLevelTypes(object):
 
 		# pointers to C types
 		self.c_int_p = POINTER(c_int)
-		self.c_uint_p = POINTER(c_uint)
 		self.ok_float_p = POINTER(self.ok_float)
 
 
@@ -37,6 +36,7 @@ class LowLevelTypes(object):
 		# matrix pointer
 		self.matrix_p = POINTER(self.matrix)
 
+
 		# function struct
 		class ok_function(Structure):
 			_fields_ = [('h', c_uint),
@@ -60,29 +60,23 @@ class LowLevelTypes(object):
 		self.function_vector_p = POINTER(self.function_vector)
 
 
-		def ndarray_pointer(x, function = False):
+		def ndarray_pointer(x):
 			if not isinstance(x, ndarray):
 				raise TypeError("input to method `ndarray_pointer "
 					  "must be a NumPy array. \n "
 					  "Input type: {}".format(type(x)))
 				return None
-			if not function:
-				if x.dtype != self.FLOAT_CAST:
-					raise TypeError("input to method `ndarray_pointer` " 
-					  "must be a NumPy array of type {} when keyword argument"
-					  "`function` is set to `False` or not provided.\n "
-					  "Input array type: {}".format(self.FLOAT_CAST, x.dtype))
-					return None
-				else: return x.ctypes.data_as(self.ok_float_p)
-			elif function:
-				if x.dtype != c_uint:
-					raise TypeError("input to method `ndarray_pointer` " 
-						  "must be a NumPy array of type {} when keyword argument"
-						  "`function` is set to `True`.\n "
-						  "Input array type: {}".format(c_uint, x.dtype))
-					return None
-				else: 
-					return x.ctypes.data_as(self.c_uint_p)
+			if not (x.dtype == self.FLOAT_CAST or x.dtype == self.function):
+				raise ValueError("input to method `ndarray_pointer "
+					  "must be a NumPy array of type {} or {}. \n "
+					  "Input array type: {}".format(self.FLOAT_CAST,
+					  	self.function, x.dtype))
+				return None
+
+			if x.dtype == self.FLOAT_CAST:
+				return x.ctypes.data_as(self.ok_float_p)
+			else:
+				return x.ctypes.data_as(self.function_p)
 
 		self.ndarray_pointer = ndarray_pointer
 	

@@ -4,28 +4,6 @@
 
 
 /* CUDA helper kernels */
-__global__ void
-__set_fn_vector_from_multi(FunctionObj * objs, const ok_float * a, 
-	const ok_float * b, const ok_float * c, const ok_float * d,
-	const ok_float * e, const Function_t * h, uint n){
-	uint tid = blockIdx.x * blockDim.x + threadIdx.x;
-	for (uint i = tid; i < n; i += gridDim.x * blockDim.x){
-		if (a != OK_NULL) 
-			objs[i].a = a[i]; 
-		if (b != OK_NULL) 
-			objs[i].b = b[i]; 
-		if (c != OK_NULL) 
-			objs[i].c = c[i]; 
-		if (d != OK_NULL) 
-			objs[i].d = d[i]; 
-		if (e != OK_NULL) 
-		objs[i].e = e[i];
-		if (h != OK_NULL) 
-			objs[i].h = h[i];
-	};
-}
-
-
 __global__ void 
 __set_fn_vector(FunctionObj * objs, 
 					const ok_float a, const ok_float b, const ok_float c,
@@ -155,74 +133,22 @@ function_vector_free(FunctionVector * f){
 }
 
 
-void function_vector_view_array(FunctionVector * f, 
+void 
+function_vector_view_array(FunctionVector * f, 
                                 FunctionObj * h, size_t n){
 	f->size = n;
 	f->objectives = (FunctionObj *) h;
 }
 
 void 
-function_vector_from_multiarray(FunctionVector * f, Function_t * h, 
-									 ok_float * a, ok_float * b, 
-									 ok_float * c, ok_float * d, 
-									 ok_float * e, size_t n){
-	f->size = n;
-	function_vector_alloc(f, n);
-	function_vector_memcpy_vmulti(f, h, a, b, c, d, e);
-}
-
-
-void 
 function_vector_memcpy_va(FunctionVector * f, FunctionObj * h){
 	ok_memcpy_gpu(f->objectives, h, f->size * sizeof(FunctionObj));
 }
 
-
-
 void 
-function_vector_memcpy_vmulti(FunctionVector * f, Function_t *h,
-									 ok_float * a, ok_float * b, 
-									 ok_float * c, ok_float * d, 
-									 ok_float * e){
-
-
-	uint grid_dim = calc_grid_dim(f->size);
-	ok_float * a_dev, * b_dev, *c_dev, *d_dev, *e_dev;
-	Function_t * h_dev = OK_NULL;
-
-	a_dev = b_dev = c_dev = d_dev = e_dev = OK_NULL;
-
-	if (h != OK_NULL)
-		ok_alloc_gpu(h_dev, f->size * sizeof(Function_t));
-		ok_memcpy_gpu(h_dev, h, f->size * sizeof(Function_t));
-	if (a != OK_NULL)
-		ok_alloc_gpu(a_dev, f->size * sizeof(ok_float));		
-		ok_memcpy_gpu(a_dev, a, f->size * sizeof(ok_float));
-	if (b != OK_NULL)
-		ok_alloc_gpu(b_dev, f->size * sizeof(ok_float));		
-		ok_memcpy_gpu(b_dev, b, f->size * sizeof(ok_float));
-	if (c != OK_NULL)
-		ok_alloc_gpu(c_dev, f->size * sizeof(ok_float));		
-		ok_memcpy_gpu(c_dev, c, f->size * sizeof(ok_float));
-	if (d != OK_NULL)
-		ok_alloc_gpu(d_dev, f->size * sizeof(ok_float));		
-		ok_memcpy_gpu(d_dev, d, f->size * sizeof(ok_float));
-	if (e != OK_NULL)
-		ok_alloc_gpu(e_dev, f->size * sizeof(ok_float));		
-		ok_memcpy_gpu(e_dev, e, f->size * sizeof(ok_float));
-
-	__set_fn_vector_from_multi<<<grid_dim, kBlockSize>>>(f->objectives, 
-		a_dev, b_dev, c_dev, d_dev, e_dev, h_dev, f->size);
-
-	if (h_dev != OK_NULL) ok_free_gpu(h_dev);
-	if (a_dev != OK_NULL) ok_free_gpu(a_dev);
-	if (b_dev != OK_NULL) ok_free_gpu(b_dev);
-	if (c_dev != OK_NULL) ok_free_gpu(c_dev);
-	if (d_dev != OK_NULL) ok_free_gpu(d_dev);
-	if (e_dev != OK_NULL) ok_free_gpu(e_dev);
-
+function_vector_memcpy_av(FunctionObj * h, FunctionVector * f){
+	ok_memcpy_gpu(h, f->objectives, f->size * sizeof(FunctionObj));
 }
-
 
 void function_vector_print(FunctionVector * f){
 	size_t i;

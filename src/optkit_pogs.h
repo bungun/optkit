@@ -6,6 +6,10 @@
 #include "optkit_equilibration.h"
 #include "optkit_projector.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef OPTKIT_INDIRECT
 typedef direct_projector projector;
 #define PROJECTOR(x) direct_projector_ ## x
@@ -14,9 +18,12 @@ typedef indirect_projector projector;
 #define PROJECTOR(x) indirect_projector_ ## x
 #endif
 
-#ifdef __cplusplus
-extern "C" {
+#ifndef OK_DEBUG_PYTHON
+#define POGS(x) __ ## x
+#else 
+#define POGS(x) x
 #endif
+
 
 const ok_float kALPHA = (ok_float) 1.7;
 const uint kMAXITER = 2000u;
@@ -102,12 +109,13 @@ typedef struct POGSSolver {
 	ok_float rho;
 	pogs_settings * settings;
 	void * linalg_handle;
+	ok_float init_time;
 } pogs_solver;
 
 
 
 void set_default_settings(pogs_settings * settings);
-void pogs_init(pogs_solver * solver, ok_float * A, size_t m, size_t n, 
+pogs_solver * pogs_init(ok_float * A, size_t m, size_t n, 
 	CBLAS_ORDER_t ord, Equilibration_t equil);
 void pogs_solve(pogs_solver * solver, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output);
@@ -115,14 +123,15 @@ void pogs_finish(pogs_solver * solver);
 void pogs(ok_float * A, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output,
 	CBLAS_ORDER_t ord, Equilibration_t equil);
-void pogs_load_solver(pogs_solver * solver, ok_float * A_equil, 
+pogs_solver * pogs_load_solver(ok_float * A_equil, 
 	ok_float * LLT_factorization, ok_float * d, 
 	ok_float * e, ok_float * z, ok_float * z12, ok_float * z_dual, 
-	ok_float * z_dual12, ok_float * z_prev, ok_float rho);
+	ok_float * z_dual12, ok_float * z_prev, ok_float rho, 
+	size_t m, size_t n, CBLAS_ORDER_t ord);
 void pogs_extract_solver(pogs_solver * solver, ok_float * A_equil, 
 	ok_float * LLT_factorization, ok_float * d, 
 	ok_float * e, ok_float * z, ok_float * z12, ok_float * z_dual, 
-	ok_float * z_dual12, ok_float * z_prev, ok_float * rho);
+	ok_float * z_dual12, ok_float * z_prev, ok_float * rho, CBLAS_ORDER_t ord);
 
 
 const pogs_settings kDefaultPOGSSettings = (const pogs_settings){
@@ -132,6 +141,7 @@ const pogs_settings kDefaultPOGSSettings = (const pogs_settings){
 	.reltol = kRTOL, 
 	.maxiter = kMAXITER,
 	.verbose = kVERBOSE,
+	.adaptiverho = kADAPTIVE,
 	.gapstop = kGAPSTOP,
 	.warmstart = kWARMSTART,
 	.resume = kRESUME,
