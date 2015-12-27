@@ -26,7 +26,6 @@ EXT = 'dylib' if uname()[0] == 'Darwin' else 'so'
 def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 	PRINT = println if VERBOSE_TEST else printvoid
 	HOME = path.dirname(path.abspath(__file__))
-	HOME = path.join(HOME, 'build')
 
 	# ------------------------------------------------------------ #
 	# ---------------------- libequil prep ----------------------- #
@@ -34,7 +33,7 @@ def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 
 	libpath = path.join(path.join(HOME, '..', 'build'),
 	 'libequil_{}{}{}.{}'.format(LAYOUT, DEVICE, PRECISION, EXT))
-	lib = CDLL(libpath)
+	lib = CDLL(path.abspath(libpath))
 
 
 	lib.sinkhorn_knopp.argtypes = [c_void_p, ok_float_p, matrix_p, 
@@ -48,7 +47,7 @@ def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 
 
 	# ------------------------------------------------------------ #
-	# ------------------------- setup ---------------------------- #
+	# ------------------------ test setup ------------------------ #
 	# ------------------------------------------------------------ #
 	PRINT("\n")
 

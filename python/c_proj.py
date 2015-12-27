@@ -36,7 +36,7 @@ def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 
 	libpath = path.join(path.join(HOME, '..', 'build'),
 	 'libprojector_{}{}{}.{}'.format(LAYOUT, DEVICE, PRECISION, EXT))
-	lib = CDLL(libpath)
+	lib = CDLL(path.abspath(libpath))
 
 
 	class DirectProjector(Structure):
@@ -63,7 +63,7 @@ def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 
 
 	# ------------------------------------------------------------ #
-	# ------------------------ setup ----------------------------- #
+	# ------------------------ test setup ------------------------ #
 	# ------------------------------------------------------------ #
 	PRINT("\n")
 
@@ -82,6 +82,8 @@ def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 
 	# store original
 	A_orig = np_copy(A.py)
+
+	# 
 	P_c = DirectProjector(None, None, 0, 0, 0)
 
 	# ------------------------------------------------------------ #
@@ -89,6 +91,7 @@ def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 	# ------------------------------------------------------------ #
 
 
+	# make random (x_in, y_in), allocate all-zero (x_out, y_out)
 	x_rand = rand_arr(n)
 	y_rand = rand_arr(m)
 	x_in = Vector(x_rand)
@@ -100,26 +103,57 @@ def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 	pretty_print("DIRECT PROJECTOR TEST:", '-')
 
 	PPRINT("NON-NORMALIZED PROJECTOR", '.')
+
 	lib.direct_projector_alloc(P_c, A.c)
+
+ 	# ---------------------------------------------------------	#
+	# calculate cholesky factorization of (I+AA') or (I+A'A)	#
+	#															#
+	# then, set (x_out, y_out) = Proj_{y=Ax} (x_in, y_in)  		#														
+	# ---------------------------------------------------------	#
 	lib.direct_projector_initialize(backend.dense_blas_handle, P_c, 0)
 	lib.direct_projector_project(backend.dense_blas_handle, P_c,
 		x_in.c, y_in.c, x_out.c, y_out.c)
 
+
 	PRINT("RANDOM (x,y)")
+
+	# print ||x_in||, ||y_in||, ||Ax_in - y_in||
 	PRINT("||x||_2, {} \t ||y||_2: {}".format(norm(x_rand), norm(y_rand)))
 	PRINT("||Ax-y||_2:")
 	PRINT(norm(y_rand-A_orig.dot(x_rand)))
 	PRINT("NORM A (from projector): ", P_c.normA)
 	PRINT("PROJECT:")
+
+	# print ||x_out||, ||y_out||, ||Ax_out - y_out||
 	PRINT("||x||_2, {} \t ||y||_2: {}".format(norm(x_out.py), norm(y_out.py)))
 	PRINT("||Ax-y||_2:")
 	res = norm(y_out.py-A.py.dot(x_out.py))
 	PRINT(res)
+
+	# Ax = y should hold (within numerical tolerance)
 	assert res <= TEST_EPS
+
+	# inputs should be unchanged
+	assert array_compare(x_rand, x_in.py)
+	assert array_compare(y_rand, y_in.py)
+
 	lib.direct_projector_free(P_c)
 
 
 	PPRINT("NORMALIZED PROJECTOR", '.')
+
+	# ---------------------------------------------------------	#
+	# repeat above procedure, but divide all entries of A by 	#
+	#														 	#
+	#  ( \sum_{i=1}^mindim (AA)_{ii} ) / sqrt(mindim)		 	#
+	#	 	where 											 	#
+	#		-mindim = min(m, n) 								#
+	#		-AA = A'A or AA' 									#
+	# 															#
+	# before forming L = chol(I + A'A) 							#
+	# --------------------------------------------------------- #
+
 	lib.direct_projector_alloc(P_c, A.c)
 	lib.direct_projector_initialize(backend.dense_blas_handle, P_c, 1)
 	lib.direct_projector_project(backend.dense_blas_handle, P_c,

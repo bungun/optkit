@@ -31,14 +31,12 @@ extern "C" {
 /*		ok_float rho, pogs_variables * z, pogs_objectives * obj) 					*/
 /*	void update_tolerances(void * linalg_handle, pogs_variables * z, 				*/
 /*		pogs_objectives * obj, pogs_tolerances * eps)								*/
-/*	int update_residuals(void * linalg_handle, pogs_solver * solver, 				*/
+/*	void update_residuals(void * linalg_handle, pogs_solver * solver, 				*/
 /*		pogs_objectives * obj, pogs_residuals * res, pogs_tolerances * eps, 		*/
 /*		int force_exact) 															*/
 /*	int check_convergence(void * linalg_handle, pogs_solver * solver, 				*/
 /*		pogs_objectives * obj, pogs_residuals * res, pogs_tolerances * eps, 		*/
 /*		int gapstop, int force_exact) 												*/
-/*	void overrelax(void * linalg_handle, vector * z12, vector * z, vector * z_out, 	*/
-/*		ok_float alpha, int overwrite) 												*/
 /*	void set_prev(pogs_variables * z) 												*/
 /*	void prox(void * linalg_handle, FunctionVector * f, 							*/
 /*		FunctionVector * g, pogs_variables * z, ok_float rho) 						*/
@@ -126,6 +124,8 @@ void
 POGS(pogs_variables_alloc)(pogs_variables ** z, size_t m, size_t n){
 	pogs_variables * z_ = OK_NULL;
 	z_ = (pogs_variables *) malloc( sizeof(pogs_variables) );
+	z_->m = m;
+	z_->n = n;
 	POGS(block_vector_alloc)(&(z_->primal), m, n);
 	POGS(block_vector_alloc)(&(z_->primal12), m, n);
 	POGS(block_vector_alloc)(&(z_->dual), m ,n);
@@ -269,7 +269,7 @@ POGS(initialize_variables)(pogs_solver * solver){
 	}
 	if (solver->settings->nu0 != OK_NULL) {
 		vector_memcpy_va(z->dual->y, solver->settings->nu0, 1);
-		vector_mul(z->dual->y, solver->M->d);
+		vector_div(z->dual->y, solver->M->d);
 		blas_gemv(solver->linalg_handle, CblasTrans, -kOne,
 			solver->M->A, z->dual->y, kZero, z->dual->x);
 		vector_scale(z->dual->vec, -kOne / solver->rho);
@@ -298,7 +298,7 @@ POGS(update_objective)(void * linalg_handle,
 	FunctionVector * f, FunctionVector * g, 
 	ok_float rho, pogs_variables * z, pogs_objectives * obj){
 
-	obj->gap = rho * MATH(fabs)( 
+	obj->gap = MATH(fabs)( 
 		blas_dot(linalg_handle, z->primal12->vec, z->dual12->vec) );
 	obj->primal = FuncEvalVector(f, z->primal12->y) + 
 			FuncEvalVector(g, z->primal12->x);
@@ -310,117 +310,65 @@ POGS(update_tolerances)(void * linalg_handle, pogs_variables * z,
 	pogs_objectives * obj, pogs_tolerances * eps){
 
 	/* ------------------------------------------------------------	*/
-	/* eps_primal 	= eps_abs + eps_rel * sqrt(m) * || y^k || 		*/
-	/* eps_dual 	= eps_abs + eps_rel * sqrt(n) * || x^k || 		*/
-	/* eps_gap	 	= eps_abs + eps_rel * sqrt(mn) * (f(y) + g(x)) 	*/
+	/* eps_primal 	= eps_abs + eps_rel * sqrt(m) * ||y^k|| 		*/
+	/* eps_dual 	= eps_abs + eps_rel * sqrt(n) * ||x^k|| 		*/
+	/* eps_gap	 	= eps_abs + eps_rel * sqrt(mn) *  				*/
+	/*										||z^k|| * ||z^k+1/2||	*/
 	/* ------------------------------------------------------------ */
 	eps->primal = eps->atolm + eps->reltol * MATH(sqrt)(blas_dot(linalg_handle, 
-		z->primal->y, z->primal->y));
+		z->primal12->y, z->primal12->y));
 	eps->dual = eps->atoln + eps->reltol * MATH(sqrt)(blas_dot(linalg_handle,
-		z->dual->x, z->dual->x));
-	eps->gap = eps->atolmn + eps->reltol * MATH(fabs)(obj->primal);
+		z->dual12->x, z->dual12->x));
+	eps->gap = eps->atolmn + eps->reltol * MATH(sqrt)(blas_dot(linalg_handle,
+		z->primal->vec, z->primal->vec)) * MATH(sqrt)(blas_dot(linalg_handle,
+		z->primal12->vec, z->primal12->vec));
 
 }
 
-int
+void
 POGS(update_residuals)(void * linalg_handle, pogs_solver * solver, 
-	pogs_objectives * obj, pogs_residuals * res, pogs_tolerances * eps, 
-	int force_exact){
+	pogs_objectives * obj, pogs_residuals * res, pogs_tolerances * eps){
 
 	pogs_variables * z = solver->z;
 	matrix * A = solver->M->A;
 
-	/* approximate residuals */
-	if ( !force_exact ){
-		/* -------------------------------- */
-		/* res_dual ~ || z^k - z^(k-1) ||_2 */
-		/* -------------------------------- */
-		vector_memcpy_vv(z->temp->vec, z->prev->vec);
-		blas_axpy(linalg_handle, -kOne, z->primal->vec, z->temp->vec);
-		res->dual = MATH(sqrt)(blas_dot(linalg_handle, 
-			z->temp->vec, z->temp->vec));
-
-		/* -------------------------------------- */
-		/* res_primal ~ || z^(k + 1/2) - z^k ||_2 */
-		/* -------------------------------------- */
-		vector_memcpy_vv(z->temp->vec, z->primal12->vec);
-		blas_axpy(linalg_handle, -kOne, z->primal->vec, z->temp->vec);
-		res->primal = MATH(sqrt)(blas_dot(linalg_handle, 
-			z->temp->vec, z->temp->vec));
-	}
-
-	/* exact residuals */
 	res->gap = obj->gap;
 
+	/* -------------------------------------------------------- */
+	/* ||Ax^(k+1/2) - y^(k+1/2)|| <=? eps_rel * || y^(k+1/2)||  */
+	/* -------------------------------------------------------- */
+	vector_memcpy_vv(z->temp->y, z->primal12->y);
+	blas_gemv(linalg_handle, CblasNoTrans, kOne, 
+		A, z->primal12->x, -kOne, z->temp->y);
+	res->primal = MATH(sqrt)(blas_dot(linalg_handle, 
+		z->temp->y, z->temp->y));
 
-	if ( force_exact || 
-		((res->primal < eps->primal) && (res->dual < eps->dual)) ) {
-		/* -------------------------------------------------------- */
-		/* ||Ax^(k+1/2) - y^(k+1/2)|| <=? eps_rel * || y^(k+1/2)||  */
-		/* -------------------------------------------------------- */
-
-		vector_memcpy_vv(z->temp->y, z->primal12->y);
-		blas_gemv(linalg_handle, CblasNoTrans, kOne, 
-			A, z->primal12->x, -kOne, z->temp->y);
-		res->primal = MATH(sqrt)(blas_dot(linalg_handle, 
-			z->temp->y, z->temp->y));
-
-		/* ------------------------------------------------------------ */
-		/* ||A'yt^(k+1/2) - xt^(k+1/2)|| <=? eps_rel * || xt^(k+1/2)||  */
-		/* ------------------------------------------------------------ */
-		if (res->primal < eps->primal){
-			vector_memcpy_vv(z->temp->x, z->dual12->x);
-			blas_gemv(linalg_handle, CblasTrans, kOne, 
-				A, z->dual12->y, kOne, z->temp->x);
-			res->dual = solver->rho * MATH(sqrt)(blas_dot(linalg_handle, 
-				z->temp->x, z->temp->x));
-			return 1;
-		}
-	}
-	return 0;
-
+	/* ------------------------------------------------------------ */
+	/* ||A'yt^(k+1/2) - xt^(k+1/2)|| <=? eps_rel * || xt^(k+1/2)||  */
+	/* ------------------------------------------------------------ */
+	vector_memcpy_vv(z->temp->x, z->dual12->x);
+	blas_gemv(linalg_handle, CblasTrans, kOne, 
+		A, z->dual12->y, kOne, z->temp->x);
+	res->dual = MATH(sqrt)(blas_dot(linalg_handle, 
+		z->temp->x, z->temp->x));
 }
 
 int 
 POGS(check_convergence)(void * linalg_handle, pogs_solver * solver, 
 	pogs_objectives * obj, pogs_residuals * res, pogs_tolerances * eps, 
-	int gapstop, int force_exact){
+	int gapstop){
 
-	int exact;
+
 
 	POGS(update_objective)(linalg_handle, solver->f, solver->g, 
 		solver->rho, solver->z, obj);
 	POGS(update_tolerances)(linalg_handle, solver->z, obj, eps);
-	exact = POGS(update_residuals)(linalg_handle, solver, obj, res, eps,
-		force_exact);
+	POGS(update_residuals)(linalg_handle, solver, obj, res, eps);
 
-	exact &= (res->primal < eps->primal);
-	exact &= (res->dual < eps->dual);
-	exact &= (res->gap < eps->gap || !(gapstop));
-
-	return exact;
+	return (res->primal < eps->primal) && (res->dual < eps->dual) &&
+		(res->gap < eps->gap || !(gapstop));
 }
 
-
-/* --------------------------------------- */
-/* z_out <- alpha * z_12 + (1 - alpha) * z */
-/* --------------------------------------- */
-void 
-POGS(overrelax)(void * linalg_handle, vector * z12, vector * z, vector * z_out, 
-	ok_float alpha, int overwrite){
-
-	if (alpha != kOne){
-		if (overwrite){
-			vector_memcpy_vv(z_out, z12);
-			vector_scale(z_out, alpha);
-		} else {
-			blas_axpy(linalg_handle, alpha, z12, z_out);
-		}
-		blas_axpy(linalg_handle, kOne - alpha, z, z_out);
-
-	} else 
-		vector_memcpy_vv(z_out, z12);
-}
 
 /* -------------- */
 /* z^k <- z^{k+1} */
@@ -439,15 +387,10 @@ void
 POGS(prox)(void * linalg_handle, FunctionVector * f, 
 	FunctionVector * g, pogs_variables * z, ok_float rho){
 
-	function_vector_print(f);
-
 	vector_memcpy_vv(z->temp->vec, z->primal->vec);
 	blas_axpy(linalg_handle, -kOne, z->dual->vec, z->temp->vec);
-	vector_print(z->temp->y);
 	ProxEvalVector(f, rho, z->temp->y, z->primal12->y);
 	ProxEvalVector(g, rho, z->temp->x, z->primal12->x);
-	vector_print(z->primal12->y);
-
 }
 
 /* --------------------------------------------------------	*/
@@ -458,8 +401,9 @@ void
 POGS(project_primal)(void * linalg_handle, projector * proj, 
 	pogs_variables * z,  ok_float alpha){
 
-	POGS(overrelax)(linalg_handle, z->primal12->vec, z->prev->vec, 
-		z->temp->vec, alpha, 1);
+	vector_set_all(z->temp->vec, kZero);
+	blas_axpy(linalg_handle, alpha, z->primal12->vec, z->temp->vec);
+	blas_axpy(linalg_handle, kOne - alpha, z->prev->vec, z->temp->vec);
 	blas_axpy(linalg_handle, kOne, z->dual->vec, z->temp->vec);
 	PROJECTOR(project)(linalg_handle, proj, z->primal12->x, z->primal12->y,
 		z->primal->x, z->primal->y);
@@ -477,15 +421,15 @@ POGS(update_dual)(void * linalg_handle, pogs_variables * z, ok_float alpha){
 	/* ------------------------------------ */
 	vector_memcpy_vv(z->dual12->vec, z->primal12->vec);
 	blas_axpy(linalg_handle, -kOne, z->prev->vec, z->dual12->vec);
-	blas_axpy(linalg_handle, kOne, z->dual->vec, z->dual->vec);
+	blas_axpy(linalg_handle, kOne, z->dual->vec, z->dual12->vec);
 
-	/* ------------------------------------ */
-	/* zt^{k+1}   = z^{k+1/2} - z^k 		*/
-	/* ------------------------------------ */
-	POGS(overrelax)(linalg_handle, z->primal12->vec, z->prev->vec, 
-		z->dual->vec, alpha, 0);
+
+	/* -------------------------------------- */
+	/* zt^{k+1}   = zt^k + z^{k+1/2} - z^k+1  */
+	/* -------------------------------------- */
+	blas_axpy(linalg_handle, alpha, z->primal12->vec, z->dual->vec);
+	blas_axpy(linalg_handle, kOne - alpha, z->prev->vec, z->dual->vec);		
 	blas_axpy(linalg_handle, -kOne, z->primal->vec, z->dual->vec);
-
 }
 
 
@@ -498,37 +442,41 @@ POGS(adaptrho)(pogs_solver * solver, adapt_params * params,
 	pogs_residuals * res, pogs_tolerances * eps, uint k){
 
 	if (!(solver->settings->adaptiverho)) return;
-	pogs_settings * settings = solver->settings;
-
 
 	if (res->dual < params->xi * eps->dual && 
-		res->primal < params->xi*eps->primal){
+		res->primal > params->xi * eps->primal &&
+		kTAU * (ok_float) k > params->l) {
+		
+		if (solver->rho < kRHOMAX) {
+		  solver->rho *= params->delta;
+		  if (solver->settings->verbose > 2)
+			  printf("+RHO: %.3e\n", solver->rho);
+		  vector_scale(solver->z->dual->vec, kOne / params->delta);
+		  params->delta = params->delta * kGAMMA < kDELTAMAX ?
+		  					params->delta * kGAMMA : kDELTAMAX;
+		  params->u = k;
+		}
+
+	} else if (res->dual > params->xi * eps->dual && 
+			res->primal < params->xi * eps->primal &&
+			kTAU * (ok_float) k > (ok_float) params->u) {
+
+		if (solver->rho > kRHOMIN) {
+		  solver->rho /= params->delta;
+		  if (solver->settings->verbose > 2)
+			  printf("-RHO: %.3e\n", solver->rho);
+		  vector_scale(solver->z->dual->vec, params->delta);
+		  params->delta = params->delta * kGAMMA < kDELTAMAX ?
+		  					params->delta * kGAMMA : kDELTAMAX;
+		  params->l = k; 
+		}
+
+	} else if (res->dual < params->xi * eps->dual && 
+				res->primal < params->xi * eps->primal) {
 		params->xi *= kKAPPA;
-	} else if (res->dual < params->xi * eps->dual &&  
-		res->primal > params->xi * eps->primal && kTAU * k > params->l){
-		if (solver->rho < kRHOMAX){
-			solver->rho *= params->delta;
-			if (settings->verbose > 2)
-				printf("+RHO %0.3e\n", (float) solver->rho);
-			vector_scale(solver->z->dual->vec, kOne / params->delta);
-			params->delta = params->delta * kGAMMA < kDELTAMAX?
-				params->delta * kGAMMA : kDELTAMAX;
-			params->u = k;
-		}
-	} else if (res->primal < params->xi * eps->primal && 
-		res->dual > params->xi * eps->dual && kTAU * k > params->u){
-		if (solver->rho > kRHOMIN){
-			solver->rho /= params->delta;
-			if (settings->verbose > 2)
-				printf("-RHO%0.3e\n", (float) solver->rho);
-			vector_scale(solver->z->dual->vec, params->delta);
-			params->delta = params->delta * kGAMMA < kDELTAMAX ?
-				params->delta * kGAMMA : kDELTAMAX;
-			params->l = k;
-		}
 	} else {
 		params->delta = params->delta / kGAMMA > kDELTAMIN ? 
-			params->delta / kGAMMA : kDELTAMIN;
+						params->delta / kGAMMA : kDELTAMIN;
 	}
 }
 
@@ -605,24 +553,26 @@ POGS(pogs_solver_loop)(pogs_solver * solver, pogs_info * info){
 		POGS(print_header_string)();
 
 	/* iterate until converged, or error/maxiter reached */
-	for (k = 1; !(converged || err) && k < settings->maxiter; ++k){
+	for (k = 1; !err; ++k){
 		POGS(set_prev)(z);
 		POGS(prox)(linalg_handle, solver->f, solver->g, z, solver->rho);
 		POGS(project_primal)(linalg_handle, solver->M->P, z, settings->alpha);
 		POGS(update_dual)(linalg_handle, z, settings->alpha);
 
 		converged = POGS(check_convergence)(linalg_handle, solver,
-			&obj, &res, &eps, settings->gapstop, 
-			(settings->resume && k == 1));
+			&obj, &res, &eps, settings->gapstop);
 
-		if (settings->verbose > 0 && (k % PRINT_ITER == 0 || converged))
+		if (settings->verbose > 0 && 
+			(k % PRINT_ITER == 0 || converged || k == settings->maxiter))
 			POGS(print_iter_string)(&res, &eps, &obj, k);
+
+		if (converged || k == settings->maxiter) break;
 
 		if (settings->adaptiverho)
 			POGS(adaptrho)(solver, &rho_params, &res, &eps, k);
 	}	
 
-	if (!converged && k==settings->maxiter)
+	if (!converged && k == settings->maxiter)
 		printf("reached max iter = %u\n", k);
 
 	/* update info */
@@ -695,7 +645,6 @@ pogs_solve(pogs_solver * solver, FunctionVector * f, FunctionVector * g,
 
 	/* unscale output */
 	POGS(copy_output)(solver, output);
-
 }
 
 void 
