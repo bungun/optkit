@@ -1,5 +1,6 @@
 from optkit.backends import OKBackend
-from optkit.types.highlevel import HighLevelLinsysTypes, HighLevelProxTypes
+from optkit.types.highlevel import HighLevelLinsysTypes, HighLevelProxTypes, \
+	HighLevelPogsTypes
 from optkit.kernels import LinsysCoreKernels, LinsysExtensionKernels, \
 	ProxKernels
 from optkit.projector import DirectProjectorFactory
@@ -66,9 +67,11 @@ dense_l2_equilibration = sinkhornknopp_equilibration = None
 
 
 """
-Solver methods
+Solver types and methods
 """
 pogs = None
+CPogsTypes = None
+PogsSolver = None
 
 """
 Backend switching
@@ -134,6 +137,8 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 
 	# Solver methods
 	global pogs
+	global CPogsTypes
+	global PogsSolver
 
 	# change backend
 	backend_name=backend.change(GPU=GPU, double=double, 
@@ -224,6 +229,8 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 	pogs = POGSDirectSolver(backend, base_kernels, Vector, Matrix, 
 		FunctionVector, DirectProjectorPy, equil_methods)
 
+	CPogsTypes = HighLevelPogsTypes(backend, FunctionVector)
+	PogsSolver = CPogsTypes.Solver
 
 	print "optkit backend set to {}".format(backend.libname)
 

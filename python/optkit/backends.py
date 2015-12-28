@@ -9,7 +9,6 @@ from os import getenv
 # CPU32, CPU64, GPU32, GPU64
 class OKBackend(object):
 	def __init__(self, GPU=False, single_precision=False):
-
 		self.device = None
 		self.precision = None
 		self.libname = "(No libraries selected)"
@@ -23,11 +22,13 @@ class OKBackend(object):
 		self.dense_lib_loader = DenseLinsysLibs()
 		self.sparse_lib_loader = None
 		self.prox_lib_loader = ProxLibs()
+		self.pogs_lib_loader = PogsLibs(dense=True)
 
 		# library instances
 		self.dense = None
 		self.sparse = None
 		self.prox = None
+		self.pogs = None
 
 		self.dense_blas_handle = c_void_p()
 		self.sparse_blas_handle = None
@@ -59,6 +60,7 @@ class OKBackend(object):
 					valid &= self.prox_lib_loader.libs[lib_key_prox] is not None
 					if self.sparse_lib_loader is not None:
 						valid &= self.sparse_lib_loader.libs[lib_key] is not None
+					valid &= self.pogs_lib_loader.libs[lib_key] is not None
 					if valid:
 						self.lowtypes = LowLevelTypes(
 							single_precision = prec=='32', order=layout)
@@ -73,7 +75,8 @@ class OKBackend(object):
 						if self.sparse_lib_loader is not None:
 							self.sparse = self.sparse_lib_loader.get(
 								self.lowtypes, GPU=dev=='gpu')
-
+						self.pogs = self.pogs_lib_loader.get(
+							self.lowtypes, GPU=dev=='gpu')
 
 						self.make_cvector = UtilMakeCVector(self.lowtypes, self.dense)
 						self.release_cvector = UtilReleaseCVector(self.lowtypes, self.dense)
@@ -102,7 +105,6 @@ class OKBackend(object):
 
 		self.__set_lib(device=device, precision=precision, order=order)
 		
-
 		if self.dense is not None: self.dense.blas_make_handle(byref(self.dense_blas_handle))
 		if self.sparse is not None: self.sparse.blas_make_handle(byref(self.sparse_blas_handle))
 
