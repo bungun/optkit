@@ -14,6 +14,13 @@ from numpy.linalg import norm
 
 ndarray_pointer = backend.lowtypes.ndarray_pointer
 lib = backend.pogs
+
+
+AdaptiveRhoParameters = lib.adapt_params
+PogsObjectives = lib.pogs_objectives
+PogsResiduals = lib.pogs_residuals
+PogsTolerances = lib.pogs_tolerances
+
 SolverSettings = CPogsTypes.SolverSettings
 SolverInfo = CPogsTypes.SolverInfo
 SolverOutput = CPogsTypes.SolverOutput
@@ -118,36 +125,53 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 
 		# transfer function vectors to solver copies 
 		PPRINT('TRANSFER FUNCTION VECTORS TO LOCAL COPIES')
+		(_ , fa_i, _ , _ , fd_i, fe_i) = f.toarrays() 
+		(_ , ga_i, _ , _ , gd_i, ge_i) = g.toarrays() 
+
 		backend.prox.function_vector_memcpy_va(solver.contents.f, 
 			f.c.objectives);
 		backend.prox.function_vector_memcpy_va(solver.contents.g, 
 			g.c.objectives);
 
-		if VERBOSE_TEST:
-			PRINT("f before scaling")
-			backend.prox.function_vector_print(f.c)
-			PRINT("g before scaling")
-			backend.prox.function_vector_print(g.c)
+		backend.prox.function_vector_print(solver.contents.f)
+
 
 		PPRINT('SCALE PROBLEM:')
-		lib.scale_problem(f.c, g.c, 
-			solver.contents.M.contents.d, solver.contents.M.contents.e)
+		lib.update_problem(solver, f.c, g.c)
 
+		backend.prox.function_vector_memcpy_av(f.c.objectives,
+			solver.contents.f)
+		backend.prox.function_vector_memcpy_av(g.c.objectives,
+			solver.contents.g)
+		
+		backend.prox.function_vector_print(solver.contents.f)
 		f.pull()
 		g.pull()
 
-		if VERBOSE_TEST:
-			PRINT("\nf after scaling:")
-			backend.prox.function_vector_print(f.c)
-			PRINT("\nSCALING d:")
-			backend.dense.vector_print(solver.contents.M.contents.d)
+		(_ , fa_f, _ , _ , fd_f, fe_f) = f.toarrays() 
+		(_ , ga_f, _ , _ , gd_f, ge_f) = g.toarrays() 
+		PRINT("f.a_{initial} / d  - f.a_{final}")
+		PRINT(fa_i / d_local - fa_f)
+		PRINT("f.d_{initial} / d  - f.d_{final}")
+		PRINT(fd_i / d_local - fd_f)
+		PRINT("f.e_{initial} / d  - f.e_{final}")
+		PRINT(fe_i / d_local - fe_f)
+		PRINT("g.a_{initial} * e  - f.a_{final}")
+		PRINT(ga_i * e_local - ga_f)
+		PRINT("g.d_{initial} * e  - f.d_{final}")
+		PRINT(gd_i * e_local - gd_f)
+		PRINT("g.e_{initial} * e  - f.e_{final}")
+		PRINT(ge_i * e_local - ge_f)
 
-			PRINT("\ng after scaling:")
-			backend.prox.function_vector_print(g.c)
-			PRINT("\nSCALING e:")
-			backend.dense.vector_print(solver.contents.M.contents.e)
+		assert array_compare(fa_i / d_local, fa_f, eps=TEST_EPS)
+		assert array_compare(fd_i / d_local, fd_f, eps=TEST_EPS)
+		assert array_compare(fe_i / d_local, fe_f, eps=TEST_EPS)
+		assert array_compare(ga_i * e_local, ga_f, eps=TEST_EPS)
+		assert array_compare(gd_i * e_local, gd_f, eps=TEST_EPS)
+		assert array_compare(ge_i * e_local, ge_f, eps=TEST_EPS)
 			
 		
+
 		# python version of solver variables
 		z_local = {'primal': zeros(m + n), 
 					'primal12': zeros(m + n),

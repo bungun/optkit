@@ -149,8 +149,8 @@ class PogsLibs(object):
 								('xi', ok_float)]
 
 				adapt_params_p = POINTER(AdaptiveRhoParameters)
-				lowtypes.adapt_params = AdaptiveRhoParameters
-				lowtypes.adapt_params_p = adapt_params_p
+				lib.adapt_params = AdaptiveRhoParameters
+				lib.adapt_params_p = adapt_params_p
 
 
 				class PogsBlockVector(Structure):
@@ -242,8 +242,8 @@ class PogsLibs(object):
 				lib.pogs_solver_p = pogs_solver_p
 				
 				## argtypes
-				lib.scale_problem.argtypes = [function_vector_p, 
-					function_vector_p, vector_p, vector_p]
+				lib.update_problem.argtypes = [pogs_solver_p,
+					function_vector_p, function_vector_p]
 				lib.initialize_variables.argtypes = [pogs_solver_p]
 				lib.pogs_solver_loop.argtypes = [pogs_solver_p, pogs_info_p]
 				lib.make_tolerances.argtypes = [pogs_settings_p, 
@@ -261,7 +261,7 @@ class PogsLibs(object):
 				lib.copy_output.argtypes = [pogs_solver_p, pogs_output_p]
 
 				## results
-				lib.scale_problem.restype = None
+				lib.update_problem.restype = None
 				lib.initialize_variables.restype = None
 				lib.pogs_solver_loop.restype = None
 				lib.make_tolerances.restype = PogsTolerances
@@ -297,18 +297,18 @@ class PogsLibs(object):
 				lib.block_vector = AttributeError
 				lib.pogs_residuals = AttributeError
 				lib.pogs_tolerances = AttributeError
-				pogs_objectives = AttributeError
-				pogs_matrix = AttributeError
-				pogs_variables = AttributeError
-				pogs_solver = AttributeError
+				lib.pogs_objectives = AttributeError
+				lib.pogs_matrix = AttributeError
+				lib.pogs_variables = AttributeError
+				lib.pogs_solver = AttributeError
 
 				lib.adapt_params_p = AttributeError
 				lib.block_vector_p = AttributeError
 				lib.pogs_residuals_p = AttributeError
 				lib.pogs_tolerances_p = AttributeError
-				pogs_objectives_p = AttributeError
-				pogs_matrix_p = AttributeError
-				pogs_variables_p = AttributeError
-				pogs_solver_p = AttributeError
+				lib.pogs_objectives_p = AttributeError
+				lib.pogs_matrix_p = AttributeError
+				lib.pogs_variables_p = AttributeError
+				lib.pogs_solver_p = AttributeError
 
 			return lib

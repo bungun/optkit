@@ -17,12 +17,12 @@ extern "C" {
 /*		CBLAS_ORDER_t ord)															*/
 /*	void pogs_solver_free(pogs_solver * solver)										*/
 /*	void update_settings(pogs_settings * settings, const pogs_settings * input) 	*/
+/* 	void updatae_problem(pogs_solver * solver, 										*/ 
+/*		FunctionVector * f, FunctionVector *g) 										*/
 /*	void equilibrate(void * linalg_handle, ok_float * A_orig, pogs_matrix * M, 		*/
 /*		Equilibration_t equil, CBLAS_ORDER_t ord) 									*/
 /*		ok_float estimate_norm(void * linalg_handle, pogs_matrix * M) 				*/
 /*	void normalize_DAE(void * linalg_handle, pogs_matrix * M) 						*/
-/*	void scale_problem(FunctionVector * f, FunctionVector * g,  					*/
-/*		vector * d, vector * e)														*/
 /*	void initialize_variables(pogs_solver * solver) 								*/
 /*	pogs_tolerances make_tolerances(const pogs_settings * settings, 				*/
 /*		size_t m, size_t n) 														*/
@@ -233,27 +233,13 @@ POGS(normalize_DAE)(void * linalg_handle, pogs_matrix * M){
 
 
 void 
-POGS(scale_problem)(FunctionVector * f, FunctionVector * g, 
-	vector * d, vector * e){
+POGS(update_problem)(pogs_solver * solver, FunctionVector * f, 
+	FunctionVector * g){
 
-	int i;
-	size_t m = f->size, n=g->size;
-	vector params = (vector){0, 0, OK_NULL};
-	params.stride = sizeof(FunctionObj) / sizeof(ok_float);
-
-	/* rescale f parameters f->a, f->c, f->e */
-	params.size = m;
-	for (i = 0; i < 3; ++i){
-		params.data = function_vector_get_parameteraddress(f, i);
-		vector_div(&params, d);
-	}
-
-	/* rescale g parameters g->a, g->d, g->e */
-	params.size = n;
-	for (i = 0; i < 3; ++i){
-		params.data = function_vector_get_parameteraddress(g, i);
-		vector_mul(&params, e);
-	}
+	function_vector_memcpy_va(solver->f, f->objectives);
+	function_vector_memcpy_va(solver->g, g->objectives);
+	function_vector_div(solver->f, solver->M->d);
+	function_vector_mul(solver->g, solver->M->e);
 }
 
 void
@@ -618,14 +604,11 @@ pogs_solve(pogs_solver * solver, FunctionVector * f, FunctionVector * g,
 
 	info->setup_time = OK_TIMER();
 
+	/* copy settings */
 	POGS(update_settings)(solver->settings, settings);
 	
-	/* copy function vectors */
-	function_vector_memcpy_va(solver->f, f->objectives);
-	function_vector_memcpy_va(solver->g, g->objectives);
-
-	/* scale objectives */
-	POGS(scale_problem)(solver->f, solver->g, solver->M->d, solver->M->e);
+	/* copy and scale function vectors */
+	POGS(update_problem)(solver, f, g);
 
 	/* get warm start variables */
 	if (settings->warmstart)

@@ -1,13 +1,10 @@
 /* Adapted to C from from POGS (github.com/foges/pogs) */
 
-
 #ifndef OPTKIT_PROXLIB_H_GUARD
 #define OPTKIT_PROXLIB_H_GUARD
 
 #include "optkit_defs.h"
 #include "optkit_dense.h"
-
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,7 +47,6 @@ typedef struct FunctionVector{
 }   /* extern "C" */
 #endif
 
-__DEVICE__ inline void checkvexity(FunctionObj * f);
 __DEVICE__ inline ok_float Abs(ok_float x) { return MATH(fabs)(x); }
 __DEVICE__ inline ok_float Acos(ok_float x) { return MATH(acos)(x); }
 __DEVICE__ inline ok_float Cos(ok_float x) { return MATH(cos)(x); }
@@ -402,9 +398,10 @@ void function_vector_free(FunctionVector * f);
 void function_vector_view_array(FunctionVector * f, FunctionObj * h, size_t n);
 void function_vector_memcpy_va(FunctionVector * f, FunctionObj * h);
 void function_vector_memcpy_av(FunctionObj * h, FunctionVector * f);
+void function_vector_mul(FunctionVector * f, const vector * v);
+void function_vector_div(FunctionVector * f, const vector * v);
 void function_vector_print(FunctionVector *f);
-ok_float * function_vector_get_parameteraddress(FunctionVector *f, 
-  int ade);
+
 
 
 void ProxEvalVector(const FunctionVector * f, ok_float rho,

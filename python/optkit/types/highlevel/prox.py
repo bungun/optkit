@@ -44,6 +44,25 @@ class HighLevelProxTypes(object):
 			def tolist(self):
 				return [backend.lowtypes.function(*self.py[i]) for i in xrange(self.size)]
 
+			def toarrays(self):
+				l = self.tolist()
+				h = zeros(self.size, int)
+				a = zeros(self.size)
+				b = zeros(self.size)
+				c = zeros(self.size)
+				d = zeros(self.size)
+				e = zeros(self.size)
+
+				for i in xrange(self.size):
+					h[i] = l[i].h
+					a[i] = l[i].a
+					b[i] = l[i].b
+					c[i] = l[i].c
+					d[i] = l[i].d
+					e[i] = l[i].e
+
+				return h, a, b, c, d, e
+
 			def set(self, **params):
 				start = int(params['start']) if 'start' in params else 0
 				end = int(params['end']) if 'end' in params else self.size

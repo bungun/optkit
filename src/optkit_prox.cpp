@@ -42,6 +42,45 @@ void function_vector_memcpy_av(FunctionObj * h, FunctionVector * f){
 	memcpy(h, f->objectives, f->size * sizeof(FunctionObj));
 }
 
+
+void 
+function_vector_mul(FunctionVector * f, const vector * v){
+	size_t i;
+	vector el = (vector){f->size, 
+		sizeof(FunctionObj) / sizeof(ok_float), OK_NULL};
+
+	el.data = &(f->objectives->a);
+	for (i = 0; i < f->size; ++i)
+		el.data[i * el.stride] *= v->data[i * v->stride];
+
+	el.data = &(f->objectives->d);
+	for (i = 0; i < f->size; ++i)
+		el.data[i * el.stride] *= v->data[i * v->stride];
+
+	el.data = &(f->objectives->e);
+	for (i = 0; i < f->size; ++i)
+		el.data[i * el.stride] *= v->data[i * v->stride];
+}
+
+void 
+function_vector_div(FunctionVector * f, const vector * v){
+	size_t i;
+	vector el = (vector){f->size, 
+		sizeof(FunctionObj) / sizeof(ok_float), OK_NULL};
+
+	el.data = &(f->objectives->a);
+	for (i = 0; i < f->size; ++i)
+		el.data[i * el.stride] /= v->data[i * v->stride];
+
+	el.data = &(f->objectives->d);
+	for (i = 0; i < f->size; ++i)
+		el.data[i * el.stride] /= v->data[i * v->stride];
+
+	el.data = &(f->objectives->e);
+	for (i = 0; i < f->size; ++i)
+		el.data[i * el.stride] /= v->data[i * v->stride];
+}
+
 void function_vector_print(FunctionVector * f){
 	size_t i;
 	for (i = 0; i < f->size; ++i)
@@ -49,13 +88,6 @@ void function_vector_print(FunctionVector * f){
 				(int) f->objectives[i].h, f->objectives[i].a,
 				f->objectives[i].b, f->objectives[i].c,
 				f->objectives[i].d, f->objectives[i].e);
-}
-
-ok_float * function_vector_get_parameteraddress(FunctionVector *f, 
-  int ade){
-	if (ade == 0) return &(f->objectives[0].a);
-	else if (ade == 1) return &(f->objectives[0].d);
-	else return &(f->objectives[0].e);
 }
 
 void ProxEvalVector(const FunctionVector * f, ok_float rho, 

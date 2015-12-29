@@ -1,5 +1,6 @@
 #include "optkit_prox.h"
 #include "optkit_defs_gpu.h"
+#include "optkit_thrust.h"
 
 
 
@@ -21,11 +22,6 @@ __set_fn_vector(FunctionObj * objs,
 		};
 }
 
-__global__ __fv_get_param(FunctionObj * f, int ade, ok_float * param){
-	if (ade == 0) param = &(f[0].a);
-	else if (ade == 1) param = &(f[0].d);
-	else param = &(f[0].e);
-}
 
 /* CUDA C++ implementation with thrust:: */
 
@@ -89,22 +85,6 @@ extern "C" {
 #endif
 
 
-
-__device__ inline void 
-checkvexity(FunctionObj * f){
-	if (f->c < (ok_float) 0){
-		printf("WARNING: f not convex for c < 0 (provided: %e). Using c = 0" \
-			, f->c);	
-		f->c = (ok_float) 0;	
-	}
-	if (f->e < (ok_float) 0){
-		printf("WARNING: f not convex for e < 0 (provided: %e). Using e = 0" \
-			, f->e);	
-		f->e = (ok_float) 0;	
-	}
-}
-
-
 void 
 function_vector_alloc(FunctionVector * f, size_t n){
 	function_vector_free(f);
@@ -150,6 +130,32 @@ function_vector_memcpy_av(FunctionObj * h, FunctionVector * f){
 	ok_memcpy_gpu(h, f->objectives, f->size * sizeof(FunctionObj));
 }
 
+
+void 
+function_vector_mul(FunctionVector * f, const vector * v){
+	vector el = (vector){f->size, 
+		sizeof(FunctionObj) / sizeof(ok_float), OK_NULL};
+
+	el.data = &(f->objectives->a);
+	__thrust_vector_mul(&el, v);
+	el.data = &(f->objectives->d);
+	__thrust_vector_mul(&el, v);
+	el.data = &(f->objectives->e);
+	__thrust_vector_mul(&el, v);
+}
+
+void 
+function_vector_div(FunctionVector * f, const vector * v){
+	vector el = (vector){f->size, 
+		sizeof(FunctionObj) / sizeof(ok_float), OK_NULL};
+	el.data = &(f->objectives->a);
+	__thrust_vector_div(&el, v);
+	el.data = &(f->objectives->d);
+	__thrust_vector_div(&el, v);
+	el.data = &(f->objectives->e);
+	__thrust_vector_div(&el, v);
+}
+
 void function_vector_print(FunctionVector * f){
 	size_t i;
 	FunctionObj obj_host[f->size];
@@ -160,15 +166,6 @@ void function_vector_print(FunctionVector * f){
 				obj_host[i].c, obj_host[i].d, obj_host[i].e);
 }
 
-
-
-ok_float * 
-function_vector_get_parameteraddress(FunctionVector *f, int ade){
-	ok_float * param;
-
-	 __fv_get_param(f->objectives, ade, param);
-	return param;
-}
 
 void 
 ProxEvalVector(const FunctionVector * f, ok_float rho,
