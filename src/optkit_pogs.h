@@ -5,6 +5,7 @@
 #include "optkit_prox.h"
 #include "optkit_equilibration.h"
 #include "optkit_projector.h"
+#include "optkit_timer.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -132,22 +133,6 @@ void pogs_extract_solver(pogs_solver * solver, ok_float * A_equil,
 	ok_float * LLT_factorization, ok_float * d, 
 	ok_float * e, ok_float * z, ok_float * z12, ok_float * z_dual, 
 	ok_float * z_dual12, ok_float * z_prev, ok_float * rho, CBLAS_ORDER_t ord);
-
-
-const pogs_settings kDefaultPOGSSettings = (const pogs_settings){
-	.alpha = kALPHA, 
-	.rho = kOne, 
-	.abstol = kATOL, 
-	.reltol = kRTOL, 
-	.maxiter = kMAXITER,
-	.verbose = kVERBOSE,
-	.adaptiverho = kADAPTIVE,
-	.gapstop = kGAPSTOP,
-	.warmstart = kWARMSTART,
-	.resume = kRESUME,
-	.x0 = OK_NULL,
-	.nu0 = OK_NULL
-};
 
 
 #ifdef __cplusplus

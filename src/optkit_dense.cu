@@ -1,4 +1,5 @@
 #include "optkit_dense.h"
+#include "optkit_defs_gpu.h"
 #include "optkit_thrust.h"
 
 
@@ -6,6 +7,23 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+__global__ void
+_get_cuda_nan(ok_float * val){
+  *val = OK_CUDA_NAN;
+}
+
+inline ok_float
+get_cuda_nan(){
+  ok_float res;
+  ok_float * res_dev;
+
+  ok_alloc_gpu(res_dev, 1 * sizeof(ok_float));
+  cudaMemcpy(&res, res_dev, 1 * sizeof(ok_float), cudaMemcpyDeviceToHost);
+  ok_free_gpu(res_dev);
+
+  return res;
+}
 
 /* VECTOR helper methods for CUDA */
 __global__ void 
@@ -28,8 +46,6 @@ __strided_memcpy(ok_float * x, size_t stride_x,
   for (i = tid; i < size; i += gridDim.x * blockDim.x)
     x[i * stride_x] = y[i * stride_y];
 }
-
-
 
 
 

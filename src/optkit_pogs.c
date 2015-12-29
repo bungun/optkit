@@ -146,8 +146,6 @@ POGS(pogs_variables_free)(pogs_variables * z){
 	ok_free(z);
 }
 
-
-
 void
 POGS(pogs_solver_alloc)(pogs_solver ** solver, size_t m, size_t n, 
 	CBLAS_ORDER_t ord){
@@ -220,13 +218,13 @@ POGS(normalize_DAE)(void * linalg_handle, pogs_matrix * M){
 
 	if (!(M->normalized)){
 		M->normA = POGS(estimate_norm)(linalg_handle, M) /
-		 MATH(sqrt)(mindim);
+		 MATH(sqrt)((ok_float) mindim);
 		matrix_scale(M->A, kOne / M->normA);
 		M->normalized = 1;
 	}
 	factor = MATH(sqrt)(MATH(sqrt)( 
-		(n * blas_dot(linalg_handle, M->d, M->d)) / 
-		(m * blas_dot(linalg_handle, M->e, M->e))  ));
+		((ok_float) n * blas_dot(linalg_handle, M->d, M->d)) / 
+		((ok_float) m * blas_dot(linalg_handle, M->e, M->e))  ));
 	vector_scale(M->d, kOne / (MATH(sqrt)(M->normA) * factor));
 	vector_scale(M->e, factor / MATH(sqrt)(M->normA));
 }
@@ -573,8 +571,20 @@ POGS(pogs_solver_loop)(pogs_solver * solver, pogs_info * info){
 
 void
 set_default_settings(pogs_settings * s){
-	POGS(update_settings)(s, &kDefaultPOGSSettings);
+	s->alpha = kALPHA; 
+	s->rho = kOne;
+	s->abstol = kATOL;
+	s->reltol = kRTOL;
+	s->maxiter = kMAXITER;
+	s->verbose = kVERBOSE;
+	s->adaptiverho = kADAPTIVE;
+	s->gapstop = kGAPSTOP;
+	s->warmstart = kWARMSTART;
+	s->resume = kRESUME;
+	s->x0 = OK_NULL;
+	s->nu0 = OK_NULL;
 }
+
 
 pogs_solver * 
 pogs_init(ok_float * A, size_t m, size_t n, 

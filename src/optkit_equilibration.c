@@ -34,7 +34,7 @@ sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out,
 		vector_recip(d);
 		nrm_d2 = blas_dot(linalg_handle, d, d); 
 		nrm_e2 = blas_dot(linalg_handle, e, e); 
-		fac = MATH(sqrt)(MATH(sqrt)(nrm_e2 / nrm_d2));
+		fac = MATH(sqrt)(MATH(sqrt)(nrm_e2 / nrm_d2) * sqrtm / sqrtn);
 		vector_scale(d, fac);
 		vector_scale(e, (ok_float) 1/fac);
 	}

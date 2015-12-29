@@ -60,3 +60,4 @@ from optkit.api import sinkhornknopp_equilibration
 
 # Solver methods 
 from optkit.api import pogs
+from optkit.api import PogsSolver

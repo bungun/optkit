@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/time.h>
 #include "gsl_cblas.h"
 
 #ifdef __CUDACC__
@@ -81,12 +79,6 @@ typedef enum CBLAS_SIDE CBLAS_SIDE_t;
 #else
 #define __DEVICE__
 #endif
-
-inline ok_float OK_TIMER() {
-  struct timeval tv;
-  gettimeofday(&tv, OK_NULL);
-  return (ok_float) tv.tv_sec + (ok_float) tv.tv_usec * (ok_float) 1e-6;
-}
 
 
 #ifdef __cplusplus

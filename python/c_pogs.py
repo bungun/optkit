@@ -133,8 +133,6 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 		backend.prox.function_vector_memcpy_va(solver.contents.g, 
 			g.c.objectives);
 
-		backend.prox.function_vector_print(solver.contents.f)
-
 
 		PPRINT('SCALE PROBLEM:')
 		lib.update_problem(solver, f.c, g.c)
@@ -144,7 +142,6 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 		backend.prox.function_vector_memcpy_av(g.c.objectives,
 			solver.contents.g)
 		
-		backend.prox.function_vector_print(solver.contents.f)
 		f.pull()
 		g.pull()
 
