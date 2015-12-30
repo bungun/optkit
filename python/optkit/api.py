@@ -1,11 +1,11 @@
 from optkit.backends import OKBackend
-from optkit.types.highlevel import HighLevelLinsysTypes, HighLevelProxTypes, \
-	HighLevelPogsTypes
-from optkit.kernels import LinsysCoreKernels, LinsysExtensionKernels, \
-	ProxKernels
-from optkit.projector import DirectProjectorFactory
-from optkit.equilibration import EquilibrationMethods
-from optkit.pogs import POGSDirectSolver
+from optkit.types.highlevel import HighLevelLinsysTypes, \
+	HighLevelProxTypes, HighLevelPogsTypes
+from optkit.py_implementations.kernels import LinsysCoreKernels, \
+	LinsysExtensionKernels, ProxKernels
+from optkit.py_implementations.projector import DirectProjectorFactory
+from optkit.py_implementations.equilibration import EquilibrationMethods
+from optkit.py_implementations.pogs import POGSDirectSolver
 from os import getenv
 
 """

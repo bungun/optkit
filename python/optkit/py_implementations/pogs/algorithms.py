@@ -1,5 +1,5 @@
-from optkit.pogs.types import PogsTypes
-from optkit.pogs.utilities import PogsKernels
+from optkit.py_implementations.pogs.types import PogsTypes
+from optkit.py_implementations.pogs.utilities import PogsKernels
 from sys import version_info
 
 version = version_info[0]+0.1*version_info[1]

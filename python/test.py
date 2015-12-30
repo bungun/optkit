@@ -22,8 +22,8 @@ def main(*args, **kwargs):
 	print "{}/{} tests passed".format(passing, len(tests))
 	if len(tests)==0:
 		test_names = ['--linsys', '--prox', '--proj',
-		'--equil', '--norm', '--block', '--pogs',
-		'--cequil', '--cproj', '--cpogs', '--cstore']
+		'--equil', '--norm', '--block', '--pogs', '--py_all',
+		'--cequil', '--cproj', '--cpogs', '--cstore', '--c_all']
 
 		print str("no tests specified.\nuse optional arguments:\n"
 			"{}\nor\n--all\n to specify tests.".format(test_names))
@@ -36,9 +36,15 @@ if __name__== "__main__":
 
 
 	args += sys.argv
-	if '--all' in sys.argv: 
+	if '--all' in args:
+		args += ['--py_all', '--c_all']
+	if '--py_all' in args: 
 		args+=['--linsys','--allsub','--prox','--proj','--equil',
 			'--norm','--block','--pogs']
+	if '--c_all' in args:
+		args+=['--cequil', '--cproj', '--cpogs', '--cstore']
+
+
 
 	if '--size' in sys.argv:
 		pos = sys.argv.index('--size')

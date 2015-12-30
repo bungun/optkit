@@ -1,4 +1,4 @@
-from optkit.projector.base import Projector
+from optkit.py_implementations.projector.base import Projector
 from optkit.utils.pyutils import var_assert
 
 class DirectProjectorFactory(object):
