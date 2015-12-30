@@ -62,7 +62,7 @@ return 0;
 }
 
 int
-POGS(is_direct)(){
+is_direct(){
 	return sizeof(projector) == sizeof(direct_projector);
 }
 
@@ -238,6 +238,9 @@ POGS(update_problem)(pogs_solver * solver, FunctionVector * f,
 	function_vector_memcpy_va(solver->g, g->objectives);
 	function_vector_div(solver->f, solver->M->d);
 	function_vector_mul(solver->g, solver->M->e);
+
+	vector_print(solver->M->d);
+	vector_print(solver->M->e);
 }
 
 void
@@ -524,8 +527,6 @@ POGS(pogs_solver_loop)(pogs_solver * solver, pogs_info * info){
 		solver->z->m, solver->z->n);
 	void * linalg_handle = solver->linalg_handle;
 
-
-	printf("verbosity %i\n", (int) settings->verbose);
 	if (settings->verbose == 0)
 		PRINT_ITER = settings->maxiter * 2u;
 	else
@@ -670,6 +671,7 @@ pogs_load_solver(ok_float * A_equil,
 
 	#ifndef OPTKIT_INDIRECT
 	matrix_memcpy_ma(solver->M->P->L, LLT_factorization, ord);
+	solver->M->P->A = solver->M->A;
 	#endif
 
 	vector_memcpy_va(solver->M->d, d, 1);

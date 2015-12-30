@@ -66,6 +66,10 @@ class HighLevelProxTypes(object):
 			def set(self, **params):
 				start = int(params['start']) if 'start' in params else 0
 				end = int(params['end']) if 'end' in params else self.size
+
+				if start < 0 : start = self.size + start
+				if end < 0 : end = self.size + end
+
 				range_length = len(self.py[start:end])
 				if  range_length == 0: 
 					raise ValueError('index range [{}:{}] results in length-0 array '

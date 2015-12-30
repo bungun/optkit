@@ -1,6 +1,7 @@
 from optkit.types import ok_enums
-from numpy import zeros, ndarray
-
+from numpy import zeros, ndarray, savez, load as np_load
+from ctypes import c_void_p
+from os import path
 
 class HighLevelPogsTypes(object):
 	def __init__(self, backend, function_vector_type):
@@ -85,27 +86,37 @@ class HighLevelPogsTypes(object):
 		self.SolverOutput = SolverOutput
 
 		class Solver(object):
-			def __init__(self, A, **options):
+			def __init__(self, A, *args, **options):
 				try:
 					assert isinstance(A, ndarray)
 					assert len(A.shape) == 2
 				except:
 					raise TypeError('input must be a 2-d numpy ndarray')
 
-
 				self.A = A 
 				self.shape = (self.m, self.n) = (m, n) = A.shape
 				self.layout = layout = ok_enums.CblasRowMajor if \
 					A.flags.c_contiguous else ok_enums.CblasColMajor
-				self.c_solver = pogslib.pogs_init(ndarray_pointer(A), m , n,
+
+				if 'no_init' not in args:
+					self.c_solver = pogslib.pogs_init(ndarray_pointer(A), m , n,
 					layout, pogslib.enums.EquilSinkhorn)
+				else:
+					self.c_solver = None
+
 				self.settings = SolverSettings()
 				self.info = SolverInfo()
 				self.output = SolverOutput(m, n)
 				self.settings.update(**options)
 				self.first_run = True
 
+
+
 			def solve(self, f, g, **options):
+				if self.c_solver is None: 
+					Warning("No solver intialized, solve() call invalid")
+					return
+
 				if not (isinstance(f, FunctionVector) and \
 					isinstance(f, FunctionVector)):
 
@@ -127,14 +138,138 @@ class HighLevelPogsTypes(object):
 					self.settings.c, self.info.c, self.output.c)
 				self.first_run = False
 
-			def load(self):
-				pass
+			def load(self, directory, name):
+				if not '.npz' in name: 
+					data = np_load(path.join(directory, name + '.npz'))
+				else:
+					data = np_load(path.join(directory, name))
 
-			def save(self):
-				pass
+
+				A_equil = data['A_equil']
+				if 'LLT' in data:
+					LLT = data['LLT']
+					LLT_ptr = ndarray_pointer(LLT)
+				else:
+					LLT_ptr = c_void_p()
+
+
+				d = data['d']
+				e = data['e']
+
+				if 'z' in data:
+					z = data['z']
+				else:
+					z = zeros(self.m + self.n)
+
+				if 'z12' in data:
+					z12 = data['z12']
+				else:
+					z12 = zeros(self.m + self.n)
+
+				if 'zt' in data:
+					zt = data['zt']
+				else:	
+					zt = zeros(self.m + self.n)
+
+				if 'zt12' in data:
+					zt12 = data['zt12']
+				else:
+					zt12 = zeros(self.m + self.n)
+
+				if 'zprev' in data:
+					zprev = data['zprev']
+				else:
+					zprev = zeros(self.m + self.n)
+
+				if 'rho' in data:
+					rho = data['rho']
+				else:
+					rho = 1.
+
+				print "LOADING"
+				print "D\n", d
+
+
+				order = ok_enums.CblasRowMajor if A_equil.flags.c_contiguous \
+					else ok_enums.CblasColMajor
+
+				if self.c_solver is not None:
+					pogslib.pogs_finish(self.c_solver)
+
+				self.c_solver = pogslib.pogs_load_solver(
+					ndarray_pointer(A_equil), 
+					LLT_ptr, ndarray_pointer(d), 
+					ndarray_pointer(e), ndarray_pointer(z),
+					ndarray_pointer(z12), ndarray_pointer(zt),
+					ndarray_pointer(zt12), ndarray_pointer(zprev), 
+					rho, self.m, self.n, order)
+
+			def save(self, directory, name):
+				if self.c_solver is None: 
+					Warning("No solver intialized, save() call invalid")
+					return
+
+
+				filename = path.join(directory, name)
+				if '.npz' not in name: filename += '.npz'
+
+				if not path.exists(directory):
+					Warning("specified directory does not exist")
+					return 
+				if path.exists(filename):
+					Warning("specified filepath already exists"
+						"and would be overwritten, aborting.")
+					return
+
+
+
+				mindim = min(self.m, self.n)
+				A_equil = zeros((self.m, self.n))
+				if pogslib.direct:
+					LLT = zeros((mindim, mindim))
+					LLT_ptr = ndarray_pointer(LLT)
+				else:
+					LLT = c_void_p()
+					LLT_ptr = LLT
+				order = ok_enums.CblasRowMajor if A_equil.flags.c_contiguous \
+					else ok_enums.CblasRowMajor
+
+				d = zeros(self.m)
+				e = zeros(self.n)
+				z = zeros(self.m + self.n)
+				z12 = zeros(self.m + self.n)
+				zt = zeros(self.m + self.n)
+				zt12 = zeros(self.m + self.n)
+				zprev = zeros(self.m + self.n)
+				rho = zeros(1)
+
+
+				pogslib.pogs_extract_solver(self.c_solver, 
+					ndarray_pointer(A_equil), 
+					LLT_ptr, ndarray_pointer(d), 
+					ndarray_pointer(e), ndarray_pointer(z),
+					ndarray_pointer(z12), ndarray_pointer(zt),
+					ndarray_pointer(zt12), ndarray_pointer(zprev), 
+					ndarray_pointer(rho), order)
+
+				print "SAVING"
+				print "D\n", d
+
+				if isinstance(LLT, ndarray):
+					savez(filename, 
+						A_equil=A_equil, LLT=LLT, d=d, e=e,
+						z=z, z12=z12, zt=zt, zt12=zt12,
+						zprev=zprev, rho=rho[0])
+				else:
+					savez(filename , 
+						A_equil=A_equil, d=d, e=e,
+						z=z, z12=z12, zt=zt, zt12=zt12,
+						zprev=zprev, rho=rho[0])
+
 					
 			def __del__(self):
-				pogslib.pogs_finish(self.c_solver)
+				if self.c_solver is not None:
+					pogslib.pogs_finish(self.c_solver)
 
 		self.Solver = Solver
 

@@ -11,7 +11,6 @@ class PogsLibs(object):
 			'..', '..', '..', 'build'))
 		search_results = ""
 		use_local = getenv('OPTKIT_USE_LOCALLIBS', 0)
-
 		densetag = 'dense' if dense else 'sparse'
 
 		# NB: no windows support
@@ -136,6 +135,11 @@ class PogsLibs(object):
 
 			lib.private_api_accessible.restype = c_int
 			lib.full_api_accessible = lib.private_api_accessible()
+
+			# function to test whether compiled for 
+			# direct/indirect projection
+			lib.is_direct.restype = c_int
+			lib.direct = lib.is_direct()
 
 			# Private API
 			# -----------			
@@ -272,10 +276,6 @@ class PogsLibs(object):
 				lib.check_convergence.restype = c_int
 				lib.adaptrho.restype = None
 				lib.copy_output.restype = None
-
-				# function to test whether compiled for 
-				# direct/indirect projection
-				lib.is_direct.restype = c_int
 
 				if lib.is_direct():
 					lib.direct_projector_project.argtypes = [c_void_p,

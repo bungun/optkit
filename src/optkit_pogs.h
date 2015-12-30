@@ -114,7 +114,8 @@ typedef struct POGSSolver {
 } pogs_solver;
 
 
-
+int private_api_accessible();
+int is_direct();
 void set_default_settings(pogs_settings * settings);
 pogs_solver * pogs_init(ok_float * A, size_t m, size_t n, 
 	CBLAS_ORDER_t ord, Equilibration_t equil);

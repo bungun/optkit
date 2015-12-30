@@ -1,7 +1,5 @@
 	###v0.1 (targets)
-- TODO: GPU vector_pow()
 - TODO: add test for vector_pow()
-- TODO: move equilibration from Python to C[/CUDA]
 - TODO: OMP parallelization for C vector operations
 
 
@@ -10,7 +8,6 @@
 - TODO: automate testing with nose2
 - TODO: license
 - TODO: cite POGS
-- TODO: testing for storage for equilibrated matrices and factorized projectors
 - TODO: documentation
 - TODO: thorough commenting
 - TODO: option to suppress [y, mu, nu] from solver output
