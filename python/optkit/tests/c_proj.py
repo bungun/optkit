@@ -173,16 +173,42 @@ def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 	assert res <= TEST_EPS
 	lib.direct_projector_free(P_c)
 
+	return True
 
+def test_cproj(*args,**kwargs):
+	print("\n\n")
+	pretty_print("C PROJECTOR TESTING ...", '#')
+	print("\n\n")
+
+	args = list(args)
+	verbose = '--verbose' in args
+	
+	(m,n)=kwargs['shape'] if 'shape' in kwargs else (10, 5)
+	A = np.load(kwargs['file']) if 'file' in kwargs else None
+	assert main(m, n, A_in=A, VERBOSE_TEST=verbose)
+	if isinstance(A, ndarray): A = A.T
+	assert main(n, m, A_in=A, VERBOSE_TEST=verbose)
+
+	print("\n\n")
+	pretty_print("... passed", '#')
+	print("\n\n")
+
+	return True
 
 if __name__ == '__main__':
-	m, n = (10, 5)
+	args = []
+	kwargs = {}
+
+	args += argv
 	if '--size' in argv:
 		pos = argv.index('--size')
 		if len(argv) > pos + 2:
-			(m, n) = (int(argv[pos+1]),int(argv[pos+2]))
-	verbose = '--verbose' in argv
-	main(m, n, A_in=None, VERBOSE_TEST=verbose)
-	main(n, m, A_in=None, VERBOSE_TEST=verbose)
+			kwargs['shape']=(int(argv[pos+1]),int(argv[pos+2]))
+	if '--file' in argv:
+		pos = argv.index('--file')
+		if len(argv) > pos + 1:
+			kwargs['file']=str(argv[pos+1])
+
+	test_cproj(*args, **kwargs)
 
 

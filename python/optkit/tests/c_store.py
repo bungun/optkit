@@ -131,7 +131,7 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 	assert info.c.k <= k_orig
 	lib.pogs_finish(solver)
 
-	PPRINT("TEST PYTHONG BINDINGS:")
+	PPRINT("TEST PYTHON BINDINGS:")
 	PRINT("MAKE SOLVER")
 	s = Solver(A)
 	PRINT("SAVE SOLVER BEFORE RUN")
@@ -170,10 +170,10 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 	assert abs(s3.info.c.obj - s.info.c.obj) < \
 		10 * s.settings.c.reltol * abs(s.info.c.obj) 
 
+	return True
 
 
-
-def test_cpogs(*args,**kwargs):
+def test_cstore(*args,**kwargs):
 	print("\n\n")
 	pretty_print("C POGS SAVE/LOAD TESTING ...", '#')
 	print("\n\n")
@@ -183,14 +183,15 @@ def test_cpogs(*args,**kwargs):
 	
 	(m,n)=kwargs['shape'] if 'shape' in kwargs else (20, 10)
 	A = np.load(kwargs['file']) if 'file' in kwargs else None
-	main(m, n, A_in=A, VERBOSE_TEST=verbose)
+	assert main(m, n, A_in=A, VERBOSE_TEST=verbose)
 	if isinstance(A, ndarray): A = A.T
-	main(n, m, A_in=A, VERBOSE_TEST=verbose)
+	assert main(n, m, A_in=A, VERBOSE_TEST=verbose)
 
 	print("\n\n")
 	pretty_print("... passed", '#')
 	print("\n\n")
 
+	return True
 
 if __name__ == '__main__':
 	args = []
@@ -206,5 +207,5 @@ if __name__ == '__main__':
 		if len(argv) > pos + 1:
 			kwargs['file']=str(argv[pos+1])
 
-	test_cpogs(*args, **kwargs)
+	test_cstore(*args, **kwargs)
 

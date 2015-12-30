@@ -191,13 +191,10 @@ void
 POGS(equilibrate)(void * linalg_handle, ok_float * A_orig, pogs_matrix * M, 
 	Equilibration_t equil, CBLAS_ORDER_t ord){
 
-
-	if (equil == EquilSinkhorn){
+	if (equil == EquilSinkhorn)
 		sinkhorn_knopp(linalg_handle, A_orig, M->A, M->d, M->e, ord);
-	} else{
+	else
 		dense_l2(linalg_handle, A_orig, M->A, M->d, M->e, ord);
-	}
-
 	M->equilibrated = 1;
 }
 
@@ -362,10 +359,10 @@ POGS(set_prev)(pogs_variables * z){
 	vector_memcpy_vv(z->prev->vec, z->primal->vec);
 }
 
-/* ------------------------------- */
-/* y^{k+1/2} = Prox_{rho, f} (y^k) */
-/* x^{k+1/2} = Prox_{rho, g} (x^k) */
-/* ------------------------------- */
+/* -------------------------------------- */
+/* y^{k+1/2} = Prox_{rho, f} (y^k - yt^k) */
+/* x^{k+1/2} = Prox_{rho, g} (x^k - xt^k) */
+/* -------------------------------------- */
 
 void
 POGS(prox)(void * linalg_handle, FunctionVector * f, 
@@ -389,7 +386,7 @@ POGS(project_primal)(void * linalg_handle, projector * proj,
 	blas_axpy(linalg_handle, alpha, z->primal12->vec, z->temp->vec);
 	blas_axpy(linalg_handle, kOne - alpha, z->prev->vec, z->temp->vec);
 	blas_axpy(linalg_handle, kOne, z->dual->vec, z->temp->vec);
-	PROJECTOR(project)(linalg_handle, proj, z->primal12->x, z->primal12->y,
+	PROJECTOR(project)(linalg_handle, proj, z->temp->x, z->temp->y,
 		z->primal->x, z->primal->y);
 }
 
@@ -668,7 +665,6 @@ pogs_load_solver(ok_float * A_equil,
 
 	#ifndef OPTKIT_INDIRECT
 	matrix_memcpy_ma(solver->M->P->L, LLT_factorization, ord);
-	solver->M->P->A = solver->M->A;
 	#endif
 
 	vector_memcpy_va(solver->M->d, d, 1);

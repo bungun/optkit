@@ -48,7 +48,6 @@ sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out,
 		matrix_column(&a, A_out, k);
 		vector_mul(&a, d);
 	}
-
 }
 void 
 dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out, 

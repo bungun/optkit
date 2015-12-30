@@ -1,15 +1,14 @@
-
 from optkit.api import backend
 from optkit.api import Vector, Matrix, FunctionVector
 from optkit.api import CPogsTypes
-
 from optkit.types import ok_enums
 from optkit.tests.defs import TEST_EPS, rand_arr
 from optkit.utils.pyutils import println, pretty_print, printvoid, \
 	var_assert, array_compare
 from optkit.utils.proxutils import prox_eval_python, func_eval_python
 from sys import argv
-from numpy import ndarray, zeros, copy as np_copy, dot as np_dot
+from numpy import ndarray, zeros, copy as np_copy, dot as np_dot,\
+	load as np_load
 from numpy.linalg import norm
 
 ndarray_pointer = backend.lowtypes.ndarray_pointer
@@ -37,7 +36,7 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 	PRINT("\n")
 
 	if isinstance(A_in, ndarray):
-		A = A_in
+		A = backend.lowtypes.FLOAT_CAST(A_in)
 		(m, n) = A.shape
 		PRINT("(using provided matrix)")
 	else:
@@ -60,7 +59,6 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 	f = FunctionVector(m, b=1, h='Abs')
 	g = FunctionVector(n, h='IndGe0')
 
-
 	solver = lib.pogs_init(ndarray_pointer(A), m, n, layout,
 		lib.enums.EquilSinkhorn)
 
@@ -69,9 +67,10 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 		PPRINT('POGS PRIVATE API TESTS', '+')
 
 		PPRINT('VERIFY INITIALIZATION:')
-		A_local = zeros((m, n))
+		O = 'F' if layout==ok_enums.CblasColMajor else 'C'
+		A_local = zeros((m, n), order=O)
 		ordA = ok_enums.CblasRowMajor if A_local.flags.c_contiguous \
-			else CblasColMajor
+			else ok_enums.CblasColMajor
 		d_local = zeros(m)
 		e_local = zeros(n)
 
@@ -82,7 +81,7 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 		backend.dense.vector_memcpy_av(ndarray_pointer(e_local),
 			solver.contents.M.contents.e, 1)
 
-		PRINT('VERIFY EQULIBRATION')
+		PRINT('VERIFY EQUILIBRATION')
 		xrand = rand_arr(n)
 		Ax = A_local.dot(xrand)
 		DAEx = d_local * A.dot(e_local * xrand)
@@ -167,8 +166,6 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 		assert array_compare(gd_i * e_local, gd_f, eps=TEST_EPS)
 		assert array_compare(ge_i * e_local, ge_f, eps=TEST_EPS)
 			
-		
-
 		# python version of solver variables
 		z_local = {'primal': zeros(m + n), 
 					'primal12': zeros(m + n),
@@ -363,6 +360,8 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 		assert array_compare(-rho * z_local['dual12'][:m] * d_local, 
 			output.nu, eps=TEST_EPS)
 
+
+
 	# ------------------- public api tests ----------------------- #
 	PPRINT("POGS PUBLIC API SOLVE",'+')
 	lib.pogs_solve(solver, f.c, g.c, settings.c, info.c, output.c)
@@ -373,17 +372,22 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 
 	assert info.c.converged or info.c.k==settings.c.maxiter
 
-	res_p = norm(A.dot(output.x)-output.y)
-	res_d = norm(A.T.dot(output.nu)+output.mu)
+	res_p = norm(A.dot(output.x) - output.y)
+	res_d = norm(A.T.dot(output.nu) + output.mu)
 	PRINT("PRIMAL FEASIBILITY: {}", res_p)
+	print norm(output.y)
 	PRINT("DUAL FEASIBILITY: {}", res_d)
+	print norm(output.mu)
 
 	if info.c.converged:
 		assert (res_p < 10 * settings.c.reltol * norm(output.y)) or \
-				norm(output.y) <= 10 * settings.c.reltol
+				norm(output.y) <= 10 * settings.c.reltol or \
+				sum(output.y) / m < TEST_EPS**2
 
 		assert (res_d <= 10 * settings.c.reltol * norm(output.mu)) or \
-				norm(output.mu) <= 10 * settings.c.reltol
+				norm(output.mu) <= 10 * settings.c.reltol or \
+				sum(output.mu) / n <= TEST_EPS**2
+
 
 
 	PPRINT("TEST PYTHON BINDINGS:")
@@ -394,6 +398,7 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 
 	PPRINT("COMPLETE",'/')
 
+	return True
 
 def test_cpogs(*args,**kwargs):
 	print("\n\n")
@@ -404,15 +409,17 @@ def test_cpogs(*args,**kwargs):
 	verbose = '--verbose' in args
 	
 	(m,n)=kwargs['shape'] if 'shape' in kwargs else (1000,500)
-	A = np.load(kwargs['file']) if 'file' in kwargs else None
-	main(m, n, A_in=A, VERBOSE_TEST=verbose)
-	if isinstance(A, ndarray): A = A.T
-	main(n, m, A_in=A, VERBOSE_TEST=verbose)
+	A = backend.lowtypes.FLOAT_CAST(
+		np_load(kwargs['file'])) if 'file' in kwargs else None
+	assert main(m, n, A_in=A, VERBOSE_TEST=verbose)
+	if not isinstance(A, ndarray): 
+		assert main(n, m, A_in=None, VERBOSE_TEST=verbose)
 
 	print("\n\n")
 	pretty_print("... passed", '#')
 	print("\n\n")
 
+	return True
 
 if __name__ == '__main__':
 	args = []

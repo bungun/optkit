@@ -141,22 +141,60 @@ class HighLevelPogsTypes(object):
 				self.first_run = False
 
 			def load(self, directory, name):
+				filename = path.join(directory, name)
 				if not '.npz' in name: 
-					data = np_load(path.join(directory, name + '.npz'))
-				else:
-					data = np_load(path.join(directory, name))
+					filename += '.npz'
+
+				err = 0
+				try:	
+					data = np_load(filename)
+				except:
+					data = {}
 
 
-				A_equil = FLOAT_CAST(data['A_equil'])
+				if 'A_equil' in data:
+					A_equil = FLOAT_CAST(data['A_equil'])
+				elif path.exists(path.join(directory, 'A_equil.npy')):
+					A_equil = FLOAT_CAST(np_load(path.join(directory, 'A_equil.npy')))
+				else: 
+					err = 1
+
+
 				if 'LLT' in data:
 					LLT = FLOAT_CAST(data['LLT'])
 					LLT_ptr = ndarray_pointer(LLT)
+				elif path.exists(path.join(directory, 'LLT.npy')):
+					LLT = FLOAT_CAST(np_load(path.join(directory, 'LLT.npy')))
+					LLT_ptr = ndarray_pointer(LLT)
 				else:
-					LLT_ptr = c_void_p()
+					if pogslib.direct:
+						err = 1
+					else:
+						LLT_ptr = c_void_p()
 
 
-				d = FLOAT_CAST(data['d'])
-				e = FLOAT_CAST(data['e'])
+				if 'd' in data:
+					d = FLOAT_CAST(data['d'])
+				elif path.exists(path.join(directory, 'd.npy')):
+					d = FLOAT_CAST(np_load(path.join(directory, 'd.npy')))
+				else:
+					err = 1
+
+				if 'e' in data:
+					e = FLOAT_CAST(data['e'])
+				elif path.exists(path.join(directory, 'e.npy')):
+					e = FLOAT_CAST(np_load(path.join(directory, 'e.npy')))
+				else:
+					err = 1
+
+				if err:
+					snippet = '`LLT`, ' if pogslib.direct else ''
+					ValueError('Minimal requirements to load solver '
+						'not met. Specified file must contain '
+						'at least one .npz file with entries `A_equil`, '
+						'{}`d`, and `e`, or the specified folder must'
+						'contain .npy files of the same names.'.format(
+							snippet))
 
 				if 'z' in data:
 					z = FLOAT_CAST(data['z'])

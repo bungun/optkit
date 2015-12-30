@@ -36,7 +36,7 @@ class OptkitBuild(build):
     for prec in precisions:
         for dev in devices:
             sparse = COMPILE_GPU_SPARSE if dev=='gpu' else COMPILE_CPU_SPARSE
-            cmd = [ 'make', 'libs' ]
+            cmd = [ 'make', 'all' ]
             cmd.extend([ 'FLOAT={}'.format(int(prec=='32')) ])
             cmd.extend([ 'GPU={}'.format(int(dev=='gpu')) ])
             cmd.extend([ 'SPARSE={}'.format(int(sparse)) ])
@@ -62,9 +62,12 @@ class OptkitBuild(build):
                 '\n\tDEVICE: {}\n\tPRECISION: {}\n\t MATRICES {}'.format(
                 device, precision, matrices))
             for matrix in matrices:
-                libs.append('libok_{}_{}{}.{}'.format(device, matrix, 
+                libs.append('libok_{}_{}{}.{}'.format(matrix, device,
                     precision, EXT))
                 libs.append('libprox_{}{}.{}'.format(device, precision, EXT))
+                libs.append('libpogs_{}_{}{}.{}'.format(matrix, device,
+                    precision, EXT))
+
         if device =='gpu':
             GPU_LIBS = libs
         else:

@@ -1,15 +1,14 @@
 from ctypes import CDLL, c_void_p, c_uint
 from os import uname
+
 from optkit.api import backend
-
-
 from optkit.api import Matrix, Vector
 from optkit.types import ok_enums
 from optkit.tests.defs import HLINE, TEST_EPS, rand_arr
 from optkit.utils.pyutils import println, pretty_print, printvoid, \
 	var_assert, array_compare
 from sys import argv
-from numpy import ndarray, copy as np_copy
+from numpy import ndarray, copy as np_copy, load as np_load
 from os import path
 
 ok_float_p = backend.lowtypes.ok_float_p
@@ -117,16 +116,42 @@ def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 
 	PRINT("\n")
 
+	return True
 
+def test_cequil(*args,**kwargs):
+	print("\n\n")
+	pretty_print("C EQUILIBRATION TESTING ...", '#')
+	print("\n\n")
+
+	args = list(args)
+	verbose = '--verbose' in args
+	
+	(m,n)=kwargs['shape'] if 'shape' in kwargs else (10,5)
+	A = backend.lowtypes.FLOAT_CAST(
+		np_load(kwargs['file'])) if 'file' in kwargs else None
+	assert main(m, n, A_in=A, VERBOSE_TEST=verbose)
+	if isinstance(A, ndarray): A = A.T
+	assert main(n, m, A_in=A, VERBOSE_TEST=verbose)
+
+	print("\n\n")
+	pretty_print("... passed", '#')
+	print("\n\n")
+
+	return True
 
 if __name__ == '__main__':
-	m, n = (10, 5)
+	args = []
+	kwargs = {}
+
+	args += argv
 	if '--size' in argv:
 		pos = argv.index('--size')
 		if len(argv) > pos + 2:
-			(m, n) = (int(argv[pos+1]),int(argv[pos+2]))
-	verbose = '--verbose' in argv
-	main(m, n, A_in=None, VERBOSE_TEST=verbose)
-	main(n, m, A_in=None, VERBOSE_TEST=verbose)
+			kwargs['shape']=(int(argv[pos+1]),int(argv[pos+2]))
+	if '--file' in argv:
+		pos = argv.index('--file')
+		if len(argv) > pos + 1:
+			kwargs['file']=str(argv[pos+1])
 
+	test_cequil(*args, **kwargs)
 

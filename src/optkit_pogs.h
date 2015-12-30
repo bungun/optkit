@@ -26,7 +26,7 @@ typedef indirect_projector projector;
 #endif
 
 
-const ok_float kALPHA = (ok_float) 1.0;
+const ok_float kALPHA = (ok_float) 1.7;
 const uint kMAXITER = 2000u;
 const ok_float kRHO = (ok_float) 1;
 const ok_float kATOL = (ok_float) 1e-4;

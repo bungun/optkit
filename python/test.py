@@ -12,12 +12,21 @@ def main(*args, **kwargs):
 	if '--norm' in args: tests.append(test_normalizedprojector)
 	if '--block' in args: tests.append(test_blocksplitting)
 	if '--pogs' in args: tests.append(test_pogs)
+	if '--cequil' in args: tests.append(test_cequil)
+	if '--cproj' in args: tests.append(test_cproj)
+	if '--cpogs' in args: tests.append(test_cpogs)
+	if '--cstore' in args: tests.append(test_cstore)
+
+
 	for t in tests: passing += t(*args, **kwargs)
 	print "{}/{} tests passed".format(passing, len(tests))
 	if len(tests)==0:
+		test_names = ['--linsys', '--prox', '--proj',
+		'--equil', '--norm', '--block', '--pogs',
+		'--cequil', '--cproj', '--cpogs', '--cstore']
+
 		print str("no tests specified.\nuse optional arguments:\n"
-			"--linsys,\n--prox,\n--proj,\n--equil,\n"
-			"--norm,\n--block,\n--pogs,\nor\n--all\n to specify tests.")
+			"{}\nor\n--all\n to specify tests.".format(test_names))
 
 
 if __name__== "__main__":
