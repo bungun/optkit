@@ -11,7 +11,6 @@ class ProxLibs(object):
 			'..', '..', '..', 'build'))
 		search_results = ""
 		use_local = getenv('OPTKIT_USE_LOCALLIBS', 0)
-		print "USE LOCAL???", use_local
 
 		# NB: no windows support
 		ext = "dylib" if uname()[0] == "Darwin" else "so"

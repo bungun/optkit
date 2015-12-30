@@ -238,9 +238,6 @@ POGS(update_problem)(pogs_solver * solver, FunctionVector * f,
 	function_vector_memcpy_va(solver->g, g->objectives);
 	function_vector_div(solver->f, solver->M->d);
 	function_vector_mul(solver->g, solver->M->e);
-
-	vector_print(solver->M->d);
-	vector_print(solver->M->e);
 }
 
 void

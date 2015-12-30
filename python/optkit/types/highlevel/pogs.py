@@ -5,6 +5,7 @@ from os import path
 
 class HighLevelPogsTypes(object):
 	def __init__(self, backend, function_vector_type):
+		FLOAT_CAST = backend.lowtypes.FLOAT_CAST
 		ndarray_pointer = backend.lowtypes.ndarray_pointer
 		PogsSettings = backend.pogs.pogs_settings
 		PogsInfo = backend.pogs.pogs_info
@@ -93,14 +94,15 @@ class HighLevelPogsTypes(object):
 				except:
 					raise TypeError('input must be a 2-d numpy ndarray')
 
-				self.A = A 
+				self.A = FLOAT_CAST(A) 
 				self.shape = (self.m, self.n) = (m, n) = A.shape
 				self.layout = layout = ok_enums.CblasRowMajor if \
 					A.flags.c_contiguous else ok_enums.CblasColMajor
 
 				if 'no_init' not in args:
-					self.c_solver = pogslib.pogs_init(ndarray_pointer(A), m , n,
-					layout, pogslib.enums.EquilSinkhorn)
+					self.c_solver = pogslib.pogs_init(
+						ndarray_pointer(self.A), m , n,
+						layout, pogslib.enums.EquilSinkhorn)
 				else:
 					self.c_solver = None
 
@@ -145,50 +147,46 @@ class HighLevelPogsTypes(object):
 					data = np_load(path.join(directory, name))
 
 
-				A_equil = data['A_equil']
+				A_equil = FLOAT_CAST(data['A_equil'])
 				if 'LLT' in data:
-					LLT = data['LLT']
+					LLT = FLOAT_CAST(data['LLT'])
 					LLT_ptr = ndarray_pointer(LLT)
 				else:
 					LLT_ptr = c_void_p()
 
 
-				d = data['d']
-				e = data['e']
+				d = FLOAT_CAST(data['d'])
+				e = FLOAT_CAST(data['e'])
 
 				if 'z' in data:
-					z = data['z']
+					z = FLOAT_CAST(data['z'])
 				else:
-					z = zeros(self.m + self.n)
+					z = zeros(self.m + self.n, dtype=FLOAT_CAST)
 
 				if 'z12' in data:
-					z12 = data['z12']
+					z12 = FLOAT_CAST(data['z12'])
 				else:
-					z12 = zeros(self.m + self.n)
+					z12 = zeros(self.m + self.n, dtype=FLOAT_CAST)
 
 				if 'zt' in data:
-					zt = data['zt']
+					zt = FLOAT_CAST(data['zt'])
 				else:	
-					zt = zeros(self.m + self.n)
+					zt = zeros(self.m + self.n, dtype=FLOAT_CAST)
 
 				if 'zt12' in data:
-					zt12 = data['zt12']
+					zt12 = FLOAT_CAST(data['zt12'])
 				else:
-					zt12 = zeros(self.m + self.n)
+					zt12 = zeros(self.m + self.n, dtype=FLOAT_CAST)
 
 				if 'zprev' in data:
-					zprev = data['zprev']
+					zprev = FLOAT_CAST(data['zprev'])
 				else:
-					zprev = zeros(self.m + self.n)
+					zprev = zeros(self.m + self.n, dtype=FLOAT_CAST)
 
 				if 'rho' in data:
-					rho = data['rho']
+					rho = FLOAT_CAST(data['rho'])
 				else:
 					rho = 1.
-
-				print "LOADING"
-				print "D\n", d
-
 
 				order = ok_enums.CblasRowMajor if A_equil.flags.c_contiguous \
 					else ok_enums.CblasColMajor
@@ -221,12 +219,10 @@ class HighLevelPogsTypes(object):
 						"and would be overwritten, aborting.")
 					return
 
-
-
 				mindim = min(self.m, self.n)
-				A_equil = zeros((self.m, self.n))
+				A_equil = zeros((self.m, self.n), dtype=FLOAT_CAST)
 				if pogslib.direct:
-					LLT = zeros((mindim, mindim))
+					LLT = zeros((mindim, mindim), dtype=FLOAT_CAST)
 					LLT_ptr = ndarray_pointer(LLT)
 				else:
 					LLT = c_void_p()
@@ -234,14 +230,14 @@ class HighLevelPogsTypes(object):
 				order = ok_enums.CblasRowMajor if A_equil.flags.c_contiguous \
 					else ok_enums.CblasRowMajor
 
-				d = zeros(self.m)
-				e = zeros(self.n)
-				z = zeros(self.m + self.n)
-				z12 = zeros(self.m + self.n)
-				zt = zeros(self.m + self.n)
-				zt12 = zeros(self.m + self.n)
-				zprev = zeros(self.m + self.n)
-				rho = zeros(1)
+				d = zeros(self.m, dtype=FLOAT_CAST)
+				e = zeros(self.n, dtype=FLOAT_CAST)
+				z = zeros(self.m + self.n, dtype=FLOAT_CAST)
+				z12 = zeros(self.m + self.n, dtype=FLOAT_CAST)
+				zt = zeros(self.m + self.n, dtype=FLOAT_CAST)
+				zt12 = zeros(self.m + self.n, dtype=FLOAT_CAST)
+				zprev = zeros(self.m + self.n, dtype=FLOAT_CAST)
+				rho = zeros(1, dtype=FLOAT_CAST)
 
 
 				pogslib.pogs_extract_solver(self.c_solver, 
@@ -251,9 +247,6 @@ class HighLevelPogsTypes(object):
 					ndarray_pointer(z12), ndarray_pointer(zt),
 					ndarray_pointer(zt12), ndarray_pointer(zprev), 
 					ndarray_pointer(rho), order)
-
-				print "SAVING"
-				print "D\n", d
 
 				if isinstance(LLT, ndarray):
 					savez(filename, 
@@ -266,7 +259,6 @@ class HighLevelPogsTypes(object):
 						z=z, z12=z12, zt=zt, zt12=zt12,
 						zprev=zprev, rho=rho[0])
 
-					
 			def __del__(self):
 				if self.c_solver is not None:
 					pogslib.pogs_finish(self.c_solver)
