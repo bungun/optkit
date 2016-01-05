@@ -72,10 +72,10 @@ class HighLevelPogsTypes(object):
 
 		class SolverOutput(object):
 			def __init__(self, m, n):
-				self.x = zeros(n)
-				self.y = zeros(m)
-				self.mu = zeros(n)
-				self.nu = zeros(m)
+				self.x = zeros(n, dtype=FLOAT_CAST)
+				self.y = zeros(m, dtype=FLOAT_CAST)
+				self.mu = zeros(n, dtype=FLOAT_CAST)
+				self.nu = zeros(m, dtype=FLOAT_CAST)
 				self.c = PogsOutput(ndarray_pointer(self.x), ndarray_pointer(self.y),
 					ndarray_pointer(self.mu), ndarray_pointer(self.nu))
 
