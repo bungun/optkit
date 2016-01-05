@@ -39,6 +39,9 @@ def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 		print "try setting the shell environment variable"
 		print "`export OPTKIT_USE_LOCALLIBS=1` and calling"
 		print "test.py from within its own directory"
+		print "\n"
+		print "also, make sure libequil is built:"
+		print "call `make libequil` from the optkit home directory"
 		print "(marking test as passed)"
 		return True
 

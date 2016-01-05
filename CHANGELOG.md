@@ -11,7 +11,7 @@
 - TODO: documentation
 - TODO: thorough commenting
 - TODO: option to suppress [y, mu, nu] from solver output
-
+- TODO: correct float32 lib error
 
 ###v0.0.1 (current)
 - CPU/GPU dense linear algebra (32/64-bit)

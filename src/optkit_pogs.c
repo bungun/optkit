@@ -435,7 +435,7 @@ POGS(adaptrho)(pogs_solver * solver, adapt_params * params,
 		  vector_scale(solver->z->dual->vec, kOne / params->delta);
 		  params->delta = params->delta * kGAMMA < kDELTAMAX ?
 		  					params->delta * kGAMMA : kDELTAMAX;
-		  params->u = k;
+		  params->u = (ok_float) k;
 		}
 
 	} else if (res->dual > params->xi * eps->dual && 
@@ -449,7 +449,7 @@ POGS(adaptrho)(pogs_solver * solver, adapt_params * params,
 		  vector_scale(solver->z->dual->vec, params->delta);
 		  params->delta = params->delta * kGAMMA < kDELTAMAX ?
 		  					params->delta * kGAMMA : kDELTAMAX;
-		  params->l = k; 
+		  params->l = (ok_float) k; 
 		}
 
 	} else if (res->dual < params->xi * eps->dual && 

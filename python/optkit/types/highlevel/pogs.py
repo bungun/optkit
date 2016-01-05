@@ -240,7 +240,8 @@ class HighLevelPogsTypes(object):
 					ndarray_pointer(zt12), ndarray_pointer(zprev), 
 					rho, self.m, self.n, order)
 
-			def save(self, directory, name):
+			def save(self, directory, name, 
+				save_equil=True, save_factorization=True):
 				if self.c_solver is None: 
 					Warning("No solver intialized, save() call invalid")
 					return
@@ -286,14 +287,18 @@ class HighLevelPogsTypes(object):
 					ndarray_pointer(zt12), ndarray_pointer(zprev), 
 					ndarray_pointer(rho), order)
 
-				if isinstance(LLT, ndarray):
+				if isinstance(LLT, ndarray) and save_factorization:
 					savez(filename, 
 						A_equil=A_equil, LLT=LLT, d=d, e=e,
 						z=z, z12=z12, zt=zt, zt12=zt12,
 						zprev=zprev, rho=rho[0])
-				else:
-					savez(filename , 
+				elif save_equil:
+					savez(filename, 
 						A_equil=A_equil, d=d, e=e,
+						z=z, z12=z12, zt=zt, zt12=zt12,
+						zprev=zprev, rho=rho[0])
+				else:
+					savez(filename, 
 						z=z, z12=z12, zt=zt, zt12=zt12,
 						zprev=zprev, rho=rho[0])
 
