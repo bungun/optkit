@@ -1,9 +1,9 @@
 from optkit.api import backend
 from operator import add as op_add
 from numpy.random import rand
-from numpy import zeros
+from numpy import zeros, float64
 
-TEST_EPS=1e-5
+TEST_EPS=1e-5 if backend.lowtypes.FLOAT_CAST == float64 else 1e-3
 HLINE  = reduce(op_add, ['-' for i in xrange(100)]) + "\n"
 
 MAT_ORDER = 'F' if backend.layout == 'col' else 'C'

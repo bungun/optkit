@@ -467,7 +467,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 	assert res_p/np.linalg.norm(output_.y) <= 10*settings.reltol
 	assert res_d/np.linalg.norm(output_.mu) <= 10*settings.reltol or \
-		np.linalg.norm(output_.mu) <= TEST_EPS
+		np.linalg.norm(output_.mu) <= 10*settings.reltol
 
 	return True
 

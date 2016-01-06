@@ -16,7 +16,7 @@ from os import path
 
 ndarray_pointer = backend.lowtypes.ndarray_pointer
 lib = backend.pogs
-
+FLOAT_CAST = backend.lowtypes.FLOAT_CAST
 
 AdaptiveRhoParameters = lib.adapt_params
 PogsObjectives = lib.pogs_objectives
@@ -72,23 +72,23 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 	k_orig = info.c.k
 
 	mindim = min(m, n)
-	A_equil = zeros((m, n))
+	A_equil = FLOAT_CAST(zeros((m, n)))
 	if lib.direct:
-		LLT = zeros((mindim, mindim))
+		LLT = FLOAT_CAST(zeros((mindim, mindim)))
 		LLT_ptr = ndarray_pointer(LLT)
 	else:
 		LLT = c_void_p()
 		LLT_ptr = LLT
 	order = ok_enums.CblasRowMajor if A_equil.flags.c_contiguous \
 		else ok_enums.CblasRowMajor
-	d = zeros(m)
-	e = zeros(n)
-	z = zeros(m + n)
-	z12 = zeros(m + n)
-	zt = zeros(m + n)
-	zt12 = zeros(m + n)
-	zprev = zeros(m + n)
-	rho = zeros(1)
+	d = FLOAT_CAST(zeros(m))
+	e = FLOAT_CAST(zeros(n))
+	z = FLOAT_CAST(zeros(m + n))
+	z12 = FLOAT_CAST(zeros(m + n))
+	zt = FLOAT_CAST(zeros(m + n))
+	zt12 = FLOAT_CAST(zeros(m + n))
+	zprev = FLOAT_CAST(zeros(m + n))
+	rho = zeros(1, dtype=FLOAT_CAST)
 
 
 	if A_equil.flags.c_contiguous != LLT.flags.c_contiguous:
@@ -165,9 +165,9 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 	PRINT("third solver: {}".format(s3.info.c.obj))
 
 	assert s3.info.c.k < s2.info.c.k
-	assert abs(s2.info.c.obj - s.info.c.obj) < \
+	assert abs(s2.info.c.obj - s.info.c.obj) <= \
 		10 * s.settings.c.reltol * abs(s.info.c.obj) 
-	assert abs(s3.info.c.obj - s.info.c.obj) < \
+	assert abs(s3.info.c.obj - s.info.c.obj) <= \
 		10 * s.settings.c.reltol * abs(s.info.c.obj) 
 
 	return True

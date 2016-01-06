@@ -163,7 +163,7 @@ def test_vector_methods(n=3,VERBOSE_TEST=True):
 	sync(c)
 	c_ = a_[0:2]
 	PRINTVAR(c)
-	assert array_compare(c.py,c_, eps=0.)
+	assert array_compare(c.py,c_, eps=TEST_EPS)
 
 	PRINT("a_view *=2")
 	mul(2,c)
@@ -257,14 +257,14 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	for i in xrange(m*n):
 		A2_.itemset(i,i)
 	A2 = Matrix(A2_)
-	assert array_compare(A2.py, A2_, eps=0.)
+	assert array_compare(A2.py, A2_, eps=TEST_EPS)
 
 	PRINT("Allocation from column-major numpy ndarray")
 	A3_ = np.ndarray(shape=(m,n),order='F')
 	for i in xrange(m*n):
 		A3_.itemset(i,i)
 	A3 = Matrix(A3_)
-	assert array_compare(A3.py, A3_, eps=0.)
+	assert array_compare(A3.py, A3_, eps=TEST_EPS)
 
 	PRINT("\nMatrix views:")
 
@@ -274,7 +274,7 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	assert VEC_ASSERT(a_col)
 	assert a_col.size == A.size1
 	ac_ = A_[:,1]
-	assert array_compare(a_col.py,ac_, eps=0.)
+	assert array_compare(a_col.py,ac_, eps=TEST_EPS)
 
 	PRINT("a_col +=3.5")
 	add(3.5,a_col)
@@ -298,7 +298,7 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	assert VEC_ASSERT(a_row)
 	assert a_row.size == A.size2
 	ar_ = A_[1,:]
-	assert array_compare(a_row.py,ar_, eps=0.)
+	assert array_compare(a_row.py,ar_, eps=TEST_EPS)
 
 	PRINT("a_row -=5.34")
 	sub(5.34,a_row)
@@ -321,7 +321,7 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	assert VEC_ASSERT(a_diag)
 	assert a_diag.size == A.mindim
 	ad_ = np.diag(A_).copy()
-	assert array_compare(a_diag.py,ad_, eps=0.)
+	assert array_compare(a_diag.py,ad_, eps=TEST_EPS)
 
 	PRINT("a_diag /=2.1")
 	div(2.1,a_diag)
@@ -422,7 +422,7 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 
 	PRINT(D.py)
 	PRINTVAR(D)
-	assert array_compare(B.py,D.py, eps=0.)
+	assert array_compare(B.py,D.py, eps=TEST_EPS)
 	assert array_compare(B.py,B_, eps=TEST_EPS)
 	assert array_compare(D.py,D_, eps=TEST_EPS)
 
@@ -433,26 +433,26 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	A2_*=2.4
 	copy(A2_,A2)
 	sync(A2)
-	assert array_compare(A2.py,A2_,eps=0.)
+	assert array_compare(A2.py,A2_,eps=TEST_EPS)
 
 	PRINT("Copy: col-major numpy ndarray -> Matrix")
 	A3_*=2.7
 	copy(A3_,A2)
 	sync(A2)
-	assert array_compare(A2.py,A3_,eps=0.)
+	assert array_compare(A2.py,A3_,eps=TEST_EPS)
 
 	# PRINT("Copy: row-major numpy ndarray->col-major Matrix")
 	# A3_ = np.copy(A3.py)
 	# A3 *= 0.76
 	# copy(A3_,A2)
 	# sync(A2)
-	# assert array_compare(A2.py,A3_,eps=0.)
+	# assert array_compare(A2.py,A3_,eps=TEST_EPS)
 
 
 	# PRINT("Copy: col-major numpy ndarray->col-major Matrix")
 	# copy(A3_,A3)
 	# sync(A3)
-	# assert array_compare(A3.py,A3_,eps=0.)
+	# assert array_compare(A3.py,A3_,eps=TEST_EPS)
 
 	return True
 
@@ -496,10 +496,10 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	B_ = np.copy(B.py)
 	assert VEC_ASSERT(a,b)
 	assert MAT_ASSERT(A,B)
-	assert array_compare(a.py,a_, eps=0.)
-	assert array_compare(b.py,b_, eps=0.)
-	assert array_compare(A.py,A_, eps=0.)
-	assert array_compare(B.py,B_, eps=0.)
+	assert array_compare(a.py,a_, eps=TEST_EPS)
+	assert array_compare(b.py,b_, eps=TEST_EPS)
+	assert array_compare(A.py,A_, eps=TEST_EPS)
+	assert array_compare(B.py,B_, eps=TEST_EPS)
 
 
 	PRINT("\nLEVEL 1")
@@ -552,7 +552,7 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	PRINTVAR(d)
 	PRINT("a:")
 	PRINTVAR(a)
-	assert array_compare(d.py,d_, eps=0.)
+	assert array_compare(d.py,d_, eps=TEST_EPS)
 
 
 
@@ -562,8 +562,8 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	d_ = 2.5*A_.dot(a_)
 	PRINTVAR(d)
 	PRINT(d.py)
-	assert array_compare(A.py,A_, eps=0.)
-	assert array_compare(a.py,a_, eps=0.)
+	assert array_compare(A.py,A_, eps=TEST_EPS)
+	assert array_compare(a.py,a_, eps=TEST_EPS)
 	assert array_compare(d.py,d_, eps=TEST_EPS)
 
 	PRINT("d := 3Aa + 2d")
@@ -572,8 +572,8 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	d_ = 3*A_.dot(a_)+2*d_
 	PRINTVAR(d)
 	PRINT(d.py)
-	assert array_compare(A.py,A_, eps=0.)
-	assert array_compare(a.py,a_, eps=0.)
+	assert array_compare(A.py,A_, eps=TEST_EPS)
+	assert array_compare(a.py,a_, eps=TEST_EPS)
 	assert array_compare(d.py,d_, eps=TEST_EPS)
 
 	PRINT("\nBLAS trsv")
@@ -617,7 +617,7 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	B_ = 2.13*A_.T.dot(A_) + 1.05*B_
 	PRINTVAR(B)
 	PRINT(B.py)
-	assert array_compare(A.py,A_, eps=0.)
+	assert array_compare(A.py,A_, eps=TEST_EPS)
 	assert array_compare(B.py,B_, eps=TEST_EPS)
 
 	PRINT("B := A^TA")
@@ -626,7 +626,7 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	B_ = A_.T.dot(A_)
 	PRINTVAR(B)
 	PRINT(B.py)
-	assert array_compare(A.py,A_, eps=0.)
+	assert array_compare(A.py,A_, eps=TEST_EPS)
 	assert array_compare(B.py,B_, eps=TEST_EPS)
 
 	PRINT("\n BLAS syrk")
@@ -645,7 +645,7 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 
 	PRINT(B_)
 	PRINTVAR(B)
-	assert array_compare(A.py,A_, eps=0.)
+	assert array_compare(A.py,A_, eps=TEST_EPS)
 	assert array_compare(B.py,B_, eps=TEST_EPS)
 
 
@@ -702,7 +702,7 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 	assert MAT_ASSERT(E)
 	E_ = np.copy(E.py)
 	PRINT(E.py)
-	assert array_compare(E.py,E_,eps=0.)
+	assert array_compare(E.py,E_,eps=TEST_EPS)
 
 
 	PRINT("---variable `x`---")
@@ -711,7 +711,7 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 	assert VEC_ASSERT(x)
 	x_ = np.copy(x.py)
 	PRINT(x.py)
-	assert array_compare(x.py,x_,eps=0.)
+	assert array_compare(x.py,x_,eps=TEST_EPS)
 
 	PRINT("\nPython solve: E^-1 x")
 	pysol = np.linalg.solve(E_,x_)
@@ -759,7 +759,10 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 
 	PRINT("solve diff (C - py)")
 	PRINT(x.py - pysol)
-	assert array_compare(x.py, pysol, eps=TEST_EPS)
+	if backend.lowtypes.FLOAT_CAST == np.float64:
+		assert array_compare(x.py, pysol, eps=TEST_EPS)
+	else:
+		assert array_compare(x.py, pysol, eps=1e-3)
 
 
 	return True
