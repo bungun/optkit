@@ -586,10 +586,10 @@ pogs_init(ok_float * A, size_t m, size_t n,
 	CBLAS_ORDER_t ord, Equilibration_t equil){
 
 	pogs_solver * solver = OK_NULL;
+	OK_TIMER t  = tic();
 
 	/* make variables, matrix */
 	POGS(pogs_solver_alloc)(&solver, m , n, ord);
-	solver->init_time = OK_TIMER();
 
 	/* equilibrate A as (D * A_equil * E) = A */
 	POGS(equilibrate)(solver->linalg_handle, A, solver->M, equil, ord);
@@ -598,7 +598,7 @@ pogs_init(ok_float * A, size_t m, size_t n,
 	PROJECTOR(initialize)(solver->linalg_handle, solver->M->P, 1);
 	POGS(normalize_DAE)(solver->linalg_handle, solver->M);	
 
-	solver->init_time = OK_TIMER() - solver->init_time;
+	solver->init_time = toc(t);
 	return solver;
 }
 
@@ -607,7 +607,7 @@ void
 pogs_solve(pogs_solver * solver, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output){
 
-	info->setup_time = OK_TIMER();
+	OK_TIMER t = tic();
 
 	/* copy settings */
 	POGS(update_settings)(solver->settings, settings);
@@ -621,15 +621,15 @@ pogs_solve(pogs_solver * solver, FunctionVector * f, FunctionVector * g,
 	if ( !(settings->resume) )
 		solver->rho = settings->rho;
 
-	info->setup_time = OK_TIMER() - info->setup_time;
+	info->setup_time = toc(t);
 	if (!(settings->warmstart || settings->resume))
 		info->setup_time += solver->init_time;
 	
 
 	/* run solver */
-	info->solve_time = OK_TIMER();
+	t = tic();
 	POGS(pogs_solver_loop)(solver, info);
-	info->solve_time = OK_TIMER() - info->solve_time;
+	info->solve_time = toc(t);
 
 	/* unscale output */
 	POGS(copy_output)(solver, output);

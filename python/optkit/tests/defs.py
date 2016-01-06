@@ -12,7 +12,7 @@ def rand_arr(*dims):
 	if len(dims)==2 and MAT_ORDER != 'C':
 		arr = zeros(shape=dims, order='F')
 		arr[:] = rand(*dims)[:]
-		return arr
+		return backend.lowtypes.FLOAT_CAST(arr)
 	else:
-		return rand(*dims)
+		return backend.lowtypes.FLOAT_CAST(rand(*dims))
 

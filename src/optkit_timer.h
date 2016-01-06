@@ -9,10 +9,23 @@
 extern "C"{
 #endif
 
-ok_float OK_TIMER() {
-  struct timeval tv;
-  gettimeofday(&tv, OK_NULL);
-  return (ok_float) tv.tv_sec + (ok_float) tv.tv_usec * (ok_float) 1e-6;
+typedef struct OK_TIMER{
+	struct timeval tv;
+	double tic, toc;
+} OK_TIMER;
+
+OK_TIMER tic(){
+	struct timeval tv;
+	OK_TIMER timer = (OK_TIMER){tv, 0, 0};
+	gettimeofday(&(timer.tv), OK_NULL);
+	timer.tic = timer.tv.tv_sec + timer.tv.tv_usec * 1e-6;
+	return timer;
+}
+
+ok_float toc(OK_TIMER timer){
+	gettimeofday(&(timer.tv), OK_NULL);
+	timer.toc = timer.tv.tv_sec + timer.tv.tv_usec * 1e-6;
+	return (ok_float) (timer.toc - timer.tic);
 }
 
 #ifdef __cplusplus

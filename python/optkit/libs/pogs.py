@@ -13,6 +13,7 @@ class PogsLibs(object):
 		use_local = getenv('OPTKIT_USE_LOCALLIBS', 0)
 		densetag = 'dense' if dense else 'sparse'
 
+
 		# NB: no windows support
 		ext = "dylib" if uname()[0] == "Darwin" else "so"
 		for device in ['gpu', 'cpu']:
