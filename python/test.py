@@ -7,6 +7,7 @@ def main(*args, **kwargs):
 	passing = 0
 	tested = 0
 	configs = []
+	errors = []
 	if '--linsys' in args: tests.append(test_linsys)
 	if '--prox' in args: tests.append(test_prox)
 	if '--proj' in args: tests.append(test_projector)
@@ -34,31 +35,38 @@ def main(*args, **kwargs):
 		if libkeys['cpu64'] is not None:
 			backend.reset()
 			print "<<< CPU, FLOAT64 >>>"
-			for t in tests: passing += t(*args, **kwargs)
+			for t in tests: passing += t(errors, *args, **kwargs)
 			tested += len(tests)
 			configs.append('cpu64')
 		if libkeys['cpu32'] is not None:
 			backend.reset()
 			print "<<< CPU, FLOAT32 >>>"
-			for t in tests: passing += t('float', *args, **kwargs)
+			for t in tests: passing += t(errors, 'float', *args, **kwargs)
 			tested += len(tests)
 			configs.append('cpu32')
 		if libkeys['gpu64'] is not None:
 			backend.reset()
 			print "<<< GPU, FLOAT64 >>>"
-			for t in tests: passing += t('gpu', *args, **kwargs)
+			for t in tests: passing += t(errors, 'gpu', *args, **kwargs)
 			tested += len(tests)
 			configs.append('gpu64')
 		if libkeys['gpu32'] is not None:
 			backend.reset()
 			print "<<< GPU, FLOAT32 >>>"
-			for t in tests: passing += t('gpu', 'float', *args, **kwargs)
+			for t in tests: passing += t(errors, 'gpu', 'float', *args, **kwargs)
 			tested += len(tests)
 			configs.append('gpu32')
 
 
 		print "{}/{} tests passed".format(passing, tested)
 		print "configurations tested: ", configs
+		if len(errors) > 0:
+			print "------------------------------------"
+			print "error log"
+			for e in errors:
+				print "------------------------------------"
+				print e
+			print "------------------------------------"
 
 
 if __name__== "__main__":
