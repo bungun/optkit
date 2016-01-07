@@ -53,4 +53,4 @@
 ###v++
 - block clustering in c/cuda
 - adaptive alpha
-
+- change Python bindings from ctypes -> Cython?

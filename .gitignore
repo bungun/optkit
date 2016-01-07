@@ -1,5 +1,4 @@
-CHANGELOG.html
-README.html
+*.html
 build/
 python/build/
 *.egg-info

@@ -1,5 +1,4 @@
 from os import path, popen, uname
-from sys import platform
 from setuptools import setup
 from setuptools.command.install import   install
 from distutils.command.build import build
@@ -96,7 +95,7 @@ class OptkitInstall(install):
         # run original install code
         install.run(self)
 
-        # install POGS executables
+        # install Optkit executables
         self.copy_tree(self.build_lib, self.install_lib)
 
 setup(
