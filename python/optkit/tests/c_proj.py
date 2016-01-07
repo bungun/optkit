@@ -141,6 +141,9 @@ def main(errors, m = 10, n = 5, A_in=None, VERBOSE_TEST=True,
 		lib.direct_projector_initialize(backend.dense_blas_handle, P_c, 0)
 		lib.direct_projector_project(backend.dense_blas_handle, P_c,
 			x_in.c, y_in.c, x_out.c, y_out.c)
+		if x_out.sync_required:
+			backend.dense.vector_memcpy_av(ndarray_pointer(x_out.py), x_out.c, 1)
+			backend.dense.vector_memcpy_av(ndarray_pointer(y_out.py), y_out.c, 1)
 
 
 		PRINT("RANDOM (x,y)")
@@ -185,6 +188,12 @@ def main(errors, m = 10, n = 5, A_in=None, VERBOSE_TEST=True,
 		lib.direct_projector_initialize(backend.dense_blas_handle, P_c, 1)
 		lib.direct_projector_project(backend.dense_blas_handle, P_c,
 			x_in.c, y_in.c, x_out.c, y_out.c)
+
+		if x_out.sync_required:
+			order = 102 if A.py.flags.f_contiguous else 101
+			backend.dense.matrix_memcpy_am(ndarray_pointer(A.py), A.c, order)
+			backend.dense.vector_memcpy_av(ndarray_pointer(x_out.py), x_out.c, 1)
+			backend.dense.vector_memcpy_av(ndarray_pointer(y_out.py), y_out.c, 1)
 
 
 		PRINT("RANDOM (x,y)")
