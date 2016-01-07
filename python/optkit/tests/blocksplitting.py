@@ -465,9 +465,10 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	res_p = np.linalg.norm(A_copy.dot(output_.x)-output_.y)
 	res_d = np.linalg.norm(A_copy.T.dot(output_.nu)+output_.mu)
 
-	assert res_p/np.linalg.norm(output_.y) <= 10*settings.reltol
-	assert res_d/np.linalg.norm(output_.mu) <= 10*settings.reltol or \
-		np.linalg.norm(output_.mu) <= 10*settings.reltol
+	if info_.converged:
+		assert res_p/np.linalg.norm(output_.y) <= 10 * settings.reltol
+		assert res_d/np.linalg.norm(output_.mu) <= 10 * settings.reltol or \
+		np.linalg.norm(output_.mu) <= 10 * settings.reltol
 
 	return True
 

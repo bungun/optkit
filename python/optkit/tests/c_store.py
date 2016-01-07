@@ -150,7 +150,7 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 
 	s3 = Solver(A, 'no_init')
 	s3.load(path.abspath('.'), 'c_solve_test')
-	PRINT("RUN 2nd LOADED SOLVER")
+	PRINT("RUN 2nd LOADED SOLVER (warmstart)")
 	s3.solve(f, g, resume=1)
 	call(['rm', 'c_solve_test.npz'])
 
@@ -166,9 +166,11 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 
 	assert s3.info.c.k < s2.info.c.k
 	assert abs(s2.info.c.obj - s.info.c.obj) <= \
-		10 * s.settings.c.reltol * abs(s.info.c.obj) 
+		max(10 * s.settings.c.reltol,
+			10 * s.settings.c.reltol * abs(s.info.c.obj))
 	assert abs(s3.info.c.obj - s.info.c.obj) <= \
-		10 * s.settings.c.reltol * abs(s.info.c.obj) 
+		max(10 * s.settings.c.reltol,
+			10 * s.settings.c.reltol * abs(s.info.c.obj))
 
 	return True
 

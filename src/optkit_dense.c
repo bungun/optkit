@@ -500,7 +500,9 @@ blas_scal(void * linalg_handle, const ok_float alpha, vector *x) {
 
 ok_float 
 blas_asum(void * linalg_handle, const vector * x) {
+  #ifdef OK_DEBUG
   if ( !__blas_check_handle(linalg_handle) ) return NAN;
+  #endif
   return CBLAS(asum)((int) x->size, x->data, (int) x->stride);
 }
 
@@ -556,7 +558,6 @@ void blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo,
 
   #ifdef OK_DEBUG
   if ( !__blas_check_handle(linalg_handle) ) return;
-
   #endif
   #ifndef OPTKIT_ORDER
   if ( __matrix_order_compat(A, C, "A", "C", "blas_syrk") )
