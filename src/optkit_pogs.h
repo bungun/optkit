@@ -99,6 +99,7 @@ typedef struct POGSMatrix {
 
 typedef struct POGSVariables {
 	block_vector * primal, * primal12, * dual, * dual12;
+	block_vector * primal_alt, * primal_search, * dual_alt, * dual_search;
 	block_vector * prev, * temp;
 	size_t m, n;
 } pogs_variables;

@@ -132,6 +132,10 @@ POGS(pogs_variables_alloc)(pogs_variables ** z, size_t m, size_t n){
 	POGS(block_vector_alloc)(&(z_->dual12), m, n);
 	POGS(block_vector_alloc)(&(z_->prev), m ,n);
 	POGS(block_vector_alloc)(&(z_->temp), m, n);
+	POGS(block_vector_alloc)(&(z_->primal_alt), m, n);
+	POGS(block_vector_alloc)(&(z_->dual_alt), m ,n);	
+	POGS(block_vector_alloc)(&(z_->primal_search), m, n);
+	POGS(block_vector_alloc)(&(z_->dual_search), m ,n);	
 	*z = z_;
 }
 
@@ -143,6 +147,10 @@ POGS(pogs_variables_free)(pogs_variables * z){
 	POGS(block_vector_free)(z->dual12);
 	POGS(block_vector_free)(z->prev);
 	POGS(block_vector_free)(z->temp);
+	POGS(block_vector_free)(z->primal_alt);
+	POGS(block_vector_free)(z->dual_alt);
+	POGS(block_vector_free)(z->primal_search);
+	POGS(block_vector_free)(z->dual_search);
 	ok_free(z);
 }
 
@@ -374,6 +382,85 @@ POGS(prox)(void * linalg_handle, FunctionVector * f,
 	ProxEvalVector(g, rho, z->temp->x, z->primal12->x);
 }
 
+
+/* -------------------------------------- */
+/* LINESEARCH METHOD					  */
+/* -------------------------------------- */
+
+void
+POGS(linesearch)(void * linalg_handle, FunctionVector * f, 
+	FunctionVector * g, pogs_variables * z, ok_float rho){
+
+	block_vector * tempP, * tempD;
+	ok_float alpha = (ok_float) 100;
+	ok_float beta = (ok_float) 0.8;
+	ok_float alpha_best = (ok_float) 100;
+	ok_float obj_curr = (ok_float) 0, obj_best = (ok_float) 0;
+
+	/* alpha (100) * unit step in primal direction */
+	vector_memcpy_vv(z->primal_search->vec, z->primal->vec);
+	blas_axpy(linalg_handle, -kOne, z->primal_alt->vec, z->primal_search->vec);
+	vector_scale(z->primal_search->vec, kOne / (kALPHA - kOne));
+
+	/* alpha (100) * unit step in dual direction */
+	vector_memcpy_vv(z->dual_search->vec, z->dual->vec);
+	blas_axpy(linalg_handle, -kOne, z->dual_alt->vec, z->dual_search->vec);
+	vector_scale(z->dual_search->vec, kOne / (kALPHA - kOne));
+
+	/* alias safely overwritable variables as temp variables */
+	tempP = z->primal;
+	tempD = z->dual;
+
+	/* first try */
+	vector_memcpy_vv(tempP->vec, z->primal_alt->vec);
+	vector_memcpy_vv(tempD->vec, z->dual_alt->vec);
+
+	blas_axpy(linalg_handle, alpha - kOne, z->primal_search->vec, tempP->vec);
+	blas_axpy(linalg_handle, alpha - kOne, z->dual_search->vec, tempD->vec);
+	blas_axpy(linalg_handle, -kOne, tempD->vec, tempP->vec);
+	ProxEvalVector(f, rho, tempP->y, z->primal12->y);
+	ProxEvalVector(g, rho, tempP->x, z->primal12->x);	
+	obj_curr = FuncEvalVector(f, z->primal12->y) + 
+		FuncEvalVector(g, z->primal12->x);
+	obj_best = obj_curr;
+
+	/* line search */
+	while (alpha > (ok_float) 0.5){
+		alpha *= beta;
+
+		blas_axpy(linalg_handle, alpha - kOne, z->primal_search->vec, tempP->vec);
+		blas_axpy(linalg_handle, alpha - kOne, z->dual_search->vec, tempD->vec);
+		blas_axpy(linalg_handle, -kOne, tempD->vec, tempP->vec);
+		ProxEvalVector(f, rho, tempP->y, z->primal12->y);
+		ProxEvalVector(g, rho, tempP->x, z->primal12->x);	
+		obj_curr = FuncEvalVector(f, z->primal12->y) + 
+			FuncEvalVector(g, z->primal12->x);
+
+		if (obj_curr < obj_best){
+			obj_best = obj_curr;
+			alpha_best = alpha;
+		}
+	}
+
+	/* finalize choice of alpha */
+	printf("ALPHA BEST %f\n", (float) alpha_best);
+	vector_memcpy_vv(z->primal->vec, z->primal_alt->vec);
+	vector_memcpy_vv(z->dual->vec, z->dual_alt->vec);	
+	blas_axpy(linalg_handle, alpha_best - kOne, z->primal_search->vec, z->primal->vec);
+	blas_axpy(linalg_handle, alpha_best - kOne, z->dual_search->vec, z->dual->vec);
+
+	/* normal prox evaluation */
+	vector_memcpy_vv(z->temp->vec, z->primal->vec);
+	blas_axpy(linalg_handle, -kOne, z->dual->vec, z->temp->vec);
+	ProxEvalVector(f, rho, z->temp->y, z->primal12->y);
+	ProxEvalVector(g, rho, z->temp->x, z->primal12->x);
+
+
+}
+
+
+
+
 /* --------------------------------------------------------	*/
 /* ( x^{k+1}, y^{k+1} ) = Proj_{y=Ax} ( x^{k+1/2 + xt^k,	*/	
 /*									y^{k+1/2} + yt^k) 		*/
@@ -382,12 +469,22 @@ void
 POGS(project_primal)(void * linalg_handle, projector * proj, 
 	pogs_variables * z,  ok_float alpha){
 
+	/* alpha should not be 1 in the line search version pogs */
+	if (alpha == (ok_float) 1)
+		alpha = (ok_float) 1.7;
+
 	vector_set_all(z->temp->vec, kZero);
-	blas_axpy(linalg_handle, alpha, z->primal12->vec, z->temp->vec);
-	blas_axpy(linalg_handle, kOne - alpha, z->prev->vec, z->temp->vec);
+	blas_axpy(linalg_handle, kALPHA, z->primal12->vec, z->temp->vec);
+	blas_axpy(linalg_handle, kOne - kALPHA, z->prev->vec, z->temp->vec);
 	blas_axpy(linalg_handle, kOne, z->dual->vec, z->temp->vec);
 	PROJECTOR(project)(linalg_handle, proj, z->temp->x, z->temp->y,
 		z->primal->x, z->primal->y);
+
+	/* alternate primal point */
+	blas_axpy(linalg_handle, kOne, z->primal12->vec, z->temp->vec);
+	blas_axpy(linalg_handle, kOne, z->dual->vec, z->temp->vec);
+	PROJECTOR(project)(linalg_handle, proj, z->temp->x, z->temp->y,
+		z->primal_alt->x, z->primal_alt->y);
 }
 
 
@@ -408,8 +505,15 @@ POGS(update_dual)(void * linalg_handle, pogs_variables * z, ok_float alpha){
 	/* -------------------------------------- */
 	/* zt^{k+1}   = zt^k + z^{k+1/2} - z^k+1  */
 	/* -------------------------------------- */
-	blas_axpy(linalg_handle, alpha, z->primal12->vec, z->dual->vec);
-	blas_axpy(linalg_handle, kOne - alpha, z->prev->vec, z->dual->vec);		
+
+	/* alternate dual point with alpha = 1 */
+	vector_memcpy_vv(z->dual_alt->vec, z->dual->vec);
+	blas_axpy(linalg_handle, kOne, z->primal12->vec, z->dual_alt->vec);
+	blas_axpy(linalg_handle, -kOne, z->primal->vec, z->dual_alt->vec);
+
+	/* dual point alpha = alpha */
+	blas_axpy(linalg_handle, kALPHA, z->primal12->vec, z->dual->vec);
+	blas_axpy(linalg_handle, kOne - kALPHA, z->prev->vec, z->dual->vec);		
 	blas_axpy(linalg_handle, -kOne, z->primal->vec, z->dual->vec);
 }
 
@@ -534,7 +638,10 @@ POGS(pogs_solver_loop)(pogs_solver * solver, pogs_info * info){
 	/* iterate until converged, or error/maxiter reached */
 	for (k = 1; !err; ++k){
 		POGS(set_prev)(z);
-		POGS(prox)(linalg_handle, solver->f, solver->g, z, solver->rho);
+		if (k == 1)
+			POGS(prox)(linalg_handle, solver->f, solver->g, z, solver->rho);
+		else
+			POGS(linesearch)(linalg_handle, solver->f, solver->g, z, solver->rho);
 		POGS(project_primal)(linalg_handle, solver->M->P, z, settings->alpha);
 		POGS(update_dual)(linalg_handle, z, settings->alpha);
 
