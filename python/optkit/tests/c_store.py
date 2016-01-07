@@ -121,7 +121,7 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 
 		if lib.full_api_accessible:
 			PRINT("extracted rho: {}\tsolver rho: {}".format(rho, solver.contents.rho))
-			assert rho == solver.contents.rho
+			assert rho[0] == solver.contents.rho
 
 
 		PRINT("(DESTROY SOLVER)")

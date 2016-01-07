@@ -107,6 +107,8 @@ def main(errors, m = 10, n = 5, A_in=None, VERBOSE_TEST=True,
 		# get matrix layout
 		order = A.c.rowmajor
 
+		# random vector for output testing
+		x_rand = RAND_ARR(n)
 
 		# ------------------------------------------------------------ #
 		# ------------------- DENSE l_2 EQUILIBRATION  --------------- #
@@ -121,8 +123,6 @@ def main(errors, m = 10, n = 5, A_in=None, VERBOSE_TEST=True,
 		if DEVICE != 'gpu':
 			pretty_print("DENSE L2 EQULIBRATION:")
 			lib.dense_l2(hdl, ndarray_pointer(A_orig), A.c, d.c, e.c, order)
-
-			x_rand = RAND_ARR(n)
 
 			if d.sync_required:
 				order = 102 if A.py.flags.f_contiguous else 101
