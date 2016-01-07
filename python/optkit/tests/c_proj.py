@@ -1,34 +1,44 @@
 from ctypes import CDLL, POINTER, Structure, c_void_p, c_uint, c_int
-from os import uname
-from optkit.api import backend
-
-
-from optkit.api import Matrix, Vector
-from optkit.types import ok_enums
-from optkit.tests.defs import HLINE, TEST_EPS, rand_arr
-from optkit.utils.pyutils import println, pretty_print, printvoid, \
-	var_assert, array_compare
+from os import uname, path
 from sys import argv
 from numpy import ndarray, copy as np_copy
 from numpy.linalg import norm
 from os import path
+from optkit.types import ok_enums
+from optkit.utils.pyutils import println, pretty_print, printvoid, \
+	var_assert, array_compare
+from optkit.tests.defs import gen_test_defs
 
-ok_float = backend.lowtypes.ok_float
-ok_float_p = backend.lowtypes.ok_float_p
-vector_p = backend.lowtypes.vector_p
-matrix_p = backend.lowtypes.matrix_p
-ndarray_pointer = backend.lowtypes.ndarray_pointer
-hdl = backend.dense_blas_handle
 
-DEVICE = backend.device
-PRECISION = backend.precision
-LAYOUT = backend.layout + '_' if backend.layout != '' else ''
-EXT = 'dylib' if uname()[0] == 'Darwin' else 'so'
+def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True,
+	gpu=False, floatbits=64):
 
-def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
+	from optkit.api import backend, set_backend
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
+
+	from optkit.api import Matrix, Vector
+	TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
+
+
+	ok_float = backend.lowtypes.ok_float
+	ok_float_p = backend.lowtypes.ok_float_p
+	vector_p = backend.lowtypes.vector_p
+	matrix_p = backend.lowtypes.matrix_p
+	ndarray_pointer = backend.lowtypes.ndarray_pointer
+	hdl = backend.dense_blas_handle
+
+	DEVICE = backend.device
+	PRECISION = backend.precision
+	LAYOUT = backend.layout + '_' if backend.layout != '' else ''
+	EXT = 'dylib' if uname()[0] == 'Darwin' else 'so'
+
+
 	PRINT = println if VERBOSE_TEST else printvoid
 	PPRINT = pretty_print if VERBOSE_TEST else printvoid
 	HOME = path.dirname(path.abspath(__file__))
+
+
 
 	# ------------------------------------------------------------ #
 	# ------------------- libprojector prep ---------------------- #
@@ -75,18 +85,19 @@ def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 	lib.direct_projector_free.restype = None
 
 
+
 	# ------------------------------------------------------------ #
 	# ------------------------ test setup ------------------------ #
 	# ------------------------------------------------------------ #
 	PRINT("\n")
 
 	if isinstance(A_in, ndarray):
-		A = Matrix(A_in)
+		A = Matrix(A_in.astype(backend.lowtypes.FLOAT_CAST))
 		var_assert(A)
 		(m, n) = A.shape
 		PRINT("(using provided matrix)")
 	else:
-		A = Matrix(rand_arr(m,n))
+		A = Matrix(RAND_ARR(m,n))
 		var_assert(A, type=Matrix)
 		PRINT("(using random matrix)")
 
@@ -99,14 +110,15 @@ def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 	# 
 	P_c = DirectProjector(None, None, 0, 0, 0)
 
+
+
 	# ------------------------------------------------------------ #
 	# -------------------- Direct Projection --------------------- #
 	# ------------------------------------------------------------ #
 
-
 	# make random (x_in, y_in), allocate all-zero (x_out, y_out)
-	x_rand = rand_arr(n)
-	y_rand = rand_arr(m)
+	x_rand = RAND_ARR(n)
+	y_rand = RAND_ARR(m)
 	x_in = Vector(x_rand)
 	y_in = Vector(y_rand)
 	x_out = Vector(n)
@@ -195,33 +207,18 @@ def test_cproj(*args,**kwargs):
 
 	args = list(args)
 	verbose = '--verbose' in args
-	
+	floatbits = 32 if 'float' in args else 64
+
 	(m,n)=kwargs['shape'] if 'shape' in kwargs else (10, 5)
 	A = np.load(kwargs['file']) if 'file' in kwargs else None
-	assert main(m, n, A_in=A, VERBOSE_TEST=verbose)
+	assert main(m, n, A_in=A, VERBOSE_TEST=verbose,
+		gpu='gpu' in args, floatbits=floatbits)
 	if isinstance(A, ndarray): A = A.T
-	assert main(n, m, A_in=A, VERBOSE_TEST=verbose)
+	assert main(n, m, A_in=A, VERBOSE_TEST=verbose,
+		gpu='gpu' in args, floatbits=floatbits)
 
 	print("\n\n")
 	pretty_print("... passed", '#')
 	print("\n\n")
 
 	return True
-
-if __name__ == '__main__':
-	args = []
-	kwargs = {}
-
-	args += argv
-	if '--size' in argv:
-		pos = argv.index('--size')
-		if len(argv) > pos + 2:
-			kwargs['shape']=(int(argv[pos+1]),int(argv[pos+2]))
-	if '--file' in argv:
-		pos = argv.index('--file')
-		if len(argv) > pos + 1:
-			kwargs['file']=str(argv[pos+1])
-
-	test_cproj(*args, **kwargs)
-
-

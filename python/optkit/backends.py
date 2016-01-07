@@ -39,10 +39,10 @@ class OKBackend(object):
 		if self.dense is not None: self.dense.blas_make_handle(byref(self.dense_blas_handle))
 		if self.sparse is not None: self.sparse.blas_make_handle(self.sparse_blas_handle)
 
+	def reset(self):
+		self.__LIBGUARD_ON__ = False
+
 	def __set_lib(self, device=None, precision=None, order=None):
-		if self.__LIBGUARD_ON__:
-			print str('Backend cannot be changed once ' 
-				'Vector/Matrix/FunctionVector objects have been created.\n')
 		devices = ['gpu', 'cpu'] if device == 'gpu' else ['cpu', 'gpu']
 		precisions = ['32', '64'] if precision == '32' else ['64', '32']
 		orders = ['col', ''] if order == 'col' else ['row', ''] \
@@ -95,6 +95,11 @@ class OKBackend(object):
 	def change(self, GPU=False, double=True, 
 		force_rowmajor=False, force_colmajor=False,
 		checktypes=None, checkdims=None, checkdevices=None):
+
+		if self.__LIBGUARD_ON__:
+			print str('Backend cannot be changed once ' 
+				'Vector/Matrix/FunctionVector objects have been created.\n')
+			return
 
 		precision = '64' if double else '32'
 		device = 'gpu' if GPU else 'cpu'

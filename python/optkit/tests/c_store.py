@@ -1,37 +1,44 @@
-from optkit.api import backend
-from optkit.api import Vector, Matrix, FunctionVector
-from optkit.api import CPogsTypes
-
-from optkit.types import ok_enums
-from optkit.tests.defs import TEST_EPS, rand_arr
-from optkit.utils.pyutils import println, pretty_print, printvoid, \
-	var_assert, array_compare
-from optkit.utils.proxutils import prox_eval_python, func_eval_python
 from sys import argv
-from numpy import ndarray, zeros, copy as np_copy, dot as np_dot
+from numpy import ndarray, zeros, copy as np_copy, dot as np_dot, float32
 from numpy.linalg import norm
 from ctypes import c_void_p
 from subprocess import call
 from os import path 
+from optkit.types import ok_enums
+from optkit.utils.pyutils import println, pretty_print, printvoid, \
+	var_assert, array_compare
+from optkit.utils.proxutils import prox_eval_python, func_eval_python
+from optkit.tests.defs import gen_test_defs
 
-ndarray_pointer = backend.lowtypes.ndarray_pointer
-lib = backend.pogs
-FLOAT_CAST = backend.lowtypes.FLOAT_CAST
+def main(m , n, A_in=None, VERBOSE_TEST=True,
+	gpu=False, floatbits=64):
 
-AdaptiveRhoParameters = lib.adapt_params
-PogsObjectives = lib.pogs_objectives
-PogsResiduals = lib.pogs_residuals
-PogsTolerances = lib.pogs_tolerances
+	from optkit.api import backend, set_backend
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
 
-SolverSettings = CPogsTypes.SolverSettings
-SolverInfo = CPogsTypes.SolverInfo
-SolverOutput = CPogsTypes.SolverOutput
-Solver = CPogsTypes.Solver
+	from optkit.api import Vector, Matrix, FunctionVector
+	from optkit.api import CPogsTypes
+	TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
 
+	ndarray_pointer = backend.lowtypes.ndarray_pointer
+	lib = backend.pogs
+	FLOAT_CAST = backend.lowtypes.FLOAT_CAST
 
-def main(m , n, A_in=None, VERBOSE_TEST=True):
+	AdaptiveRhoParameters = lib.adapt_params
+	PogsObjectives = lib.pogs_objectives
+	PogsResiduals = lib.pogs_residuals
+	PogsTolerances = lib.pogs_tolerances
+
+	SolverSettings = CPogsTypes.SolverSettings
+	SolverInfo = CPogsTypes.SolverInfo
+	SolverOutput = CPogsTypes.SolverOutput
+	Solver = CPogsTypes.Solver
+
 	PRINT = println if VERBOSE_TEST else printvoid
 	PPRINT = pretty_print if VERBOSE_TEST else printvoid
+
+
 
 	# ------------------------------------------------------------ #
 	# ------------------------ test setup ------------------------ #
@@ -39,15 +46,17 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 	PRINT("\n")
 
 	if isinstance(A_in, ndarray):
-		A = A_in
+		A = A_in.astype(FLOAT_CAST)
 		(m, n) = A.shape
 		PRINT("(using provided matrix)")
 	else:
-		A = rand_arr(m,n)
+		A = RAND_ARR(m,n)
 		PRINT("(using random matrix)")
 
 	pretty_print("{} MATRIX".format("SKINNY" if m >= n else "FAT"), '=')
 	print "(m = {}, n = {})".format(m, n)
+
+
 
 	# ------------------------------------------------------------ #
 	# --------------------------- POGS --------------------------- #
@@ -72,23 +81,23 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 	k_orig = info.c.k
 
 	mindim = min(m, n)
-	A_equil = FLOAT_CAST(zeros((m, n)))
+	A_equil = zeros((m, n)).astype(FLOAT_CAST)
 	if lib.direct:
-		LLT = FLOAT_CAST(zeros((mindim, mindim)))
+		LLT = zeros((mindim, mindim)).astype(FLOAT_CAST)
 		LLT_ptr = ndarray_pointer(LLT)
 	else:
 		LLT = c_void_p()
 		LLT_ptr = LLT
 	order = ok_enums.CblasRowMajor if A_equil.flags.c_contiguous \
 		else ok_enums.CblasRowMajor
-	d = FLOAT_CAST(zeros(m))
-	e = FLOAT_CAST(zeros(n))
-	z = FLOAT_CAST(zeros(m + n))
-	z12 = FLOAT_CAST(zeros(m + n))
-	zt = FLOAT_CAST(zeros(m + n))
-	zt12 = FLOAT_CAST(zeros(m + n))
-	zprev = FLOAT_CAST(zeros(m + n))
-	rho = zeros(1, dtype=FLOAT_CAST)
+	d = zeros(m).astype(FLOAT_CAST)
+	e = zeros(n).astype(FLOAT_CAST)
+	z = zeros(m + n).astype(FLOAT_CAST)
+	z12 = zeros(m + n).astype(FLOAT_CAST)
+	zt = zeros(m + n).astype(FLOAT_CAST)
+	zt12 = zeros(m + n).astype(FLOAT_CAST)
+	zprev = zeros(m + n).astype(FLOAT_CAST)
+	rho = zeros(1).astype(FLOAT_CAST)
 
 
 	if A_equil.flags.c_contiguous != LLT.flags.c_contiguous:
@@ -101,7 +110,7 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 		ndarray_pointer(zt12), ndarray_pointer(zprev), 
 		ndarray_pointer(rho), order)
 
-	xrand = rand_arr(n)
+	xrand = RAND_ARR(n)
 	Ax = A_equil.dot(xrand)
 	DAEx = d * A.dot(e * xrand)
 	PRINT("A_{equil}x_{rand} - D^{-1}AE^{-1}x_{rand}:")
@@ -164,16 +173,16 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 	PRINT("second solver: {}".format(s2.info.c.obj))
 	PRINT("third solver: {}".format(s3.info.c.obj))
 
-	assert s3.info.c.k < s2.info.c.k
+	FAC = 30 if backend.lowtypes.FLOAT_CAST == float32 else 10
+	assert s3.info.c.k <= s2.info.c.k
 	assert abs(s2.info.c.obj - s.info.c.obj) <= \
-		max(10 * s.settings.c.reltol,
-			10 * s.settings.c.reltol * abs(s.info.c.obj))
+		max(FAC * s.settings.c.reltol,
+			FAC * s.settings.c.reltol * abs(s.info.c.obj))
 	assert abs(s3.info.c.obj - s.info.c.obj) <= \
-		max(10 * s.settings.c.reltol,
-			10 * s.settings.c.reltol * abs(s.info.c.obj))
+		max(FAC * s.settings.c.reltol,
+			FAC * s.settings.c.reltol * abs(s.info.c.obj))
 
 	return True
-
 
 def test_cstore(*args,**kwargs):
 	print("\n\n")
@@ -182,32 +191,18 @@ def test_cstore(*args,**kwargs):
 
 	args = list(args)
 	verbose = '--verbose' in args
+	floatbits = 32 if 'float' in args else 64
 	
 	(m,n)=kwargs['shape'] if 'shape' in kwargs else (20, 10)
 	A = np.load(kwargs['file']) if 'file' in kwargs else None
-	assert main(m, n, A_in=A, VERBOSE_TEST=verbose)
+	assert main(m, n, A_in=A, VERBOSE_TEST=verbose,
+		gpu='gpu' in args, floatbits=floatbits)
 	if isinstance(A, ndarray): A = A.T
-	assert main(n, m, A_in=A, VERBOSE_TEST=verbose)
+	assert main(n, m, A_in=A, VERBOSE_TEST=verbose,
+		gpu='gpu' in args, floatbits=floatbits)
 
 	print("\n\n")
 	pretty_print("... passed", '#')
 	print("\n\n")
 
 	return True
-
-if __name__ == '__main__':
-	args = []
-	kwargs = {}
-
-	args += argv
-	if '--size' in argv:
-		pos = argv.index('--size')
-		if len(argv) > pos + 2:
-			kwargs['shape']=(int(argv[pos+1]),int(argv[pos+2]))
-	if '--file' in argv:
-		pos = argv.index('--file')
-		if len(argv) > pos + 1:
-			kwargs['file']=str(argv[pos+1])
-
-	test_cstore(*args, **kwargs)
-

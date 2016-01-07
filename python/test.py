@@ -1,10 +1,12 @@
 import sys
 from optkit.tests import *
-
+from optkit.api import backend
 
 def main(*args, **kwargs):
 	tests = []
 	passing = 0
+	tested = 0
+	configs = []
 	if '--linsys' in args: tests.append(test_linsys)
 	if '--prox' in args: tests.append(test_prox)
 	if '--proj' in args: tests.append(test_projector)
@@ -18,8 +20,6 @@ def main(*args, **kwargs):
 	if '--cstore' in args: tests.append(test_cstore)
 
 
-	for t in tests: passing += t(*args, **kwargs)
-	print "{}/{} tests passed".format(passing, len(tests))
 	if len(tests)==0:
 		test_names = ['--linsys', '--prox', '--proj',
 		'--equil', '--norm', '--block', '--pogs', '--py_all',
@@ -27,13 +27,43 @@ def main(*args, **kwargs):
 
 		print str("no tests specified.\nuse optional arguments:\n"
 			"{}\nor\n--all\n to specify tests.".format(test_names))
+		
+	else:
+		libkeys = backend.dense_lib_loader.libs
+
+		if libkeys['cpu64'] is not None:
+			backend.reset()
+			print "<<< CPU, FLOAT64 >>>"
+			for t in tests: passing += t(*args, **kwargs)
+			tested += len(tests)
+			configs.append('cpu64')
+		if libkeys['cpu32'] is not None:
+			backend.reset()
+			print "<<< CPU, FLOAT32 >>>"
+			for t in tests: passing += t('float', *args, **kwargs)
+			tested += len(tests)
+			configs.append('cpu32')
+		if libkeys['gpu64'] is not None:
+			backend.reset()
+			print "<<< GPU, FLOAT64 >>>"
+			for t in tests: passing += t('gpu', *args, **kwargs)
+			tested += len(tests)
+			configs.append('gpu64')
+		if libkeys['gpu32'] is not None:
+			backend.reset()
+			print "<<< GPU, FLOAT32 >>>"
+			for t in tests: passing += t('gpu', 'float', *args, **kwargs)
+			tested += len(tests)
+			configs.append('gpu32')
+
+
+		print "{}/{} tests passed".format(passing, tested)
+		print "configurations tested: ", configs
 
 
 if __name__== "__main__":
 	args=[]
 	kwargs={}
-	reps=1
-
 
 	args += sys.argv
 	if '--all' in args:
@@ -45,7 +75,6 @@ if __name__== "__main__":
 		args+=['--cequil', '--cproj', '--cpogs', '--cstore']
 
 
-
 	if '--size' in sys.argv:
 		pos = sys.argv.index('--size')
 		if len(sys.argv) > pos + 2:
@@ -54,10 +83,5 @@ if __name__== "__main__":
 		pos = sys.argv.index('--file')
 		if len(sys.argv) > pos + 1:
 			kwargs['file']=str(sys.argv[pos+1])
-	if '--reps' in sys.argv:
-		pos = sys.argv.index('--reps')
-		if len(sys.argv) > pos + 1:
-			reps=int(sys.argv[pos+1])
 
-	for r in xrange(reps):
-		main(*args,**kwargs)
+	main(*args, **kwargs)

@@ -1,30 +1,39 @@
 from ctypes import CDLL, c_void_p, c_uint
-from os import uname
-
-from optkit.api import backend
-from optkit.api import Matrix, Vector
-from optkit.types import ok_enums
-from optkit.tests.defs import HLINE, TEST_EPS, rand_arr
-from optkit.utils.pyutils import println, pretty_print, printvoid, \
-	var_assert, array_compare
 from sys import argv
 from numpy import ndarray, copy as np_copy, load as np_load
-from os import path
+from os import path, uname
+from optkit.utils.pyutils import println, pretty_print, printvoid, \
+	var_assert, array_compare
+from optkit.types import ok_enums
+from optkit.tests.defs import gen_test_defs
 
-ok_float_p = backend.lowtypes.ok_float_p
-vector_p = backend.lowtypes.vector_p
-matrix_p = backend.lowtypes.matrix_p
-ndarray_pointer = backend.lowtypes.ndarray_pointer
-hdl = backend.dense_blas_handle
+def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True,
+	gpu=False, floatbits=64):
 
-DEVICE = backend.device
-PRECISION = backend.precision
-LAYOUT = backend.layout + '_' if backend.layout != '' else ''
-EXT = 'dylib' if uname()[0] == 'Darwin' else 'so'
+	from optkit.api import backend, set_backend
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
 
-def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
+	from optkit.api import Matrix, Vector
+
+	TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
+
+	ok_float_p = backend.lowtypes.ok_float_p
+	vector_p = backend.lowtypes.vector_p
+	matrix_p = backend.lowtypes.matrix_p
+	ndarray_pointer = backend.lowtypes.ndarray_pointer
+	hdl = backend.dense_blas_handle
+
+	DEVICE = backend.device
+	PRECISION = backend.precision
+	LAYOUT = backend.layout + '_' if backend.layout != '' else ''
+	EXT = 'dylib' if uname()[0] == 'Darwin' else 'so'
+
+
 	PRINT = println if VERBOSE_TEST else printvoid
 	HOME = path.dirname(path.abspath(__file__))
+
+
 
 	# ------------------------------------------------------------ #
 	# ---------------------- libequil prep ----------------------- #
@@ -64,12 +73,12 @@ def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 	PRINT("\n")
 
 	if isinstance(A_in, ndarray):
-		A = Matrix(A_in)
+		A = Matrix(A_in.astype(backend.lowtypes.FLOAT_CAST))
 		var_assert(A)
 		(m, n) = A.shape
 		PRINT("(using provided matrix)")
 	else:
-		A = Matrix(rand_arr(m,n))
+		A = Matrix(RAND_ARR(m,n))
 		var_assert(A)
 		PRINT("(using random matrix)")
 
@@ -99,7 +108,7 @@ def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 	pretty_print("DENSE L2 EQULIBRATION:")
 	lib.dense_l2(hdl, ndarray_pointer(A_orig), A.c, d.c, e.c, order)
 
-	x_rand = rand_arr(n)
+	x_rand = RAND_ARR(n)
 
 	Ax = A.py.dot(x_rand)
 	DAEx = d.py * A_orig.dot(e.py * x_rand)
@@ -108,11 +117,11 @@ def main(m = 10, n = 5, A_in=None, VERBOSE_TEST=True):
 	PRINT(DAEx - Ax)
 	assert array_compare(DAEx, Ax, eps=TEST_EPS)
 	
-
-
-
 	A2 = Matrix(A_orig)
 	assert var_assert(A2)
+
+
+
 	# ------------------------------------------------------------ #
 	# --------------- SINKHORN KNOPP EQUILIBRATION --------------- #
 	# ------------------------------------------------------------ #
@@ -138,33 +147,18 @@ def test_cequil(*args,**kwargs):
 
 	args = list(args)
 	verbose = '--verbose' in args
+	floatbits = 32 if 'float' in args else 64
 	
 	(m,n)=kwargs['shape'] if 'shape' in kwargs else (10,5)
-	A = backend.lowtypes.FLOAT_CAST(
-		np_load(kwargs['file'])) if 'file' in kwargs else None
-	assert main(m, n, A_in=A, VERBOSE_TEST=verbose)
+	A = np_load(kwargs['file']) if 'file' in kwargs else None
+	assert main(m, n, A_in=A, VERBOSE_TEST=verbose,
+		gpu='gpu' in args, floatbits=floatbits)
 	if isinstance(A, ndarray): A = A.T
-	assert main(n, m, A_in=A, VERBOSE_TEST=verbose)
+	assert main(n, m, A_in=A, VERBOSE_TEST=verbose,
+		gpu='gpu' in args, floatbits=floatbits)
 
 	print("\n\n")
 	pretty_print("... passed", '#')
 	print("\n\n")
 
 	return True
-
-if __name__ == '__main__':
-	args = []
-	kwargs = {}
-
-	args += argv
-	if '--size' in argv:
-		pos = argv.index('--size')
-		if len(argv) > pos + 2:
-			kwargs['shape']=(int(argv[pos+1]),int(argv[pos+2]))
-	if '--file' in argv:
-		pos = argv.index('--file')
-		if len(argv) > pos + 1:
-			kwargs['file']=str(argv[pos+1])
-
-	test_cequil(*args, **kwargs)
-

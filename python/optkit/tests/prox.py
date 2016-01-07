@@ -1,20 +1,29 @@
-from optkit.api import *
-from optkit.utils.proxutils import func_eval_python, prox_eval_python
-from optkit.utils.pyutils import println, printvoid, var_assert
-from optkit.types import ok_function_enums
-from optkit.tests.defs import TEST_EPS, MAT_ORDER, rand_arr
 import numpy as np
 from numpy import inf,nan
+from optkit.utils.proxutils import func_eval_python, prox_eval_python
+from optkit.utils.pyutils import println, pretty_print, printvoid, var_assert
+from optkit.types import ok_function_enums
+from optkit.tests.defs import gen_test_defs
 
-VEC_ASSERT = lambda *v : var_assert(*v,type=Vector)
-FUNC_ASSERT = lambda *f : var_assert(*f,type=FunctionVector)
+
 
 def test_prox(*args, **kwargs):
+
+	from optkit.api import backend, set_backend
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
+
+	from optkit.api import prox, linsys, Vector, FunctionVector
+	TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)	
+	VEC_ASSERT = lambda *v : var_assert(*v,type=Vector)
+	FUNC_ASSERT = lambda *f : var_assert(*f,type=FunctionVector)
+
+
 	print "FUNCTION AND PROXIMAL OPERATOR TESTING\n\n\n\n"
 	m = kwargs['shape'][0] if 'shape' in kwargs else 5
 	m = max(m, 5)
 	PRINT = println if '--verbose' in args else printvoid
-	PRINTFUNC = print_function_vector if '--verbose' in args else printvoid
+	PRINTFUNC = prox['print_function_vector'] if '--verbose' in args else printvoid
 
 
 	for FUNCKEY in ok_function_enums.enum_dict.keys():	
@@ -30,7 +39,7 @@ def test_prox(*args, **kwargs):
 		PRINT([f.tolist()[i].h for i in xrange(m)])
 
 		PRINT("SYNC FUNCTION VECTOR TO SET h VALUE")
-		push_function_vector(f)
+		prox['push_function_vector'](f)
 		PRINTFUNC(f)
 
 		PRINT("MODIFY FUNCTION VECTOR\nf.b += 0.3; f.c += 2; f.d -= 0.45")
@@ -42,13 +51,13 @@ def test_prox(*args, **kwargs):
 			f_[i].d -= 0.45 
 
 		f.py[:]=f_[:]
-		push_function_vector(f)
+		prox['push_function_vector'](f)
 		PRINTFUNC(f)
 
 		rho = 1.
 
-		x = Vector(rand_arr(m))
-		x_out = Vector(rand_arr(m))
+		x = Vector(RAND_ARR(m))
+		x_out = Vector(RAND_ARR(m))
 		x_orig = np.copy(x.py)
 		
 		assert VEC_ASSERT(x, x_out)
@@ -58,8 +67,8 @@ def test_prox(*args, **kwargs):
 		PRINT(x_out.py)
 
 		x_out_py = prox_eval_python(f.tolist(), rho, x.py)
-		prox_eval(f,rho,x,x_out)
-		sync(x, x_out)
+		prox['prox_eval'](f,rho,x,x_out)
+		linsys['sync'](x, x_out)
 
 		PRINT('PROX EVALUATION C')
 		PRINT(x_out.py)
@@ -71,14 +80,14 @@ def test_prox(*args, **kwargs):
 		#prox eval should not change x value
 		assert np.max(np.abs(x.py - x_orig)) == 0.
 
-		copy(x_out, x)
-		sync(x)
+		linsys['copy'](x_out, x)
+		linsys['sync'](x)
 		x_orig = np.copy(x.py)
 		PRINT('FUNCTION EVALUATION INPUT:')
 		PRINT(x.py)
-		res_c = func_eval(f, x)
+		res_c = prox['func_eval'](f, x)
 		res_py = func_eval_python(f.tolist(), x.py)
-		sync(x)
+		linsys['sync'](x)
 		PRINT('FUNCTION EVALUATION C')
 		PRINT(res_c)
 		PRINT('FUNCTION EVALUATION PYTHON')

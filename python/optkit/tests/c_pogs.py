@@ -1,34 +1,41 @@
-from optkit.api import backend
-from optkit.api import Vector, Matrix, FunctionVector
-from optkit.api import CPogsTypes
-from optkit.types import ok_enums
-from optkit.tests.defs import TEST_EPS, rand_arr
-from optkit.utils.pyutils import println, pretty_print, printvoid, \
-	var_assert, array_compare
-from optkit.utils.proxutils import prox_eval_python, func_eval_python
 from sys import argv
 from numpy import ndarray, zeros, copy as np_copy, dot as np_dot,\
 	load as np_load
 from numpy.linalg import norm
+from optkit.utils.pyutils import println, pretty_print, printvoid, \
+	var_assert, array_compare
+from optkit.utils.proxutils import prox_eval_python, func_eval_python
+from optkit.types import ok_enums
+from optkit.tests.defs import gen_test_defs
 
-ndarray_pointer = backend.lowtypes.ndarray_pointer
-lib = backend.pogs
+def main(m , n, A_in=None, VERBOSE_TEST=True,
+	gpu=False, floatbits=64):
 
+	from optkit.api import backend, set_backend
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
 
-AdaptiveRhoParameters = lib.adapt_params
-PogsObjectives = lib.pogs_objectives
-PogsResiduals = lib.pogs_residuals
-PogsTolerances = lib.pogs_tolerances
+	from optkit.api import Vector, Matrix, FunctionVector
+	from optkit.api import CPogsTypes
+	TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
 
-SolverSettings = CPogsTypes.SolverSettings
-SolverInfo = CPogsTypes.SolverInfo
-SolverOutput = CPogsTypes.SolverOutput
-Solver = CPogsTypes.Solver
+	ndarray_pointer = backend.lowtypes.ndarray_pointer
+	lib = backend.pogs
 
+	AdaptiveRhoParameters = lib.adapt_params
+	PogsObjectives = lib.pogs_objectives
+	PogsResiduals = lib.pogs_residuals
+	PogsTolerances = lib.pogs_tolerances
 
-def main(m , n, A_in=None, VERBOSE_TEST=True):
+	SolverSettings = CPogsTypes.SolverSettings
+	SolverInfo = CPogsTypes.SolverInfo
+	SolverOutput = CPogsTypes.SolverOutput
+	Solver = CPogsTypes.Solver
+
 	PRINT = println if VERBOSE_TEST else printvoid
 	PPRINT = pretty_print if VERBOSE_TEST else printvoid
+
+
 
 	# ------------------------------------------------------------ #
 	# ------------------------ test setup ------------------------ #
@@ -36,15 +43,17 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 	PRINT("\n")
 
 	if isinstance(A_in, ndarray):
-		A = backend.lowtypes.FLOAT_CAST(A_in)
+		A = A_in.astype(backend.lowtypes.FLOAT_CAST)
 		(m, n) = A.shape
 		PRINT("(using provided matrix)")
 	else:
-		A = rand_arr(m,n)
+		A = RAND_ARR(m,n)
 		PRINT("(using random matrix)")
 
 	pretty_print("{} MATRIX".format("SKINNY" if m >= n else "FAT"), '=')
 	print "(m = {}, n = {})".format(m, n)
+
+
 
 	# ------------------------------------------------------------ #
 	# --------------------------- POGS --------------------------- #
@@ -81,7 +90,7 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 			solver.contents.M.contents.e, 1)
 
 		PRINT('VERIFY EQUILIBRATION')
-		xrand = rand_arr(n)
+		xrand = RAND_ARR(n)
 		Ax = A_local.dot(xrand)
 		DAEx = d_local * A.dot(e_local * xrand)
 		PRINT("A_{equil}x - (D^{-1} A E^{-1})x")
@@ -89,8 +98,8 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 		assert array_compare(Ax, DAEx, eps=TEST_EPS)
 
 		PRINT('VERIFY PROJECTOR')
-		x_in = Vector(rand_arr(n))
-		y_in = Vector(rand_arr(m))
+		x_in = Vector(RAND_ARR(n))
+		y_in = Vector(RAND_ARR(m))
 		x_out = Vector(zeros(n))
 		y_out = Vector(zeros(m))
 		x_local = zeros(n)
@@ -188,8 +197,8 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 
 		PPRINT('OBTAIN WARMSTART VARIABLES')
 		
-		xrand = rand_arr(n)
-		nurand = rand_arr(m)
+		xrand = RAND_ARR(n)
+		nurand = RAND_ARR(m)
 
 		settings.update(x0=xrand, nu0=nurand)
 		solver.contents.settings.contents.x0 = settings.c.x0
@@ -388,7 +397,6 @@ def main(m , n, A_in=None, VERBOSE_TEST=True):
 				sum(output.mu) / n <= TEST_EPS**2
 
 
-
 	PPRINT("TEST PYTHON BINDINGS:")
 	s = Solver(A)
 	s.solve(f, g)
@@ -406,32 +414,18 @@ def test_cpogs(*args,**kwargs):
 
 	args = list(args)
 	verbose = '--verbose' in args
-	
+	floatbits = 32 if 'float' in args else 64
+
 	(m,n)=kwargs['shape'] if 'shape' in kwargs else (1000,500)
-	A = backend.lowtypes.FLOAT_CAST(
-		np_load(kwargs['file'])) if 'file' in kwargs else None
-	assert main(m, n, A_in=A, VERBOSE_TEST=verbose)
+	A = np_load(kwargs['file']) if 'file' in kwargs else None
+	assert main(m, n, A_in=A, VERBOSE_TEST=verbose,
+		gpu='gpu' in args, floatbits=floatbits)
 	if not isinstance(A, ndarray): 
-		assert main(n, m, A_in=None, VERBOSE_TEST=verbose)
+		assert main(n, m, A_in=None, VERBOSE_TEST=verbose,
+			gpu='gpu' in args, floatbits=floatbits)
 
 	print("\n\n")
 	pretty_print("... passed", '#')
 	print("\n\n")
 
 	return True
-
-if __name__ == '__main__':
-	args = []
-	kwargs = {}
-
-	args += argv
-	if '--size' in argv:
-		pos = argv.index('--size')
-		if len(argv) > pos + 2:
-			kwargs['shape']=(int(argv[pos+1]),int(argv[pos+2]))
-	if '--file' in argv:
-		pos = argv.index('--file')
-		if len(argv) > pos + 1:
-			kwargs['file']=str(argv[pos+1])
-
-	test_cpogs(*args, **kwargs)

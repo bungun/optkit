@@ -1,17 +1,23 @@
-from optkit.api import *
-from optkit.types import ok_function_enums
-from optkit.utils.pyutils import println, printvoid, var_assert
-from optkit.tests.defs import HLINE, TEST_EPS, MAT_ORDER, rand_arr
 import numpy as np
 from numpy.linalg import norm
+from optkit.types import ok_function_enums
+from optkit.tests.defs import gen_test_defs
+from optkit.utils.pyutils import println, pretty_print, var_assert
 
-SolverState = pogs.types.SolverState
-SolverInfo = pogs.types.SolverInfo
-OutputVariables = pogs.types.OutputVariables
+def warmstart_test(m=300, n=200, A_in=None, VERBOSE_TEST=True,
+	gpu=False, floatbits=64):
 
+	from optkit.api import backend, set_backend
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
 
+	from optkit.api import Matrix, FunctionVector, pogs
+	TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
 
-def warmstart_test(m=300, n=200, A_in=None, VERBOSE_TEST=True):
+	SolverState = pogs.types.SolverState
+	SolverInfo = pogs.types.SolverInfo
+	OutputVariables = pogs.types.OutputVariables
+
 	if m is None: m=300
 	if n is None: n=200
 	if isinstance(A_in,np.ndarray):
@@ -22,99 +28,80 @@ def warmstart_test(m=300, n=200, A_in=None, VERBOSE_TEST=True):
 
 	print '(m = {}, n = {})'.format(m, n)
 
-	PRINT=println #if VERBOSE_TEST else printvoid
+	PPRINT = pretty_print #if VERBOSE_TEST else printvoid
+
 	verbose=2 if VERBOSE_TEST else 0
 
 	maxiter=2000
 	reltol=1e-3
-	A = rand_arr(m,n) if A_in is None else A_in
+	A = RAND_ARR(m,n) if A_in is None else A_in.astype(backend.lowtypes.FLOAT_CAST)
 	f = FunctionVector(m, h='Square', b=1)
 	g = FunctionVector(n, h='IndGe0')
 
-	PRINT(HLINE)
-	PRINT("\nCOLD START")
-	PRINT(HLINE)
+	PPRINT("COLD START")
 	info, output, solver_state = pogs(A, f, g, 
 		verbose = int(VERBOSE_TEST))
 	var_assert(info, type=SolverInfo)
 	assert info.err == 0
 	assert info.converged or info.k == maxiter
 
-	PRINT(HLINE)
-	PRINT("\nWARM START with x0")
-	PRINT(HLINE)
+	PPRINT("WARM START with x0")
 	info, _ , _  = pogs(A, f, g, x0=output.x, 
 		warmstart = True, verbose = int(VERBOSE_TEST))
 	var_assert(info, type=SolverInfo)
 	assert info.err == 0
 	assert info.converged or info.k == maxiter
 
-	PRINT(HLINE)
-	PRINT("\nWARM START with x0, rho")
-	PRINT(HLINE)
+	PPRINT("WARM START with x0, rho")
 	info, _ , _  = pogs(A, f, g, x0=output.x, rho=info.rho, 
 		warmstart = True, verbose = int(VERBOSE_TEST))
 	var_assert(info, type=SolverInfo)
 	assert info.err == 0
 	assert info.converged or info.k == maxiter
 
-	PRINT(HLINE)
-	PRINT("\nWARM START with nu0")
-	PRINT(HLINE)
+	PPRINT("WARM START with nu0")
 	info, _ , _  = pogs(A, f, g, nu0=output.nu, 
 		warmstart = True, verbose = int(VERBOSE_TEST))
 	var_assert(info, type=SolverInfo)
 	assert info.err == 0
 	assert info.converged or info.k == maxiter
 
-	PRINT(HLINE)
-	PRINT("\nWARM START with nu0, rho")
-	PRINT(HLINE)
+	PPRINT("WARM START with nu0, rho")
 	info, _ , _  = pogs(A, f, g, nu0=output.nu, rho=info.rho, 
 		warmstart = True, verbose = int(VERBOSE_TEST))
 	var_assert(info, type=SolverInfo)
 	assert info.err == 0
 	assert info.converged or info.k == maxiter
 
-	PRINT(HLINE)
-	PRINT("\nWARM START with x0 and nu0")
-	PRINT(HLINE)
+	PPRINT("WARM START with x0 and nu0")
 	info, _ , _  = pogs(A, f, g, x0=output.x, nu0=output.nu, 
 		warmstart = True, verbose = int(VERBOSE_TEST))
 	var_assert(info, type=SolverInfo)
 	assert info.err == 0
 	assert info.converged or info.k == maxiter
 
-	PRINT(HLINE)
-	PRINT("\nWARM START with x0 and nu0, rho")
-	PRINT(HLINE)
+	PPRINT("WARM START with x0 and nu0, rho")
 	info, _ , _  = pogs(A, f, g, x0=output.x, nu0=output.nu, rho=info.rho, 
 		warmstart = True, verbose = int(VERBOSE_TEST))
 	var_assert(info, type=SolverInfo)
 	assert info.err == 0
 	assert info.converged or info.k == maxiter
 
-	PRINT(HLINE)
-	PRINT("\nWARM START with solver state")
-	PRINT(HLINE)
+	PPRINT("WARM START with solver state")
 	info, _ , _  = pogs(A, f, g, solver_state=solver_state,
 		verbose = int(VERBOSE_TEST))
 	var_assert(info, type=SolverInfo)
 	assert info.err == 0
 	assert info.converged or info.k == maxiter
 
-	PRINT(HLINE)
-	PRINT("\nWARM START with solver state, rho")
-	PRINT(HLINE)
+	PPRINT("WARM START with solver state, rho")
 	info, _ , _  = pogs(A, f, g, solver_state=solver_state, rho=info.rho,
 		verbose = int(VERBOSE_TEST))
 	var_assert(info, type=SolverInfo)
 	assert info.err == 0
 	assert info.converged or info.k == maxiter
 
-	PRINT(HLINE)
-	PRINT("\nWARM START with solver state and 1.02x perturbed f(y)")
-	PRINT(HLINE)
+	PPRINT("WARM START with solver state and 1.02x perturbed f(y)")
 
 	f.pull()
 	fobj = f.tolist()
@@ -129,9 +116,7 @@ def warmstart_test(m=300, n=200, A_in=None, VERBOSE_TEST=True):
 	assert info.err == 0
 	assert info.converged or info.k == maxiter
 
-	PRINT(HLINE)
-	PRINT("\nWARM START with solver state and 1.1x perturbed f(y)")
-	PRINT(HLINE)
+	PPRINT("WARM START with solver state and 1.1x perturbed f(y)")
 
 	f.pull()
 	fobj = f.tolist()
@@ -146,9 +131,7 @@ def warmstart_test(m=300, n=200, A_in=None, VERBOSE_TEST=True):
 	assert info.err == 0
 	assert info.converged or info.k == maxiter
 
-	PRINT(HLINE)
-	PRINT("\nWARM START with solver state and 1.2x perturbed f(y)")
-	PRINT(HLINE)
+	PPRINT("WARM START with solver state and 1.2x perturbed f(y)")
 
 	f.pull()
 	fobj = f.tolist()
@@ -164,9 +147,7 @@ def warmstart_test(m=300, n=200, A_in=None, VERBOSE_TEST=True):
 	assert info.err == 0
 	assert info.converged or info.k == maxiter
 
-	PRINT(HLINE)
-	PRINT("\nWARM START with solver state and 2x perturbed f(y)")
-	PRINT(HLINE)
+	PPRINT("WARM START with solver state and 2x perturbed f(y)")
 
 
 	f.pull()
@@ -184,24 +165,38 @@ def warmstart_test(m=300, n=200, A_in=None, VERBOSE_TEST=True):
 
 
 
-def pogs_test(m=300,n=200,A_in=None, VERBOSE_TEST=True):
+def pogs_test(m=300,n=200,A_in=None, VERBOSE_TEST=True,
+	gpu=False, floatbits=64):
+
+	from optkit.api import backend, set_backend
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
+
+	from optkit.api import Matrix, FunctionVector, pogs
+	TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
+
+	SolverState = pogs.types.SolverState
+	SolverInfo = pogs.types.SolverInfo
+	OutputVariables = pogs.types.OutputVariables
 	if m is None: m=300
 	if n is None: n=200
 	if isinstance(A_in,np.ndarray):
 		if len(A_in.shape)==2:
-			(m,n)=A_in.shape
+			(m,n) = A_in.shape
+			A_in = A_in.astype(backend.lowtypes.FLOAT_CAST)
 		else:
 			A_in=None
 
-	PRINT=println if VERBOSE_TEST else printvoid
+	PRINT = println if VERBOSE_TEST else printvoid
+	PPRINT = pretty_print if VERBOSE_TEST else printvoid
 	verbose=2 if VERBOSE_TEST else 0
 
 	mat_kind = "SKINNY MATRIX" if m >= n else "FAT MATRIX"
-	PRINT(HLINE, HLINE, HLINE)
-	PRINT(mat_kind)
+
+	PPRINT(mat_kind, '=')
 	PRINT("m: {}, n: {}".format(m,n))
 
-	A = Matrix(rand_arr(m,n)) if A_in is None else Matrix(A_in) 
+	A = Matrix(RAND_ARR(m,n)) if A_in is None else Matrix(A_in) 
 	A_copy = np.copy(A.py)
 	maxiter=2000
 	reltol=1e-3
@@ -222,7 +217,7 @@ def pogs_test(m=300,n=200,A_in=None, VERBOSE_TEST=True):
 		A_ = solver_state.A.mat.py 
 		d = solver_state.z.de.y.py
 		e = solver_state.z.de.x.py
-		xrand = rand_arr(n)
+		xrand = RAND_ARR(n)
 		assert np.max(np.abs(d*A_copy.dot(e*xrand)-A_.dot(xrand)))
 
 		res_p = np.linalg.norm(A_copy.dot(output.x)-output.y)
@@ -233,21 +228,17 @@ def pogs_test(m=300,n=200,A_in=None, VERBOSE_TEST=True):
 		assert not info.converged or res_d <= TEST_EPS or res_d/np.linalg.norm(output.mu) <= 10*reltol
 
 
-		PRINT(HLINE)
-		PRINT("PRIMAL & DUAL FEASIBILITY")
+		PPRINT("PRIMAL & DUAL FEASIBILITY", '.')
 		PRINT("||Ax-y||: ", res_p)
 		PRINT("||A'nu+mu||: ", res_d)
 
-		PRINT(HLINE, HLINE)
-		PRINT("INFO:")
+		PPRINT("INFO:", '.')
 		PRINT(info)
 		
-		PRINT(HLINE, HLINE)
-		PRINT("OUTPUT:")
+		PPRINT("OUTPUT:", '.')
 		PRINT(output)
 
-		PRINT(HLINE, HLINE)
-		PRINT("SOLVER STATE:")
+		PPRINT("SOLVER STATE:", '.')
 		PRINT(solver_state)
 
 
@@ -255,14 +246,17 @@ def pogs_test(m=300,n=200,A_in=None, VERBOSE_TEST=True):
 def test_pogs(*args, **kwargs):
 	print "POGS CALL TESTING\n\n\n\n"
 	verbose = '--verbose' in args
+	floatbits = 32 if 'float' in args else 64
 	(m,n)=kwargs['shape'] if 'shape' in kwargs else (None,None)
 	A = np.load(kwargs['file']) if 'file' in kwargs else None
 	# pogs_test(m=m,n=n,A_in=A,VERBOSE_TEST=verbose)
 	# if isinstance(A,np.ndarray): A=A.T
 	# pogs_test(m=n,n=m,A_in=A,VERBOSE_TEST=verbose)
 
-	warmstart_test(m=m, n=n, A_in=A, VERBOSE_TEST=verbose)
+	warmstart_test(m=m, n=n, A_in=A, VERBOSE_TEST=verbose,
+		gpu='gpu' in args, floatbits=floatbits)
 	if isinstance(A,np.ndarray): A=A.T
-	warmstart_test(m=n, n=m, A_in=A, VERBOSE_TEST=verbose)
+	warmstart_test(m=n, n=m, A_in=A, VERBOSE_TEST=verbose,
+		gpu='gpu' in args, floatbits=floatbits)
 	print "...passed"
 	return True

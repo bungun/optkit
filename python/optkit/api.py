@@ -19,57 +19,17 @@ Types
 Vector = Matrix = FunctionVector = None
 
 """
-Linsys calls
+Python implementations
 """
-# Core: array operations
-set_all = copy = view = sync = print_var = None
-
-# Core: elementwise vector operations
-add = sub = mul = div = None
-elemwise_inverse = elemwise_sqrt = elemwise_inverse_sqrt = None 
-
-# Core: blas level 1 operations
-dot = asum = nrm2 = axpy = None
-
-# Core: blas level 2/3 & lapack operations
-gemv = gemm = cholesky_factor = cholesky_solve = None
-
-# Extensions: x = [x1 x2]
-splitview = None
-
-# Extensions: z = ax + by; y = ax + by
-axpby = axpby_inplace = None
-
-# Extensions: diag(A); A += aI; sum(diag(A)); norm(diag(A), [l_1 ,l_2]) 
-diag = aidpm = add_diag = sum_diag = norm_diag = mean_diag = None
-
-# Extensions: B = A'A or AA'; mul(A,'tA') = gemv('tA', a, A, x, b, y)
-gramian = get_curryable_gemv = None
-
-
-"""
-Prox calls
-"""
-scale_function_vector = push_function_vector = print_function_vector = None
-func_eval = prox_eval = None
-
-"""
-Projectors
-"""
+linsys = None
+prox = None
 DirectProjector = None
-DirectProjectorPy = None
-
-
-"""
-Equilibration methods
-"""
-dense_l2_equilibration = sinkhornknopp_equilibration = None
-
-
-"""
-Solver types and methods
-"""
+equil = None
 pogs = None
+
+"""
+C implementations
+"""
 CPogsTypes = None
 PogsSolver = None
 
@@ -86,57 +46,24 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 	global Matrix
 	global FunctionVector
 
+	## Python implementations
 	# Linsys calls
-	global set_all
-	global copy
-	global view
-	global sync
-	global print_var
-	global add
-	global sub
-	global mul
-	global div
-	global elemwise_inverse
-	global elemwise_sqrt
-	global elemwise_inverse_sqrt
-	global dot
-	global asum
-	global nrm2
-	global axpy
-	global gemv
-	global gemm
-	global cholesky_factor
-	global cholesky_solve
-
-	global splitview
-	global axpby
-	global axpby_inplace
-	global diag
-	global aidpm
-	global add_diag
-	global sum_diag
-	global norm_diag
-	global mean_diag
-	global gramian
-	global get_curryable_gemv
+	global linsys
 
 	# Prox calls
-	global scale_function_vector
-	global push_function_vector
-	global print_function_vector
-	global func_eval
-	global prox_eval
+	global prox
 
-	# Projector types
+	# Projector 
 	global DirectProjector
-	global DirectProjectorPy
 
 	# Equilibration methods
-	global dense_l2_equilibration
-	global sinkhornknopp_equilibration
+	global equil
 
 	# Solver methods
 	global pogs
+
+	## C implementations
+	global DirectProjector
 	global CPogsTypes
 	global PogsSolver
 
@@ -159,76 +86,69 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 
 	# reset linsys calls
 	# (reset core)
-	set_all = linsys_core_kernels.set_all	
-	copy = linsys_core_kernels.copy
-	view = linsys_core_kernels.view
-	sync = linsys_core_kernels.sync
-	print_var = linsys_core_kernels.print_var
-	add = linsys_core_kernels.add
-	sub = linsys_core_kernels.sub
-	mul = linsys_core_kernels.mul
-	div = linsys_core_kernels.div
-	elemwise_inverse = linsys_core_kernels.elemwise_inverse
-	elemwise_sqrt = linsys_core_kernels.elemwise_sqrt
-	elemwise_inverse_sqrt = linsys_core_kernels.elemwise_inverse_sqrt
-	dot = linsys_core_kernels.dot
-	asum = linsys_core_kernels.asum
-	nrm2 = linsys_core_kernels.nrm2
-	axpy = linsys_core_kernels.axpy
-	gemv = linsys_core_kernels.gemv
-	gemm = linsys_core_kernels.gemm
-	cholesky_factor = linsys_core_kernels.cholesky_factor
-	cholesky_solve = linsys_core_kernels.cholesky_solve
+	linsys = {}
+	linsys['set_all'] = linsys_core_kernels.set_all	
+	linsys['copy'] = linsys_core_kernels.copy
+	linsys['view'] = linsys_core_kernels.view
+	linsys['sync'] = linsys_core_kernels.sync
+	linsys['print_var'] = linsys_core_kernels.print_var
+	linsys['add'] = linsys_core_kernels.add
+	linsys['sub'] = linsys_core_kernels.sub
+	linsys['mul'] = linsys_core_kernels.mul
+	linsys['div'] = linsys_core_kernels.div
+	linsys['elemwise_inverse'] = linsys_core_kernels.elemwise_inverse
+	linsys['elemwise_sqrt'] = linsys_core_kernels.elemwise_sqrt
+	linsys['elemwise_inverse_sqrt'] = linsys_core_kernels.elemwise_inverse_sqrt
+	linsys['dot'] = linsys_core_kernels.dot
+	linsys['asum'] = linsys_core_kernels.asum
+	linsys['nrm2'] = linsys_core_kernels.nrm2
+	linsys['axpy'] = linsys_core_kernels.axpy
+	linsys['gemv'] = linsys_core_kernels.gemv
+	linsys['gemm'] = linsys_core_kernels.gemm
+	linsys['cholesky_factor'] = linsys_core_kernels.cholesky_factor
+	linsys['cholesky_solve'] = linsys_core_kernels.cholesky_solve
 
 	# (reset extensions)
-	splitview = linsys_extensions.splitview
-	axpby = linsys_extensions.axpby
-	axpby_inplace = linsys_extensions.axpby_inplace
-	diag = linsys_extensions.diag
-	aidpm = linsys_extensions.aidpm
-	add_diag = linsys_extensions.add_diag
-	sum_diag = linsys_extensions.sum_diag
-	norm_diag = linsys_extensions.norm_diag
-	mean_diag = linsys_extensions.mean_diag
-	gramian = linsys_extensions.gramian
-	get_curryable_gemv = linsys_extensions.get_curryable_gemv
+	linsys['splitview'] = linsys_extensions.splitview
+	linsys['axpby'] = linsys_extensions.axpby
+	linsys['axpby_inplace'] = linsys_extensions.axpby_inplace
+	linsys['diag'] = linsys_extensions.diag
+	linsys['aidpm'] = linsys_extensions.aidpm
+	linsys['add_diag'] = linsys_extensions.add_diag
+	linsys['sum_diag'] = linsys_extensions.sum_diag
+	linsys['norm_diag'] = linsys_extensions.norm_diag
+	linsys['mean_diag'] = linsys_extensions.mean_diag
+	linsys['gramian'] = linsys_extensions.gramian
+	linsys['get_curryable_gemv'] = linsys_extensions.get_curryable_gemv
 
 	# reset prox calls
-	scale_function_vector = prox_kernels.scale_function_vector
-	push_function_vector = prox_kernels.push_function_vector
-	print_function_vector = prox_kernels.print_function_vector
-	func_eval = prox_kernels.eval
-	prox_eval = prox_kernels.prox
+	prox = {}
+	prox['scale_function_vector'] = prox_kernels.scale_function_vector
+	prox['push_function_vector'] = prox_kernels.push_function_vector
+	prox['print_function_vector'] = prox_kernels.print_function_vector
+	prox['func_eval'] = prox_kernels.eval
+	prox['prox_eval'] = prox_kernels.prox
 
-	base_kernels = {'set_all': set_all, 'copy': copy, 'view': view, 'sync':
-		sync, 'print_var': print_var, 'add': add, 'sub': sub, 'mul': mul,
-		'div': div, 'elemwise_inverse': elemwise_inverse, 'elemwise_sqrt':
-		elemwise_sqrt, 'elemwise_inverse_sqrt': elemwise_inverse_sqrt,
-		'dot': dot, 'asum': asum, 'nrm2': nrm2, 'axpy': axpy, 'gemv':
-		gemv, 'gemm': gemm, 'cholesky_factor': cholesky_factor, 'cholesky_solve':
-		cholesky_solve, 'splitview': splitview, 'axpby': axpby,
-		'axpby_inplace': axpby_inplace, 'diag': diag, 'aidpm': aidpm,
-		'add_diag': add_diag, 'sum_diag': sum_diag, 'norm_diag': norm_diag,
-		'mean_diag': mean_diag, 'gramian': gramian, 'get_curryable_gemv':
-		get_curryable_gemv, 'scale_function_vector': scale_function_vector,
-		'push_function_vector': push_function_vector, 'print_function_vector':
-		print_function_vector, 'func_eval': func_eval, 'prox_eval': prox_eval}
+	# single dictionary with all linsys and prox calls, for internal use.
+	base_kernels = linsys.copy()
+	base_kernels.update(prox)
 
-
-	# reset algorithmic types
 	# (projection)
-	DirectProjectorPy = DirectProjectorFactory(
+	DirectProjector = DirectProjectorFactory(
 		base_kernels, Matrix).DirectProjector 
 
 	# (equilibration)
 	equil_methods = EquilibrationMethods(base_kernels, Vector, Matrix)
-	dense_l2_equilibration = equil_methods.dense_l2
-	sinkhornknopp_equilibration = equil_methods.sinkhornknopp
+	equil = {}
+	equil['dense_l2'] = equil_methods.dense_l2
+	equil['sinkhornknopp'] = equil_methods.sinkhornknopp
 
 	# (solver)
 	pogs = POGSDirectSolver(backend, base_kernels, Vector, Matrix, 
-		FunctionVector, DirectProjectorPy, equil_methods)
+		FunctionVector, DirectProjector, equil_methods)
 
+
+	## C implemenetations
 	CPogsTypes = HighLevelPogsTypes(backend, FunctionVector)
 	PogsSolver = CPogsTypes.Solver
 

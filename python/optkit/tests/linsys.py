@@ -1,26 +1,24 @@
-from optkit.api import *
-from optkit.api import backend
 from optkit.types.lowlevel import ok_enums
 from optkit.utils.pyutils import println, printvoid, \
-	var_assert, array_compare
-from optkit.tests.defs import TEST_EPS, MAT_ORDER, rand_arr
+	var_assert, array_compare, pretty_print
 import numpy as np
 from ctypes import c_void_p, byref
+from optkit.tests.defs import gen_test_defs
 
-VEC_ASSERT = lambda *v : var_assert(*v, type=Vector)
-MAT_ASSERT = lambda *A : var_assert(*A, type=Matrix)
+def test_lowlevelvectorcalls(VERBOSE_TEST=True,
+	gpu=False, floatbits=64):
 
-make_cvector = backend.make_cvector
-make_cmatrix = backend.make_cmatrix
+	from optkit.api import backend, set_backend
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
 
-
-def test_lowlevelvectorcalls(VERBOSE_TEST=True):
+	make_cvector = backend.make_cvector
 
 	blas_handle = c_void_p()
 	backend.dense.blas_make_handle(byref(blas_handle))
 
-	v = make_cvector()
-	w = make_cvector()
+	v = backend.make_cvector()
+	w = backend.make_cvector()
 	backend.dense.vector_calloc(v, 10)
 	backend.dense.vector_calloc(w, 10)
 	backend.dense.vector_add_constant(v, 12.)
@@ -33,9 +31,14 @@ def test_lowlevelvectorcalls(VERBOSE_TEST=True):
 	backend.dense.vector_free(w)
 	return True
 
-def test_lowlevelmatrixcalls(VERBOSE_TEST=True):
+def test_lowlevelmatrixcalls(VERBOSE_TEST=True,
+	gpu=False, floatbits=64):
 
-	A = make_cmatrix()
+	from optkit.api import backend, set_backend
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
+
+	A = backend.make_cmatrix()
 	backend.dense.matrix_calloc(A, 10,  10, ok_enums.CblasRowMajor)
 	if VERBOSE_TEST:
 		backend.dense.matrix_print(A)
@@ -43,18 +46,30 @@ def test_lowlevelmatrixcalls(VERBOSE_TEST=True):
 	return True
 
 
-def test_vector_methods(n=3,VERBOSE_TEST=True):
+def test_vector_methods(n=3,VERBOSE_TEST=True,
+	gpu=False, floatbits=64):
+
+	from optkit.api import backend, set_backend
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
+
+	from optkit.api import linsys, Vector, Matrix
+	TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
+
+
 	if n is None: n = 3
 	if n < 3: 
 		print str("length provided: {}.\n"
 		"using 3 as minimum vector length for tests".format(n))
 		n=3
 
-	PRINT=println if VERBOSE_TEST else printvoid
-	PRINTVAR=print_var if VERBOSE_TEST else printvoid
+	PRINT = println if VERBOSE_TEST else printvoid
+	PPRINT = pretty_print if VERBOSE_TEST else printvoid
+	PRINTVAR = linsys['print_var'] if VERBOSE_TEST else printvoid
+	VEC_ASSERT = lambda *v : var_assert(*v, type=Vector)
 
-	PRINT("VECTOR METHODS")
-	PRINT("--------------")
+
+	PPRINT("VECTOR METHODS")
 
 
 	PRINT("\nAllocation (int size={}) & printing".format(n))
@@ -73,42 +88,41 @@ def test_vector_methods(n=3,VERBOSE_TEST=True):
 	PRINT("c to python")
 
 	orig_pointer = a.py.ctypes._as_parameter_.value
-	sync(a)
+	linsys['sync'](a)
 	assert a.py.ctypes._as_parameter_.value == orig_pointer
 	PRINT(a.py)
 	PRINTVAR(a)
 
 	PRINT("python to c")
 	orig_pointer = a.c.data
-	sync(a,python_to_C=1)
+	linsys['sync'](a,python_to_C=1)
 	# assert a.c.data == orig_pointer
 	PRINT(a.py)
 	PRINTVAR(a)
 
 
-
 	PRINT("\nConstant addition: a += 1")
-	add(1,a)
-	sync(a)
+	linsys['add'](1,a)
+	linsys['sync'](a)
 	a_ += 1
 	PRINTVAR(a)
 	assert array_compare(a.py,a_, eps=TEST_EPS)
 
 	PRINT("\nScalar multiplication: a *= 5")
-	mul(5,a)
-	sync(a)
+	linsys['mul'](5,a)
+	linsys['sync'](a)
 	a_ *= 5
 	PRINTVAR(a)
 	assert array_compare(a.py,a_, eps=TEST_EPS)
 
 	PRINT("\nScalar division: a /= 2.3")
-	div(2.3,a)
-	sync(a)
+	linsys['div'](2.3,a)
+	linsys['sync'](a)
 	a_ /= 2.3
 	PRINTVAR(a)
 	assert array_compare(a.py,a_, eps=TEST_EPS)
 
-	b_ = rand_arr(n)
+	b_ = RAND_ARR(n)
 	PRINT("\nAllocation (from numpy array {})".format(b_))
 	PRINT("---variable `b`---")
 	b=Vector(np.copy(b_))
@@ -118,8 +132,8 @@ def test_vector_methods(n=3,VERBOSE_TEST=True):
 
 
 	PRINT("\nElementwise vector addition: a += b")
-	add(b,a)
-	sync(a,b)
+	linsys['add'](b,a)
+	linsys['sync'](a,b)
 	a_ += b_
 	PRINT("a:")
 	PRINTVAR(a)
@@ -130,8 +144,8 @@ def test_vector_methods(n=3,VERBOSE_TEST=True):
 
 
 	PRINT("\nElementwise vector multiplication: a *= b")
-	mul(b,a)
-	sync(a,b)
+	linsys['mul'](b,a)
+	linsys['sync'](a,b)
 	a_ *= b_
 	PRINTVAR(a)
 	assert array_compare(a.py,a_, eps=TEST_EPS)
@@ -139,8 +153,8 @@ def test_vector_methods(n=3,VERBOSE_TEST=True):
 
 
 	PRINT("\nElementwise vector division: a /= b")
-	div(b,a)
-	sync(a,b)
+	linsys['div'](b,a)
+	linsys['sync'](a,b)
 	a_ /= b_
 	PRINTVAR(a)
 	assert array_compare(a.py,a_, eps=TEST_EPS)
@@ -148,8 +162,8 @@ def test_vector_methods(n=3,VERBOSE_TEST=True):
 
 
 	PRINT("\nElementwise vector subtraction: a-= b")
-	sub(b,a)
-	sync(a,b)
+	linsys['sub'](b,a)
+	linsys['sync'](a,b)
 	a_ -= b_
 	PRINTVAR(a)
 	assert array_compare(a.py,a_, eps=TEST_EPS)
@@ -159,15 +173,15 @@ def test_vector_methods(n=3,VERBOSE_TEST=True):
 	PRINT("\nView")
 	PRINT("---variable `a_view`---")
 	PRINT("a_view = view(a, 0:2)")
-	c=view(a,(0,2))
-	sync(c)
+	c=linsys['view'](a,(0,2))
+	linsys['sync'](c)
 	c_ = a_[0:2]
 	PRINTVAR(c)
 	assert array_compare(c.py,c_, eps=TEST_EPS)
 
 	PRINT("a_view *=2")
-	mul(2,c)
-	sync(c)
+	linsys['mul'](2,c)
+	linsys['sync'](c)
 	c_ *=2
 
 	PRINT("a_view:")
@@ -180,15 +194,24 @@ def test_vector_methods(n=3,VERBOSE_TEST=True):
 
 	PRINT("Set all")
 	val = 0.2
-	set_all(val, a)
-	sync(a)
+	linsys['set_all'](val, a)
+	linsys['sync'](a)
 	PRINTVAR(a)
 	PRINT(a.py)
 	assert all(a.py == 0.2)
 
 	return True
 
-def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
+def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True,
+	gpu=False, floatbits=64):
+
+	from optkit.api import backend, set_backend
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
+
+	from optkit.api import linsys, Vector, Matrix
+	TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
+
 	if m is None: m=4
 	if n is None: n=3
 	if n < 3 or m < 3: 
@@ -197,13 +220,13 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 		n=max(n,3)
 		m=max(m,3)
 
-	PRINT=println if VERBOSE_TEST else printvoid
-	PRINTVAR=print_var if VERBOSE_TEST else printvoid
+	PRINT = println if VERBOSE_TEST else printvoid
+	PPRINT = pretty_print if VERBOSE_TEST else printvoid
+	PRINTVAR = linsys['print_var'] if VERBOSE_TEST else printvoid
+	VEC_ASSERT = lambda *v : var_assert(*v, type=Vector)
+	MAT_ASSERT = lambda *A : var_assert(*A, type=Matrix)
 
-
-	PRINT("\n\n")
-	PRINT("MATRIX METHODS")
-	PRINT("--------------")
+	PPRINT("MATRIX METHODS")
 
 
 	PRINT("\nAllocation (int size1={},size2={}) & printing".format(m,n))
@@ -230,7 +253,7 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 
 	# load C value to python (expect overwrite in GPU case)
 	orig_pointer = A.py.ctypes._as_parameter_.value
-	sync(A)
+	linsys['sync'](A)
 	PRINT(A.py)
 	PRINTVAR(A)
 	assert A.py.ctypes._as_parameter_.value == orig_pointer
@@ -244,12 +267,12 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 
 	# orig_pointer = A.c.data.value
 	# send python value to C
-	sync(A,python_to_C=1)
+	linsys['sync'](A,python_to_C=1)
 	# assert A.c.data.value == orig_pointer
 	PRINT(A.py)
 	PRINTVAR(A)
 	# load C value back to python, compare to clone
-	sync(A)
+	linsys['sync'](A)
 	assert array_compare(A.py,A_, eps=TEST_EPS)
 
 	PRINT("Allocation from row-major numpy ndarray")
@@ -270,15 +293,15 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 
 	PRINT("\n---variable `a_col`---")
 	PRINT("column view: A[1]:")
-	a_col = view(A,1,col=1)
+	a_col = linsys['view'](A,1,col=1)
 	assert VEC_ASSERT(a_col)
 	assert a_col.size == A.size1
 	ac_ = A_[:,1]
 	assert array_compare(a_col.py,ac_, eps=TEST_EPS)
 
 	PRINT("a_col +=3.5")
-	add(3.5,a_col)
-	sync(a_col) 	
+	linsys['add'](3.5,a_col)
+	linsys['sync'](a_col) 	
 	ac_ += 3.5
 
 	PRINT("a_col:")
@@ -294,15 +317,15 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 
 	PRINT("\n---variable `a_row`---")
 	PRINT("row view: A[1]:")
-	a_row = view(A,1,row=1)
+	a_row = linsys['view'](A,1,row=1)
 	assert VEC_ASSERT(a_row)
 	assert a_row.size == A.size2
 	ar_ = A_[1,:]
 	assert array_compare(a_row.py,ar_, eps=TEST_EPS)
 
 	PRINT("a_row -=5.34")
-	sub(5.34,a_row)
-	sync(a_row)
+	linsys['sub'](5.34,a_row)
+	linsys['sync'](a_row)
 	ar_ -= 5.34
 
 	PRINT("a_row:")
@@ -317,14 +340,14 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 
 	PRINT("\n---variable `a_diag'---")
 	PRINT("diag view: A:")
-	a_diag = view(A,diag=1)
+	a_diag = linsys['view'](A,diag=1)
 	assert VEC_ASSERT(a_diag)
 	assert a_diag.size == A.mindim
 	ad_ = np.diag(A_).copy()
 	assert array_compare(a_diag.py,ad_, eps=TEST_EPS)
 
 	PRINT("a_diag /=2.1")
-	div(2.1,a_diag)
+	linsys['div'](2.1,a_diag)
 	ad_ /= 2.1
 	PRINT("a_diag:")
 	PRINTVAR(a_diag)
@@ -339,7 +362,7 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 
 
 	PRINT("\nsync diagonal")
-	sync(a_diag, A)
+	linsys['sync'](a_diag, A)
 	for i in xrange(min(m,n)):
 		A_[i,i] /= 2.1
 
@@ -353,15 +376,15 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	PRINT("\nsubmatrix")
 	PRINT("\n---variable `a_sub`---")
 	PRINT("view: A[0:1,1:2]:")
-	a_sub = view(A,(0,1),(1,2))
+	a_sub = linsys['view'](A,(0,1),(1,2))
 	assert MAT_ASSERT(a_sub)
 	as_ = A_[0:1,1:2]
 	assert array_compare(a_sub.py,as_, eps=TEST_EPS)
 
 
 	PRINT("a_sub /=3.5")
-	div(3.5,a_sub)
-	sync(a_sub)
+	linsys['div'](3.5,a_sub)
+	linsys['sync'](a_sub)
 	as_ /= 3.5
 
 	PRINT("a_sub:")
@@ -374,9 +397,9 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	assert array_compare(A.py,A_, eps=TEST_EPS)
 
 
-	PRINT("\nAllocation (from {} by {} rand_arr array)".format(n,n))
+	PRINT("\nAllocation (from {} by {} RAND_ARR array)".format(n,n))
 	PRINT("---variable `B`---")
-	B=Matrix(rand_arr(n,n))
+	B=Matrix(RAND_ARR(n,n))
 	assert MAT_ASSERT(B)
 	B_ = np.copy(B.py)
 
@@ -388,8 +411,8 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 
 	PRINT("\nMatrix scaling")
 	PRINT("B *= 2")
-	mul(2.,B)
-	sync(B)
+	linsys['mul'](2.,B)
+	linsys['sync'](B)
 	B_ *= 2.
 
 	PRINT(B.py)
@@ -397,9 +420,9 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	assert array_compare(B.py,B_, eps=TEST_EPS)
 
 
-	PRINT("\nAllocation (from {}x{} rand_arr array)".format(m,n))
+	PRINT("\nAllocation (from {}x{} RAND_ARR array)".format(m,n))
 	PRINT("---variable `C`---")
-	C=Matrix(rand_arr(m,n))
+	C=Matrix(RAND_ARR(m,n))
 	assert MAT_ASSERT(C)
 
 	PRINT(C.py)
@@ -416,8 +439,8 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	PRINTVAR(D)
 
 	PRINT("D := memcopy(B)")
-	copy(B,D)
-	sync(B,D)
+	linsys['copy'](B,D)
+	linsys['sync'](B,D)
 	D_[:]=B_[:]
 
 	PRINT(D.py)
@@ -431,14 +454,14 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 
 	PRINT("Copy: row-major numpy ndarray -> Matrix")
 	A2_*=2.4
-	copy(A2_,A2)
-	sync(A2)
+	linsys['copy'](A2_,A2)
+	linsys['sync'](A2)
 	assert array_compare(A2.py,A2_,eps=TEST_EPS)
 
 	PRINT("Copy: col-major numpy ndarray -> Matrix")
 	A3_*=2.7
-	copy(A3_,A2)
-	sync(A2)
+	linsys['copy'](A3_,A2)
+	linsys['sync'](A2)
 	assert array_compare(A2.py,A3_,eps=TEST_EPS)
 
 	# PRINT("Copy: row-major numpy ndarray->col-major Matrix")
@@ -457,12 +480,22 @@ def test_matrix_methods(m=4,n=3,VERBOSE_TEST=True):
 	return True
 
 
-def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
+def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True,
+	gpu=False, floatbits=64):
+
+	from optkit.api import backend, set_backend
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
+
+	from optkit.api import linsys, Vector, Matrix
+	TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
+
 	if m is None: m=4
 	if n is None: n=3
-	if isinstance(A_in,np.ndarray):
+	if isinstance(A_in, np.ndarray):
 		if len(A_in.shape)==2:
-			(m,n)=A_in.shape
+			(m,n) = A_in.shape
+			A_in = A_in.astype(backend.lowtypes)
 		else:
 			A_in=None
 
@@ -473,23 +506,22 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 		m=max(m,3)
 		A_in=None
 
-	PRINT=println if VERBOSE_TEST else printvoid
-	PRINTVAR=print_var if VERBOSE_TEST else printvoid
+	PRINT = println if VERBOSE_TEST else printvoid
+	PPRINT = pretty_print if VERBOSE_TEST else printvoid
+	PRINTVAR = linsys['print_var'] if VERBOSE_TEST else printvoid
+	VEC_ASSERT = lambda *v : var_assert(*v, type=Vector)
+	MAT_ASSERT = lambda *A : var_assert(*A, type=Matrix)
 
-	PRINT("\n\n")
 	PRINT("BLAS METHODS")
-	PRINT("------------")
 
 
-	a=Vector(rand_arr(n))
-	b=Vector(rand_arr(n))
+	a=Vector(RAND_ARR(n))
+	b=Vector(RAND_ARR(n))
 	if isinstance(A_in,np.ndarray):
 		A = Matrix(A_in)
-		# A=Matrix(m,n)
-		# A.py[:]=A_in[:]
 	else:
-		A=Matrix(rand_arr(m,n))
-	B=Matrix(rand_arr(n,n))
+		A=Matrix(RAND_ARR(m,n))
+	B=Matrix(RAND_ARR(n,n))
 	a_ = np.copy(a.py)
 	b_ = np.copy(b.py)
 	A_ = np.copy(A.py)
@@ -502,26 +534,26 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	assert array_compare(B.py,B_, eps=TEST_EPS)
 
 
-	PRINT("\nLEVEL 1")
+	PPRINT("LEVEL 1", '.')
 
 	PRINT("\nVector-vector dot products")
 	PRINT("(a,b)")
-	res = dot(a,b)
+	res = linsys['dot'](a,b)
 	PRINT(res)
 	assert abs(res-np.dot(a_,b_)) <= TEST_EPS
 
 	PRINT("\n(a,a)")
-	res =dot(a,a)
+	res =linsys['dot'](a,a)
 	PRINT(res)
 	assert abs(res-np.dot(a_,a_)) <= TEST_EPS
 
 	PRINT("\n2-norm: ||a||_2")
-	res = nrm2(a)
+	res = linsys['nrm2'](a)
 	PRINT(res)
 	assert abs(res-np.linalg.norm(a_,2)) <= TEST_EPS
 
 	PRINT("\n1-norm: ||a||_1")
-	res=asum(a)
+	res= linsys['asum'](a)
 	PRINT(res)
 	assert abs(res-np.linalg.norm(a_,1)) <= TEST_EPS
 
@@ -532,19 +564,19 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	PRINT("b:")
 	PRINTVAR(b)
 	PRINT("b += 3a")
-	axpy(3,a,b)
-	sync(a,b)
+	linsys['axpy'](3,a,b)
+	linsys['sync'](a,b)
 	b_ += 3*a_
 	PRINTVAR(b)
 	assert array_compare(a.py,a_, eps=TEST_EPS)
 	assert array_compare(b.py,b_, eps=TEST_EPS)
 
-	PRINT("\nLEVEL 2")
+	PPRINT("LEVEL 2", '.')
 
 	PRINT("\nBLAS gemv:")
 	PRINT("---variable `d`---")
-	PRINT("\nAllocation (from {}x1 rand_arr array)".format(m))
-	d = Vector(rand_arr(m))
+	PRINT("\nAllocation (from {}x1 RAND_ARR array)".format(m))
+	d = Vector(RAND_ARR(m))
 	assert VEC_ASSERT(d)
 	d_ = np.copy(d.py)
 
@@ -557,8 +589,8 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 
 
 	PRINT("d := 2.5Aa")
-	gemv('N',2.5,A,a,0,d)
-	sync(A,a,d)
+	linsys['gemv']('N',2.5,A,a,0,d)
+	linsys['sync'](A,a,d)
 	d_ = 2.5*A_.dot(a_)
 	PRINTVAR(d)
 	PRINT(d.py)
@@ -567,8 +599,8 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	assert array_compare(d.py,d_, eps=TEST_EPS)
 
 	PRINT("d := 3Aa + 2d")
-	gemv('N',3,A,a,2,d)
-	sync(A,a,d)
+	linsys['gemv']('N',3,A,a,2,d)
+	linsys['sync'](A,a,d)
 	d_ = 3*A_.dot(a_)+2*d_
 	PRINTVAR(d)
 	PRINT(d.py)
@@ -578,8 +610,8 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 
 	PRINT("\nBLAS trsv")
 	# random lower triangular matrix L
-	L_ = rand_arr(n,n)
-	xrand_ = rand_arr(n)
+	L_ = RAND_ARR(n,n)
+	xrand_ = RAND_ARR(n)
 	for i in xrange(n):
 		# diagonal entries ~1 (keep condition number reasonable)
 		L_[i,i]/=10**np.log(n)
@@ -596,14 +628,14 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	PRINT("y = inv(L) * x [c]")
 	backend.dense.blas_trsv(backend.dense_blas_handle, ok_enums.CblasLower, 
 		ok_enums.CblasNoTrans, ok_enums.CblasNonUnit,  L.c, xrand.c)
-	sync(xrand)
+	linsys['sync'](xrand)
 
 	PRINT(pysol)
 	PRINTVAR(xrand)
 	assert array_compare(xrand.py, pysol, eps=TEST_EPS);
 
 
-	PRINT("\nLEVEL 3")
+	PPRINT("LEVEL 3",'.')
 
 	PRINT("\nBLAS gemm:")
 	PRINT("A:")
@@ -612,8 +644,8 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	PRINTVAR(B)
 
 	PRINT("B := 2.13A^TA + 1.05B ")
-	gemm('T','N',2.13,A,A,1.05,B)
-	sync(A,B)
+	linsys['gemm']('T','N',2.13,A,A,1.05,B)
+	linsys['sync'](A,B)
 	B_ = 2.13*A_.T.dot(A_) + 1.05*B_
 	PRINTVAR(B)
 	PRINT(B.py)
@@ -621,8 +653,8 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	assert array_compare(B.py,B_, eps=TEST_EPS)
 
 	PRINT("B := A^TA")
-	gemm('T','N',1,A,A,0,B)
-	sync(A,B)
+	linsys['gemm']('T','N',1,A,A,0,B)
+	linsys['sync'](A,B)
 	B_ = A_.T.dot(A_)
 	PRINTVAR(B)
 	PRINT(B.py)
@@ -635,7 +667,7 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	B_ += 0.2*A_.T.dot(A_) 
 	backend.dense.blas_syrk(backend.dense_blas_handle, ok_enums.CblasLower,
 		ok_enums.CblasTrans, 0.2, A.c, 0, B.c)
-	sync(A,B)
+	linsys['sync'](A,B)
 
 	for i in xrange(n):
 		for j in xrange(n):
@@ -652,14 +684,14 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 	if not B.on_gpu:
 		PRINT("\n BLAS trsm")
 		PRINT("inv(L)*B")
-		sync(L)
+		linsys['sync'](L)
 		L_ = np.copy(L.py)
 		B_ = np.linalg.inv(L_).dot(B_)
 		backend.dense.blas_trsm(backend.dense_blas_handle, ok_enums.CblasLeft, 
 			ok_enums.CblasLower, ok_enums.CblasNoTrans, 
 			ok_enums.CblasNonUnit,
 			1., L.c, B.c)
-		sync(B)
+		linsys['sync'](B)
 
 		PRINT(B_)
 		PRINTVAR(B)
@@ -671,7 +703,16 @@ def test_blas_methods(m=4,n=3,A_in=None,VERBOSE_TEST=True):
 
 
 
-def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
+def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True,
+	gpu=False, floatbits=64):
+
+	from optkit.api import backend, set_backend
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
+
+	from optkit.api import linsys, Vector, Matrix
+	TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
+
 	if n is None: n=10
 	if isinstance(A_in,np.ndarray):
 		if len(A_in.shape)!=2:
@@ -679,25 +720,26 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 			n=10
 		else:
 			n=min(A_in.shape[0],A_in.shape[1])
+			A_in = A_in.astype(backend.lowtypes.FLOAT_CAST)
 
 
+	PRINT = println if VERBOSE_TEST else printvoid
+	PPRINT = pretty_print if VERBOSE_TEST else printvoid
+	PRINTVAR = linsys['print_var'] if VERBOSE_TEST else printvoid
+	VEC_ASSERT = lambda *v : var_assert(*v, type=Vector)
+	MAT_ASSERT = lambda *A : var_assert(*A, type=Matrix)
 
-	PRINT=println if VERBOSE_TEST else printvoid
-	PRINTVAR=print_var if VERBOSE_TEST else printvoid
-
-	PRINT("\n\n")
-	PRINT("LINALG METHODS")
-	PRINT("--------------")
+	PPRINT("LINALG METHODS")
 
 	PRINT("---variable `E`---")
-	PRINT("\nAllocation from {} by {} rand_arr array".format(n,n))
+	PRINT("\nAllocation from {} by {} RAND_ARR array".format(n,n))
 	if isinstance(A_in,np.ndarray):
 		if A_in.shape[0]>=A_in.shape[1]:
 			E = Matrix(np.dot(A_in.T,A_in))
 		else:
 			E = Matrix(np.dot(A_in,A_in.T))
 	else:
-		F = rand_arr(n,n)
+		F = RAND_ARR(n,n)
 		E = Matrix(np.dot(F,F.T))
 	assert MAT_ASSERT(E)
 	E_ = np.copy(E.py)
@@ -706,8 +748,8 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 
 
 	PRINT("---variable `x`---")
-	PRINT("\nAllocation (from {}x1 rand_arr array)".format(n))
-	x = Vector(rand_arr(n))
+	PRINT("\nAllocation (from {}x1 RAND_ARR array)".format(n))
+	x = Vector(RAND_ARR(n))
 	assert VEC_ASSERT(x)
 	x_ = np.copy(x.py)
 	PRINT(x.py)
@@ -727,8 +769,8 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 	PRINT("original array:")
 	PRINTVAR(E)
 		
-	cholesky_factor(E)
-	sync(E)
+	linsys['cholesky_factor'](E)
+	linsys['sync'](E)
 	PRINT("E_LLT := chol(E) (lower triangular)")
 	PRINTVAR(E)
 
@@ -751,8 +793,8 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 	PRINT(x.py)
 
 	PRINT("x := chol_solve(E_LLT,x)")
-	cholesky_solve(E, x)
-	sync(x)
+	linsys['cholesky_solve'](E, x)
+	linsys['sync'](x)
 
 	PRINT("after")
 	PRINT(x.py)
@@ -762,7 +804,7 @@ def test_linalg_methods(n=10,A_in=None,VERBOSE_TEST=True):
 	if backend.lowtypes.FLOAT_CAST == np.float64:
 		assert array_compare(x.py, pysol, eps=TEST_EPS)
 	else:
-		assert array_compare(x.py, pysol, eps=1e-3)
+		assert array_compare(x.py, pysol, eps=1e-2)
 
 
 	return True
@@ -774,29 +816,35 @@ def test_linsys(*args,**kwargs):
 	verbose = '--verbose' in args
 	(m,n)=kwargs['shape'] if 'shape' in kwargs else (None,None)
 	A = np.load(kwargs['file']) if 'file' in kwargs else None
-
+	floatbits = 32 if 'float' in args else 64
 
 	if '--allsub' in args:
 		args+=['--lowvec','--lowmat','--vec','--mat','--blas','--linalg']
 
 	if '--lowvec' in args:
 		tests += 1
-		assert test_lowlevelvectorcalls(VERBOSE_TEST=verbose)
+		assert test_lowlevelvectorcalls(VERBOSE_TEST=verbose,
+			gpu='gpu' in args, floatbits=floatbits)
 	if '--lowmat' in args:
 		tests += 1
-		assert test_lowlevelmatrixcalls(VERBOSE_TEST=verbose)
+		assert test_lowlevelmatrixcalls(VERBOSE_TEST=verbose,
+			gpu='gpu' in args, floatbits=floatbits)
 	if '--vec' in args:
 		tests += 1
-		assert test_vector_methods(n=n,VERBOSE_TEST=verbose)
+		assert test_vector_methods(n=n,VERBOSE_TEST=verbose,
+			gpu='gpu' in args, floatbits=floatbits)
 	if '--mat' in args:
 		tests += 1
-		assert test_matrix_methods(m=m,n=n,VERBOSE_TEST=verbose)
+		assert test_matrix_methods(m=m,n=n,VERBOSE_TEST=verbose,
+			gpu='gpu' in args, floatbits=floatbits)
 	if '--blas' in args:
 		tests += 1
-		assert test_blas_methods(m=m,n=n,A_in=A,VERBOSE_TEST=verbose)
+		assert test_blas_methods(m=m,n=n,A_in=A,VERBOSE_TEST=verbose,
+			gpu='gpu' in args, floatbits=floatbits)
 	if '--linalg' in args:
 		tests += 1
-		assert test_linalg_methods(n=n,A_in=A,VERBOSE_TEST=verbose)
+		assert test_linalg_methods(n=n,A_in=A,VERBOSE_TEST=verbose,
+			gpu='gpu' in args, floatbits=floatbits)
 
 	terminal_char = '' if tests == 1 else 's'
 	print "{} sub-test{} completed".format(tests, terminal_char)

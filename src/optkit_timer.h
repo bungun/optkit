@@ -18,13 +18,13 @@ OK_TIMER tic(){
 	struct timeval tv;
 	OK_TIMER timer = (OK_TIMER){tv, 0, 0};
 	gettimeofday(&(timer.tv), OK_NULL);
-	timer.tic = (double) (timer.tv.tv_sec + timer.tv.tv_usec * 1e-6);
+	timer.tic = (double) timer.tv.tv_sec + (double) timer.tv.tv_usec * 1e-6;
 	return timer;
 }
 
 ok_float toc(OK_TIMER timer){
 	gettimeofday(&(timer.tv), OK_NULL);
-	timer.toc = (double) (timer.tv.tv_sec + timer.tv.tv_usec * 1e-6);
+	timer.toc = (double) timer.tv.tv_sec + (double) timer.tv.tv_usec * 1e-6;
 	return (ok_float) (timer.toc - timer.tic);
 }
 

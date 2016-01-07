@@ -1,23 +1,33 @@
-from optkit.api import *
-from optkit.utils.proxutils import func_eval_python, prox_eval_python
-from optkit.utils.pyutils import println, printvoid, var_assert
-from optkit.tests.defs import TEST_EPS, HLINE, MAT_ORDER, rand_arr
 import numpy as np
+from numpy.linalg import norm
+from optkit.utils.proxutils import func_eval_python, prox_eval_python
+from optkit.utils.pyutils import println, pretty_print, printvoid, var_assert
+from optkit.tests.defs import gen_test_defs
+
+def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True,
+	gpu=False, floatbits=64):
+
+	from optkit.api import backend, set_backend
+
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
+
+	from optkit.api import Vector, Matrix, FunctionVector, \
+		linsys, DirectProjector, pogs
+	TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
+
+	ProblemVariables = pogs.types.ProblemVariables
+	SolverMatrix = pogs.types.SolverMatrix
+	SolverState = pogs.types.SolverState
+	SolverSettings = pogs.types.SolverSettings
+	SolverInfo = pogs.types.SolverInfo
+	OutputVariables = pogs.types.OutputVariables
+	Objectives = pogs.types.Objectives
+	Residuals = pogs.types.Residuals
+	Tolerances = pogs.types.Tolerances
+	AdaptiveRhoParameters = pogs.types.AdaptiveRhoParameters
 
 
-ProblemVariables = pogs.types.ProblemVariables
-SolverMatrix = pogs.types.SolverMatrix
-SolverState = pogs.types.SolverState
-SolverSettings = pogs.types.SolverSettings
-SolverInfo = pogs.types.SolverInfo
-OutputVariables = pogs.types.OutputVariables
-Objectives = pogs.types.Objectives
-Residuals = pogs.types.Residuals
-Tolerances = pogs.types.Tolerances
-AdaptiveRhoParameters = pogs.types.AdaptiveRhoParameters
-
-	
-def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	if m is None: m=30
 	if n is None: n=20
 	if isinstance(A_in,np.ndarray):
@@ -28,13 +38,14 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 	print '(m = {}, n = {})'.format(m, n)
 
-	PRINT=println if VERBOSE_TEST else printvoid
-	PRINTVAR=print_var if VERBOSE_TEST else printvoid
+	PRINT = println if VERBOSE_TEST else printvoid
+	PPRINT = pretty_print if VERBOSE_TEST else printvoid
+	PRINTVAR = print_var if VERBOSE_TEST else printvoid
 
 	if isinstance(A_in,np.ndarray):
-		A = Matrix(A_in)
+		A = Matrix(A_in.astype(backend.lowtypes.FLOAT_CAST))
 	else:
-		A = Matrix(rand_arr(m,n))
+		A = Matrix(RAND_ARR(m,n))
 	f = FunctionVector(m, h='Abs', b=1)
 	g = FunctionVector(n, h='IndGe0')
 	A_orig = np.copy(A.py)
@@ -60,11 +71,9 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	assert output.y.size == m
 
 
-	PRINT("\nPROBLEM SETUP METHODS")
-	PRINT("=====================\n")
+	PPRINT("PROBLEM SETUP METHODS", '=')
 
-	PRINT("\nINPUT/OUTPUT")
-	PRINT("------------\n")
+	PPRINT("INPUT/OUTPUT")
 
 	PRINT("\nPROBLEM DATA")
 	PRINT("A object: ", A)
@@ -90,32 +99,30 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT(output)
 
 
-	PRINT(HLINE)
-	PRINT("\nPRECONDITION, PROJECTOR, PROX OPERATOR")
-	PRINT("--------------------------------------\n")
+	PPRINT("PRECONDITION, PROJECTOR, PROX OPERATOR")
 
 
 	PRINT("\nEQUILIBRATE")
 	if not A.equilibrated: pogs.utils.equilibrate(A, d, e)
 	A.sync()
-	sync(d, e)
+	linsys['sync'](d, e)
 
 	PRINT("A: ", A)
 	PRINT("d: ", d)
 	PRINT("e: ", e)
 
-	xrand = rand_arr(n)
+	xrand = RAND_ARR(n)
 	Ax = A.mat.py.dot(xrand)
-	DAEx = d.py*A_orig.dot(e.py*xrand)
-	assert all(np.abs(Ax-DAEx)<= TEST_EPS)
+	DAEx = d.py * A_orig.dot(e.py * xrand)
+	assert all(np.abs(Ax - DAEx) <= TEST_EPS)
 
 
 	PRINT("\nPROJECTOR")
-	Proj = DirectProjectorPy(A.mat, normalize=True)	
+	Proj = DirectProjector(A.mat, normalize=True)	
 	A.normalized=True	
 	A.sync()
 	PRINT("ProjA: ", Proj)
-	assert var_assert(Proj,type=DirectProjectorPy)
+	assert var_assert(Proj,type=DirectProjector)
 
 
 	PRINT("\nNORMALIZE A, Proj, d, e")
@@ -126,20 +133,20 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("e: ", e)
 
 
-	norm_de_before = np.linalg.norm(d.py)*np.linalg.norm(e.py)
+	norm_de_before = norm(d.py) * norm(e.py)
 	pogs.utils.normalize_system(A, d, e, normA=Proj.normA)
 	A.sync()
-	sync(d, e)
-	norm_de_after = np.linalg.norm(d.py)*np.linalg.norm(e.py)
+	linsys['sync'](d, e)
+	norm_de_after = norm(d.py) * norm(e.py)
 
-	xrand = rand_arr(n)
+	xrand = RAND_ARR(n)
 	Ax = A.mat.py.dot(xrand)
-	DAEx = d.py*A_orig.dot(e.py*xrand)
-	assert all(np.abs(Ax-DAEx)<= TEST_EPS)
+	DAEx = d.py * A_orig.dot(e.py * xrand)
+	assert all(np.abs(Ax - DAEx) <= TEST_EPS)
 
 
 	# ||A||_2 == 1
-	assert abs(np.linalg.norm(A.mat.py)/(A.mat.mindim**0.5)-1) <= TEST_EPS
+	assert abs(norm(A.mat.py) / (A.mat.mindim**0.5) - 1) <= TEST_EPS
 
 
 	# ||d||*||e|| / ||1/sqrt(norm_A) * d||*||1/sqrt(norm_A) * e|| == norm_A
@@ -192,29 +199,26 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("f: ", f)
 	PRINT("g: ", g)
 
-	PRINT(HLINE)
-	PRINT("\nSCALED SYSTEM: PROJECTION TEST")
+	PPRINT("SCALED SYSTEM: PROJECTION TEST")
 
-	x = Vector(rand_arr(n))
-	y = Vector(rand_arr(m))
+	x = Vector(RAND_ARR(n))
+	y = Vector(RAND_ARR(m))
 	x_out = Vector(n)
 	y_out = Vector(m)
 	var_assert(x,y,x_out,y_out,type=Vector)
 
 	PRINT("RANDOM (x,y)")
-	PRINT("||x||_2, {} \t ||y||_2: {}".format(
-		np.linalg.norm(x.py), np.linalg.norm(y.py)))
+	PRINT("||x||_2, {} \t ||y||_2: {}".format(norm(x.py), norm(y.py)))
 	PRINT("||Ax-y||_2:")
-	PRINT(np.linalg.norm(y.py-A.mat.py.dot(x.py)))
+	PRINT(norm(y.py-A.mat.py.dot(x.py)))
 
 	Proj(x,y,x_out,y_out)
-	sync(x, y, x_out, y_out)
+	linsys['sync'](x, y, x_out, y_out)
 
 	PRINT("PROJECT:")
-	PRINT("||x||_2, {} \t ||y||_2: {}".format(
-		np.linalg.norm(x_out.py), np.linalg.norm(y_out.py)))
+	PRINT("||x||_2, {} \t ||y||_2: {}".format(norm(x_out.py), norm(y_out.py)))
 	PRINT("||Ax-y||_2:")
-	res = np.linalg.norm(y_out.py-A.mat.py.dot(x_out.py))
+	res = norm(y_out.py - A.mat.py.dot(x_out.py))
 	assert res <= TEST_EPS
 	PRINT(res)
 
@@ -223,9 +227,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	Prox = pogs.utils.prox_eval(f,g)		
 	PRINT("Prox: ", Prox)
 
-	PRINT(HLINE)
-	PRINT("\nVARIABLE MANIPULATION AND STORAGE")
-	PRINT("---------------------------------\n")
+	PPRINT("\nVARIABLE MANIPULATION AND STORAGE")
 
 	PRINT("\nVARIABLE INITIALIZATION (i.e., WARM START)")
 	pogs.utils.initialize_variables(A.mat, settings.rho, z, x.py, y.py)
@@ -234,13 +236,13 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("z primal", z.primal.vec)
 	PRINT("z dual", z.dual.vec)
 
-	res_p = np.linalg.norm(A.mat.py.dot(z.primal.x.py)-z.primal.y.py)
-	res_d = np.linalg.norm(A.mat.py.T.dot(z.dual.y.py)+z.dual.x.py)
+	res_p = norm(A.mat.py.dot(z.primal.x.py) - z.primal.y.py)
+	res_d = norm(A.mat.py.T.dot(z.dual.y.py) + z.dual.x.py)
 	PRINT("primal feasibility at step k=0: ", res_p)
 	PRINT("dual feasibility at step k=0: ", res_p)
 	
-	assert np.max(np.abs((z.primal.x.py-(x.py/z.de.x.py)))) <= 0.
-	assert np.max(np.abs((z.dual.y.py+(y.py/z.de.y.py)/settings.rho))) <= TEST_EPS
+	assert np.max(np.abs((z.primal.x.py - (x.py / z.de.x.py)))) <= 0.
+	assert np.max(np.abs((z.dual.y.py + (y.py / z.de.y.py) / settings.rho))) <= TEST_EPS
 	assert res_p <= TEST_EPS
 	assert res_d <= TEST_EPS
 
@@ -248,10 +250,10 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("\nVARIABLE UNSCALING")
 	pogs.utils.unscale_output(settings.rho, z, output)		
 	PRINT("output vars:", output)
-	assert np.max(np.abs((z.primal12.x.py*e_-output.x))) <= TEST_EPS
-	assert np.max(np.abs((z.primal12.y.py/d_-output.y))) <= TEST_EPS
-	assert np.max(np.abs((-settings.rho*z.dual12.x.py/e_-output.mu))) <= TEST_EPS
-	assert np.max(np.abs((-settings.rho*z.dual12.y.py*d_-output.nu))) <= TEST_EPS
+	assert np.max(np.abs((z.primal12.x.py * e_ - output.x))) <= TEST_EPS
+	assert np.max(np.abs((z.primal12.y.py / d_ - output.y))) <= TEST_EPS
+	assert np.max(np.abs((-settings.rho * z.dual12.x.py / e_ - output.mu))) <= TEST_EPS
+	assert np.max(np.abs((-settings.rho * z.dual12.y.py * d_ - output.nu))) <= TEST_EPS
 
 
 
@@ -260,12 +262,9 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	assert var_assert(solver_state)
 	PRINT(solver_state)
 
-	PRINT(HLINE)
-	PRINT(HLINE)
-	PRINT("\nPROBLEM SOLVE METHODS")
-	PRINT("=====================\n")
+	PPRINT("PROBLEM SOLVE METHODS", '=')
 
-	PRINT("\nACCESS SETTINGS")
+	PPRINT("ACCESS SETTINGS",'.')
 	PRINT("rho: ", settings.rho)
 	PRINT("alpha: ", settings.alpha)
 	PRINT("abs tol: ", settings.abstol)
@@ -273,8 +272,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("adpative rho: ", settings.adaptive)
 	PRINT("max iter: ", settings.maxiter)
 
-	PRINT(HLINE)
-	PRINT("\nMAKE OBJECTIVES, RESIDUALS, TOLERANCES")
+	PPRINT("MAKE OBJECTIVES, RESIDUALS, TOLERANCES", '.')
 	obj = Objectives()
 	res = Residuals()
 	eps = Tolerances(m,n, atol=settings.abstol, rtol=settings.reltol)
@@ -283,27 +281,24 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("Residuals: ", res)
 	PRINT("Tolerances: ", eps)
 
-	PRINT(HLINE)
-	PRINT("\nMAKE ADAPTIVE RHO PARAMETERS")
+	PPRINT("MAKE ADAPTIVE RHO PARAMETERS", '.')
 	rhopar = AdaptiveRhoParameters()
 	assert var_assert(rhopar)
 	PRINT("a.r. params: ", rhopar)
 
-	PRINT(HLINE)
-	PRINT("\nITERATE: z_prev = z^k")
+	PPRINT("ITERATE: z_prev = z^k", '.')
 	z.prev.copy_from(z.primal)
-	sync(z.prev.vec, z.primal.vec)
+	linsys['sync'](z.prev.vec, z.primal.vec)
 	PRINT(z.prev)
 	PRINT(z.primal)
 	assert all(z.primal.vec.py-z.prev.vec.py==0)
 
-	PRINT(HLINE)
-	PRINT("\nPROX EVALUAION")
+	PPRINT("PROX EVALUAION", '.')
 	PRINT("BEFORE:")
 	PRINT(z.primal12)
 	
-	xarg_ = z.primal.x.py-z.dual.x.py
-	yarg_ = z.primal.y.py-z.dual.y.py
+	xarg_ = z.primal.x.py - z.dual.x.py
+	yarg_ = z.primal.y.py - z.dual.y.py
 
 
 	xout_ = prox_eval_python(g.tolist(), settings.rho, xarg_)
@@ -319,8 +314,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("AFTER")
 	PRINT(z.primal12)
 
-	PRINT(HLINE)
-	PRINT("\nPROJECTION")
+	PPRINT("PROJECTION", '.')
 	PRINT("BEFORE:")
 	PRINT(z.primal)
 
@@ -328,14 +322,13 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 
 	pogs.utils.project_primal(Proj, z, alpha=settings.alpha)
 	z.sync()
-	assert np.linalg.norm(A.mat.py.dot(z.primal.x.py)-z.primal.y.py) <= TEST_EPS
-	assert np.linalg.norm(A.mat.py.T.dot(z.dual.y.py)+z.dual.x.py) <= TEST_EPS
+	assert norm(A.mat.py.dot(z.primal.x.py)-z.primal.y.py) <= TEST_EPS
+	assert norm(A.mat.py.T.dot(z.dual.y.py)+z.dual.x.py) <= TEST_EPS
 
 	PRINT("AFTER")
 	PRINT(z.primal)
 
-	PRINT(HLINE)
-	PRINT("\nDUAL UPDATE")
+	PPRINT("DUAL UPDATE", '.')
 	PRINT("BEFORE:")
 	PRINT("Z_TILDE")
 	PRINT(z.dual)
@@ -360,8 +353,7 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT(z.dual12 )
 
 
-	PRINT(HLINE)
-	PRINT("\nCHECK CONVERGENCE:")
+	PPRINT("CHECK CONVERGENCE:", '.')
 	converged = pogs.utils.check_convergence(A,f,g,
 		settings.rho,z,obj,res,eps,gapstop=settings.gapstop)	
 	
@@ -375,40 +367,38 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	assert abs(obj.d - obj_dua_py) <= TEST_EPS 
 	assert abs(obj.gap - abs(obj_gap_py)) <= TEST_EPS
 
-	assert abs(eps.p - (eps.atolm+eps.reltol*np.linalg.norm(z.primal.y.py))) <= TEST_EPS
-	assert abs(eps.d - (eps.atoln+eps.reltol*np.linalg.norm(z.dual.x.py))) <= TEST_EPS
+	assert abs(eps.p - (eps.atolm+eps.reltol*norm(z.primal.y.py))) <= TEST_EPS
+	assert abs(eps.d - (eps.atoln+eps.reltol*norm(z.dual.x.py))) <= TEST_EPS
 	assert abs(eps.gap - (eps.atolmn+eps.reltol*obj_py)) <= TEST_EPS
 
-	res_p = np.linalg.norm(z.primal.vec.py-z.primal12.vec.py)
-	res_d = np.linalg.norm(z.primal.vec.py-z.prev.vec.py)
+	res_p = norm(z.primal.vec.py - z.primal12.vec.py)
+	res_d = norm(z.primal.vec.py - z.prev.vec.py)
 	if res_d < eps.d and res_p < eps.p:
-		res_p = np.linalg.norm(A.mat.py.dot(z.primal12.x.py)-\
+		res_p = norm(A.mat.py.dot(z.primal12.x.py) - \
 							z.primal12.y.py)
 		if res_p < eps.p:
-			res_d = np.linalg.norm(A.mat.py.dot(z.dual12.y.py)+\
+			res_d = norm(A.mat.py.dot(z.dual12.y.py) + \
 							z.dual12.x.py)
 
 	assert abs(res.p - res_p) <= TEST_EPS
 	assert abs(res.d - res_d) <= TEST_EPS
 	assert abs(res.gap - abs(obj_gap_py)) <= TEST_EPS
 	
-	cvg_py = np.linalg.norm(A.mat.py.dot(z.primal12.x.py)-\
+	cvg_py = norm(A.mat.py.dot(z.primal12.x.py) - \
 							z.primal12.y.py) <= eps.p and \
-			np.linalg.norm(A.mat.py.dot(z.dual12.y.py)+ \
+			norm(A.mat.py.dot(z.dual12.y.py) + \
 							z.dual12.x.py) <= eps.d
 	assert cvg_py == converged
 
 	PRINT("Converged? ", converged )
 	
 
-	PRINT(HLINE)
-	PRINT("\nITERATION INFO:")
+	PPRINT("ITERATION INFO:", '.')
 	PRINT(pogs.utils.header_string())
 	PRINT(pogs.utils.iter_string(1, res, eps, obj))
 
 
-	PRINT(HLINE)
-	PRINT("\nADAPT RHO")
+	PPRINT("ADAPT RHO", '.')
 	PRINT("Adaptive rho requested?", settings.adaptive)
 	PRINT("rho before:", settings.rho)
 	PRINT("Z_TILDE before:", z.dual)
@@ -419,15 +409,15 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 		z.sync()
 	z_after = np.copy(z.dual.vec.py)
 	rho_after = settings.rho
-	assert all(z_after/z_before-rho_before/rho_after <= TEST_EPS) or \
-			all(z_after/z_before-rho_before/rho_after <= TEST_EPS)
+	assert all(z_after / z_before - rho_before / rho_after <= TEST_EPS) or \
+			all(z_after / z_before - rho_before / rho_after <= TEST_EPS)
 	PRINT("rho after:", settings.rho)
 	PRINT("Z_TILDE after:", z.dual)
 
-	PRINT(HLINE)
-	PRINT("\nUPDATE INFO")
+	PPRINT("UPDATE INFO", '.')
 	PRINT("info before: ", info)
-	info.update(rho=settings.rho,obj=obj.p, converged=converged,err=0,k=0)
+	info.update(rho=settings.rho, obj=obj.p, 
+		converged=converged, err=0, k=0)
 	assert info.rho == settings.rho
 	assert info.obj == obj.p
 	assert info.converged == converged
@@ -436,39 +426,33 @@ def blocksplitting_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("info after: ", info )
 
 
-	PRINT(HLINE)
-	PRINT(HLINE)
-	PRINT("\nPOGS INNER LOOP ROUTINE")
-	PRINT("-----------------------\n")
-	settings.maxiter=2000
+	PPRINT("POGS INNER LOOP ROUTINE")
+	settings.maxiter = 2000
 	PRINT(settings)
-	pogs.admm_loop(A.mat,Proj,Prox,z,settings,info, 
-		pogs.utils.check_convergence(A.mat,f,g)) 	
-	assert info.converged or info.k==settings.maxiter
+	pogs.admm_loop(A.mat, Proj, Prox, z,settings, info, 
+		pogs.utils.check_convergence(A.mat, f, g)) 	
+	assert info.converged or info.k == settings.maxiter
 	PRINT(info)
 
 
-	PRINT(HLINE)
-	PRINT(HLINE)
-	PRINT("\nPOGS ROUTINE")
-	PRINT("------------\n")
+	PPRINT("POGS ROUTINE")
 
 
 	A_copy = np.copy(A.mat.py)
-	info_, output_, solver = pogs(A.mat,f,g,
-		maxiter=settings.maxiter,reltol=settings.reltol)
-	assert var_assert(solver,type=SolverState)
-	assert var_assert(info_,type=SolverInfo)
+	info_, output_, solver = pogs(A.mat, f, g,
+		maxiter=settings.maxiter, reltol=settings.reltol)
+	assert var_assert(solver, type=SolverState)
+	assert var_assert(info_, type=SolverInfo)
 	assert var_assert(output_, type=OutputVariables)
-	assert info_.converged or info_.k==settings.maxiter
+	assert info_.converged or info_.k == settings.maxiter
 
-	res_p = np.linalg.norm(A_copy.dot(output_.x)-output_.y)
-	res_d = np.linalg.norm(A_copy.T.dot(output_.nu)+output_.mu)
+	res_p = norm(A_copy.dot(output_.x) - output_.y)
+	res_d = norm(A_copy.T.dot(output_.nu) + output_.mu)
 
 	if info_.converged:
-		assert res_p/np.linalg.norm(output_.y) <= 10 * settings.reltol
-		assert res_d/np.linalg.norm(output_.mu) <= 10 * settings.reltol or \
-		np.linalg.norm(output_.mu) <= 10 * settings.reltol
+		assert res_p / norm(output_.y) <= 10 * settings.reltol
+		assert res_d / norm(output_.mu) <= 10 * settings.reltol or \
+		norm(output_.mu) <= 10 * settings.reltol
 
 	return True
 
@@ -477,12 +461,14 @@ def test_blocksplitting(*args, **kwargs):
 	verbose = '--verbose' in args
 	(m,n)=kwargs['shape'] if 'shape' in kwargs else (None,None)
 	A = np.load(kwargs['file']) if 'file' in kwargs else None
+	floatbits = 32 if 'float' in args else 64
 
-	assert blocksplitting_test(m=m,n=n,A_in=A,VERBOSE_TEST=verbose)
+	assert blocksplitting_test(m=m, n=n, A_in=A, VERBOSE_TEST=verbose,
+		gpu='gpu' in args, floatbits=floatbits)
 	if isinstance(A, np.ndarray): A = A.T
-	assert blocksplitting_test(m=n,n=m,A_in=A,VERBOSE_TEST=verbose)
 
+	assert blocksplitting_test(m=n, n=m, A_in=A, VERBOSE_TEST=verbose,
+		gpu='gpu' in args, floatbits=floatbits)
 
 	print "...passed"
 	return True
-	

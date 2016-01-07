@@ -1,25 +1,31 @@
-from optkit.api import *
-from optkit.utils.pyutils import println, printvoid, var_assert
-from optkit.tests.defs import TEST_EPS, MAT_ORDER, rand_arr
 from operator import and_
 import numpy as np
+from optkit.tests.defs import gen_test_defs
+from optkit.utils.pyutils import println, pretty_print, printvoid, var_assert
 
+def dense_equil_test(equil_method, A_in=None, VERBOSE_TEST=True,
+	gpu=False, floatbits=64):
 
+	from optkit.api import backend, set_backend
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
 
-def dense_equil_test(equil_method, A_in=None, VERBOSE_TEST=True):
+	from optkit.api import Vector, Matrix, linsys, equil
+	TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
+
 	PRINT = println if VERBOSE_TEST else printvoid
-	PNORM = 1 if equil_method == sinkhornknopp_equilibration else 2
+	PNORM = 1 if equil_method == 'sinkhornknopp' else 2
 
 
 	PRINT("SKINNY MATRIX")
 
-	if A_in is not None:
+	if isinstance(A_in, np.ndarray):
 		if A_in.shape[1] > A_in.shape[0]: A_in = A_in.T
-		A = Matrix(A_in)
+		A = Matrix(A_in.astype(backend.lowtypes.FLOAT_CAST))
 		(m1,n1) = A.shape
 	else:
 		(m1,n1) = (50, 30)
-		A = Matrix(rand_arr(m1,n1))
+		A = Matrix(RAND_ARR(m1,n1))
 	A_out = Matrix(np.zeros_like(A.py))
 	A_orig= np.copy(A.py)
 
@@ -43,8 +49,8 @@ def dense_equil_test(equil_method, A_in=None, VERBOSE_TEST=True):
 
 	PRINT("d: ", d.py)
 	PRINT("e: ", e.py)
-	equil_method(A, A_out, d, e)
-	sync(A, A_out, d, e)
+	equil[equil_method](A, A_out, d, e)
+	linsys['sync'](A, A_out, d, e)
 
 
 	PRINT("\nAFTER")
@@ -67,7 +73,7 @@ def dense_equil_test(equil_method, A_in=None, VERBOSE_TEST=True):
 
 
 	# verify A_out = DAE
-	xrand = rand_arr(n1)
+	xrand = RAND_ARR(n1)
 	assert all((A_out.py.dot(xrand)-d.py*A_orig.dot(e.py*xrand)) <= TEST_EPS)
 
 
@@ -79,7 +85,7 @@ def dense_equil_test(equil_method, A_in=None, VERBOSE_TEST=True):
 		(m2,n2) = B.shape
 	else:
 		(m2,n2) = (30, 50)
-		B = Matrix(rand_arr(m2,n2))
+		B = Matrix(RAND_ARR(m2,n2))
 	B_out = Matrix(np.zeros_like(B.py))
 	B_orig = np.copy(B.py)
 
@@ -104,8 +110,8 @@ def dense_equil_test(equil_method, A_in=None, VERBOSE_TEST=True):
 
 	PRINT("d: ", d.py)
 	PRINT("e: ", e.py)
-	equil_method(B, B_out, d, e)
-	sync(B, B_out, d, e)
+	equil[equil_method](B, B_out, d, e)
+	linsys['sync'](B, B_out, d, e)
 
 	PRINT("\nAFTER")
 
@@ -125,7 +131,7 @@ def dense_equil_test(equil_method, A_in=None, VERBOSE_TEST=True):
 
 
 	# verify B_out = DBE
-	xrand = rand_arr(n2)
+	xrand = RAND_ARR(n2)
 	assert all((B_out.py.dot(xrand)-d.py*B_orig.dot(e.py*xrand)) <= TEST_EPS)
 
 
@@ -136,15 +142,16 @@ def test_equil(*args,**kwargs):
 	print "EQUILIBRATION TESTING\n\n\n\n\n"
 	
 	verbose = '--verbose' in args
+	floatbits = 32 if 'float' in args else 64
 	A = np.load(kwargs['file']) if 'file' in kwargs else None
 
-	print "\n\nDENSE EQUIL"
-	print "===========\n\n"
-	assert dense_equil_test(dense_l2_equilibration,A_in=A,VERBOSE_TEST=verbose)
+	pretty_print("DENSE EQUIL", '=')
+	assert dense_equil_test('dense_l2', A_in=A, 
+		VERBOSE_TEST=verbose, gpu='gpu' in args, floatbits=floatbits)
 	print "...passed"
 
-	print "\n\nSINKHORN KNOPP"
-	print "==============\n\n"
-	assert dense_equil_test(sinkhornknopp_equilibration,A_in=A,VERBOSE_TEST=verbose)
+	pretty_print("SINKHORN KNOPP", '=')
+	assert dense_equil_test('sinkhornknopp', A_in=A, 
+		VERBOSE_TEST=verbose, gpu='gpu' in args, floatbits=floatbits)
 	print "...passed"
 	return True

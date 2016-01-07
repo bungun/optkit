@@ -1,11 +1,19 @@
-from optkit.api import *
-from optkit.utils.pyutils import println,printvoid
-from optkit.tests.proj import direct_proj_test
-from optkit.tests.defs import TEST_EPS, MAT_ORDER, rand_arr
 import numpy as np
+from optkit.utils.pyutils import println, pretty_print, printvoid
+from optkit.tests.proj import direct_proj_test
+from optkit.tests.defs import gen_test_defs
 
 
-def normalize_and_project_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
+def normalize_and_project_test(m=None,n=None,A_in=None,VERBOSE_TEST=True,
+	gpu=False, floatbits=64):
+	
+	from optkit.api import backend, set_backend
+	if not backend.__LIBGUARD_ON__:
+		set_backend(GPU=gpu, double=floatbits == 64)
+
+	from optkit.api import Vector, Matrix, linsys, equil
+	TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
+
 	if m is None: m=1000
 	if n is None: n=3000
 	if isinstance(A_in, np.ndarray):
@@ -14,23 +22,21 @@ def normalize_and_project_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 		else:
 			A_in = A_in if m >= n else A_in.T
 			(m,n) = A_in.shape
+			A_in = A_in.astype(backend.lowtypes.FLOAT_CAST)
 
 	if not isinstance(A_in, np.ndarray):
-		A_in = rand_arr(m, n)
+		A_in = RAND_ARR(m, n)
 
-	PRINT=println if VERBOSE_TEST else printvoid
+	PRINT = println if VERBOSE_TEST else printvoid
+	PPRINT = pretty_print if VERBOSE_TEST else printvoid
 
 
-	PRINT("\n=============")
-	PRINT("BEGIN TESTING")
-	PRINT("=============")
+	PPRINT("BEGIN TESTING",'+')
 
-	PRINT("\n\nDIRECT PROJECTOR")
-	PRINT("----------------\n\n")
+	PPRINT("DIRECT PROJECTOR")
 
 	# fat matrix
-	PRINT("\nFAT MATRIX")
-	PRINT("----------\n")
+	PPRINT("FAT MATRIX",'.')
 	A = Matrix(A_in)
 	A_equil = Matrix(np.zeros_like(A.py))
 	d = Vector(m)
@@ -40,37 +46,36 @@ def normalize_and_project_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("\nORIGINAL MATRIX")
 	assert direct_proj_test(m,n,A.py,PRINT=PRINT)
 
-	copy(A,A_equil)
-	sync(A_equil)
+	linsys['copy'](A,A_equil)
+	linsys['sync'](A_equil)
 	PRINT("\nORIGINAL MATRIX, normalized")
 	assert direct_proj_test(m,n,A_equil.py,normalize=True,PRINT=PRINT)
 
 
 	PRINT("\nL2-EQUILIBRATED MATRIX")
-	dense_l2_equilibration(A,A_equil,d,e)
-	sync(A_equil)
+	equil['dense_l2'](A,A_equil,d,e)
+	linsys['sync'](A_equil)
 	assert direct_proj_test(m,n,A_equil.py,PRINT=PRINT)
 
 	PRINT("\nL2-EQUILIBRATED MATRIX, normalized")
-	dense_l2_equilibration(A,A_equil,d,e)
-	sync(A_equil)
+	equil['dense_l2'](A,A_equil,d,e)
+	linsys['sync'](A_equil)
 	assert direct_proj_test(m,n,A_equil.py,normalize=True,PRINT=PRINT)
 
 
 	PRINT("\nSINKHORN-EQUILIBRATED MATRIX")
-	sinkhornknopp_equilibration(A,A_equil,d,e)
-	sync(A_equil)
+	equil['sinkhornknopp'](A,A_equil,d,e)
+	linsys['sync'](A_equil)
 	assert direct_proj_test(m,n,A_equil.py,PRINT=PRINT)	
 
 	PRINT("\nSINKHORN-EQUILIBRATED MATRIX, normalized")
-	sync(A_equil)
-	sinkhornknopp_equilibration(A,A_equil,d,e)
+	equil['sinkhornknopp'](A,A_equil,d,e)
+	linsys['sync'](A_equil)
 	assert direct_proj_test(m,n,A_equil.py,normalize=True,PRINT=PRINT)	
 
 
 	# skinny matrix
-	PRINT("\nSKINNY MATRIX")
-	PRINT("-------------\n")
+	PPRINT("SKINNY MATRIX",'.')
 
 	(m,n) = (n,m)
 
@@ -79,51 +84,50 @@ def normalize_and_project_test(m=None,n=None,A_in=None,VERBOSE_TEST=True):
 	PRINT("\nORIGINAL MATRIX")
 	assert direct_proj_test(m,n,A.py.T,PRINT=PRINT)
 
-	copy(A,A_equil)
-	sync(A_equil)
+	linsys['copy'](A,A_equil)
+	linsys['sync'](A_equil)
 	PRINT("\nORIGINAL MATRIX, normalized")
 	assert direct_proj_test(m,n,A_equil.py.T,normalize=True,PRINT=PRINT)
 
 
 	PRINT("\nL2-EQUILIBRATED MATRIX")
-	dense_l2_equilibration(A,A_equil,d,e)
-	sync(A_equil)
+	equil['dense_l2'](A,A_equil,d,e)
+	linsys['sync'](A_equil)
 	assert direct_proj_test(m,n,A_equil.py.T,PRINT=PRINT)
 
 	PRINT("\nL2-EQUILIBRATED MATRIX, normalized")
-	dense_l2_equilibration(A,A_equil,d,e)
-	sync(A_equil)
+	equil['dense_l2'](A,A_equil,d,e)
+	linsys['sync'](A_equil)
 	assert direct_proj_test(m,n,A_equil.py.T,normalize=True,PRINT=PRINT)
 
 
 	PRINT("\nSINKHORN-EQUILIBRATED MATRIX")
-	sinkhornknopp_equilibration(A,A_equil,d,e)
-	sync(A_equil)
+	equil['sinkhornknopp'](A,A_equil,d,e)
+	linsys['sync'](A_equil)
 	assert direct_proj_test(m,n,A_equil.py.T,PRINT=PRINT)	
 
 	PRINT("\nSINKHORN-EQUILIBRATED MATRIX, normalized")
-	sinkhornknopp_equilibration(A,A_equil,d,e)
-	sync(A_equil)
+	equil['sinkhornknopp'](A,A_equil,d,e)
+	linsys['sync'](A_equil)
 	assert direct_proj_test(m,n,A_equil.py.T,normalize=True,PRINT=PRINT)	
 
 
-	PRINT("\n\nINDIRECT PROJECTOR")
-	PRINT("------------------\n\n")
+	PPRINT("INDIRECT PROJECTOR")
 
 	PRINT("(NOT IMPLEMENTED)")
 
-	PRINT("\n===========")
-	PRINT("END TESTING")
-	PRINT("===========")
+	PPRINT("END TESTING",'=')
 	return True
 
 def test_normalizedprojector(*args,**kwargs):
 	print "NORMALIZED PROJECTOR TESTING\n\n\n\n"
 
 	verbose = '--verbose' in args
+	floatbits = 32 if 'float' in args else 64	
 	(m,n)=kwargs['shape'] if 'shape' in kwargs else (None,None)
 	A = np.load(kwargs['file']) if 'file' in kwargs else None
-	assert normalize_and_project_test(m=m,n=n,A_in=A,VERBOSE_TEST=verbose)
+	assert normalize_and_project_test(m=m,n=n,A_in=A,
+		VERBOSE_TEST=verbose, gpu='gpu' in args, floatbits=floatbits)
 
 	print "...passed"
 	return True
