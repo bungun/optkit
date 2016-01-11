@@ -79,7 +79,8 @@ class HighLevelPogsTypes(object):
 				self.mu1 = zeros(n, dtype=FLOAT_CAST)
 				self.nu1 = zeros(m, dtype=FLOAT_CAST)
 				self.c = PogsOutput(ndarray_pointer(self.x), ndarray_pointer(self.y),
-					ndarray_pointer(self.mu), ndarray_pointer(self.nu))
+					ndarray_pointer(self.mu), ndarray_pointer(self.nu),
+					ndarray_pointer(self.mu1), ndarray_pointer(self.nu1))
 
 			def __str__(self):
 				return str("x:\n{}\ny:\n{}\nmu:\n{}\nnu:\n{}\n".format(
