@@ -489,6 +489,17 @@ POGS(copy_output)(pogs_solver * solver, pogs_output * output){
 	vector_mul(z->temp->y, d);
 	vector_memcpy_av(output->mu, z->temp->x, 1);
 	vector_memcpy_av(output->nu, z->temp->y, 1);
+
+	/* ----------------- */
+	/* mu1 = -rho * xt^k */
+	/* nu1 = -rho * yt^k */
+	/* ----------------- */
+	vector_memcpy_vv(z->temp->vec, z->dual->vec);
+	vector_scale(z->temp->vec, -solver->rho);
+	vector_div(z->temp->x, e);
+	vector_mul(z->temp->y, d);
+	vector_memcpy_av(output->mu1, z->temp->x, 1);
+	vector_memcpy_av(output->nu1, z->temp->y, 1);	
 }
 
 

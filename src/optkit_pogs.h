@@ -86,7 +86,7 @@ typedef struct POGSInfo {
 } pogs_info;
 
 typedef struct POGSOutput {
-	ok_float * x, * y, * mu, * nu;
+	ok_float * x, * y, * mu, * nu, * mu1, * nu1;
 } pogs_output;
 
 typedef struct POGSMatrix {
