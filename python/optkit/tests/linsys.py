@@ -13,6 +13,7 @@ def test_lowlevelvectorcalls(errors, VERBOSE_TEST=True,
 		from optkit.api import backend, set_backend
 		if not backend.__LIBGUARD_ON__:
 			set_backend(GPU=gpu, double=floatbits == 64)
+		backend.make_linalg_contexts()	
 
 		make_cvector = backend.make_cvector
 
@@ -44,6 +45,7 @@ def test_lowlevelmatrixcalls(errors, VERBOSE_TEST=True,
 		from optkit.api import backend, set_backend
 		if not backend.__LIBGUARD_ON__:
 			set_backend(GPU=gpu, double=floatbits == 64)
+		backend.make_linalg_contexts()	
 
 		A = backend.make_cmatrix()
 		backend.dense.matrix_calloc(A, 10,  10, ok_enums.CblasRowMajor)
@@ -63,6 +65,7 @@ def test_vector_methods(errors, n=3,VERBOSE_TEST=True,
 		from optkit.api import backend, set_backend
 		if not backend.__LIBGUARD_ON__:
 			set_backend(GPU=gpu, double=floatbits == 64)
+		backend.make_linalg_contexts()	
 
 		from optkit.api import linsys, Vector, Matrix
 		TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
@@ -224,6 +227,7 @@ def test_matrix_methods(errors, m=4, n=3, VERBOSE_TEST=True,
 		from optkit.api import backend, set_backend
 		if not backend.__LIBGUARD_ON__:
 			set_backend(GPU=gpu, double=floatbits == 64)
+		backend.make_linalg_contexts()	
 
 		from optkit.api import linsys, Vector, Matrix
 		TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
@@ -506,6 +510,7 @@ def test_blas_methods(errors, m=4, n=3, A_in=None, VERBOSE_TEST=True,
 		from optkit.api import backend, set_backend
 		if not backend.__LIBGUARD_ON__:
 			set_backend(GPU=gpu, double=floatbits == 64)
+		backend.make_linalg_contexts()	
 
 		from optkit.api import linsys, Vector, Matrix
 		TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
@@ -732,6 +737,7 @@ def test_linalg_methods(errors, n=10, A_in=None, VERBOSE_TEST=True,
 		from optkit.api import backend, set_backend
 		if not backend.__LIBGUARD_ON__:
 			set_backend(GPU=gpu, double=floatbits == 64)
+		backend.make_linalg_contexts()	
 
 		from optkit.api import linsys, Vector, Matrix
 		TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)

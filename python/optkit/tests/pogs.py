@@ -12,6 +12,7 @@ def warmstart_test(errors, m=300, n=200, A_in=None, VERBOSE_TEST=True,
 		from optkit.api import backend, set_backend
 		if not backend.__LIBGUARD_ON__:
 			set_backend(GPU=gpu, double=floatbits == 64)
+		backend.make_linalg_contexts()	
 
 		from optkit.api import Matrix, FunctionVector, pogs
 		TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)

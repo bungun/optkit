@@ -164,4 +164,9 @@ class DenseLinsysLibs(object):
 			lib.linalg_cholesky_decomp.restype=None
 			lib.linalg_cholesky_svx.restype=None
 
+			# DEVICE
+			# ------
+			lib.ok_device_reset.argtypes=[]
+			lib.ok_device_reset.restype=None
+
 			return lib

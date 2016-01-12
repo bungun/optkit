@@ -649,6 +649,7 @@ pogs_solve(pogs_solver * solver, FunctionVector * f, FunctionVector * g,
 void 
 pogs_finish(pogs_solver * solver){
 	POGS(pogs_solver_free)(solver);
+	ok_device_reset();
 }
 
 void

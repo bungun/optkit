@@ -18,6 +18,7 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		from optkit.api import backend, set_backend
 		if not backend.__LIBGUARD_ON__:
 			set_backend(GPU=gpu, double=floatbits == 64)
+		backend.make_linalg_contexts()	
 
 		from optkit.api import Vector, Matrix, FunctionVector
 		from optkit.api import CPogsTypes

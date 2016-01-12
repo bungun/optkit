@@ -1099,11 +1099,15 @@ linalg_cholesky_svx(void * linalg_handle,
 
   blas_trsv(linalg_handle, 
                   CblasLower, CblasTrans, CblasNonUnit, L, x);
-
-
-
 }
 
+
+/* device reset */
+int ok_device_reset(){
+  cudaDeviceReset();
+  CUDA_CHECK_ERR;
+  return 0;
+}
 
 
 #ifdef __cplusplus

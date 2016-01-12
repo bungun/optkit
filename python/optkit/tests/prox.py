@@ -10,7 +10,8 @@ def test_prox(errors, *args, **kwargs):
 	try:
 		from optkit.api import backend, set_backend
 		if not backend.__LIBGUARD_ON__:
-			set_backend(GPU=gpu, double=floatbits == 64)
+			set_backend(GPU='gpu' in args, double='float' not in args)
+		backend.make_linalg_contexts()	
 
 		from optkit.api import prox, linsys, Vector, FunctionVector
 		TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)	

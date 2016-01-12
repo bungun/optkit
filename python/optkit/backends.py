@@ -30,8 +30,8 @@ class OKBackend(object):
 		self.prox = None
 		self.pogs = None
 
-		self.dense_blas_handle = c_void_p()
-		self.sparse_blas_handle = None
+		self.dense_blas_handle = c_void_p(0)
+		self.sparse_blas_handle = c_void_p(0)
 
 		self.__LIBGUARD_ON__ = False
 		self.__set_lib()
@@ -41,6 +41,21 @@ class OKBackend(object):
 
 	def reset(self):
 		self.__LIBGUARD_ON__ = False
+
+	def make_linalg_contexts(self):
+		self.destroy_linalg_contexts()
+		if self.dense is not None: self.dense.blas_make_handle(byref(self.dense_blas_handle))
+		if self.sparse is not None: self.sparse.blas_make_handle(byref(self.sparse_blas_handle))
+
+	def destroy_linalg_contexts(self):
+		if self.dense is not None: 
+			if self.dense_blas_handle.value != 0:
+				self.dense.blas_destroy_handle(self.dense_blas_handle)
+		if self.sparse is not None: 
+			if self.sparse_blas_handle.value != 0:
+				self.sparse.blas_destroy_handle(self.sparse_blas_handle)
+		self.dense.ok_device_reset()
+
 
 	def __set_lib(self, device=None, precision=None, order=None):
 		devices = ['gpu', 'cpu'] if device == 'gpu' else ['cpu', 'gpu']
@@ -105,19 +120,13 @@ class OKBackend(object):
 		device = 'gpu' if GPU else 'cpu'
 		order = 'row' if force_rowmajor else 'col' if force_colmajor else '' 
 
-		if self.dense is not None: self.dense.blas_destroy_handle(self.dense_blas_handle)
-		if self.sparse is not None: self.sparse.blas_destroy_handle(self.sparse_blas_handle)
-
+		self.destroy_linalg_contexts()
 		self.__set_lib(device=device, precision=precision, order=order)
 		
-		if self.dense is not None: self.dense.blas_make_handle(byref(self.dense_blas_handle))
-		if self.sparse is not None: self.sparse.blas_make_handle(byref(self.sparse_blas_handle))
-
 		if checktypes is not None: self.typecheck = checktypes
 		if checkdims is not None: self.dimcheck = checkdims
 		if checkdevices is not None: self.devicecheck = checkdevices
 
 
 	def __del__(self):
-		if self.dense is not None: self.dense.blas_destroy_handle(self.dense_blas_handle)
-		if self.sparse is not None: self.sparse.blas_destroy_handle(self.sparse_blas_handle)
+		self.destroy_linalg_contexts()
