@@ -45,7 +45,7 @@ class HighLevelPogsTypes(object):
 
 			@property			
 			def arrays(self):
-				l = self.tolist()
+				l = self.list
 				h = zeros(self.size, int)
 				a = zeros(self.size)
 				b = zeros(self.size)

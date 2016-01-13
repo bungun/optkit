@@ -1,4 +1,4 @@
- #include "optkit_prox.h"
+ #include "optkit_prox.hpp"
 
 #ifdef __cplusplus
 extern "C" {

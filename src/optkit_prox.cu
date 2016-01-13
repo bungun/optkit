@@ -1,8 +1,6 @@
-#include "optkit_prox.h"
+#include "optkit_prox.hpp"
 #include "optkit_defs_gpu.h"
-#include "optkit_thrust.h"
-
-
+#include "optkit_thrust.hpp"
 
 /* CUDA helper kernels */
 __global__ void 

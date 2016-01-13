@@ -12,3 +12,6 @@ test
 *.dll
 
 *.pyc
+
+src/*graph*
+src/*cluster*

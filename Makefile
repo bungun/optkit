@@ -209,11 +209,11 @@ gpu_sparse: $(SRC)optkit_sparse.cu $(SRC)optkit_sparse.h
 	mkdir -p $(OUT)
 	$(CUXX) $(CUXXFLAGS) $< -c -o $(SPARSESTATIC)
 
-cpu_prox: $(SRC)optkit_prox.cpp $(SRC)optkit_prox.h
+cpu_prox: $(SRC)optkit_prox.cpp $(SRC)optkit_prox.hpp
 	mkdir -p $(OUT)
 	g++ $(CXXFLAGS) $< -c -o $(PROXSTATIC)
 
-gpu_prox: $(SRC)optkit_prox.cu $(SRC)optkit_prox.h
+gpu_prox: $(SRC)optkit_prox.cu $(SRC)optkit_prox.hpp
 	mkdir -p $(OUT)
 	$(CUXX) $(CUXXFLAGS) $< -c -o $(PROXSTATIC)
 

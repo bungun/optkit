@@ -111,7 +111,7 @@ void linalg_cholesky_svx(void * linalg_handle, const matrix * L,
 
 
 /* device reset */
-int ok_device_reset();
+int ok_device_reset(void);
 
 #ifdef __cplusplus
 }
