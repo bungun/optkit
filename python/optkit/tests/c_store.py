@@ -139,7 +139,7 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		settings.c.resume = 1
 		lib.pogs_solve(solver, f.c, g.c, settings.c, info.c, output.c)
 		PRINT("SOLVER ITERATIONS:", info.c.k)
-		assert info.c.k <= k_orig
+		assert info.c.k <= k_orig or not info.c.converged
 		lib.pogs_finish(solver, int(backend.device_reset_allowed))
 
 		PPRINT("TEST PYTHON BINDINGS:")
@@ -176,13 +176,16 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		PRINT("third solver: {}".format(s3.info.c.obj))
 
 		FAC = 30 if backend.lowtypes.FLOAT_CAST == float32 else 10
-		assert s3.info.c.k <= s2.info.c.k
+		assert s3.info.c.k <= s2.info.c.k or not s3.info.c.converged
 		assert abs(s2.info.c.obj - s.info.c.obj) <= \
 			max(FAC * s.settings.c.reltol,
-				FAC * s.settings.c.reltol * abs(s.info.c.obj))
+				FAC * s.settings.c.reltol * abs(s.info.c.obj)) or \
+			not s2.info.c.converged or not s.info.c.converged
 		assert abs(s3.info.c.obj - s.info.c.obj) <= \
 			max(FAC * s.settings.c.reltol,
-				FAC * s.settings.c.reltol * abs(s.info.c.obj))
+				FAC * s.settings.c.reltol * abs(s.info.c.obj)) or \
+			not s3.info.c.converged or not s.info.c.converged
+
 
 		return True
 

@@ -402,7 +402,7 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		s = Solver(A)
 		s.solve(f, g)
 		assert abs(s.info.c.obj - info.c.obj) < 10 * s.settings.c.reltol or \
-			s.info.c.converged == info.c.converged
+			not s.info.c.converged or not info.c.converged
 
 		PPRINT("COMPLETE",'/')
 
