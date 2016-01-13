@@ -370,12 +370,18 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 				output.nu, eps=TEST_EPS)
 
 
-
 		# ------------------- public api tests ----------------------- #
 		PPRINT("POGS PUBLIC API SOLVE",'+')
 
+		# solve
 		lib.pogs_solve(solver, f.c, g.c, settings.c, info.c, output.c)
+
+		# destroy blas handles now, since pogs_finish will reset device
+		backend.destroy_linalg_contexts(device_reset=False)
+
+		# teardown solver
 		lib.pogs_finish(solver)
+
 
 		print info
 		# print output
