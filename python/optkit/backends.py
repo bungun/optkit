@@ -35,6 +35,7 @@ class OKBackend(object):
 
 		self.__LIBGUARD_ON__ = False
 		self.__HANDLES_MADE__ = False
+		self.__CSOLVER_COUNT__ = 0
 		self.__set_lib()
 
 		if self.dense is not None: self.dense.blas_make_handle(byref(self.dense_blas_handle))
@@ -50,15 +51,25 @@ class OKBackend(object):
 		if self.sparse is not None: self.sparse.blas_make_handle(byref(self.sparse_blas_handle))
 		self.__HANDLES_MADE__ = True
 
-	def destroy_linalg_contexts(self, device_reset=True):
+	def destroy_linalg_contexts(self):
 		if self.__HANDLES_MADE__:
 			if self.dense is not None: 
 				self.dense.blas_destroy_handle(self.dense_blas_handle)
 			if self.sparse is not None: 
 					self.sparse.blas_destroy_handle(self.sparse_blas_handle)
 			self.__HANDLES_MADE__ = False
-		if device_reset:
+		if self.device_reset_allowed:
 			self.dense.ok_device_reset()
+
+	@property	
+	def device_reset_allowed(self):
+		return self.__CSOLVER_COUNT__ == 0 and not self.__HANDLES_MADE__
+
+	def increment_csolver_count(self):
+		self.__CSOLVER_COUNT__ += 1
+
+	def decrement_csolver_count(self):
+		self.__CSOLVER_COUNT__ -= 1
 
 
 	def __set_lib(self, device=None, precision=None, order=None):

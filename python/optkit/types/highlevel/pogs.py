@@ -257,7 +257,7 @@ class HighLevelPogsTypes(object):
 				self.output = SolverOutput(m, n)
 				self.settings.update(**options)
 				self.first_run = True
-
+				backend.increment_csolver_count()
 
 
 			def solve(self, f, g, **options):
@@ -449,8 +449,10 @@ class HighLevelPogsTypes(object):
 						zprev=zprev, rho=rho[0])
 
 			def __del__(self):
+				backend.decrement_csolver_count() 
 				if self.c_solver is not None:
-					pogslib.pogs_finish(self.c_solver)
+					pogslib.pogs_finish(self.c_solver,
+						int(backend.device_reset_allowed))
 
 		self.Solver = Solver
 

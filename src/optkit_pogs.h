@@ -121,7 +121,7 @@ pogs_solver * pogs_init(ok_float * A, size_t m, size_t n,
 	CBLAS_ORDER_t ord, Equilibration_t equil);
 void pogs_solve(pogs_solver * solver, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output);
-void pogs_finish(pogs_solver * solver);
+void pogs_finish(pogs_solver * solver, int reset);
 void pogs(ok_float * A, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output,
 	CBLAS_ORDER_t ord, Equilibration_t equil);

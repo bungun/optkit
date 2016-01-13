@@ -116,7 +116,7 @@ class PogsLibs(object):
 				c_size_t, c_size_t, c_uint, c_uint]
 			lib.pogs_solve.argtypes = [c_void_p, function_vector_p, function_vector_p, 
 				pogs_settings_p, pogs_info_p, pogs_output_p]
-			lib.pogs_finish.argtypes = [c_void_p]
+			lib.pogs_finish.argtypes = [c_void_p, c_int]
 			lib.pogs.argtypes = [ok_float_p, function_vector_p, function_vector_p,
 				pogs_settings_p, pogs_info_p, pogs_output_p, c_uint, c_uint]
 			lib.pogs_load_solver.argtypes = [ok_float_p, 

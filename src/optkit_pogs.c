@@ -647,9 +647,9 @@ pogs_solve(pogs_solver * solver, FunctionVector * f, FunctionVector * g,
 }
 
 void 
-pogs_finish(pogs_solver * solver){
+pogs_finish(pogs_solver * solver, int reset){
 	POGS(pogs_solver_free)(solver);
-	ok_device_reset();
+	if (reset) ok_device_reset();
 }
 
 void
@@ -659,7 +659,7 @@ pogs(ok_float * A, FunctionVector * f, FunctionVector * g,
 	pogs_solver * solver = OK_NULL;
 	solver = pogs_init(A, f->size, g->size, ord, equil);
 	pogs_solve(solver, f, g, settings, info, output);
-	pogs_finish(solver);
+	pogs_finish(solver, 1);
 }
 
 

@@ -376,11 +376,9 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		# solve
 		lib.pogs_solve(solver, f.c, g.c, settings.c, info.c, output.c)
 
-		# destroy blas handles now, since pogs_finish will reset device
-		backend.destroy_linalg_contexts(device_reset=False)
-
-		# teardown solver
-		lib.pogs_finish(solver)
+		# teardown solver, don't reset device (blas_handles still exist
+		# attached to backend)
+		lib.pogs_finish(solver, 0)
 
 
 		print info
