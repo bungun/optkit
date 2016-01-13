@@ -31,9 +31,10 @@ class OKBackend(object):
 		self.pogs = None
 
 		self.dense_blas_handle = c_void_p(0)
-		self.sparse_blas_handle = c_void_p(0)
+		self.sparse_blas_handle = None
 
 		self.__LIBGUARD_ON__ = False
+		self.__HANDLES_MADE__ = False
 		self.__set_lib()
 
 		if self.dense is not None: self.dense.blas_make_handle(byref(self.dense_blas_handle))
@@ -46,14 +47,14 @@ class OKBackend(object):
 		self.destroy_linalg_contexts()
 		if self.dense is not None: self.dense.blas_make_handle(byref(self.dense_blas_handle))
 		if self.sparse is not None: self.sparse.blas_make_handle(byref(self.sparse_blas_handle))
+		self.__HANDLES_MADE__ = True
 
 	def destroy_linalg_contexts(self):
-		if self.dense is not None: 
-			if self.dense_blas_handle.value != 0:
+		if self.__HANDLES_MADE__:
+			if self.dense is not None: 
 				self.dense.blas_destroy_handle(self.dense_blas_handle)
-		if self.sparse is not None: 
-			if self.sparse_blas_handle.value != 0:
-				self.sparse.blas_destroy_handle(self.sparse_blas_handle)
+			if self.sparse is not None: 
+					self.sparse.blas_destroy_handle(self.sparse_blas_handle)
 		self.dense.ok_device_reset()
 
 

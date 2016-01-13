@@ -32,6 +32,7 @@ C implementations
 """
 CPogsTypes = None
 PogsSolver = None
+PogsObjective = None
 
 """
 Backend switching
@@ -66,6 +67,7 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 	global DirectProjector
 	global CPogsTypes
 	global PogsSolver
+	global PogsObjective
 
 	# change backend
 	backend_name=backend.change(GPU=GPU, double=double, 
@@ -149,8 +151,9 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 
 
 	## C implemenetations
-	CPogsTypes = HighLevelPogsTypes(backend, FunctionVector)
+	CPogsTypes = HighLevelPogsTypes(backend)
 	PogsSolver = CPogsTypes.Solver
+	PogsObjective = CPogsTypes.Objective
 
 	print "optkit backend set to {}".format(backend.libname)
 

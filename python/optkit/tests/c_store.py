@@ -20,7 +20,7 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 			set_backend(GPU=gpu, double=floatbits == 64)
 		backend.make_linalg_contexts()	
 
-		from optkit.api import Vector, Matrix, FunctionVector
+		from optkit.api import Vector, Matrix
 		from optkit.api import CPogsTypes
 		TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
 
@@ -37,6 +37,7 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		SolverInfo = CPogsTypes.SolverInfo
 		SolverOutput = CPogsTypes.SolverOutput
 		Solver = CPogsTypes.Solver
+		Objective = CPogsTypes.Objective
 
 		PRINT = println if VERBOSE_TEST else printvoid
 		PPRINT = pretty_print if VERBOSE_TEST else printvoid
@@ -70,8 +71,8 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		layout = ok_enums.CblasRowMajor if A.flags.c_contiguous \
 			else ok_enums.CblasColMajor
 
-		f = FunctionVector(m, b=1, h='Abs')
-		g = FunctionVector(n, h='IndGe0')
+		f = Objective(m, b=1, h='Abs')
+		g = Objective(n, h='IndGe0')
 
 
 		solver = lib.pogs_init(ndarray_pointer(A), m, n, layout,

@@ -12,6 +12,10 @@
 - TODO: option to suppress [y, mu, nu] from solver output
 - TODO: add unit test for vector_pow, _recip, _sqrt
 
+###vX
+- separated FunctionVector (python implementation of POGS) from Objective (python wrapper for C implementation og POGS)
+- cudaDeviceReset() called---if working on GPU---when PogsHighLevelTypes.Solver objects deleted/go out of scope
+
 ###v0.0.2 (current)
 - C implementations of equilibration, projection and POGS
 
