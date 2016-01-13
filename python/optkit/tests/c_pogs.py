@@ -375,10 +375,7 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 
 		# solve
 		lib.pogs_solve(solver, f.c, g.c, settings.c, info.c, output.c)
-
-		# teardown solver, don't reset device (blas_handles still exist
-		# attached to backend)
-		lib.pogs_finish(solver, 0)
+		lib.pogs_finish(solver, int(backend.device_reset_allowed))
 
 
 		print info

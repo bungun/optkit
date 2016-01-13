@@ -125,7 +125,7 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 
 
 		PRINT("(DESTROY SOLVER)")
-		lib.pogs_finish(solver)
+		lib.pogs_finish(solver, int(backend.device_reset_allowed))
 
 		PPRINT("LOAD EXTRACTED SOLVER") 
 
@@ -140,7 +140,7 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		lib.pogs_solve(solver, f.c, g.c, settings.c, info.c, output.c)
 		PRINT("SOLVER ITERATIONS:", info.c.k)
 		assert info.c.k <= k_orig
-		lib.pogs_finish(solver)
+		lib.pogs_finish(solver, int(backend.device_reset_allowed))
 
 		PPRINT("TEST PYTHON BINDINGS:")
 		PRINT("MAKE SOLVER")

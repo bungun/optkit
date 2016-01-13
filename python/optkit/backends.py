@@ -43,7 +43,7 @@ class OKBackend(object):
 
 	def reset(self):
 		self.__LIBGUARD_ON__ = False
-		destroy_linalg_contexts()
+		self.destroy_linalg_contexts()
 
 	def make_linalg_contexts(self):
 		self.destroy_linalg_contexts()
