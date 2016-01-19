@@ -73,6 +73,7 @@ class PogsLibs(object):
 							('reltol', ok_float),
 							('maxiter', c_uint),
 							('verbose', c_uint),
+							('suppress', c_uint),
 							('adaptiverho', c_int),
 							('gapstop', c_int),
 							('warmstart', c_int),

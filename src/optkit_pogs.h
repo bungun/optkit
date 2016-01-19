@@ -35,6 +35,7 @@ const int kADAPTIVE = 1;
 const int kGAPSTOP = 0;
 const int kWARMSTART = 0;
 const uint kVERBOSE = 2u;
+const uint kSUPPRESS = 0u;
 const int kRESUME = 0;
 const ok_float kRHOMAX = (ok_float) 1e4;
 const ok_float kRHOMIN = (ok_float) 1e-4;
@@ -73,7 +74,7 @@ typedef struct POGSObjectives {
 
 typedef struct POGSSettings {
 	ok_float alpha, rho, abstol, reltol;
-	uint maxiter, verbose;
+	uint maxiter, verbose, suppress;
 	int adaptiverho, gapstop, warmstart, resume;
 	ok_float * x0, * nu0; 
 } pogs_settings;

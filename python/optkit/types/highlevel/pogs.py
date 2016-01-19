@@ -173,6 +173,7 @@ class HighLevelPogsTypes(object):
 				if 'reltol' in options: self.c.reltol = options['reltol']
 				if 'maxiter' in options: self.c.maxiter = options['maxiter']
 				if 'verbose' in options: self.c.verbose = options['verbose']
+				if 'suppress' in options: self.c.suppress = options['suppress']
 				if 'adaptiverho' in options: self.c.adaptiverho = options['adaptiverho']
 				if 'gapstop' in options: self.c.gapstop = options['gapstop']
 				if 'resume' in options: self.c.resume = options['resume']
@@ -187,6 +188,7 @@ class HighLevelPogsTypes(object):
 					"reltol: {}\n".format(self.c.reltol) +
 					"maxiter: {}\n".format(self.c.maxiter) +
 					"verbose: {}\n".format(self.c.verbose) +
+					"suppress: {}\n".format(self.c.suppress) +
 					"adaptiverho: {}\n".format(self.c.adaptiverho) +
 					"gapstop: {}\n".format(self.c.gapstop) +
 					"warmstart: {}\n".format(self.c.warmstart) +
@@ -199,6 +201,34 @@ class HighLevelPogsTypes(object):
 		class SolverInfo(object):
 			def __init__(self):
 				self.c = PogsInfo(0, 0, 0, 0, 0, 0, 0)
+
+			@property 
+			def iters(self):
+				return self.c.k
+
+			@property 
+			def solve_time(self):
+				return self.c.solve_time
+
+			@property 
+			def setup_time(self):
+				return self.c.setup_time
+
+			@property
+			def error(self):
+			    return self.c.error
+			
+			@property
+			def converged(self):
+			    return self.c.converged
+
+			@property
+			def objval(self):
+			    return self.c.obj
+
+			@property
+			def rho(self):
+				return self.c.rho
 
 			def __str__(self):
 				return str(
