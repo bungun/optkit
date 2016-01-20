@@ -102,9 +102,7 @@ class PogsLibs(object):
 				_fields_ = [('x', ok_float_p),
 							('y', ok_float_p),
 							('mu', ok_float_p),
-							('nu', ok_float_p),
-							('mu1', ok_float_p),
-							('nu1', ok_float_p)]		
+							('nu', ok_float_p)]		
 
 			pogs_output_p = POINTER(PogsOutput)			
 			lib.pogs_output = PogsOutput

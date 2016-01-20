@@ -471,14 +471,13 @@ POGS(copy_output)(pogs_solver * solver, pogs_output * output){
 	uint suppress = solver->settings->suppress;
 
 
-	/* -------------------- */
-	/* suppression levels: 	*/
-	/* 0: all output 		*/
-	/* 1: no mu 	 		*/
-	/* 2: no y 				*/
-	/* 3: no nu^k 			*/
-	/* 4: no nu^k+1/2 		*/
-	/* -------------------- */
+	/* ------------------------------------------------ */
+	/* suppression levels: 								*/
+	/* 0: suppress: none, 		return: (x, y, nu, mu)	*/
+	/* 1: suppress: mu,  		return: (x, y, nu)		*/
+	/* 2: suppress: (y, mu)		return: (x, nu)			*/
+	/* 3: suppress: (y, nu, mu)	return: (x)				*/
+	/* ------------------------------------------------ */
 
 
 	/* ------------- */
@@ -495,7 +494,7 @@ POGS(copy_output)(pogs_solver * solver, pogs_output * output){
 	}
 
 
-	if (suppress < 4){
+	if (suppress < 3){
 		/* ---------------------- */
 		/* mu = -rho * xt^(k+1/2) */
 		/* nu = -rho * yt^(k+1/2) */
@@ -509,22 +508,6 @@ POGS(copy_output)(pogs_solver * solver, pogs_output * output){
 			vector_div(z->temp->x, e);
 			vector_memcpy_av(output->mu, z->temp->x, 1);
 		}
-
-		if (suppress < 3){
-			/* ----------------- */
-			/* mu1 = -rho * xt^k */
-			/* nu1 = -rho * yt^k */
-			/* ----------------- */
-			vector_memcpy_vv(z->temp->vec, z->dual->vec);
-			vector_scale(z->temp->vec, -solver->rho);
-			vector_div(z->temp->x, e);
-			vector_mul(z->temp->y, d);
-		}
-
-		if (suppress < 1){
-			vector_memcpy_av(output->mu1, z->temp->x, 1);
-			vector_memcpy_av(output->nu1, z->temp->y, 1);
-		}	
 	}
 }
 
