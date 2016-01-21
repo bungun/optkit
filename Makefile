@@ -2,16 +2,17 @@
 OPTKITROOT=./
 OUT=$(OPTKITROOT)build/
 SRC=$(OPTKITROOT)src/
+INCLUDE=$(OPTKITROOT)include/
 PREFIX_OUT=$(OUT)optkit_
 
 # C++ Flags
 CXX=gcc
-CXXFLAGS= -g -O3 -fPIC -I. -I./include -Wall -Wconversion
+CXXFLAGS= -g -O3 -fPIC -I. -I./include -I./include/external -Wall -Wconversion
 LDFLAGS_=-lstdc++ -lm
 
 # CUDA Flags
 CUXX=nvcc
-CUXXFLAGS=-arch=sm_50 -Xcompiler -fPIC -I. -I./include 
+CUXXFLAGS=-arch=sm_50 -Xcompiler -fPIC -I. -I./include -I./include/external
 CULDFLAGS_=-lstdc++ -lm
 
 # Check system args
@@ -31,7 +32,7 @@ CXXFLAGS += -fopenmp
 endif
 endif
 
-CULDFLAGS_ += -lcudart -lcublas -lcusparse
+CULDFLAGS_ += -lcudart -lcublas
 
 
 # make options
@@ -89,11 +90,14 @@ PRECISION=64
 endif
 
 ifneq ($(GPU), 0)
+ifneq ($(SPARSE), 0)
+LDFLAGS_ += -lcusparse
+endif
 LDFLAGS=$(CULDFLAGS_)
 DEVICETAG=gpu
 else
 ifneq ($(SPARSE), 0)
-LDFLAGS_ += -lSuiteSparse
+LDFLAGS_ += -lcsparse
 endif
 LDFLAGS=$(LDFLAGS_)
 DEVICETAG=cpu
@@ -129,7 +133,7 @@ EQUIL_STATIC_DEPS=$(DENSESTATIC) $(EQUILSTATIC)
 ifneq ($(SPARSE), 0)
 PROJ_STATIC_DEPS += $(SPARSESTATIC)
 EQUIL_STATIC_DEPS += $(SPARSESTATIC)
-POGS_STATIC_DEPS+= $(SPARSESTATIC) 
+POGS_STATIC_DEPS += $(SPARSESTATIC) 
 endif
 
 .PHONY: default, all, libs, libok, libok_dense, libok_sparse, libprox
@@ -193,39 +197,39 @@ libprox: $(PROXTARG)
 	mkdir -p $(OUT)
 	$(CXX) $(CXXFLAGS) -shared -o $(OUT)$@_$(DEVICETAG)$(PRECISION).$(SHARED) $(PROXSTATIC) $(LDFLAGS)
 
-cpu_dense: $(SRC)optkit_dense.c $(SRC)optkit_dense.h
+cpu_dense: $(SRC)optkit_dense.c $(INCLUDE)optkit_dense.h
 	mkdir -p $(OUT)
 	$(CXX) $(CXXFLAGS) $< -c -o $(DENSESTATIC)	
 
-gpu_dense: $(SRC)optkit_dense.cu $(SRC)optkit_dense.h
+gpu_dense: $(SRC)optkit_dense.cu $(INCLUDE)optkit_dense.h
 	mkdir -p $(OUT)
 	$(CUXX) $(CUXXFLAGS) $< -c -o $(DENSESTATIC)
 
-cpu_sparse: $(SRC)optkit_sparse.c $(SRC)optkit_sparse.h
+cpu_sparse: $(SRC)optkit_sparse.c $(INCLUDE)optkit_sparse.h
 	mkdir -p $(OUT)
 	$(CXX) $(CXXFLAGS) $< -c -o $(SPARSESTATIC)	
 
-gpu_sparse: $(SRC)optkit_sparse.cu $(SRC)optkit_sparse.h
+gpu_sparse: $(SRC)optkit_sparse.cu $(INCLUDE)optkit_sparse.h
 	mkdir -p $(OUT)
 	$(CUXX) $(CUXXFLAGS) $< -c -o $(SPARSESTATIC)
 
-cpu_prox: $(SRC)optkit_prox.cpp $(SRC)optkit_prox.hpp
+cpu_prox: $(SRC)optkit_prox.cpp $(INCLUDE)optkit_prox.hpp
 	mkdir -p $(OUT)
 	g++ $(CXXFLAGS) $< -c -o $(PROXSTATIC)
 
-gpu_prox: $(SRC)optkit_prox.cu $(SRC)optkit_prox.hpp
+gpu_prox: $(SRC)optkit_prox.cu $(INCLUDE)optkit_prox.hpp
 	mkdir -p $(OUT)
 	$(CUXX) $(CUXXFLAGS) $< -c -o $(PROXSTATIC)
 
-pogs: $(SRC)optkit_pogs.c $(SRC)optkit_pogs.h
+pogs: $(SRC)optkit_pogs.c $(INCLUDE)optkit_pogs.h
 	mkdir -p $(OUT) 
 	$(CXX) $(CXXFLAGS) $< -c -o $(POGSSTATIC)
 	
-equil: $(SRC)optkit_equilibration.c $(SRC)optkit_equilibration.h
+equil: $(SRC)optkit_equilibration.c $(INCLUDE)optkit_equilibration.h
 	mkdir -p $(OUT)
 	$(CXX) $(CXXFLAGS) $< -c -o $(EQUILSTATIC)
 
-projector: $(SRC)optkit_projector.c $(SRC)optkit_projector.h
+projector: $(SRC)optkit_projector.c $(INCLUDE)optkit_projector.h
 	mkdir -p $(OUT)
 	$(CXX) $(CXXFLAGS) $< -c -o $(PROJSTATIC)
 
