@@ -525,36 +525,36 @@ blas_dot_inplace(void * linalg_handle, const vector * x, const vector * y,
 
 /* BLAS LEVEL 2 */
 
-void blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t TransA, 
+void blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t transA, 
                 ok_float alpha, const matrix *A, 
                const vector *x, ok_float beta, vector *y){
 
   #ifdef OK_DEBUG
   if ( !__blas_check_handle(linalg_handle) ) return;
   #endif
-  CBLAS(gemv)(A->rowmajor, TransA, (int) A->size1, (int) A->size2, 
+  CBLAS(gemv)(A->rowmajor, transA, (int) A->size1, (int) A->size2, 
               alpha, A->data, (int) A->ld, x->data, (int) x->stride, 
               beta, y->data, (int) y->stride);
 }
 
 void blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo, 
-                 CBLAS_TRANSPOSE_t TransA, CBLAS_DIAG_t Diag, 
+                 CBLAS_TRANSPOSE_t transA, CBLAS_DIAG_t Diag, 
                  const matrix *A, vector *x){
 
   #ifdef OK_DEBUG
   if ( !__blas_check_handle(linalg_handle) ) return;
   #endif
-  CBLAS(trsv)(A->rowmajor, Uplo, TransA, Diag, (int) A->size1, 
+  CBLAS(trsv)(A->rowmajor, Uplo, transA, Diag, (int) A->size1, 
               A->data, (int) A->ld, x->data, (int) x->stride); 
 }
 
 /* BLAS LEVEL 3 */
 void blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo, 
-                 CBLAS_TRANSPOSE_t Trans, ok_float alpha, 
+                 CBLAS_TRANSPOSE_t transA, ok_float alpha, 
                  const matrix * A, ok_float beta, matrix * C) {
 
 
-  const int k = (Trans == CblasNoTrans) ? (int) A->size2 : (int) A->size1;
+  const int k = (transA == CblasNoTrans) ? (int) A->size2 : (int) A->size1;
 
   #ifdef OK_DEBUG
   if ( !__blas_check_handle(linalg_handle) ) return;
@@ -562,18 +562,18 @@ void blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo,
   #ifndef OPTKIT_ORDER
   if ( __matrix_order_compat(A, C, "A", "C", "blas_syrk") )
   #endif
-    CBLAS(syrk)(A->rowmajor, Uplo, Trans, (int) C->size2 , k, alpha, 
+    CBLAS(syrk)(A->rowmajor, Uplo, transA, (int) C->size2 , k, alpha, 
                 A->data, (int) A->ld, beta, C->data, (int) C->ld);
   
 }
 
-void blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t TransA, 
-                 CBLAS_TRANSPOSE_t TransB, ok_float alpha, 
+void blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t transA, 
+                 CBLAS_TRANSPOSE_t transB, ok_float alpha, 
                  const matrix * A, const matrix * B, 
                  ok_float beta, matrix * C){
 
 
-  const int NA = (TransA == CblasNoTrans) ? (int) A->size2 : (int) A->size1; 
+  const int NA = (transA == CblasNoTrans) ? (int) A->size2 : (int) A->size1; 
 
   #ifdef OK_DEBUG
   if ( !__blas_check_handle(linalg_handle) ) return;
@@ -582,13 +582,13 @@ void blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t TransA,
   if ( __matrix_order_compat(A, B, "A", "B", "gemm") && 
         __matrix_order_compat(A, C, "A", "C", "blas_gemm") )
   #endif
-    CBLAS(gemm)(A->rowmajor, TransA, TransB, (int) C->size1, (int) C->size2, NA, alpha, 
+    CBLAS(gemm)(A->rowmajor, transA, transB, (int) C->size1, (int) C->size2, NA, alpha, 
                 A->data, (int) A->ld, B->data, (int) B->ld, beta, C->data, (int) C->ld);
 
 }
 
 void blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side, 
-                 CBLAS_UPLO_t Uplo, CBLAS_TRANSPOSE_t TransA,
+                 CBLAS_UPLO_t Uplo, CBLAS_TRANSPOSE_t transA,
                  CBLAS_DIAG_t Diag, ok_float alpha, 
                  const matrix *A, matrix *B) {
 
@@ -598,7 +598,7 @@ void blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side,
   #ifndef OPTKIT_ORDER
   if ( __matrix_order_compat(A, B, "A", "B", "blas_trsm") )
   #endif
-    CBLAS(trsm)(A->rowmajor, Side, Uplo, TransA, Diag,(int) B->size1, (int) B->size2, 
+    CBLAS(trsm)(A->rowmajor, Side, Uplo, transA, Diag,(int) B->size1, (int) B->size2, 
                 alpha, A->data,(int) A->ld, B->data, (int) B->ld);
 
 }
@@ -629,7 +629,7 @@ void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
 
       /* A22 -= L12*L12'*/
       matrix_submatrix(&a22, A, i + 1, i + 1, n - i - 1, n - i - 1);
-      blas_syrk(linalg_handle, CblasLower, CblasNoTrans, 
+      blas_syrk(linalg_handle, CblasLower, CblasNotransA, 
                   -kOne, &l21, kOne, &a22);      
     }
   }
@@ -665,13 +665,13 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A) {
     if (i + blk_dim < n) {
       /* L21 = A21 L21^-T */
       matrix_submatrix(&L21, A, i + n11, i, n - i - n11, n11);
-      blas_trsm(linalg_handle, CblasRight, CblasLower, CblasTrans, 
+      blas_trsm(linalg_handle, CblasRight, CblasLower, CblastransA, 
                   CblasNonUnit, kOne, &L11, &L21);
 
       /* A22 -= L21*L21^T */
       matrix_submatrix(&A22, A, i + blk_dim, i + blk_dim, 
                          n - i - blk_dim, n - i - blk_dim);
-      blas_syrk(linalg_handle, CblasLower, CblasNoTrans, 
+      blas_syrk(linalg_handle, CblasLower, CblasNotransA, 
                   (ok_float) -kOne, &L21, (ok_float) kOne, &A22);
     }
   }
@@ -681,8 +681,8 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A) {
 /* Cholesky solve */
 void linalg_cholesky_svx(void * linalg_handle, 
                            const matrix * L, vector * x) {
-  blas_trsv(linalg_handle, CblasLower, CblasNoTrans, CblasNonUnit, L, x);
-  blas_trsv(linalg_handle, CblasLower, CblasTrans, CblasNonUnit, L, x);
+  blas_trsv(linalg_handle, CblasLower, CblasNotransA, CblasNonUnit, L, x);
+  blas_trsv(linalg_handle, CblasLower, CblastransA, CblasNonUnit, L, x);
 }
 
 /* device reset */

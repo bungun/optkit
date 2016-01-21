@@ -13,5 +13,10 @@ test
 
 *.pyc
 
+python/*operator*
+include/*operator*
+include/*graph*
+include/*cluster*
+src/*operator*
 src/*graph*
 src/*cluster*

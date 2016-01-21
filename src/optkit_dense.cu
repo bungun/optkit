@@ -726,7 +726,7 @@ blas_dot_inplace(void * linalg_handle, const vector * x, const vector * y,
 /* BLAS LEVEL 2 */
 
 void 
-blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t Trans, 
+blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t transA, 
                 ok_float alpha, const matrix *A, 
                const vector *x, ok_float beta, vector *y){
 
@@ -735,18 +735,18 @@ blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t Trans,
 
   #ifndef OPTKIT_ORDER
   if (A->rowmajor==CblasColMajor)
-    tA = (Trans == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
+    tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
   else
-    tA = (Trans == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+    tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
 
   s1 = (A->rowmajor==CblasRowMajor) ? (int) A->size2 : (int) A->size1;
   s2 = (A->rowmajor==CblasRowMajor) ? (int) A->size1 : (int) A->size2;
   #elif OPTKIT_ORDER == 101
-  tA = (Trans == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+  tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
   s1 = (int) A->size2;
   s2 = (int) A->size1;
   #else
-  tA = (Trans == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
+  tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
   s1 = (int) A->size1;
   s2 = (int) A->size2;
   #endif
@@ -763,7 +763,7 @@ blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t Trans,
 
 void 
 blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo, 
-                 CBLAS_TRANSPOSE_t Trans, CBLAS_DIAG_t Diag, 
+                 CBLAS_TRANSPOSE_t transA, CBLAS_DIAG_t Diag, 
                  const matrix *A, vector *x){
 
   cublasOperation_t tA;
@@ -772,17 +772,17 @@ blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo,
 
   #ifndef OPTKIT_ORDER
   if (A->rowmajor==CblasColMajor){
-    tA = (Trans == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
+    tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
     ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
   } else {
-    tA = (Trans == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+    tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
     ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
   }
   #elif OPTKIT_ORDER == 101
-  tA = (Trans == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+  tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
   ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
   #else
-  tA = (Trans == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
+  tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
   ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
   #endif
 
@@ -801,27 +801,27 @@ blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo,
 
 void 
 blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo, 
-                 CBLAS_TRANSPOSE_t Trans, ok_float alpha, 
+                 CBLAS_TRANSPOSE_t transA, ok_float alpha, 
                  const matrix * A, ok_float beta, matrix * C) {
 
   cublasOperation_t tA;
   cublasFillMode_t ul;
 
-  const int k = (Trans == CblasNoTrans) ? (int) A->size2 : (int) A->size1;
+  const int k = (transA == CblasNoTrans) ? (int) A->size2 : (int) A->size1;
 
   #ifndef OPTKIT_ORDER
   if (A->rowmajor==CblasColMajor){
-    tA = (Trans == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
+    tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
     ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
   } else {
-    tA = (Trans == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+    tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
     ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
   }
   #elif OPTKIT_ORDER == 101
-  tA = (Trans == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+  tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
   ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
   #else
-  tA = (Trans == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
+  tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
   ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
   #endif
 
@@ -839,36 +839,36 @@ blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo,
 }
 
 void 
-blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t TransA, 
-                 CBLAS_TRANSPOSE_t TransB, ok_float alpha, 
+blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t transA, 
+                 CBLAS_TRANSPOSE_t transB, ok_float alpha, 
                  const matrix * A, const matrix * B, 
                  ok_float beta, matrix * C){
 
   cublasOperation_t tA, tB;
   int s1, s2;
 
-  const int k = (TransA == CblasNoTrans) ? (int) A->size2 : (int) A->size1; 
+  const int k = (transA == CblasNoTrans) ? (int) A->size2 : (int) A->size1; 
 
   #ifndef OPTKIT_ORDER
   s1 = (A->rowmajor==CblasRowMajor) ? (int) C->size2 : (int) C->size1;
   s2 = (A->rowmajor==CblasRowMajor) ? (int) C->size1 : (int) C->size2;
   if (A->rowmajor==CblasColMajor){
-    tA = TransA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
-    tB = TransB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+    tA = transA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+    tB = transB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
   } else {
-    tA = TransB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
-    tB = TransA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+    tA = transB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+    tB = transA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
   }
   #elif OPTKIT_ORDER == 101
   s1 = (int) C->size2;
   s2 = (int) C->size1;
-  tA = TransB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
-  tB = TransA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+  tA = transB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+  tB = transA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
   #else 
   s1 = (int) C->size1;
   s2 = (int) C->size2;
-  tA = TransA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
-  tB = TransB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+  tA = transA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+  tB = transB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
   #endif
 
   #ifndef OK_DEBUG
@@ -888,7 +888,7 @@ blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t TransA,
 
 void 
 blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side, 
-                 CBLAS_UPLO_t Uplo, CBLAS_TRANSPOSE_t Trans,
+                 CBLAS_UPLO_t Uplo, CBLAS_TRANSPOSE_t transA,
                  CBLAS_DIAG_t Diag, ok_float alpha, 
                  const matrix *A, matrix *B) {
 
