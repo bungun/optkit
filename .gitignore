@@ -14,13 +14,7 @@ test
 *.pyc
 
 python/*operator*
-include/*operator*
 include/*graph*
 include/*cluster*
-include/*sparse*
-include/*cg*
-src/*operator*
 src/*graph*
 src/*cluster*
-src/*sparse*
-src/*cg*
