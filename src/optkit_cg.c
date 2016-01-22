@@ -7,7 +7,7 @@
 /* (original license below)							*/
 
 
-/* original CGLS license from cgls.h and cgls.cuh in POGS:
+/* original license for cgls.h and cgls.cuh in POGS:
 ////////////////////////////////////////////////////////////////////////////////
 // Copyright (c) 2015, Christopher Fougner                                    //
 // All rights reserved.                                                       //
