@@ -1,3 +1,6 @@
+#ifndef OPTKIT_THRUST_H_GUARD
+#define OPTKIT_THRUST_H_GUARD
+
 #include "optkit_dense.h"
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
@@ -24,6 +27,7 @@ class strided_range {
   struct StrideF : public thrust::unary_function<diff_t, diff_t> {
     diff_t stride;
     StrideF(diff_t stride) : stride(stride) { }
+
     __host__ __device__
     diff_t operator()(const diff_t& i) const { 
       return stride * i;
@@ -209,3 +213,5 @@ __thrust_vector_pow(vector * v, const ok_float p){
   strided_range_t r = __make_strided_range(v);
   __transform_r(r, PowF(p));  
 }
+
+#endif /* OPTKIT_THRUST_H_GUARD */

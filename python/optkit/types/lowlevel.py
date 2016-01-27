@@ -1,24 +1,29 @@
 from ctypes import c_float, c_double, c_int, c_uint, c_size_t, \
 					POINTER, Structure, c_void_p
-from numpy import float32, float64, ndarray
+from numpy import int32, float32, float64, ndarray
+
 
 class LowLevelTypes(object):
-	def __init__(self, single_precision=False, order=''):
+	def __init__(self, single_precision=False, 
+		long_int=False, order=''):
 		self.ok_float = c_float if single_precision else c_double
+		self.ok_int = c_int
 		self.order = order
  		self.FLOAT_CAST = float32 if single_precision else float64
 
 		# pointers to C types
 		self.c_int_p = POINTER(c_int)
 		self.ok_float_p = POINTER(self.ok_float)
-
+		self.ok_int_p = POINTER(self.ok_int)
 
 		# low-level optkit types
 		# ----------------------
 
 		# vector struct
 		class ok_vector(Structure):
-			_fields_ = [('size', c_size_t),('stride', c_size_t),('data', self.ok_float_p)]
+			_fields_ = [('size', c_size_t),
+						('stride', c_size_t),
+						('data', self.ok_float_p)]
 
 		self.vector = ok_vector
 		# vector pointer
@@ -26,16 +31,31 @@ class LowLevelTypes(object):
 
 		# matrix struct
 		class ok_matrix(Structure):
-			_fields_ = [('size1',c_size_t),
-						('size2',c_size_t),
-						('ld',c_size_t),
-						('data',self.ok_float_p),
-						('rowmajor',c_uint)]
+			_fields_ = [('size1', c_size_t),
+						('size2', c_size_t),
+						('ld', c_size_t),
+						('data', self.ok_float_p),
+						('rowmajor', c_uint)]
 		self.matrix = ok_matrix
 
 		# matrix pointer
 		self.matrix_p = POINTER(self.matrix)
 
+		# sparse matrix struct
+		class ok_sparse_matrix(Structure):
+			_fields_ = [('size1', c_size_t),
+						('size2', c_size_t),
+						('nnz', c_size_t),
+						('ptrlen', c_size_t),
+						('val', self.ok_float_p),
+						('ind', self.ok_int_p),
+						('ptr', self.ok_int_p),
+						('rowmajor', c_uint)]
+
+		self.sparse_matrix = ok_sparse_matrix
+
+		# sparse matrix pointer
+		self.sparse_matrix_p = POINTER(self.sparse_matrix)
 
 		# function struct
 		class ok_function(Structure):
@@ -52,8 +72,8 @@ class LowLevelTypes(object):
 
 		# function vector struct
 		class ok_function_vector(Structure):
-			_fields_ = [('size',c_size_t),
-						('objectives',self.function_p)]
+			_fields_ = [('size', c_size_t),
+						('objectives', self.function_p)]
 		self.function_vector = ok_function_vector
 
 		# function vector pointer
@@ -66,20 +86,22 @@ class LowLevelTypes(object):
 					  "must be a NumPy array. \n "
 					  "Input type: {}".format(type(x)))
 				return None
-			if not (x.dtype == self.FLOAT_CAST or x.dtype == self.function):
-				raise ValueError("input to method `ndarray_pointer "
-					  "must be a NumPy array of type {} or {}. \n "
-					  "Input array type: {}".format(self.FLOAT_CAST,
-					  	self.function, x.dtype))
-				return None
-
 			if x.dtype == self.FLOAT_CAST:
 				return x.ctypes.data_as(self.ok_float_p)
-			else:
+			elif x.dtype == int32:
+				return x.ctypes.data_as(self.ok_int_p)
+			elif x.dtype == self.function:
 				return x.ctypes.data_as(self.function_p)
+			else:
+				raise ValueError("input to method `ndarray_pointer "
+					  "must be a NumPy array of type {}, {} or {}. \n "
+					  "Input array type: {}".format(self.FLOAT_CAST,
+					  	int32, self.function, x.dtype))
+				return None
 
 		self.ndarray_pointer = ndarray_pointer
 	
+
 
 
 # enums

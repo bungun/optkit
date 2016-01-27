@@ -32,7 +32,7 @@ CXXFLAGS += -fopenmp
 endif
 endif
 
-CULDFLAGS_ += -lcudart -lcublas
+CULDFLAGS_ += -lcudart -lcublas -lcusparse
 
 
 # make options
@@ -90,25 +90,16 @@ PRECISION=64
 endif
 
 ifneq ($(GPU), 0)
-ifneq ($(SPARSE), 0)
-LDFLAGS_ += -lcusparse
-endif
 LDFLAGS=$(CULDFLAGS_)
 DEVICETAG=gpu
 else
-ifneq ($(SPARSE), 0)
-LDFLAGS_ += -lcsparse
-endif
 LDFLAGS=$(LDFLAGS_)
 DEVICETAG=cpu
 endif
 
 DENSETARG=$(DEVICETAG)_dense
-ifneq ($(SPARSE), 0)
 SPARSETARG=$(DEVICETAG)_sparse
-else
-SPARSETARG=
-endif
+
 
 LINSYSLIBS=libok_dense
 POGSLIBS=libpogs_dense
@@ -130,6 +121,7 @@ POGS_STATIC_DEPS=$(POGSSTATIC) $(EQUILSTATIC) $(PROJSTATIC)
 POGS_STATIC_DEPS += $(DENSESTATIC) $(PROXSTATIC)
 PROJ_STATIC_DEPS=$(DENSESTATIC) $(PROJSTATIC)
 EQUIL_STATIC_DEPS=$(DENSESTATIC) $(EQUILSTATIC)
+SPARSE_STATIC_DEPS=$(DENSESTATIC)
 ifneq ($(SPARSE), 0)
 PROJ_STATIC_DEPS += $(SPARSESTATIC)
 EQUIL_STATIC_DEPS += $(SPARSESTATIC)
@@ -144,7 +136,7 @@ all: libs libequil libprojector libpogs
 
 libs: libok libprox
 
-libok: $(LINSYSLIBS)
+libok: libok_dense libok_sparse
 
 libpogs: $(POGSLIBS)
 
@@ -152,9 +144,7 @@ libpogs_dense: pogs equil projector $(LINSYSLIBS) libprox
 	mkdir -p $(OUT)	
 	$(CXX) $(CXXFLAGS) -shared -o \
 	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED)  \
-	$(POGS_STATIC_DEPS) $(LDFLAGS) \
-	# $(OUT)libok_dense_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
-	# $(OUT)libprox_$(DEVICETAG)$(PRECISION).$(SHARED) 
+	$(POGS_STATIC_DEPS) $(LDFLAGS) 
 
 
 libpogs_sparse: 
@@ -184,13 +174,14 @@ libequil: equil $(DENSETARG) $(SPARSETARG)
 libok_dense: $(DENSETARG)
 	mkdir -p $(OUT)
 	$(CXX) $(CXXFLAGS) -shared -o \
-	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) $(DENSESTATIC) $(LDFLAGS)
+	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
+	$(DENSESTATIC) $(LDFLAGS)
 
-libok_sparse:
-# libok_sparse: $(SPARSETARG)
-	# mkdir -p $(OUT)
-	# $(CXX) $(CXXFLAGS) -shared -o \
-	# $(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) $(SPARSESTATIC) $(LDFLAGS)
+libok_sparse: $(SPARSETARG)
+	mkdir -p $(OUT)
+	$(CXX) $(CXXFLAGS) -shared -o \
+	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
+	$(SPARSESTATIC) $(SPARSE_STATIC_DEPS ) $(LDFLAGS) 
 
 
 libprox: $(PROXTARG)

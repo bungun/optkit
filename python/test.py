@@ -31,6 +31,7 @@ def main(*args, **kwargs):
 		
 	else:
 		libkeys = backend.dense_lib_loader.libs
+		print libkeys
 
 		if libkeys['cpu64'] is not None:
 			backend.reset()
@@ -91,5 +92,9 @@ if __name__== "__main__":
 		pos = sys.argv.index('--file')
 		if len(sys.argv) > pos + 1:
 			kwargs['file']=str(sys.argv[pos+1])
+	if '--occupancy' in sys.argv:
+		pos = sys.argv.index('--occupancy')
+		if len(sys.argv) > pos + 1:
+			kwargs['occupancy']=max(0., min(1., float(sys.argv[pos+1])))
 
 	main(*args, **kwargs)

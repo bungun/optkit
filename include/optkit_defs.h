@@ -28,16 +28,7 @@ extern "C" {
 
 
 typedef unsigned int uint;
-
-#ifdef __CUDACC__
 typedef int ok_int;
-#else
-    #ifndef LONG
-    typedef int ok_int;
-    #else
-    typedef long ok_int;
-    #endif
-#endif
 
 /* C BLAS enums */
 typedef enum CBLAS_ORDER CBLAS_ORDER_t;

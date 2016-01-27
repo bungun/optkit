@@ -629,7 +629,7 @@ void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
 
       /* A22 -= L12*L12'*/
       matrix_submatrix(&a22, A, i + 1, i + 1, n - i - 1, n - i - 1);
-      blas_syrk(linalg_handle, CblasLower, CblasNotransA, 
+      blas_syrk(linalg_handle, CblasLower, CblasNoTrans, 
                   -kOne, &l21, kOne, &a22);      
     }
   }
@@ -665,13 +665,13 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A) {
     if (i + blk_dim < n) {
       /* L21 = A21 L21^-T */
       matrix_submatrix(&L21, A, i + n11, i, n - i - n11, n11);
-      blas_trsm(linalg_handle, CblasRight, CblasLower, CblastransA, 
+      blas_trsm(linalg_handle, CblasRight, CblasLower, CblasTrans, 
                   CblasNonUnit, kOne, &L11, &L21);
 
       /* A22 -= L21*L21^T */
       matrix_submatrix(&A22, A, i + blk_dim, i + blk_dim, 
                          n - i - blk_dim, n - i - blk_dim);
-      blas_syrk(linalg_handle, CblasLower, CblasNotransA, 
+      blas_syrk(linalg_handle, CblasLower, CblasNoTrans, 
                   (ok_float) -kOne, &L21, (ok_float) kOne, &A22);
     }
   }
@@ -681,8 +681,8 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A) {
 /* Cholesky solve */
 void linalg_cholesky_svx(void * linalg_handle, 
                            const matrix * L, vector * x) {
-  blas_trsv(linalg_handle, CblasLower, CblasNotransA, CblasNonUnit, L, x);
-  blas_trsv(linalg_handle, CblasLower, CblastransA, CblasNonUnit, L, x);
+  blas_trsv(linalg_handle, CblasLower, CblasNoTrans, CblasNonUnit, L, x);
+  blas_trsv(linalg_handle, CblasLower, CblasTrans, CblasNonUnit, L, x);
 }
 
 /* device reset */

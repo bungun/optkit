@@ -16,7 +16,7 @@ backend = OKBackend()
 """
 Types
 """
-Vector = Matrix = FunctionVector = None
+Vector = Matrix = SparseMatrix = FunctionVector = None
 
 """
 Python implementations
@@ -45,6 +45,7 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 	# Types
 	global Vector
 	global Matrix
+	global SparseMatrix
 	global FunctionVector
 
 	## Python implementations
@@ -80,6 +81,7 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 
 	Vector = linsys_type_factory.Vector
 	Matrix = linsys_type_factory.Matrix
+	SparseMatrix = linsys_type_factory.SparseMatrix
 	FunctionVector = prox_type_factory.FunctionVector
 
 	linsys_core_kernels = LinsysCoreKernels(backend, Vector, Matrix)
