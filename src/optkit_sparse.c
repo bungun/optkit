@@ -5,8 +5,11 @@
 extern "C" {
 #endif
 
-void __csr2csc(size_t m, size_t n, size_t nnz, ok_float * csr_val, ok_int * row_ptr, ok_int * col_ind,
-      ok_float * csc_val, ok_int * row_ind, ok_int * col_ptr){
+
+void 
+__csr2csc(size_t m, size_t n, size_t nnz, 
+    ok_float * csr_val, ok_int * row_ptr, ok_int * col_ind,
+    ok_float * csc_val, ok_int * row_ind, ok_int * col_ptr){
 
   ok_int i, j, k, l;
   memset(col_ptr, 0, (n + 1) * sizeof(ok_int));
@@ -32,27 +35,41 @@ void __csr2csc(size_t m, size_t n, size_t nnz, ok_float * csr_val, ok_int * row_
   col_ptr[0] = 0;
 }
 
-void __transpose_inplace(sp_matrix * A){
-  if (A->rowmajor == CblasRowMajor)
-    __csr2csc(A->size1, A->size2, A->nnz, 
-      A->val, A->ptr, A->ind,
-      A->val + A->nnz, A->ind + A->nnz, A->ptr + A->ptrlen);
+void 
+__transpose_inplace(sp_matrix * A, SPARSE_TRANSPOSE_DIRECTION_t dir){
+  if (dir == Forward2Adjoint)
+    if (A->rowmajor == CblasRowMajor)
+      __csr2csc(A->size1, A->size2, A->nnz, 
+        A->val, A->ptr, A->ind,
+        A->val + A->nnz, A->ind + A->nnz, A->ptr + A->ptrlen);
+    else
+      __csr2csc(A->size2, A->size1, A->nnz, 
+        A->val, A->ptr, A->ind,
+        A->val + A->nnz, A->ind + A->nnz, A->ptr + A->ptrlen);
   else
-    __csr2csc(A->size2, A->size1, 
-      A->nnz, A->val, A->ptr, A->ind,
-      A->val + A->nnz, A->ind + A->nnz, A->ptr + A->ptrlen);
+    if (A->rowmajor == CblasRowMajor)
+      __csr2csc(A->size2, A->size1, A->nnz, 
+        A->val + A->nnz, A->ptr + A->ptrlen, A->ind + A->nnz,
+        A->val, A->ind, A->ptr); 
+    else
+      __csr2csc(A->size1, A->size2, A->nnz, 
+        A->val + A->nnz, A->ptr + A->ptrlen, A->ind + A->nnz,
+        A->val, A->ind, A->ptr);
 }
 
 
-void sp_make_handle(void * sparse_handle){
+void 
+sp_make_handle(void * sparse_handle){
   sparse_handle = OK_NULL;
 }
 
-void sp_destroy_handle(void * sparse_handle){
+void 
+sp_destroy_handle(void * sparse_handle){
   return;
 }
 
-void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, 
+void 
+sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, 
   size_t nnz, CBLAS_ORDER_t order) {
   /* Stored forward and adjoint operators */
 
@@ -65,7 +82,8 @@ void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n,
   A->ptr = (ok_int *) malloc((2 + m + n) * sizeof(ok_int));
 }
 
-void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, 
+void 
+sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, 
   size_t nnz, CBLAS_ORDER_t order){
 
   sp_matrix_alloc(A, m, n, nnz, order);
@@ -75,23 +93,32 @@ void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n,
 
 }
 
-void sp_matrix_free(sp_matrix * A) { 
+void 
+sp_matrix_free(sp_matrix * A) { 
   ok_free(A->val);
   ok_free(A->ind);
   ok_free(A->ptr);
 }
 
+void 
+sp_matrix_memcpy_mm(sp_matrix * A, const sp_matrix * B){
+  memcpy(A->val, B->val, 2 * A->nnz * sizeof(ok_float));
+  memcpy(A->ind, B->ind, 2 * A->nnz * sizeof(ok_int));
+  memcpy(A->ptr, B->ptr, (A->size1 + A->size2 + 2) * sizeof(ok_int));  
+}
 
-void sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A, 
+void 
+sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A, 
   const ok_float * val, const ok_int * ind, const ok_int * ptr){
 
   memcpy(A->val, val, A->nnz * sizeof(ok_float));
   memcpy(A->ind, ind, A->nnz * sizeof(ok_int));
   memcpy(A->ptr, ptr, A->ptrlen * sizeof(ok_int));
-  __transpose_inplace(A);
+  __transpose_inplace(A, Forward2Adjoint);
 }
 
-void sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
+void 
+sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
   const sp_matrix * A){
 
   memcpy(val, A->val, A->nnz * sizeof(ok_float));
@@ -99,8 +126,115 @@ void sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
   memcpy(ptr, A-> ptr, A->ptrlen * sizeof(ok_int));
 }
 
-void sp_matrix_print(const sp_matrix * A){
+void 
+sp_matrix_memcpy_vals_mm(sp_matrix * A, const sp_matrix * B){
+  memcpy(A->val, B->val, 2 * A->nnz * sizeof(ok_float));
+}
+
+void 
+sp_matrix_memcpy_vals_ma(void * sparse_handle, sp_matrix * A, 
+  const ok_float * val){
+  memcpy(A->val, val, A->nnz * sizeof(ok_float));
+  __transpose_inplace(A, Forward2Adjoint);
+}
+
+void 
+sp_matrix_memcpy_vals_am(ok_float * val, const sp_matrix * A){
+  memcpy(val, A->val, A->nnz * sizeof(ok_float));
+}
+
+void 
+sp_matrix_memcpy_pattern_mm(sp_matrix * A, const sp_matrix * B){
+  memcpy(A->ind, B->ind, 2 * A->nnz * sizeof(ok_int));
+  memcpy(A->ptr, B->ptr, (A->size1 + A->size2 + 2) * sizeof(ok_int));  
+}
+
+void 
+sp_matrix_memcpy_pattern_ma(void * sparse_handle, sp_matrix * A, 
+  const ok_int * ind, const ok_int * ptr){
+  memcpy(A->ind, ind, A->nnz * sizeof(ok_int));
+  memcpy(A->ptr, ptr, A->ptrlen * sizeof(ok_int));
+  __transpose_inplace(A, Forward2Adjoint);
+}
+
+void 
+sp_matrix_memcpy_pattern_am(ok_int * ind, ok_int * ptr,
+  const sp_matrix * A){
+  memcpy(ind, A->ind, A->nnz * sizeof(ok_int));
+  memcpy(ptr, A-> ptr, A->ptrlen * sizeof(ok_int));
+}
+
+void 
+sp_matrix_abs(sp_matrix * A){
+  size_t i;
+  #ifdef _OPENMP
+  #pragma omp parallel for
+  #endif
+  for (i = 0; i < 2 * A->nnz; ++i) {
+    A->val[i] = MATH(fabs)(A->val[i]);
+  }
+}
+
+void 
+sp_matrix_scale(sp_matrix * A, const ok_float alpha){
+  CBLAS(scal)( (int) (2 * A->nnz), alpha, A->val, 1);
+}
+
+void 
+sp_matrix_scale_left(sp_matrix * A, const vector * v){
+  size_t i;
+
+  if (A->size1 != v->size){
+    printf("ERROR (optkit.sparse):\n \
+      Incompatible dimensions for A = diag(v) * A\n \
+      A: %i x %i, v: %i\n", (int) A->size1, (int) A->size2, (int) v->size);
+    return;
+  }
+
+  if (A->rowmajor == CblasRowMajor){
+    for (i = 0; i < A->ptrlen - 1; ++i) { 
+      if (A->ptr[i + 1] == A->ptr[i]) continue;
+      CBLAS(scal)( (int) (A->ptr[i + 1] - A->ptr[i]), v->data[i], 
+        A->val + A->ptr[i], 1);
+    }
+    __transpose_inplace(A, Forward2Adjoint);
+  } else {
+    for (i = A->ptrlen; i < A->size1 + A->size2 + 1; ++i) 
+      CBLAS(scal)( (int) (A->ptr[i + 1] - A->ptr[i]), v->data[i - A->ptrlen], 
+        A->val + A->nnz + A->ptr[i], 1);
+    __transpose_inplace(A, Adjoint2Forward);
+  }
+}
+
+void 
+sp_matrix_scale_right(sp_matrix * A, const vector * v){
+  size_t i;
+
+  if (A->size2 != v->size){
+    printf("ERROR (optkit.sparse):\n \
+      Incompatible dimensions for A = A * diag(v)\n \
+      A: %i x %i, v: %i\n", (int) A->size1, (int) A->size2, (int) v->size);
+    return;
+  }
+
+  if (A->rowmajor == CblasRowMajor){
+    for (i = A->ptrlen; i < A->size1 + A->size2 + 1; ++i)
+      CBLAS(scal)( (int) (A->ptr[i + 1] - A->ptr[i]), v->data[i - A->ptrlen], 
+        A->val + A->nnz + A->ptr[i], 1);
+    __transpose_inplace(A, Adjoint2Forward);
+  } else {
+    for (i = 0; i < A->ptrlen - 1; ++i) 
+      CBLAS(scal)( (int) (A->ptr[i + 1] - A->ptr[i]), v->data[i], 
+        A->val + A->ptr[i], 1);
+    __transpose_inplace(A, Forward2Adjoint);
+  }
+}
+
+
+void 
+sp_matrix_print(const sp_matrix * A){
   uint i;
+  ok_int ptr_idx;
 
   if (A->rowmajor == CblasRowMajor)
     printf("sparse CSR matrix:\n");
@@ -109,21 +243,24 @@ void sp_matrix_print(const sp_matrix * A){
 
   printf("dims: %u, %u\n", (uint) A->size1, (uint) A->size2);
   printf("# nonzeros: %u\n", (uint) A->nnz);
-  printf("\n\tpointers:\n");
-  for(i = 0; i < A->ptrlen; ++i)
-    printf("%i ", A->ptr[i]);
-  printf("\n");
-  printf("\n\tindices:\n");
-  for(i = 0; i < A->nnz; ++i)
-    printf("%i ", A->ind[i]);
-  printf("\n");  
-  printf("\n\tvalues:\n");
-  for(i = 0; i < A->nnz; ++i)
-    printf("%e ", A->val[i]);
+
+  ptr_idx = 0;
+  if (A->rowmajor == CblasRowMajor)
+    for(i = 0; i < A->nnz; ++i){
+      while (A->ptr[ptr_idx + 1] <= i) ++ptr_idx;
+      printf("(%i, %i)\t%e\n", ptr_idx, A->ind[i], A->val[i]);
+    }
+  else
+    for(i = (uint) A->nnz; i < 2 * A->nnz; ++i){
+      while (A->ptr[(uint) ptr_idx + A->ptrlen + 1] - 1 <= i) ++ptr_idx;
+      printf("(%i, %i)\t%e\n", A->ind[i], ptr_idx, A->val[i]);
+    }
   printf("\n");
 }
 
-void sp_blas_gemv(void * sparse_handle, 
+
+void 
+sp_blas_gemv(void * sparse_handle, 
   CBLAS_TRANSPOSE_t transA, ok_float alpha, sp_matrix * A, 
   vector * x, ok_float beta, vector * y){
 

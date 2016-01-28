@@ -1,17 +1,17 @@
-	###v0.1 (targets)
+###v0.1 (targets)
 - TODO: OMP parallelization for C vector operations
 - TODO: documentation
 - TODO: automate testing with nose2
 
 
-###v0.0.3 (next release)
+###v0.0.4 (next release)
 - TODO: error checking throughout GPU calls (and mirrored for CPU)
 - TODO: license
 - TODO: cite POGS
 - TODO: thorough commenting
 - TODO: add unit test for vector_pow, _recip, _sqrt
 
-###vX
+###v0.0.3 (alpha)
 - CPU Sparse Linear Algebra
 - GPU Sparse Linear Algebra
 - Python Sparse Linear Algebra bindings

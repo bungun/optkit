@@ -6,7 +6,7 @@ import sys
 
 class LinsysCoreKernels(object):
 	
-	def __init__(self, backend, vector_type, matrix_type):
+	def __init__(self, backend, vector_type, matrix_type, sparse_matrix_type):
 		if not backend.linalg_contexts_exist:
 			backend.make_linalg_contexts()
 
@@ -18,6 +18,7 @@ class LinsysCoreKernels(object):
 		ndarray_pointer = backend.lowtypes.ndarray_pointer
  		Vector = vector_type
 		Matrix = matrix_type
+		SparseMatrix = sparse_matrix_type
 
 		dimcheck = backend.dimcheck
 		typecheck = backend.typecheck
@@ -73,10 +74,13 @@ class LinsysCoreKernels(object):
 			else:
 				raise TypeError("optkit.kernels.linsys.copy(dest, orig) defined "
 					  "only when arguments are type:\n\t"
-					  "(optkit.Vector,optkit.Vector\n\t"	
-					  "(optkit.Matrix,optkit.Matrix\n\t"	
-					  "(numpy.ndarray,optkit.Vector\n\t"	
-					  "(numpy.ndarray,optkit.Matrix.")	
+					  "(optkit.Vector, optkit.Vector)\n\t"	
+					  "(optkit.Matrix, optkit.Matrix)\n\t"
+					  "(optkit.SparseMatrix, optkit.SparseMatrix)\n\t"	
+					  "(numpy.ndarray, optkit.Vector)\n\t"	
+					  "(numpy.ndarray, optkit.Matrix)\n\t"
+					  "(scipy.sparse.csr_matrix, optkit.SparseMatrix)\n\t"
+					  "(scipy.sparse.csc_matrix, optkit.SparseMatrix).")	
 		self.copy = copy 
 
 		def view(x, *range_, **viewtype):

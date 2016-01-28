@@ -84,7 +84,7 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 	SparseMatrix = linsys_type_factory.SparseMatrix
 	FunctionVector = prox_type_factory.FunctionVector
 
-	linsys_core_kernels = LinsysCoreKernels(backend, Vector, Matrix)
+	linsys_core_kernels = LinsysCoreKernels(backend, Vector, Matrix, SparseMatrix)
 	linsys_extensions = LinsysExtensionKernels(linsys_core_kernels, Matrix)
 	prox_kernels = ProxKernels(backend, Vector, FunctionVector)
 

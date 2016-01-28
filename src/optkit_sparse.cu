@@ -1,10 +1,10 @@
 #include "optkit_sparse.h"
 #include "optkit_defs_gpu.h"
+#include "optkit_thrust.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 
 /* helper methods for CUDA */
@@ -34,29 +34,52 @@ __int_set_all(ok_int * data, ok_float val, size_t stride, size_t size){
   __float_set<<<grid_dim, kBlockSize>>>(arr, val, stride, size);
 }
 
-void __transpose_inplace(void * sparse_handle, sp_matrix * A){
+void 
+__transpose_inplace(void * sparse_handle, sp_matrix * A,
+  SPARSE_TRANSPOSE_DIRECTION_t dir){
+
   cusparseStatus_t err;
   ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
 
-  if (A->rowmajor == CblasRowMajor)
-    err = CUSPARSE(csr2csc)(
-      *(cusparseHandle_t *) sp_hdl->hdl)), 
-      (int) A->size1, (int) A->size2, (int) A->nnz, A->val, A->ptr, A->ind,
-      A->val + A->nnz, A->ind + A->nnz, A->ptr + A->ptrlen, 
-      CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO);
+  if (dir == Forward2Adjoint){  
+    if (A->rowmajor == CblasRowMajor)
+      err = CUSPARSE(csr2csc)(
+        *(cusparseHandle_t *) sp_hdl->hdl)), 
+        (int) A->size1, (int) A->size2, (int) A->nnz, 
+        A->val, A->ptr, A->ind,
+        A->val + A->nnz, A->ind + A->nnz, A->ptr + A->ptrlen, 
+        CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO);
+    else
+      err = CUSPARSE(csr2csc)(
+        *(cusparseHandle_t *) sp_hdl->hdl, 
+        (int) A->size2, (int) A->size1, (int) A->nnz, 
+        A->val, A->ptr, A->ind,
+        A->val + A->nnz, A->ind + A->nnz, A->ptr + A->ptrlen, 
+        CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO);
   else
-    err = CUSPARSE(csr2csc)(
-      *(cusparseHandle_t *) sp_hdl->hdl, 
-      (int) A->size2, (int) A->size1, (int) A->nnz, A->val, A->ptr, A->ind,
-      A->val + A->nnz, A->ind + A->nnz, A->ptr + A->ptrlen, 
-      CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO);
+    if (A->rowmajor == CblasRowMajor)
+      err = CUSPARSE(csr2csc)(
+        *(cusparseHandle_t *) sp_hdl->hdl)), 
+        (int) A->size1, (int) A->size2, (int) A->nnz, 
+        A->val + A->nnz, A->ptr + A->ptrlen, A->ind + A->nnz,
+        A->val, A->ind, A->ptr, 
+        CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO);
+    else
+      err = CUSPARSE(csr2csc)(
+        *(cusparseHandle_t *) sp_hdl->hdl, 
+        (int) A->size2, (int) A->size1, (int) A->nnz, 
+        A->val + A->nnz, A->ptr + A->ptrlen, A->ind + A->nnz,
+        A->val, A->ind, A->ptr, 
+        CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO);
+  }
 
   // CusparseCheckError(err);
   // return err;
 }
 
 
-void sp_make_handle(void * sparse_handle){
+void 
+sp_make_handle(void * sparse_handle){
   ok_sparse_handle * ok_hdl = (ok_sparse_handle * ) malloc(
     sizeof(ok_sparse_handle) );
   cusparseHandle_t * hdl = (cusparseHandle_t *) malloc( 
@@ -71,7 +94,8 @@ void sp_make_handle(void * sparse_handle){
   sparse_hdl->descr = (void *) descr;
 }
 
-void sp_destroy_handle(void * sparse_handle){
+void 
+sp_destroy_handle(void * sparse_handle){
   ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
   cusparseDestroy(*(cusparseHandle_t *) (
     (void *) sp_hdl->hdl));
@@ -84,7 +108,8 @@ void sp_destroy_handle(void * sparse_handle){
   ok_free(sparse_handle);
 }
 
-void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, 
+void 
+sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, 
   size_t nnz, CBLAS_ORDER_t order) {
   /* Stored forward and adjoint operators */
   A->size1 = m;
@@ -96,7 +121,8 @@ void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n,
   ok_alloc_gpu(A->ptr, 2 * A->ptrlen * sizeof(ok_int));
 }
 
-void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, 
+void 
+sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, 
   size_t nnz, CBLAS_ORDER_t order){
   sp_matrix_alloc(A, m, n, nnz, order); 
   __float_set_all(A->val, (ok_float) 0, 1, nnz); 
@@ -104,10 +130,17 @@ void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n,
   __int_set_all(A->ptr, (ok_int) 0, 1, ptrlen); 
 }
 
-void sp_matrix_free(sp_matrix * A) {
+void 
+sp_matrix_free(sp_matrix * A) {
   ok_free_gpu(A->val);
   ok_free_gpu(A->ind);
   ok_free_gpu(A->ptr);
+}
+
+void sp_matrix_memcpy_mm(sp_matrix * A, const sp_matrix * B){
+  ok_memcpy_gpu(A->val, B->val, 2 * A->nnz * sizeof(ok_float));
+  ok_memcpy_gpu(A->len, B->ind, 2 * A->nnz * sizeof(ok_int));
+  ok_memcpy_gpu(A->ptr, B->ptr, (2 + A->size1 + A->size2) * sizeof(ok_int)); 
 }
 
 void sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A, 
@@ -127,8 +160,137 @@ void sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
   ok_memcpy_gpu(ptr, A-> ptr, A->ptrlen * sizeof(ok_int));
 }
 
-void sp_matrix_print(const sp_matrix * A){
+void sp_matrix_memcpy_vals_mm(sp_matrix * A, const sp_matrix * B){
+  ok_memcpy_gpu(A->val, B->val, 2 * A->nnz * sizeof(ok_float));
+}
+
+void sp_matrix_memcpy_vals_ma(void * sparse_handle, sp_matrix * A, 
+  const ok_float * val){
+
+  ok_memcpy_gpu(A->val, val, A->nnz * sizeof(ok_float));
+  __transpose_inplace(sparse_handle, A);
+}
+
+void sp_matrix_memcpy_vals_am(ok_float * val, const sp_matrix * A){
+  ok_memcpy_gpu(val, A->val, A->nnz * sizeof(ok_float));
+}
+
+void sp_matrix_memcpy_pattern_mm(sp_matrix * A, const sp_matrix * B){
+  ok_memcpy_gpu(A->len, B->ind, 2 * A->nnz * sizeof(ok_int));
+  ok_memcpy_gpu(A->ptr, B->ptr, (2 + A->size1 + A->size2) * sizeof(ok_int)); 
+}
+
+void sp_matrix_memcpy_pattern_ma(void * sparse_handle, sp_matrix * A, 
+  const ok_int * ind, const ok_int * ptr){
+
+  ok_memcpy_gpu(A->len, ind, A->nnz * sizeof(ok_int));
+  ok_memcpy_gpu(A->ptr, ptr, A->ptrlen * sizeof(ok_int));
+  __transpose_inplace(sparse_handle, A);
+}
+
+void sp_matrix_memcpy_pattern_am(ok_int * ind, ok_int * ptr, 
+  const sp_matrix * A){
+
+  ok_memcpy_gpu(len, A->ind, A->nnz * sizeof(ok_int));
+  ok_memcpy_gpu(ptr, A-> ptr, A->ptrlen * sizeof(ok_int));
+}
+
+
+void sp_matrix_abs(sp_matrix * A){
+  vector vals = (vector){2 * A->nnz, 1, A->val};
+  __thrust_vector_abs(&vals);
+}
+
+void sp_matrix_scale(sp_matrix * A, const ok_float alpha){
+  vector vals = (vector){2 * A->nnz, 1, A->val};
+  __thrust_vector_abs(&vals, alpha);
+}
+
+void sp_matrix_scale_left(sp_matrix * A, const vector * v){
   uint i;
+  vector Asub = (vector){0, 1, OK_NULL};
+  ok_float v_host[v->size];
+  vector_memcpy_av(v_host, v, 1);
+
+  if (A->size1 != v->size){
+    printf("ERROR (optkit.sparse):\n \
+      Incompatible dimensions for A = diag(v) * A\n \
+      A: %i x %i, v: %i\n", (int) A->size1, (int) A->size2, (int) v->size);
+    return;
+  }
+  /*
+  // ok_float val[1];
+  */
+
+  if (A->rowmajor == CblasRowMajor){
+    for (i = 0; i < A->ptrlen - 1; ++i) {
+      Asub.size = (size_t) (A->ptr[i + 1] - A->ptr[i]);
+      Asub.data = A->val + A->ptr[i];
+      __thrust_vector_scale(&Asub, v_host[i]);
+      /*
+      // ok_memcpy_gpu(val, v->data + i, sizeof(ok_float));
+      // vector_scale(Asub, val);
+      */
+    }
+    __transpose_inplace(A, Forward2Adjoint);
+  } else {
+    for (i = A->ptrlen; i < A->size1 + A->size2 + 1; ++i) {
+      Asub.size = (size_t) (A->ptr[i + 1] - A->ptr[i]);
+      Asub.data = A->val + A->nnz + A->ptr[i];
+      __thrust_vector_scale(&Asub, v_host[i - A->ptrlen]);
+      /*
+      // ok_memcpy_gpu(val, v->data + i, sizeof(ok_float));
+      // vector_scale(Asub, val);
+      */
+    }
+    __transpose_inplace(A, Adjoint2Forward);
+  }
+}
+
+void sp_matrix_scale_right(sp_matrix * A, const vector * v){
+  size_t i;
+  vector Asub = (vector){0, 1, OK_NULL};
+  ok_float v_host[v->size];
+  vector_memcpy_av(v_host, v, 1);
+
+  if (A->size2 != v->size){
+    printf("ERROR (optkit.sparse):\n \
+      Incompatible dimensions for A = A * diag(v)\n \
+      A: %i x %i, v: %i\n", (int) A->size1, (int) A->size2, (int) v->size);
+    return;
+  }
+  /*
+  // ok_float val[1];
+  */
+
+  if (A->rowmajor == CblasRowMajor){
+    for (i = A->ptrlen; i < A->size1 + A->size2 + 1; ++i) {
+      Asub.size = (size_t) (A->ptr[i + 1] - A->ptr[i]);
+      Asub.data = A->val + A->nnz + A->ptr[i];
+      __thrust_vector_scale(&Asub, v_host[i - A->ptrlen]);
+      /*
+      // ok_memcpy_gpu(val, v->data + i, sizeof(ok_float));
+      // __thrust_vector_scale(Asub, val);
+      */
+    }
+    __transpose_inplace(A, Adjoint2Forward);
+  } else {
+    for (i = 0; i < A->ptrlen - 1; ++i) {
+      Asub.size = (size_t) (A->ptr[i + 1] - A->ptr[i]);
+      Asub.data = A->val + A->ptr[i];
+      __thrust_vector_scale(&Asub, v_host[i]);
+      /*
+      // ok_memcpy_gpu(val, v->data + i, sizeof(ok_float));
+      // __thrust_vector_scale(Asub, val);
+      */
+    }
+    __transpose_inplace(A, Forward2Adjoint);
+  }
+}
+
+void sp_matrix_print(const sp_matrix * A){
+  size_t i;
+  ok_int ptr_idx;
   ok_float val_host[A->nnz];
   ok_int ind_host[A->nnz];
   ok_int ptr_host[A->ptrlen];
@@ -144,17 +306,18 @@ void sp_matrix_print(const sp_matrix * A){
   
   printf("dims: %u, %u\n", (uint) A->size1, (uint) A->size2);
   printf("# nonzeros: %u\n", (uint) A->nnz);
-  printf("\n\tpointers:\n");
-  for(i = 0; i < A->ptrlen; ++i)
-    printf("%i ", ptr_host[i]);
-  printf("\n");
-  printf("\n\tindices:\n");
-  for(i = 0; i < A->nnz; ++i)
-    printf("%i ", ind_host[i]);
-  printf("\n");  
-  printf("\n\tvalues:\n");
-  for(i = 0; i < A->nnz; ++i)
-    printf("%e ", val_host[i]);
+
+  ptr_idx = 0;
+  if (A->rowmajor == CblasRowMajor)
+    for(i = 0; i < A->nnz; ++i){
+      while (ptr_host[ptr_idx + 1] - 1 <= i) ++ptr_idx;
+      printf("(%i, %i)\t%e\n", ptr_idx, ind_host[i], val_host[i]);
+    }
+  else
+    for(i = (uint) A->nnz; i < 2 * A->nnz; ++i){
+      while (ptr_host[(uint) ptr_idx + A->ptrlen + 1] - 1 <= i) ++ptr_idx;
+      printf("(%i, %i)\t%e\n", ind_host[i], ptr_idx, val_host[i]);
+    }
   printf("\n");
 }
 

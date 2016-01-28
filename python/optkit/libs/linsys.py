@@ -240,8 +240,19 @@ class SparseLinsysLibs(object):
 			lib.sp_matrix_alloc.argtypes = [sparse_matrix_p, c_size_t, c_size_t, c_size_t, c_uint]
 			lib.sp_matrix_calloc.argtypes = [sparse_matrix_p, c_size_t, c_size_t, c_size_t, c_uint]
 			lib.sp_matrix_free.argtypes = [sparse_matrix_p]
+			lib.sp_matrix_memcpy_mm.argtypes = [sparse_matrix_p, sparse_matrix_p]
 			lib.sp_matrix_memcpy_ma.argtypes = [c_void_p, sparse_matrix_p, ok_float_p, ok_int_p, ok_int_p]
 			lib.sp_matrix_memcpy_am.argtypes = [ok_float_p, ok_int_p, ok_int_p, sparse_matrix_p]
+			lib.sp_matrix_memcpy_vals_mm.argtypes = [sparse_matrix_p, sparse_matrix_p]
+			lib.sp_matrix_memcpy_vals_ma.argtypes = [c_void_p, sparse_matrix_p, ok_float_p]
+			lib.sp_matrix_memcpy_vals_am.argtypes = [ok_float_p, sparse_matrix_p]
+			lib.sp_matrix_memcpy_pattern_mm.argtypes = [sparse_matrix_p, sparse_matrix_p]
+			lib.sp_matrix_memcpy_pattern_ma.argtypes = [c_void_p, sparse_matrix_p, ok_int_p, ok_int_p]
+			lib.sp_matrix_memcpy_pattern_am.argtypes = [ok_int_p, ok_int_p, sparse_matrix_p]
+			lib.sp_matrix_abs.argtypes = [sparse_matrix_p]
+			lib.sp_matrix_scale.argtypes = [sparse_matrix_p, ok_float]
+			lib.sp_matrix_scale_left.argtypes = [sparse_matrix_p, vector_p]
+			lib.sp_matrix_scale_right.argtypes = [sparse_matrix_p, vector_p]
 			lib.sp_matrix_print.argtypes = [sparse_matrix_p]
 
 			## return values 
@@ -249,8 +260,19 @@ class SparseLinsysLibs(object):
 			lib.sp_matrix_alloc.restype = None
 			lib.sp_matrix_calloc.restype = None
 			lib.sp_matrix_free.restype = None
+			lib.sp_matrix_memcpy_mm.restype = None
 			lib.sp_matrix_memcpy_ma.restype = None
 			lib.sp_matrix_memcpy_am.restype = None
+			lib.sp_matrix_memcpy_vals_mm.restype = None
+			lib.sp_matrix_memcpy_vals_ma.restype = None
+			lib.sp_matrix_memcpy_vals_am.restype = None
+			lib.sp_matrix_memcpy_pattern_mm.restype = None
+			lib.sp_matrix_memcpy_pattern_ma.restype = None
+			lib.sp_matrix_memcpy_pattern_am.restype = None
+			lib.sp_matrix_abs.restype = None
+			lib.sp_matrix_scale.restype = None
+			lib.sp_matrix_scale_left.restype = None
+			lib.sp_matrix_scale_right.restype = None			
 			lib.sp_matrix_print.restype = None
 
 			# Sparse BLAS
