@@ -16,6 +16,11 @@
 extern "C" {
 #endif
 
+#define OPTKIT_VERSION_MAJOR 0
+#define OPTKIT_VERSION_MINOR 0
+#define OPTKIT_VERSION_CHANGE 3
+#define OPTKIT_VERSION_STATUS "-a"
+
 #ifdef OK_DEBUG
 #define PRINT_DEBUG printf
 #else
@@ -26,7 +31,7 @@ extern "C" {
 #define OK_NULL 0
 #define ok_free(x) free(x); x = OK_NULL
 
-
+ 
 typedef unsigned int uint;
 typedef int ok_int;
 
