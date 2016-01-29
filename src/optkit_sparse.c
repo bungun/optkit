@@ -96,6 +96,7 @@ sp_matrix_calloc(sp_matrix * A, size_t m, size_t n,
   memset(A->val, 0, 2 * nnz * sizeof(ok_float));
   memset(A->ind, 0, 2 * nnz * sizeof(ok_int));
   memset(A->ptr, 0, (2 + m + n) * sizeof(ok_int));
+  sp_matrix_print(A);
 }
 
 void 
@@ -240,8 +241,8 @@ sp_matrix_scale_right(void * sparse_handle,
 
 void 
 sp_matrix_print(const sp_matrix * A){
-  uint i;
-  ok_int ptr_idx;
+  size_t i;
+  ok_int j, ptr1, ptr2;
 
   if (A->rowmajor == CblasRowMajor)
     printf("sparse CSR matrix:\n");
@@ -251,16 +252,21 @@ sp_matrix_print(const sp_matrix * A){
   printf("dims: %u, %u\n", (uint) A->size1, (uint) A->size2);
   printf("# nonzeros: %u\n", (uint) A->nnz);
 
-  ptr_idx = 0;
   if (A->rowmajor == CblasRowMajor)
-    for(i = 0; i < A->nnz; ++i){
-      while (A->ptr[ptr_idx + 1] <= i) ++ptr_idx;
-      printf("(%i, %i)\t%e\n", ptr_idx, A->ind[i], A->val[i]);
+    for(i = 0; i < A->ptrlen - 1; ++ i){
+      ptr1 = A->ptr[i];
+      ptr2 = A->ptr[i + 1];
+      for(j = ptr1; j < ptr2; ++j){
+        printf("(%i, %i)\t%e\n", (int) i,  A->ind[j], A->val[j]);
+      }
     }
   else
-    for(i = (uint) A->nnz; i < 2 * A->nnz; ++i){
-      while (A->ptr[(uint) ptr_idx + A->ptrlen + 1] - 1 <= i) ++ptr_idx;
-      printf("(%i, %i)\t%e\n", A->ind[i], ptr_idx, A->val[i]);
+    for(i = 0; i < A->ptrlen - 1; ++ i){
+      ptr1 = A->ptr[i];
+      ptr2 = A->ptr[i + 1];
+      for(j = ptr1; j < ptr2; ++j){
+        printf("(%i, %i)\t%e\n", A->ind[j], (int) i, A->val[j]);
+      }
     }
   printf("\n");
 }

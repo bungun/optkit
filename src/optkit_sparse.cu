@@ -321,7 +321,7 @@ void sp_matrix_scale_right(void * sparse_handle,
 
 void sp_matrix_print(const sp_matrix * A){
   size_t i;
-  ok_int ptr_idx;
+  ok_int j, ptr1, ptr2;
   ok_float val_host[A->nnz];
   ok_int ind_host[A->nnz];
   ok_int ptr_host[A->ptrlen];
@@ -339,19 +339,23 @@ void sp_matrix_print(const sp_matrix * A){
   printf("dims: %u, %u\n", (uint) A->size1, (uint) A->size2);
   printf("# nonzeros: %u\n", (uint) A->nnz);
 
-  ptr_idx = 0;
   if (A->rowmajor == CblasRowMajor)
-    for(i = 0; i < A->nnz; ++i){
-      while (ptr_host[ptr_idx + 1] - 1 <= i) ++ptr_idx;
-      printf("(%i, %i)\t%e\n", ptr_idx, ind_host[i], val_host[i]);
+    for(i = 0; i < A->ptrlen - 1; ++ i){
+      ptr1 = ptr_host[i];
+      ptr2 = ptr_host[i + 1];
+      for(j = ptr1; j < ptr2; ++j){
+        printf("(%i, %i)\t%e\n", (int) i,  ind_host[j], val_host[j]);
+      }
     }
   else
-    for(i = (uint) A->nnz; i < 2 * A->nnz; ++i){
-      while (ptr_host[(uint) ptr_idx + A->ptrlen + 1] - 1 <= i) ++ptr_idx;
-      printf("(%i, %i)\t%e\n", ind_host[i], ptr_idx, val_host[i]);
+    for(i = 0; i < A->ptrlen - 1; ++ i){
+      ptr1 = ptr_host[i];
+      ptr2 = ptr_host[i + 1];
+      for(j = ptr1; j < ptr2; ++j){
+        printf("(%i, %i)\t%e\n", ind_host[j], (int) i, val_host[j]);
+      }
     }
   printf("\n");
-  CUDA_CHECK_ERR;
 }
 
 

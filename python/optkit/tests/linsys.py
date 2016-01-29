@@ -77,7 +77,7 @@ def test_lowlevelsparsecalls(errors, VERBOSE_TEST=True,
 
 		backend.sparse.sp_make_handle(byref(sparse_handle))
 		A = backend.make_csparsematrix()
-		backend.sparse.sp_matrix_calloc(A, 10,  10, 22, ok_enums.CblasRowMajor)
+		backend.sparse.sp_matrix_calloc(A, 10, 5, 22, ok_enums.CblasRowMajor)
 		if VERBOSE_TEST:
 			backend.sparse.sp_matrix_print(A)
 		backend.sparse.sp_matrix_free(A)
