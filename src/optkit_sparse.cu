@@ -1,4 +1,3 @@
-#include "cusparse.h"
 #include "optkit_sparse.h"
 #include "optkit_defs_gpu.h"
 #include "optkit_thrust.hpp"
@@ -109,7 +108,7 @@ sp_destroy_handle(void * sparse_handle){
   ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
   cusparseDestroy(*(sp_hdl->hdl));
   CUDA_CHECK_ERR;
-  cusparseDestroyMatDescr(*(sp_hdl->hdl));
+  cusparseDestroyMatDescr(*(sp_hdl->descr));
   CUDA_CHECK_ERR;
   ok_free(sp_hdl->descr);
   ok_free(sp_hdl->hdl);
@@ -163,7 +162,7 @@ void sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A,
   ok_memcpy_gpu(A->ind, ind, A->nnz * sizeof(ok_int));
   ok_memcpy_gpu(A->ptr, ptr, A->ptrlen * sizeof(ok_int));
   CUDA_CHECK_ERR;
-  __transpose_inplace(sparse_handle, A);
+  __transpose_inplace(sparse_handle, A, Forward2Adjoint);
 }
 
 void sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr, 
@@ -186,7 +185,7 @@ void sp_matrix_memcpy_vals_ma(void * sparse_handle, sp_matrix * A,
 
   ok_memcpy_gpu(A->val, val, A->nnz * sizeof(ok_float));
   CUDA_CHECK_ERR;
-  __transpose_inplace(sparse_handle, A);
+  __transpose_inplace(sparse_handle, A, Forward2Adjoint);
 }
 
 void sp_matrix_memcpy_vals_am(ok_float * val, const sp_matrix * A){
@@ -206,7 +205,7 @@ void sp_matrix_memcpy_pattern_ma(void * sparse_handle, sp_matrix * A,
   ok_memcpy_gpu(A->ind, ind, A->nnz * sizeof(ok_int));
   ok_memcpy_gpu(A->ptr, ptr, A->ptrlen * sizeof(ok_int));
   CUDA_CHECK_ERR;
-  __transpose_inplace(sparse_handle, A);
+  __transpose_inplace(sparse_handle, A, Forward2Adjoint);
 }
 
 void sp_matrix_memcpy_pattern_am(ok_int * ind, ok_int * ptr, 
@@ -229,7 +228,8 @@ void sp_matrix_scale(sp_matrix * A, const ok_float alpha){
   CUDA_CHECK_ERR;
 }
 
-void sp_matrix_scale_left(sp_matrix * A, const vector * v){
+void sp_matrix_scale_left(void * sparse_handle, 
+  sp_matrix * A, const vector * v){
   uint i;
   vector Asub = (vector){0, 1, OK_NULL};
   ok_float v_host[v->size];
@@ -256,7 +256,7 @@ void sp_matrix_scale_left(sp_matrix * A, const vector * v){
       // vector_scale(Asub, val);
       */
     }
-    __transpose_inplace(A, Forward2Adjoint);
+    __transpose_inplace(sparse_handle, A, Forward2Adjoint);
   } else {
     for (i = A->ptrlen; i < A->size1 + A->size2 + 1; ++i) {
       Asub.size = (size_t) (A->ptr[i + 1] - A->ptr[i]);
@@ -267,12 +267,13 @@ void sp_matrix_scale_left(sp_matrix * A, const vector * v){
       // vector_scale(Asub, val);
       */
     }
-    __transpose_inplace(A, Adjoint2Forward);
+    __transpose_inplace(sparse_handle, A, Adjoint2Forward);
   }
   CUDA_CHECK_ERR;
 }
 
-void sp_matrix_scale_right(sp_matrix * A, const vector * v){
+void sp_matrix_scale_right(void * sparse_hadnle,
+  sp_matrix * A, const vector * v){
   size_t i;
   vector Asub = (vector){0, 1, OK_NULL};
   ok_float v_host[v->size];
@@ -299,7 +300,7 @@ void sp_matrix_scale_right(sp_matrix * A, const vector * v){
       // __thrust_vector_scale(Asub, val);
       */
     }
-    __transpose_inplace(A, Adjoint2Forward);
+    __transpose_inplace(sparse_handle, A, Adjoint2Forward);
   } else {
     for (i = 0; i < A->ptrlen - 1; ++i) {
       Asub.size = (size_t) (A->ptr[i + 1] - A->ptr[i]);
@@ -310,7 +311,7 @@ void sp_matrix_scale_right(sp_matrix * A, const vector * v){
       // __thrust_vector_scale(Asub, val);
       */
     }
-    __transpose_inplace(A, Forward2Adjoint);
+    __transpose_inplace(sparse_handle, A, Forward2Adjoint);
   }
   CUDA_CHECK_ERR;
 }

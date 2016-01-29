@@ -251,8 +251,8 @@ class SparseLinsysLibs(object):
 			lib.sp_matrix_memcpy_pattern_am.argtypes = [ok_int_p, ok_int_p, sparse_matrix_p]
 			lib.sp_matrix_abs.argtypes = [sparse_matrix_p]
 			lib.sp_matrix_scale.argtypes = [sparse_matrix_p, ok_float]
-			lib.sp_matrix_scale_left.argtypes = [sparse_matrix_p, vector_p]
-			lib.sp_matrix_scale_right.argtypes = [sparse_matrix_p, vector_p]
+			lib.sp_matrix_scale_left.argtypes = [c_void_p, sparse_matrix_p, vector_p]
+			lib.sp_matrix_scale_right.argtypes = [c_void_p, sparse_matrix_p, vector_p]
 			lib.sp_matrix_print.argtypes = [sparse_matrix_p]
 
 			## return values 

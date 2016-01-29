@@ -54,8 +54,8 @@ void sp_matrix_memcpy_pattern_am(ok_int * ind, ok_int * ptr,
 /* elementwise, row-wise & column-wise math */
 void sp_matrix_abs(sp_matrix * A);
 void sp_matrix_scale(sp_matrix * A, const ok_float alpha);
-void sp_matrix_scale_left(sp_matrix * A, const vector * v);
-void sp_matrix_scale_right(sp_matrix * A, const vector * v);
+void sp_matrix_scale_left(void * sparse_handle, sp_matrix * A, const vector * v);
+void sp_matrix_scale_right(void * sparse_handle, sp_matrix * A, const vector * v);
 
 /* print */
 void sp_matrix_print(const sp_matrix * A);

@@ -188,7 +188,8 @@ sp_matrix_scale(sp_matrix * A, const ok_float alpha){
 }
 
 void 
-sp_matrix_scale_left(sp_matrix * A, const vector * v){
+sp_matrix_scale_left(void * sparse_handle,
+  sp_matrix * A, const vector * v){
   size_t i;
 
   if (A->size1 != v->size){
@@ -214,7 +215,8 @@ sp_matrix_scale_left(sp_matrix * A, const vector * v){
 }
 
 void 
-sp_matrix_scale_right(sp_matrix * A, const vector * v){
+sp_matrix_scale_right(void * sparse_handle,
+  sp_matrix * A, const vector * v){
   size_t i;
 
   if (A->size2 != v->size){

@@ -923,7 +923,7 @@ def __test_sparse_scale(backend, linsys, A, left, right, x, y,
 	PPRINT, PRINT, TEST_EPS):
 
 	PPRINT("y := diag(a_left) * A * x", '.')
-	backend.sparse.sp_matrix_scale_left(A.c, left.c)
+	backend.sparse.sp_matrix_scale_left(backend.sparse_handle, A.c, left.c)
 	backend.sparse.sp_blas_gemv(backend.sparse_handle, 
 		ok_enums.CblasNoTrans, 1, A.c, x.c, 0, y.c)		
 
@@ -937,7 +937,7 @@ def __test_sparse_scale(backend, linsys, A, left, right, x, y,
 	# form A = A * diag(a_right)
 	
 	PPRINT("y := A * diag(a_right) * A * x", '.')
-	backend.sparse.sp_matrix_scale_right(A.c, right.c)
+	backend.sparse.sp_matrix_scale_right(backend.sparse_handle, A.c, right.c)
 	backend.sparse.sp_blas_gemv(backend.sparse_handle, 
 		ok_enums.CblasNoTrans, 1, A.c, x.c, 0, y.c)		
 
