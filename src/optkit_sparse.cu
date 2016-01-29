@@ -128,7 +128,7 @@ sp_matrix_alloc(sp_matrix * A, size_t m, size_t n,
   A->ptrlen = (order == CblasColMajor) ? n + 1 : m + 1;
   ok_alloc_gpu(A->val, 2 * nnz * sizeof(ok_float));
   ok_alloc_gpu(A->ind, 2 * nnz * sizeof(ok_int));
-  ok_alloc_gpu(A->ptr, 2 * A->ptrlen * sizeof(ok_int));
+  ok_alloc_gpu(A->ptr, (2 + m + n) * sizeof(ok_int));
   CUDA_CHECK_ERR;
 
 }
@@ -137,9 +137,9 @@ void
 sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, 
   size_t nnz, CBLAS_ORDER_t order){
   sp_matrix_alloc(A, m, n, nnz, order); 
-  __float_set_all(A->val, (ok_float) 0, 1, nnz); 
-  __int_set_all(A->ind, (ok_int) 0, 1, nnz); 
-  __int_set_all(A->ptr, (ok_int) 0, 1, A->ptrlen); 
+  __float_set_all(A->val, (ok_float) 0, 1, 2 * nnz); 
+  __int_set_all(A->ind, (ok_int) 0, 1, 2 * nnz); 
+  __int_set_all(A->ptr, (ok_int) 0, 1, 2 + A->size1 + A->size2); 
   CUDA_CHECK_ERR;
 }
 

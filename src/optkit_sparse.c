@@ -92,12 +92,10 @@ sp_matrix_alloc(sp_matrix * A, size_t m, size_t n,
 void 
 sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, 
   size_t nnz, CBLAS_ORDER_t order){
-
   sp_matrix_alloc(A, m, n, nnz, order);
-  memset(A->val, 0, nnz * sizeof(ok_float));
-  memset(A->val, 0, nnz * sizeof(ok_int));
-  memset(A->val, 0, A->ptrlen * sizeof(ok_int));
-
+  memset(A->val, 0, 2 * nnz * sizeof(ok_float));
+  memset(A->ind, 0, 2 * nnz * sizeof(ok_int));
+  memset(A->ptr, 0, (2 + m + n) * sizeof(ok_int));
 }
 
 void 
