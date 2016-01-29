@@ -53,7 +53,7 @@ class OKBackend(object):
 		if not self.__HANDLES_MADE__:
 			self.destroy_linalg_contexts()
 			if self.dense is not None: self.dense.blas_make_handle(byref(self.dense_blas_handle))
-			if self.sparse is not None: self.sparse.sp_make_handle(self.sparse_handle)
+			if self.sparse is not None: self.sparse.sp_make_handle(byref(self.sparse_handle))
 			self.__HANDLES_MADE__ = True
 
 			self.make_cvector = UtilMakeCVector(self.lowtypes, self.dense)

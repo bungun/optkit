@@ -66,8 +66,8 @@ __transpose_inplace(sp_matrix * A, SPARSE_TRANSPOSE_DIRECTION_t dir){
 
 
 void 
-sp_make_handle(void * sparse_handle){
-  sparse_handle = OK_NULL;
+sp_make_handle(void ** sparse_handle){
+  * sparse_handle = OK_NULL;
 }
 
 void 

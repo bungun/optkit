@@ -24,14 +24,9 @@ typedef struct sp_matrix {
   CBLAS_ORDER_t rowmajor;
 } sp_matrix;
 
-/* struct for cusparse handle and cusparse matrix description*/
-typedef struct ok_sparse_handle{
-  void * hdl;
-  void * descr;
-} ok_sparse_handle;
 
 /* memory management */
-void sp_make_handle(void * sparse_handle);
+void sp_make_handle(void ** sparse_handle);
 void sp_destroy_handle(void * sparse_handle);
 
 void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, 
