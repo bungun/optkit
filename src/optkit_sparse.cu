@@ -231,13 +231,41 @@ void sp_matrix_scale(sp_matrix * A, const ok_float alpha){
   CUDA_CHECK_ERR;
 }
 
+void __sp_matrix_scale_diag(void * sparse_handle,
+  sp_matrix * A, const vector * v, CBLAS_SIDE_t side){
+  size_t i, offset, stop, inner_dim;
+  vector Asub = (vector){0, 1, OK_NULL};
+  ok_float val;
+  ok_int ptr1 = (ok_int) 0;
+  ok_int ptr2;
+  SPARSE_TRANSPOSE_DIRECTION_t dir
+
+  if (side == CblasLeft){
+    offset = (A->rowmajor == CblasRowMajor) ? 0 : A->ptrlen;
+    stop = (A->rowmajor == CblasRowMajor) ? A->ptrlen - 1 : 1 + A->size1 + A->size2;
+    dir = (A->rowmajor == CblasRowMajor) ? Forward2Adjoint : Adjoint2Forward;
+  } else {
+    offset = (A->rowmajor == CblasRowMajor) ? A->ptrlen : 0;
+    stop = (A->rowmajor == CblasRowMajor) ? 1 + A->size1 + A->size2 : A->ptrlen - 1;
+    dir = (A->rowmajor == CblasRowMajor) ? Adjoint2Forward : Forward2Adjoint;
+  }
+
+  for (i = offset; i < stop; ++i) {
+    ok_memcpy_gpu(&ptr2, A->ptr + i, sizeof(ok_int));
+    if (ptr2 == ptr1) continue;
+    ok_memcpy_gpu(&val, v->data + (i - offset) * v->stride, sizeof(ok_float));
+
+    Asub.size = ptr2 - ptr1;
+    Asub.data = A->val + (size_t) ptr1;
+    __thrust_vector_scale(&Asub, val);
+    ptr1 = ptr2;
+  }
+  __transpose_inplace(sparse_handle, A, dir);
+  CUDA_CHECK_ERR;
+}
+
 void sp_matrix_scale_left(void * sparse_handle, 
   sp_matrix * A, const vector * v){
-  uint i;
-  vector Asub = (vector){0, 1, OK_NULL};
-  ok_float v_host[v->size];
-  vector_memcpy_av(v_host, v, 1);
-  CUDA_CHECK_ERR;
 
   if (A->size1 != v->size){
     printf("ERROR (optkit.sparse):\n \
@@ -245,79 +273,21 @@ void sp_matrix_scale_left(void * sparse_handle,
       A: %i x %i, v: %i\n", (int) A->size1, (int) A->size2, (int) v->size);
     return;
   }
-  /*
-  // ok_float val[1];
-  */
-
-  if (A->rowmajor == CblasRowMajor){
-    for (i = 0; i < A->ptrlen - 1; ++i) {
-      Asub.size = (size_t) (A->ptr[i + 1] - A->ptr[i]);
-      Asub.data = A->val + A->ptr[i];
-      __thrust_vector_scale(&Asub, v_host[i]);
-      /*
-      // ok_memcpy_gpu(val, v->data + i, sizeof(ok_float));
-      // vector_scale(Asub, val);
-      */
-    }
-    __transpose_inplace(sparse_handle, A, Forward2Adjoint);
-  } else {
-    for (i = A->ptrlen; i < A->size1 + A->size2 + 1; ++i) {
-      Asub.size = (size_t) (A->ptr[i + 1] - A->ptr[i]);
-      Asub.data = A->val + A->nnz + A->ptr[i];
-      __thrust_vector_scale(&Asub, v_host[i - A->ptrlen]);
-      /*
-      // ok_memcpy_gpu(val, v->data + i, sizeof(ok_float));
-      // vector_scale(Asub, val);
-      */
-    }
-    __transpose_inplace(sparse_handle, A, Adjoint2Forward);
-  }
-  CUDA_CHECK_ERR;
+  __sp_matrix_scale_diag(sparse_handle, A, v, CblasLeft);
 }
 
-void sp_matrix_scale_right(void * sparse_handle,
+void sp_matrix_scale_right(void * sparse_handle, 
   sp_matrix * A, const vector * v){
-  size_t i;
-  vector Asub = (vector){0, 1, OK_NULL};
-  ok_float v_host[v->size];
-  vector_memcpy_av(v_host, v, 1);
-  CUDA_CHECK_ERR;
 
-  if (A->size2 != v->size){
+  if (A->size1 != v->size){
     printf("ERROR (optkit.sparse):\n \
-      Incompatible dimensions for A = A * diag(v)\n \
+      Incompatible dimensions for A = diag(v) * A\n \
       A: %i x %i, v: %i\n", (int) A->size1, (int) A->size2, (int) v->size);
     return;
   }
-  /*
-  // ok_float val[1];
-  */
-
-  if (A->rowmajor == CblasRowMajor){
-    for (i = A->ptrlen; i < A->size1 + A->size2 + 1; ++i) {
-      Asub.size = (size_t) (A->ptr[i + 1] - A->ptr[i]);
-      Asub.data = A->val + A->nnz + A->ptr[i];
-      __thrust_vector_scale(&Asub, v_host[i - A->ptrlen]);
-      /*
-      // ok_memcpy_gpu(val, v->data + i, sizeof(ok_float));
-      // __thrust_vector_scale(Asub, val);
-      */
-    }
-    __transpose_inplace(sparse_handle, A, Adjoint2Forward);
-  } else {
-    for (i = 0; i < A->ptrlen - 1; ++i) {
-      Asub.size = (size_t) (A->ptr[i + 1] - A->ptr[i]);
-      Asub.data = A->val + A->ptr[i];
-      __thrust_vector_scale(&Asub, v_host[i]);
-      /*
-      // ok_memcpy_gpu(val, v->data + i, sizeof(ok_float));
-      // __thrust_vector_scale(Asub, val);
-      */
-    }
-    __transpose_inplace(sparse_handle, A, Forward2Adjoint);
-  }
-  CUDA_CHECK_ERR;
+  __sp_matrix_scale_diag(sparse_handle, A, v, CblasRight);
 }
+
 
 void sp_matrix_print(const sp_matrix * A){
   size_t i;

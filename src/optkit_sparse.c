@@ -96,7 +96,6 @@ sp_matrix_calloc(sp_matrix * A, size_t m, size_t n,
   memset(A->val, 0, 2 * nnz * sizeof(ok_float));
   memset(A->ind, 0, 2 * nnz * sizeof(ok_int));
   memset(A->ptr, 0, (2 + m + n) * sizeof(ok_int));
-  sp_matrix_print(A);
 }
 
 void 
@@ -187,9 +186,33 @@ sp_matrix_scale(sp_matrix * A, const ok_float alpha){
 }
 
 void 
+__sp_matrix_scale_diag(sp_matrix * A, const vector * v, CBLAS_SIDE_t side){
+  size_t i, offset, stop;
+  SPARSE_TRANSPOSE_DIRECTION_t dir;
+
+  if (side == CblasLeft){
+    offset = (A->rowmajor == CblasRowMajor) ? 0 : A->ptrlen;
+    stop = (A->rowmajor == CblasRowMajor) ? A->ptrlen - 1 : 1 + A->size1 + A->size2;
+    dir = (A->rowmajor == CblasRowMajor) ? Forward2Adjoint : Adjoint2Forward;
+  } else {
+    offset = (A->rowmajor == CblasRowMajor) ? A->ptrlen : 0;
+    stop = (A->rowmajor == CblasRowMajor) ? 1 + A->size1 + A->size2 : A->ptrlen - 1;
+    dir = (A->rowmajor == CblasRowMajor) ? Adjoint2Forward : Forward2Adjoint;
+  }
+
+  for (i = offset; i < stop; ++i) { 
+    if (A->ptr[i + 1] == A->ptr[i]) continue;
+    CBLAS(scal)( (int) (A->ptr[i + 1] - A->ptr[i]), v->data[i - offset], 
+      A->val + A->ptr[i], 1);
+  }
+  __transpose_inplace(A, Forward2Adjoint);
+}
+
+
+
+void 
 sp_matrix_scale_left(void * sparse_handle,
   sp_matrix * A, const vector * v){
-  size_t i;
 
   if (A->size1 != v->size){
     printf("ERROR (optkit.sparse):\n \
@@ -197,26 +220,12 @@ sp_matrix_scale_left(void * sparse_handle,
       A: %i x %i, v: %i\n", (int) A->size1, (int) A->size2, (int) v->size);
     return;
   }
-
-  if (A->rowmajor == CblasRowMajor){
-    for (i = 0; i < A->ptrlen - 1; ++i) { 
-      if (A->ptr[i + 1] == A->ptr[i]) continue;
-      CBLAS(scal)( (int) (A->ptr[i + 1] - A->ptr[i]), v->data[i], 
-        A->val + A->ptr[i], 1);
-    }
-    __transpose_inplace(A, Forward2Adjoint);
-  } else {
-    for (i = A->ptrlen; i < A->size1 + A->size2 + 1; ++i) 
-      CBLAS(scal)( (int) (A->ptr[i + 1] - A->ptr[i]), v->data[i - A->ptrlen], 
-        A->val + A->nnz + A->ptr[i], 1);
-    __transpose_inplace(A, Adjoint2Forward);
-  }
+  __sp_matrix_scale_diag(A, v, CblasLeft);
 }
 
 void 
 sp_matrix_scale_right(void * sparse_handle,
   sp_matrix * A, const vector * v){
-  size_t i;
 
   if (A->size2 != v->size){
     printf("ERROR (optkit.sparse):\n \
@@ -224,18 +233,7 @@ sp_matrix_scale_right(void * sparse_handle,
       A: %i x %i, v: %i\n", (int) A->size1, (int) A->size2, (int) v->size);
     return;
   }
-
-  if (A->rowmajor == CblasRowMajor){
-    for (i = A->ptrlen; i < A->size1 + A->size2 + 1; ++i)
-      CBLAS(scal)( (int) (A->ptr[i + 1] - A->ptr[i]), v->data[i - A->ptrlen], 
-        A->val + A->nnz + A->ptr[i], 1);
-    __transpose_inplace(A, Adjoint2Forward);
-  } else {
-    for (i = 0; i < A->ptrlen - 1; ++i) 
-      CBLAS(scal)( (int) (A->ptr[i + 1] - A->ptr[i]), v->data[i], 
-        A->val + A->ptr[i], 1);
-    __transpose_inplace(A, Forward2Adjoint);
-  }
+  __sp_matrix_scale_diag(A, v, CblasRight);
 }
 
 
