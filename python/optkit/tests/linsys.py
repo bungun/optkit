@@ -73,6 +73,10 @@ def test_lowlevelsparsecalls(errors, VERBOSE_TEST=True,
 
 		assert backend.sparse is not None
 
+		m = 10
+		n = 5
+		nnz = min((m * n) / 2, np.random.rand() * (m * n))
+
 		sparse_handle = c_void_p(0)
 
 		backend.sparse.sp_make_handle(byref(sparse_handle))

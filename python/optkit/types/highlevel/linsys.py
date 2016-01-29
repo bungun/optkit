@@ -74,7 +74,7 @@ class HighLevelLinsysTypes(object):
 			def __del__(self):
 				backend.decrement_cobject_count()
 				if self.is_view: return
-				if self.on_gpu: release_cvector(self.c)
+				if self.on_gpu: backend.release_cvector(self.c)
 
 			def isvalid(self):
 				for item in ['on_gpu','sync_required','is_view','size','c','py']:
@@ -179,7 +179,7 @@ class HighLevelLinsysTypes(object):
 			def __del__(self):
 				backend.decrement_cobject_count()
 				if self.is_view: return
-				if self.on_gpu: release_cmatrix(self.c)
+				if self.on_gpu: backend.release_cmatrix(self.c)
 
 
 			def isvalid(self):
