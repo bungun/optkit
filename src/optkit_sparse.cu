@@ -233,12 +233,12 @@ void sp_matrix_scale(sp_matrix * A, const ok_float alpha){
 
 void __sp_matrix_scale_diag(void * sparse_handle,
   sp_matrix * A, const vector * v, CBLAS_SIDE_t side){
-  size_t i, offset, stop, inner_dim;
+  size_t i, offset, stop;
   vector Asub = (vector){0, 1, OK_NULL};
   ok_float val;
   ok_int ptr1 = (ok_int) 0;
   ok_int ptr2;
-  SPARSE_TRANSPOSE_DIRECTION_t dir
+  SPARSE_TRANSPOSE_DIRECTION_t dir;
 
   if (side == CblasLeft){
     offset = (A->rowmajor == CblasRowMajor) ? 0 : A->ptrlen;
@@ -251,7 +251,7 @@ void __sp_matrix_scale_diag(void * sparse_handle,
   }
 
   for (i = offset; i < stop; ++i) {
-    ok_memcpy_gpu(&ptr2, A->ptr + i, sizeof(ok_int));
+    ok_memcpy_gpu(&ptr2, A->ptr + 1 + i, sizeof(ok_int));
     if (ptr2 == ptr1) continue;
     ok_memcpy_gpu(&val, v->data + (i - offset) * v->stride, sizeof(ok_float));
 
