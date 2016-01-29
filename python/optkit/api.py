@@ -9,6 +9,11 @@ from optkit.py_implementations.pogs import POGSDirectSolver
 from os import getenv
 
 """
+Version query
+"""
+OPTKIT_VERSION = None
+
+"""
 Backend handle
 """
 backend = OKBackend()
@@ -34,12 +39,15 @@ CPogsTypes = None
 PogsSolver = None
 PogsObjective = None
 
+
 """
 Backend switching
 """
 def set_backend(GPU=False, double=True, force_rowmajor=False,
 	force_colmajor=False):
+
 	# Backend
+	global OPTKIT_VERSION
 	global backend
 
 	# Types
@@ -74,6 +82,7 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 	backend_name=backend.change(GPU=GPU, double=double, 
 		force_rowmajor=force_rowmajor, force_colmajor=force_colmajor)
 	
+	OPTKIT_VERSION = backend.version
 
 	# reset types
 	linsys_type_factory = HighLevelLinsysTypes(backend)

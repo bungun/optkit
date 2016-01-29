@@ -1,16 +1,18 @@
-from ctypes import c_void_p, byref, pointer
+from ctypes import c_int, c_void_p, byref, pointer
 from optkit.libs import *
 from optkit.types import LowLevelTypes
 from optkit.utils import UtilMakeCVector, UtilMakeCMatrix, \
 	UtilMakeCSparseMatrix, UtilMakeCFunctionVector, \
 	UtilReleaseCVector, UtilReleaseCMatrix, \
 	UtilReleaseCSparseMatrix, UtilReleaseCFunctionVector
+from optkit.utils.pyutils import version_string
 from os import getenv
 import gc
 
 # CPU32, CPU64, GPU32, GPU64
 class OKBackend(object):
 	def __init__(self, GPU=False, single_precision=False):
+		self.version = None
 		self.device = None
 		self.precision = None
 		self.libname = "(No libraries selected)"
@@ -119,6 +121,18 @@ class OKBackend(object):
 		self.__CSOLVER_COUNT__ -= 1
 
 
+	def __get_version(self):
+		major = c_int()
+		minor = c_int()
+		change = c_int()
+		status = c_int()
+		try:
+			self.dense.denselib_version(byref(major), byref(minor),
+				byref(change), byref(status))
+			self.version = "Optkit v{}".format(version_string(
+				major.value, minor.value, change.value, status.value))
+		except:
+			self.version = "Optkit: version unknown"
 
 	def __set_lib(self, device=None, precision=None, order=None):
 		devices = ['gpu', 'cpu'] if device == 'gpu' else ['cpu', 'gpu']
@@ -152,12 +166,13 @@ class OKBackend(object):
 							self.lowtypes, GPU=dev=='gpu')
 						self.pogs = self.pogs_lib_loader.get(
 							self.lowtypes, GPU=dev=='gpu')
-
+						
 						return 
 					else:
 						print str('Libraries for configuration {} '
 							'not found. Trying next layout/device/precision '
 							'configuration.'.format(lib_key))
+
 
 		raise RuntimeError("No libraries found for backend.")
 
@@ -176,6 +191,7 @@ class OKBackend(object):
 
 		self.destroy_linalg_contexts()
 		self.__set_lib(device=device, precision=precision, order=order)
+		self.__get_version()
 		
 		if checktypes is not None: self.typecheck = checktypes
 		if checkdims is not None: self.dimcheck = checkdims

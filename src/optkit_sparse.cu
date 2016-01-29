@@ -6,6 +6,10 @@
 extern "C" {
 #endif
 
+void 
+sparselib_version(int * maj, int * min, int * change, int * status){
+  OPTKIT_VERSION(maj, min, change, status);
+}
 
 /* helper methods for CUDA */
 __global__ void 

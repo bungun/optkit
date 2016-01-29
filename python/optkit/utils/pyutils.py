@@ -4,6 +4,12 @@ from operator import and_, add as op_add
 from toolz import curry 
 from numpy import ndarray, squeeze, abs as np_abs, max as np_max
 
+def version_string(major, minor, change, status):
+	v = "{}.{}.{}".format(major, minor, change)
+	if status:
+		v+= "-{}".format(chr(status))
+	return v 
+
 def istypedtuple(x,n, type_):
 	valid = isinstance(x,tuple)
 	if valid:

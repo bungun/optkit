@@ -7,6 +7,7 @@
 extern "C" {
 #endif
 
+void denselib_version(int * maj, int * min, int * change, int * status);
 
 /* VECTOR definition and methods */
 

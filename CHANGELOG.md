@@ -9,7 +9,8 @@
 - TODO: license
 - TODO: cite POGS
 - TODO: thorough commenting
-- TODO: add unit test for vector_pow, _recip, _sqrt
+- TODO: add unit tests for vector_pow, _recip, _sqrt
+- TODO: add unit tests for sp_matrix _scale, _abs, _memcpy variants
 
 ###v0.0.3 (alpha)
 - CPU Sparse Linear Algebra
@@ -18,6 +19,7 @@
 - Separated FunctionVector (python implementation of POGS) from Objective (python wrapper for C implementation of POGS)
 - Python backend counts allocations and calls cudaDeviceReset() when allocated blas handles and PogsSolver go out of scope (purpose: for scripts creating multiple PogsSolver instances, can delete solver objects to free GPU memory)
 - Option to suppress [y, mu, nu] from POGS solver output (C and Py)
+- Version number calls in C, Py
 
 ###v0.0.2 (current)
 - C implementations of equilibration, projection and POGS (dense only)
@@ -58,3 +60,4 @@
 - block clustering in c/cuda
 - adaptive alpha (line search) for POGS
 - change Python bindings from ctypes -> Cython?
+- DCP ADMM

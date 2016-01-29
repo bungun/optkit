@@ -4,6 +4,11 @@
 extern "C" {
 #endif
 
+void 
+pogslib_version(int * maj, int * min, int * change, int * status){
+  OPTKIT_VERSION(maj, min, change, status);
+}
+
 /* -------------------------------------------------------------------------------- */
 /* POGS private API:																*/
 /*																					*/

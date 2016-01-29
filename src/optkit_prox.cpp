@@ -5,6 +5,11 @@ extern "C" {
 #endif
 
 
+void 
+proxlib_version(int * maj, int * min, int * change, int * status){
+  OPTKIT_VERSION(maj, min, change, status);
+}
+
 void function_vector_alloc(FunctionVector * f, size_t n){
 	if (f->objectives != OK_NULL) ok_free(f->objectives);
 	f->size = n;

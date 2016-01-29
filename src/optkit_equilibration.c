@@ -4,8 +4,10 @@
 extern "C" {
 #endif
 
-
-
+void 
+equillib_version(int * maj, int * min, int * change, int * status){
+  OPTKIT_VERSION(maj, min, change, status);
+}
 
 void 
 sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out, 

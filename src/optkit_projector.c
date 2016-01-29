@@ -4,6 +4,11 @@
 extern "C" {
 #endif
 
+void 
+projectorlib_version(int * maj, int * min, int * change, int * status){
+  OPTKIT_VERSION(maj, min, change, status);
+}
+
 /* Direct Projector methods */
 void 
 direct_projector_alloc(direct_projector * P, matrix * A){

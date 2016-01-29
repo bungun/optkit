@@ -8,6 +8,12 @@
 extern "C" {
 #endif
 
+void 
+denselib_version(int * maj, int * min, int * change, int * status){
+  OPTKIT_VERSION(maj, min, change, status);
+}
+
+
 __global__ void
 _get_cuda_nan(ok_float * val){
   *val = OK_CUDA_NAN;

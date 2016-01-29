@@ -19,12 +19,14 @@ def main(*args, **kwargs):
 	if '--cproj' in args: tests.append(test_cproj)
 	if '--cpogs' in args: tests.append(test_cpogs)
 	if '--cstore' in args: tests.append(test_cstore)
+	if '--version' in args: tests.append(test_version)
 
 
 	if len(tests)==0:
 		test_names = ['--linsys', '--prox', '--proj',
 		'--equil', '--norm', '--block', '--pogs', '--py_all',
-		'--cequil', '--cproj', '--cpogs', '--cstore', '--c_all']
+		'--cequil', '--cproj', '--cpogs', '--cstore', '--c_all',
+		'--version']
 
 		print str("no tests specified.\nuse optional arguments:\n"
 			"{}\nor\n--all\n to specify tests.".format(test_names))
@@ -76,7 +78,7 @@ if __name__== "__main__":
 
 	args += sys.argv
 	if '--all' in args:
-		args += ['--py_all', '--c_all']
+		args += ['--py_all', '--c_all', '--version']
 	if '--py_all' in args: 
 		args+=['--linsys','--allsub','--prox','--proj','--equil',
 			'--norm','--block','--pogs']

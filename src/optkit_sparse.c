@@ -5,6 +5,10 @@
 extern "C" {
 #endif
 
+void 
+sparselib_version(int * maj, int * min, int * change, int * status){
+  OPTKIT_VERSION(maj, min, change, status);
+}
 
 void 
 __csr2csc(size_t m, size_t n, size_t nnz, 

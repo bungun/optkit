@@ -10,6 +10,9 @@
 extern "C" {
 #endif
 
+void proxlib_version(int * maj, int * min, int * change, int * status);
+
+
 /* List of functions supported by the proximal operator library. */
 enum Function { 
                 FnZero, 		 /* f(x) = 0 */

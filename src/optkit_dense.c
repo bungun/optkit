@@ -5,6 +5,10 @@
 extern "C" {
 #endif
 
+void 
+denselib_version(int * maj, int * min, int * change, int * status){
+  OPTKIT_VERSION(maj, min, change, status);
+}
 
 /* VECTOR methods */
 inline int __vector_exists(vector * v) {
