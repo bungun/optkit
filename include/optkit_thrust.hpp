@@ -16,11 +16,6 @@
 /* ---------------------------------------------------------------- */
 template <typename Iterator>
 class strided_range {
- protected:
-  Iterator first;
-  Iterator last;
-  diff_t stride;
-
  public:
   typedef typename thrust::iterator_difference<Iterator>::type diff_t;
 
@@ -50,7 +45,10 @@ class strided_range {
   strided_iterator_t end() const {
     return begin() + ((last - first) + (stride - 1)) / stride;
   }
-
+ protected:
+  Iterator first;
+  Iterator last;
+  diff_t stride;
 };
 
 typedef thrust::constant_iterator<ok_float> constant_iterator_t;
