@@ -7,7 +7,10 @@ extern "C" {
 
 void 
 denselib_version(int * maj, int * min, int * change, int * status){
-  OPTKIT_VERSION(maj, min, change, status);
+    * maj = OPTKIT_VERSION_MAJOR;
+    * min = OPTKIT_VERSION_MINOR;
+    * change = OPTKIT_VERSION_CHANGE;
+    * status = (int) OPTKIT_VERSION_STATUS;
 }
 
 /* VECTOR methods */

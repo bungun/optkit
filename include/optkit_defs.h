@@ -20,15 +20,7 @@ extern "C" {
 #define OPTKIT_VERSION_MINOR 0
 #define OPTKIT_VERSION_CHANGE 3
 #define OPTKIT_VERSION_STATUS 'a'
-#define OPTKIT_VERSION get_optkit_version
 
-inline void
-get_optkit_version(int * maj, int * min, int * change, int * status){
-    * maj = OPTKIT_VERSION_MAJOR;
-    * min = OPTKIT_VERSION_MINOR;
-    * change = OPTKIT_VERSION_CHANGE;
-    * status = (int) OPTKIT_VERSION_STATUS;
-}
 
 #ifdef OK_DEBUG
 #define PRINT_DEBUG printf
