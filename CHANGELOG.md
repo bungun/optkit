@@ -12,6 +12,7 @@
 - TODO: add unit tests for vector_pow, _recip, _sqrt
 - TODO: add unit tests for sp_matrix _scale, _abs, _memcpy variants
 
+
 ###v0.0.3 (alpha)
 - CPU Sparse Linear Algebra
 - GPU Sparse Linear Algebra

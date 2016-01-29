@@ -32,28 +32,38 @@ def main(*args, **kwargs):
 			"{}\nor\n--all\n to specify tests.".format(test_names))
 		
 	else:
-		libkeys = backend.dense_lib_loader.libs
-		print libkeys
+		libkeys_d = backend.dense_lib_loader.libs
+		libkeys_s = backend.sparse_lib_loader.libs
+		libkeys_px = backend.prox_lib_loader.libs
+		libkeys_pg = backend.pogs_lib_loader.libs
 
-		if libkeys['cpu64'] is not None:
+		libkeys = {}
+		for key in ['cpu64', 'cpu32', 'gpu64', 'gpu32']:
+			libkeys[key] = libkeys_d[key] is not None
+			libkeys[key] &= libkeys_s[key] is not None
+			libkeys[key] &= libkeys_px[key] is not None
+			libkeys[key] &= libkeys_pg[key] is not None
+
+
+		if libkeys['cpu64']:
 			backend.reset()
 			print "<<< CPU, FLOAT64 >>>"
 			for t in tests: passing += t(errors, *args, **kwargs)
 			tested += len(tests)
 			configs.append('cpu64')
-		if libkeys['cpu32'] is not None:
+		if libkeys['cpu32']:
 			backend.reset()
 			print "<<< CPU, FLOAT32 >>>"
 			for t in tests: passing += t(errors, 'float', *args, **kwargs)
 			tested += len(tests)
 			configs.append('cpu32')
-		if libkeys['gpu64'] is not None:
+		if libkeys['gpu64']:
 			backend.reset()
 			print "<<< GPU, FLOAT64 >>>"
 			for t in tests: passing += t(errors, 'gpu', *args, **kwargs)
 			tested += len(tests)
 			configs.append('gpu64')
-		if libkeys['gpu32'] is not None:
+		if libkeys['gpu32']:
 			backend.reset()
 			print "<<< GPU, FLOAT32 >>>"
 			for t in tests: passing += t(errors, 'gpu', 'float', *args, **kwargs)
