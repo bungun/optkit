@@ -1,6 +1,7 @@
 #include "optkit_sparse.h"
 #include "optkit_defs_gpu.h"
 #include "optkit_thrust.hpp"
+#include <cusparse.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,36 +52,38 @@ void
 __transpose_inplace(void * sparse_handle, sp_matrix * A,
   SPARSE_TRANSPOSE_DIRECTION_t dir){
 
-  cusparseStatus_t err;
   ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
 
-  if (dir == Forward2Adjoint){  
-    if (A->rowmajor == CblasRowMajor)
-      err = CUSPARSE(csr2csc)( *(sp_hdl->hdl), 
+  if (dir == Forward2Adjoint) {
+    if (A->rowmajor == CblasRowMajor) {
+      CUSPARSE(csr2csc)( *(sp_hdl->hdl), 
         (int) A->size1, (int) A->size2, (int) A->nnz, 
         A->val, A->ptr, A->ind,
         A->val + A->nnz, A->ind + A->nnz, A->ptr + A->ptrlen, 
         CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO);
-    else
-      err = CUSPARSE(csr2csc)( *(sp_hdl->hdl), 
+    } else {
+      CUSPARSE(csr2csc)( *(sp_hdl->hdl), 
         (int) A->size2, (int) A->size1, (int) A->nnz, 
         A->val, A->ptr, A->ind,
         A->val + A->nnz, A->ind + A->nnz, A->ptr + A->ptrlen, 
         CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO);
-  else
-    if (A->rowmajor == CblasRowMajor)
-      err = CUSPARSE(csr2csc)( *(sp_hdl->hdl), 
+    }
+  } else {
+    if (A->rowmajor == CblasRowMajor) {
+      CUSPARSE(csr2csc)( *(sp_hdl->hdl), 
         (int) A->size1, (int) A->size2, (int) A->nnz, 
         A->val + A->nnz, A->ptr + A->ptrlen, A->ind + A->nnz,
         A->val, A->ind, A->ptr, 
         CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO);
-    else
-      err = CUSPARSE(csr2csc)( *(sp_hdl->hdl), 
+    } else {
+      CUSPARSE(csr2csc)( *(sp_hdl->hdl), 
         (int) A->size2, (int) A->size1, (int) A->nnz, 
         A->val + A->nnz, A->ptr + A->ptrlen, A->ind + A->nnz,
         A->val, A->ind, A->ptr, 
         CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO);
+    }
   }
+
 
   CUDA_CHECK_ERR;
   // CusparseCheckError(err);
@@ -224,7 +227,7 @@ void sp_matrix_abs(sp_matrix * A){
 
 void sp_matrix_scale(sp_matrix * A, const ok_float alpha){
   vector vals = (vector){2 * A->nnz, 1, A->val};
-  __thrust_vector_abs(&vals, alpha);
+  __thrust_vector_scale(&vals, alpha);
   CUDA_CHECK_ERR;
 }
 
@@ -272,7 +275,7 @@ void sp_matrix_scale_left(void * sparse_handle,
   CUDA_CHECK_ERR;
 }
 
-void sp_matrix_scale_right(void * sparse_hadnle,
+void sp_matrix_scale_right(void * sparse_handle,
   sp_matrix * A, const vector * v){
   size_t i;
   vector Asub = (vector){0, 1, OK_NULL};
@@ -356,7 +359,6 @@ void sp_blas_gemv(void * sparse_handle,
   CBLAS_TRANSPOSE_t transA, ok_float alpha, sp_matrix * A, 
   vector * x, ok_float beta, vector * y){
 
-  cusparseStatus_t err;
   ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
 
   /* Always perform forward (non-transpose) operations */
@@ -366,23 +368,24 @@ void sp_blas_gemv(void * sparse_handle,
     csc, forward op -> adjoint
     csc, adjoint op -> forward */
 
-  if ((A->rowmajor == CblasRowMajor) != (transA == CblasTrans))
+  if ((A->rowmajor == CblasRowMajor) != (transA == CblasTrans)){
     /* Use forward operator stored in A */
-    err = CUSPARSE(csrmv)(
+    CUSPARSE(csrmv)(
       *(sp_hdl->hdl), 
       CUSPARSE_OPERATION_NON_TRANSPOSE, 
       (int) A->size1, (int) A->size2, (int) A->nnz, &alpha, 
       *(sp_hdl->descr),        
       A->val, A->ptr, A->ind, x->data, &beta, y->data);
-  else
+  } else {
     /* Use adjoint operator stored in A */
-    err = CUSPARSE(csrmv)(
+    CUSPARSE(csrmv)(
       *(sp_hdl->hdl), 
       CUSPARSE_OPERATION_NON_TRANSPOSE, 
       (int) A->size2, (int) A->size1, (int) A->nnz, &alpha, 
       *(sp_hdl->descr),        
       A->val + A->nnz, A->ptr + A->ptrlen, A->ind + A->nnz, 
       x->data, &beta, y->data);
+  }
   
   // CusparseCheckError(err);
   // return err;
