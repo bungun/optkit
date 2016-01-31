@@ -181,6 +181,17 @@ sp_matrix_abs(sp_matrix * A){
 }
 
 void 
+sp_matrix_pow(sp_matrix * A, const ok_float x){
+  size_t i;
+  #ifdef _OPENMP
+  #pragma omp parallel for
+  #endif
+  for (i = 0; i < 2 * A->nnz; ++i) {
+    A->val[i] = MATH(pow)(A->val[i], x);
+  }
+}
+
+void 
 sp_matrix_scale(sp_matrix * A, const ok_float alpha){
   CBLAS(scal)( (int) (2 * A->nnz), alpha, A->val, 1);
 }

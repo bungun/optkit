@@ -225,6 +225,12 @@ void sp_matrix_abs(sp_matrix * A){
   CUDA_CHECK_ERR;
 }
 
+void sp_matrix_pow(sp_matrix * A, const ok_float x){
+  vector vals = (vector){2 * A->nnz, 1, A->val};
+  __thrust_vector_pow(&vals, x);
+  CUDA_CHECK_ERR;
+}
+
 void sp_matrix_scale(sp_matrix * A, const ok_float alpha){
   vector vals = (vector){2 * A->nnz, 1, A->val};
   __thrust_vector_scale(&vals, alpha);
@@ -240,6 +246,13 @@ void __sp_matrix_scale_diag(void * sparse_handle,
   ok_int ptr2;
   SPARSE_TRANSPOSE_DIRECTION_t dir;
 
+  /* Always perform forward (non-transpose) scaling (contiguous blocks) */
+  /* cusparse uses csr, so:
+    csr, left scaling -> scale forward operator, transpose data F2A
+    csr, right scaling -> scale adjoint operator, transpose data A2F
+    csc, left scaling -> scale adjoint operator, transpose data A2F
+    csc, right scaling -> scale forward operator, tranpose data F2A */
+
   if (side == CblasLeft){
     offset = (A->rowmajor == CblasRowMajor) ? 0 : A->ptrlen;
     stop = (A->rowmajor == CblasRowMajor) ? A->ptrlen - 1 : 1 + A->size1 + A->size2;
@@ -249,6 +262,7 @@ void __sp_matrix_scale_diag(void * sparse_handle,
     stop = (A->rowmajor == CblasRowMajor) ? 1 + A->size1 + A->size2 : A->ptrlen - 1;
     dir = (A->rowmajor == CblasRowMajor) ? Adjoint2Forward : Forward2Adjoint;
   }
+  sp_matrix_print(A);
 
   for (i = offset; i < stop; ++i) {
     ok_memcpy_gpu(&ptr2, A->ptr + 1 + i, sizeof(ok_int));
@@ -262,6 +276,8 @@ void __sp_matrix_scale_diag(void * sparse_handle,
   }
   __transpose_inplace(sparse_handle, A, dir);
   CUDA_CHECK_ERR;
+  sp_matrix_print(A);
+
 }
 
 void sp_matrix_scale_left(void * sparse_handle, 
@@ -279,9 +295,9 @@ void sp_matrix_scale_left(void * sparse_handle,
 void sp_matrix_scale_right(void * sparse_handle, 
   sp_matrix * A, const vector * v){
 
-  if (A->size1 != v->size){
+  if (A->size2 != v->size){
     printf("ERROR (optkit.sparse):\n \
-      Incompatible dimensions for A = diag(v) * A\n \
+      Incompatible dimensions for A = A * diag(v)\n \
       A: %i x %i, v: %i\n", (int) A->size1, (int) A->size2, (int) v->size);
     return;
   }
@@ -337,10 +353,10 @@ void sp_blas_gemv(void * sparse_handle,
 
   /* Always perform forward (non-transpose) operations */
   /* cusparse uses csr, so:
-    csr, forward op -> forward
-    csr, adjoint op -> adjoint
-    csc, forward op -> adjoint
-    csc, adjoint op -> forward */
+    csr, forward op -> apply stored forward operator
+    csr, adjoint op -> apply stored adjoint operator
+    csc, forward op -> apply stored adjoint operator
+    csc, adjoint op -> apply stored forward operator */
 
   if ((A->rowmajor == CblasRowMajor) != (transA == CblasTrans)){
     /* Use forward operator stored in A */
