@@ -300,7 +300,7 @@ inline ok_float __matrix_get(const matrix * A, size_t i, size_t j) {
 
 }
 
-inline void __matrix_set(matrix *A, size_t i, size_t j, ok_float x){
+inline void __matrix_set(matrix * A, size_t i, size_t j, ok_float x){
   #ifndef OPTKIT_ORDER
   if (A->order == CblasRowMajor)
     A->data[i * A->ld + j] = x;
@@ -315,8 +315,28 @@ inline void __matrix_set(matrix *A, size_t i, size_t j, ok_float x){
 }
 
 void matrix_set_all(matrix * A, ok_float x) {
+  size_t i, j;
   if (!__matrix_exists(A)) return;
-  memset(A->data, x, A->size1 * A->size2 * sizeof(ok_float));
+
+  #ifndef OPTKIT_ORDER
+  if (A->order == CblasRowMajor){
+    for (i = 0; i < A->size1; ++i)
+      for (j = 0; j < A->size2; ++j)
+        __matrix_set(A, i, j, x);
+  } else {
+    for (j = 0; j < A->size2; ++j)
+      for (i = 0; i < A->size1; ++i)
+        __matrix_set(A, i, j, x);
+  }
+  #elif OPTKIT_ORDER == 101
+  for (i = 0; i < A->size1; ++i)
+    for (j = 0; j < A->size2; ++j)
+      __matrix_set(A, i, j, x);
+  #else
+  for (j = 0; i < A->size2; ++j)
+    for (i = 0; j < A->size1; ++i)
+      __matrix_set(A, i, j, x);
+  #endif
 }
 
 void matrix_memcpy_mm(matrix * A, const matrix * B) {
@@ -449,7 +469,7 @@ void matrix_abs(matrix * A) {
 }
 
 
-void matrix_abs(matrix * A, const ok_float x) {
+void matrix_pow(matrix * A, const ok_float x) {
   size_t i;
   #ifndef OPTKIT_ORDER
   vector row_col = (vector){0,0,OK_NULL};
