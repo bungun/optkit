@@ -19,7 +19,7 @@ direct_projector_alloc(direct_projector * P, matrix * A){
 
 	P->A = A;
 	P->L = (matrix *) malloc( sizeof(matrix) );
-	matrix_calloc(P->L, mindim, mindim, A->rowmajor);
+	matrix_calloc(P->L, mindim, mindim, A->order);
 	P->skinny = (uint) mindim == A->size2;
 	P->normalized = 0;
 }
