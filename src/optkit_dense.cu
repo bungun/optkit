@@ -625,7 +625,7 @@ matrix_abs(matrix * A){
 }
 
 void
-matrix_abs(matrix * A, const ok_float x){
+matrix_pow(matrix * A, const ok_float x){
   size_t i;
   #ifndef OPTKIT_ORDER
   vector row_col = (vector){0,0,OK_NULL};

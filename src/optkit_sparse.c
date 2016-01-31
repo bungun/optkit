@@ -199,14 +199,16 @@ sp_matrix_scale(sp_matrix * A, const ok_float alpha){
 
 void 
 __sp_matrix_scale_diag(sp_matrix * A, const vector * v, CBLAS_SIDE_t side){
-  size_t i, offset, stop;
+  size_t i, offset, offsetnz, stop;
   SPARSE_TRANSPOSE_DIRECTION_t dir;
 
   if (side == CblasLeft){
+    offsetnz = (A->order == CblasRowMajor) ? 0 : A->nnz;
     offset = (A->order == CblasRowMajor) ? 0 : A->ptrlen;
     stop = (A->order == CblasRowMajor) ? A->ptrlen - 1 : 1 + A->size1 + A->size2;
     dir = (A->order == CblasRowMajor) ? Forward2Adjoint : Adjoint2Forward;
   } else {
+    offsetnz = (A->order == CblasRowMajor) ? A->nnz : 0;
     offset = (A->order == CblasRowMajor) ? A->ptrlen : 0;
     stop = (A->order == CblasRowMajor) ? 1 + A->size1 + A->size2 : A->ptrlen - 1;
     dir = (A->order == CblasRowMajor) ? Adjoint2Forward : Forward2Adjoint;
@@ -215,7 +217,7 @@ __sp_matrix_scale_diag(sp_matrix * A, const vector * v, CBLAS_SIDE_t side){
   for (i = offset; i < stop; ++i) { 
     if (A->ptr[i + 1] == A->ptr[i]) continue;
     CBLAS(scal)( (int) (A->ptr[i + 1] - A->ptr[i]), v->data[i - offset], 
-      A->val + A->ptr[i], 1);
+      A->val + A->ptr[i] + offsetnz, 1);
   }
   __transpose_inplace(A, dir);
 }

@@ -239,9 +239,9 @@ void sp_matrix_scale(sp_matrix * A, const ok_float alpha){
 
 void __sp_matrix_scale_diag(void * sparse_handle,
   sp_matrix * A, const vector * v, CBLAS_SIDE_t side){
-  size_t i, offset, stop;
+  size_t i, offset, offsetnz, stop;
   vector Asub = (vector){0, 1, OK_NULL};
-  ok_float val;
+  ok_float scal;
   ok_int ptr_host[2 + A->size1 + A->size2];
   SPARSE_TRANSPOSE_DIRECTION_t dir;
 
@@ -254,10 +254,12 @@ void __sp_matrix_scale_diag(void * sparse_handle,
     csc, right scaling -> scale forward operator, tranpose data F2A */
 
   if (side == CblasLeft){
+    offset = (A->order == CblasRowMajor) ? 0 : A->nnz;    
     offset = (A->order == CblasRowMajor) ? 0 : A->ptrlen;
     stop = (A->order == CblasRowMajor) ? A->ptrlen - 1 : 1 + A->size1 + A->size2;
     dir = (A->order == CblasRowMajor) ? Forward2Adjoint : Adjoint2Forward;
   } else {
+    offset = (A->order == CblasRowMajor) ? A->nnz : 0;
     offset = (A->order == CblasRowMajor) ? A->ptrlen : 0;
     stop = (A->order == CblasRowMajor) ? 1 + A->size1 + A->size2 : A->ptrlen - 1;
     dir = (A->order == CblasRowMajor) ? Adjoint2Forward : Forward2Adjoint;
@@ -265,11 +267,11 @@ void __sp_matrix_scale_diag(void * sparse_handle,
 
   for (i = offset; i < stop; ++i) {
     if (ptr_host[i + 1] == ptr_host[i]) continue;
-    ok_memcpy_gpu(&val, v->data + (i - offset) * v->stride, sizeof(ok_float));
+    ok_memcpy_gpu(&scal, v->data + (i - offset) * v->stride, sizeof(ok_float));
 
     Asub.size = ptr_host[i + 1] - ptr_host[i];
     Asub.data = A->val + ptr_host[i];
-    __thrust_vector_scale(&Asub, val);
+    __thrust_vector_scale(&Asub, scal);
   }
   __transpose_inplace(sparse_handle, A, dir);
   CUDA_CHECK_ERR;
