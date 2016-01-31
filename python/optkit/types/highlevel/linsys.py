@@ -197,7 +197,7 @@ class HighLevelLinsysTypes(object):
 				assert isinstance(self.c, lowtypes.matrix)
 				assert self.c.size1 == self.size1
 				assert self.c.size2 == self.size2
-				assert self.c.rowmajor
+				assert self.c.order
 				assert self.c.data is not None
 				return True
 

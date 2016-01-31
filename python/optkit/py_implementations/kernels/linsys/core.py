@@ -127,7 +127,7 @@ class LinsysCoreKernels(object):
 				rng1 = Range(x.size1, *range_[0])
 				rng2 = Range(x.size2, *range_[1])		
 				pyview = x.py[rng1.idx1:rng1.idx2,rng2.idx1:rng2.idx2]
-				cview = backend.lowtypes.matrix(0, 0, 0, None, x.c.rowmajor)
+				cview = backend.lowtypes.matrix(0, 0, 0, None, x.c.order)
 				denselib.matrix_submatrix(cview,x.c, 
 										 rng1.idx1, rng2.idx1, 
 										 rng1.elements, rng2.elements)		

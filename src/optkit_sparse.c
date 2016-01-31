@@ -45,7 +45,7 @@ __csr2csc(size_t m, size_t n, size_t nnz,
 void 
 __transpose_inplace(sp_matrix * A, SPARSE_TRANSPOSE_DIRECTION_t dir){
   if (dir == Forward2Adjoint)
-    if (A->rowmajor == CblasRowMajor)
+    if (A->order == CblasRowMajor)
       __csr2csc(A->size1, A->size2, A->nnz, 
         A->val, A->ptr, A->ind,
         A->val + A->nnz, A->ind + A->nnz, A->ptr + A->ptrlen);
@@ -54,7 +54,7 @@ __transpose_inplace(sp_matrix * A, SPARSE_TRANSPOSE_DIRECTION_t dir){
         A->val, A->ptr, A->ind,
         A->val + A->nnz, A->ind + A->nnz, A->ptr + A->ptrlen);
   else
-    if (A->rowmajor == CblasRowMajor)
+    if (A->order == CblasRowMajor)
       __csr2csc(A->size2, A->size1, A->nnz, 
         A->val + A->nnz, A->ptr + A->ptrlen, A->ind + A->nnz,
         A->val, A->ind, A->ptr); 
@@ -87,6 +87,7 @@ sp_matrix_alloc(sp_matrix * A, size_t m, size_t n,
   A->val = (ok_float *) malloc(2 * nnz * sizeof(ok_float));
   A->ind = (ok_int *) malloc(2 * nnz * sizeof(ok_int));
   A->ptr = (ok_int *) malloc((2 + m + n) * sizeof(ok_int));
+  A->order = order;
 }
 
 void 
@@ -202,13 +203,13 @@ __sp_matrix_scale_diag(sp_matrix * A, const vector * v, CBLAS_SIDE_t side){
   SPARSE_TRANSPOSE_DIRECTION_t dir;
 
   if (side == CblasLeft){
-    offset = (A->rowmajor == CblasRowMajor) ? 0 : A->ptrlen;
-    stop = (A->rowmajor == CblasRowMajor) ? A->ptrlen - 1 : 1 + A->size1 + A->size2;
-    dir = (A->rowmajor == CblasRowMajor) ? Forward2Adjoint : Adjoint2Forward;
+    offset = (A->order == CblasRowMajor) ? 0 : A->ptrlen;
+    stop = (A->order == CblasRowMajor) ? A->ptrlen - 1 : 1 + A->size1 + A->size2;
+    dir = (A->order == CblasRowMajor) ? Forward2Adjoint : Adjoint2Forward;
   } else {
-    offset = (A->rowmajor == CblasRowMajor) ? A->ptrlen : 0;
-    stop = (A->rowmajor == CblasRowMajor) ? 1 + A->size1 + A->size2 : A->ptrlen - 1;
-    dir = (A->rowmajor == CblasRowMajor) ? Adjoint2Forward : Forward2Adjoint;
+    offset = (A->order == CblasRowMajor) ? A->ptrlen : 0;
+    stop = (A->order == CblasRowMajor) ? 1 + A->size1 + A->size2 : A->ptrlen - 1;
+    dir = (A->order == CblasRowMajor) ? Adjoint2Forward : Forward2Adjoint;
   }
 
   for (i = offset; i < stop; ++i) { 
@@ -216,7 +217,7 @@ __sp_matrix_scale_diag(sp_matrix * A, const vector * v, CBLAS_SIDE_t side){
     CBLAS(scal)( (int) (A->ptr[i + 1] - A->ptr[i]), v->data[i - offset], 
       A->val + A->ptr[i], 1);
   }
-  __transpose_inplace(A, Forward2Adjoint);
+  __transpose_inplace(A, dir);
 }
 
 
@@ -253,7 +254,7 @@ sp_matrix_print(const sp_matrix * A){
   size_t i;
   ok_int j, ptr1, ptr2;
 
-  if (A->rowmajor == CblasRowMajor)
+  if (A->order == CblasRowMajor)
     printf("sparse CSR matrix:\n");
   else
     printf("sparse CSC matrix:\n");
@@ -261,7 +262,7 @@ sp_matrix_print(const sp_matrix * A){
   printf("dims: %u, %u\n", (uint) A->size1, (uint) A->size2);
   printf("# nonzeros: %u\n", (uint) A->nnz);
 
-  if (A->rowmajor == CblasRowMajor)
+  if (A->order == CblasRowMajor)
     for(i = 0; i < A->ptrlen - 1; ++ i){
       ptr1 = A->ptr[i];
       ptr2 = A->ptr[i + 1];
@@ -298,7 +299,7 @@ sp_blas_gemv(void * sparse_handle,
   ok_float * val, tmp;
   ok_int * ind, * ptr;
 
-  if ((A->rowmajor == CblasRowMajor) != (transA == CblasTrans)){
+  if ((A->order == CblasRowMajor) != (transA == CblasTrans)){
     ptrlen = A->ptrlen;
     ptr = A->ptr;
     ind = A->ind;

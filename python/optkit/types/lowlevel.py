@@ -35,7 +35,7 @@ class LowLevelTypes(object):
 						('size2', c_size_t),
 						('ld', c_size_t),
 						('data', self.ok_float_p),
-						('rowmajor', c_uint)]
+						('order', c_uint)]
 		self.matrix = ok_matrix
 
 		# matrix pointer
@@ -50,7 +50,7 @@ class LowLevelTypes(object):
 						('val', self.ok_float_p),
 						('ind', self.ok_int_p),
 						('ptr', self.ok_int_p),
-						('rowmajor', c_uint)]
+						('order', c_uint)]
 
 		self.sparse_matrix = ok_sparse_matrix
 

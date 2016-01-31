@@ -181,13 +181,13 @@ void matrix_alloc(matrix * A, size_t m, size_t n, CBLAS_ORDER_t ord) {
   A->data = (ok_float *) malloc(m * n * sizeof(ok_float));
 #ifndef OPTKIT_ORDER
   A->ld = (ord == CblasRowMajor) ? n : m;
-  A->rowmajor = ord;
+  A->order = ord;
 #elif OPTKIT_ORDER == 101
   A->ld = n;
-  A->rowmajor = CblasRowMajor;
+  A->order = CblasRowMajor;
 #else
   A->ld = m;
-  A->rowmajor = CblasColMajor;
+  A->order = CblasColMajor;
 #endif
 }
 
@@ -210,13 +210,13 @@ void matrix_submatrix(matrix * A_sub, matrix * A, size_t i, size_t j, size_t n1,
   A_sub->size2 = n2;
   A_sub->ld = A->ld;
   #ifndef OPTKIT_ORDER
-  A_sub->data = (A->rowmajor == CblasRowMajor) ? A->data + (i * A->ld) + j : A->data + i + (j * A->ld);
+  A_sub->data = (A->order == CblasRowMajor) ? A->data + (i * A->ld) + j : A->data + i + (j * A->ld);
   #elif OPTKIT_ORDER == 101
   A_sub->data = A->data + (i * A->ld) + j;
   #else
   A_sub->data = A->data + i + (j * A->ld);
   #endif
-  A_sub->rowmajor = A->rowmajor;
+  A_sub->order = A->order;
 }
 
 
@@ -225,8 +225,8 @@ void matrix_row(vector * row, matrix * A, size_t i) {
   if (!__matrix_exists(A)) return;
   row->size = A->size2;
   #ifndef OPTKIT_ORDER
-  row->stride = (A->rowmajor == CblasRowMajor) ? 1 : A->ld;
-  row->data = (A->rowmajor == CblasRowMajor) ? A->data + (i * A->ld) : A->data + i;
+  row->stride = (A->order == CblasRowMajor) ? 1 : A->ld;
+  row->data = (A->order == CblasRowMajor) ? A->data + (i * A->ld) : A->data + i;
   #elif OPTKIT_ORDER == 101
   row->stride = 1;
   row->data = A->data + (i * A->ld);
@@ -241,8 +241,8 @@ void matrix_column(vector * col, matrix *A, size_t j) {
   if (!__matrix_exists(A)) return;
   col->size = A->size1;
   #ifndef OPTKIT_ORDER
-  col->stride = (A->rowmajor == CblasRowMajor) ? A->ld : 1;
-  col->data = (A->rowmajor == CblasRowMajor) ? A->data + j : A->data + (j * A->ld);
+  col->stride = (A->order == CblasRowMajor) ? A->ld : 1;
+  col->data = (A->order == CblasRowMajor) ? A->data + j : A->data + (j * A->ld);
   #elif OPTKIT_ORDER == 101
   col->stride = A->ld;
   col->data = A->data + j;
@@ -276,19 +276,19 @@ void matrix_view_array(matrix * A, const ok_float *base, size_t n1, size_t n2, C
   A->data = (ok_float *) base;
   #ifndef OPTKIT_ORDER
   A->ld = (ord == CblasRowMajor) ? n2 : n1;
-  A->rowmajor = ord;
+  A->order = ord;
   #elif OPTKIT_ORDER == 101
   A->ld = n2;
-  A->rowmajor = CblasRowMajor;
+  A->order = CblasRowMajor;
   #else
   A->ld = n1;
-  A->rowmajor = CblasColMajor;
+  A->order = CblasColMajor;
   #endif
 }
 
 inline ok_float __matrix_get(const matrix * A, size_t i, size_t j) {
   #ifndef OPTKIT_ORDER
-  if (A->rowmajor == CblasRowMajor)
+  if (A->order == CblasRowMajor)
     return A->data[i * A->ld + j];
   else
     return A->data[i + j * A->ld];
@@ -302,7 +302,7 @@ inline ok_float __matrix_get(const matrix * A, size_t i, size_t j) {
 
 inline void __matrix_set(matrix *A, size_t i, size_t j, ok_float x){
   #ifndef OPTKIT_ORDER
-  if (A->rowmajor == CblasRowMajor)
+  if (A->order == CblasRowMajor)
     A->data[i * A->ld + j] = x;
   else
     A->data[i + j * A->ld] = x;
@@ -329,7 +329,7 @@ void matrix_memcpy_mm(matrix * A, const matrix * B) {
     printf("error: n-dimensions must match for matrix memcpy\n");
   else{
     #ifndef OPTKIT_ORDER
-    if (A->rowmajor == B->rowmajor)  
+    if (A->order == B->order)  
       memcpy(A->data, B->data, A->size1 * A->size2 * sizeof(ok_float));
     else    
       for (i = 0; i < A->size1; ++i)
@@ -342,13 +342,13 @@ void matrix_memcpy_mm(matrix * A, const matrix * B) {
 }
 
 void matrix_memcpy_ma(matrix * A, const ok_float * B, 
-  const CBLAS_ORDER_t rowmajor) {
+  const CBLAS_ORDER_t ord) {
 
   uint i,j;
-  if (A->rowmajor == rowmajor)
+  if (A->order == ord)
     memcpy(A->data, B, A->size1 * A->size2 * sizeof(ok_float));
   else {
-    if (rowmajor == CblasRowMajor)
+    if (ord == CblasRowMajor)
       for (i = 0; i < A->size1; ++i)
         for (j = 0; j < A->size2; ++j)
           __matrix_set(A,i,j, B[i * A->size2 + j]);
@@ -360,12 +360,12 @@ void matrix_memcpy_ma(matrix * A, const ok_float * B,
 }
 
 void matrix_memcpy_am(ok_float * A, const matrix * B,
-  const CBLAS_ORDER_t rowmajor) {
+  const CBLAS_ORDER_t ord) {
   uint i,j;
-  if (B->rowmajor == rowmajor)
+  if (B->order == ord)
     memcpy(A, B->data, B->size1 * B->size2 * sizeof(ok_float));
   else {
-    if (rowmajor)
+    if (ord == CblasRowMajor)
       for (i = 0; i < B->size1; ++i)
         for (j = 0; j < B->size2; ++j)
           A[i + j * B->size1] = __matrix_get(B, i, j);
@@ -392,7 +392,7 @@ void matrix_scale(matrix *A, ok_float x) {
   size_t i;
   #ifndef OPTKIT_ORDER
   vector row_col = (vector){0,0,OK_NULL};
-  if (A->rowmajor == CblasRowMajor)
+  if (A->order == CblasRowMajor)
     for(i = 0; i < A->size1; ++i){
       matrix_row(&row_col, A, i);
       vector_scale(&row_col, x);
@@ -422,7 +422,7 @@ void matrix_abs(matrix * A) {
   size_t i;
   #ifndef OPTKIT_ORDER
   vector row_col = (vector){0,0,OK_NULL};
-  if (A->rowmajor == CblasRowMajor)
+  if (A->order == CblasRowMajor)
     for(i = 0; i < A->size1; ++i){
       matrix_row(&row_col, A, i);
       vector_abs(&row_col);
@@ -453,7 +453,7 @@ void matrix_abs(matrix * A, const ok_float x) {
   size_t i;
   #ifndef OPTKIT_ORDER
   vector row_col = (vector){0,0,OK_NULL};
-  if (A->rowmajor == CblasRowMajor)
+  if (A->order == CblasRowMajor)
     for(i = 0; i < A->size1; ++i){
       matrix_row(&row_col, A, i);
       vector_pow(&row_col, x);
@@ -484,7 +484,7 @@ void matrix_abs(matrix * A, const ok_float x) {
 int __matrix_order_compat(const matrix * A, const matrix * B, 
   const char * nm_A, const char * nm_B, const char * nm_routine){
 
-  if (A->rowmajor == B->rowmajor) return 1;
+  if (A->order == B->order) return 1;
   printf("OPTKIT ERROR (%s) matrices %s and %s must have same layout.\n", 
          nm_routine, nm_A, nm_B);
   return 0;
@@ -570,7 +570,7 @@ void blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t transA,
   #ifdef OK_DEBUG
   if ( !__blas_check_handle(linalg_handle) ) return;
   #endif
-  CBLAS(gemv)(A->rowmajor, transA, (int) A->size1, (int) A->size2, 
+  CBLAS(gemv)(A->order, transA, (int) A->size1, (int) A->size2, 
               alpha, A->data, (int) A->ld, x->data, (int) x->stride, 
               beta, y->data, (int) y->stride);
 }
@@ -582,7 +582,7 @@ void blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo,
   #ifdef OK_DEBUG
   if ( !__blas_check_handle(linalg_handle) ) return;
   #endif
-  CBLAS(trsv)(A->rowmajor, Uplo, transA, Diag, (int) A->size1, 
+  CBLAS(trsv)(A->order, Uplo, transA, Diag, (int) A->size1, 
               A->data, (int) A->ld, x->data, (int) x->stride); 
 }
 
@@ -615,7 +615,7 @@ void blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo,
   #ifndef OPTKIT_ORDER
   if ( __matrix_order_compat(A, C, "A", "C", "blas_syrk") )
   #endif
-    CBLAS(syrk)(A->rowmajor, Uplo, transA, (int) C->size2 , k, alpha, 
+    CBLAS(syrk)(A->order, Uplo, transA, (int) C->size2 , k, alpha, 
                 A->data, (int) A->ld, beta, C->data, (int) C->ld);
   
 }
@@ -635,7 +635,7 @@ void blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t transA,
   if ( __matrix_order_compat(A, B, "A", "B", "gemm") && 
         __matrix_order_compat(A, C, "A", "C", "blas_gemm") )
   #endif
-    CBLAS(gemm)(A->rowmajor, transA, transB, (int) C->size1, (int) C->size2, NA, alpha, 
+    CBLAS(gemm)(A->order, transA, transB, (int) C->size1, (int) C->size2, NA, alpha, 
                 A->data, (int) A->ld, B->data, (int) B->ld, beta, C->data, (int) C->ld);
 
 }
@@ -651,7 +651,7 @@ void blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side,
   #ifndef OPTKIT_ORDER
   if ( __matrix_order_compat(A, B, "A", "B", "blas_trsm") )
   #endif
-    CBLAS(trsm)(A->rowmajor, Side, Uplo, transA, Diag,(int) B->size1, (int) B->size2, 
+    CBLAS(trsm)(A->order, Side, Uplo, transA, Diag,(int) B->size1, (int) B->size2, 
                 alpha, A->data,(int) A->ld, B->data, (int) B->ld);
 
 }

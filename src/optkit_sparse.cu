@@ -55,7 +55,7 @@ __transpose_inplace(void * sparse_handle, sp_matrix * A,
   ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
 
   if (dir == Forward2Adjoint) {
-    if (A->rowmajor == CblasRowMajor) {
+    if (A->order == CblasRowMajor) {
       CUSPARSE(csr2csc)( *(sp_hdl->hdl), 
         (int) A->size1, (int) A->size2, (int) A->nnz, 
         A->val, A->ptr, A->ind,
@@ -69,15 +69,15 @@ __transpose_inplace(void * sparse_handle, sp_matrix * A,
         CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO);
     }
   } else {
-    if (A->rowmajor == CblasRowMajor) {
+    if (A->order == CblasRowMajor) {
       CUSPARSE(csr2csc)( *(sp_hdl->hdl), 
-        (int) A->size1, (int) A->size2, (int) A->nnz, 
+        (int) A->size2, (int) A->size1, (int) A->nnz, 
         A->val + A->nnz, A->ptr + A->ptrlen, A->ind + A->nnz,
         A->val, A->ind, A->ptr, 
         CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO);
     } else {
       CUSPARSE(csr2csc)( *(sp_hdl->hdl), 
-        (int) A->size2, (int) A->size1, (int) A->nnz, 
+        (int) A->size1, (int) A->size2, (int) A->nnz, 
         A->val + A->nnz, A->ptr + A->ptrlen, A->ind + A->nnz,
         A->val, A->ind, A->ptr, 
         CUSPARSE_ACTION_NUMERIC, CUSPARSE_INDEX_BASE_ZERO);
@@ -130,7 +130,7 @@ sp_matrix_alloc(sp_matrix * A, size_t m, size_t n,
   ok_alloc_gpu(A->ind, 2 * nnz * sizeof(ok_int));
   ok_alloc_gpu(A->ptr, (2 + m + n) * sizeof(ok_int));
   CUDA_CHECK_ERR;
-
+  A->order = order;
 }
 
 void 
@@ -242,10 +242,10 @@ void __sp_matrix_scale_diag(void * sparse_handle,
   size_t i, offset, stop;
   vector Asub = (vector){0, 1, OK_NULL};
   ok_float val;
-  ok_int ptr1 = (ok_int) 0;
-  ok_int ptr2;
+  ok_int ptr_host[2 + A->size1 + A->size2];
   SPARSE_TRANSPOSE_DIRECTION_t dir;
 
+  ok_memcpy_gpu(ptr_host, A->ptr, (2 + A->size1 + A->size2) * sizeof(ok_int));
   /* Always perform forward (non-transpose) scaling (contiguous blocks) */
   /* cusparse uses csr, so:
     csr, left scaling -> scale forward operator, transpose data F2A
@@ -254,30 +254,25 @@ void __sp_matrix_scale_diag(void * sparse_handle,
     csc, right scaling -> scale forward operator, tranpose data F2A */
 
   if (side == CblasLeft){
-    offset = (A->rowmajor == CblasRowMajor) ? 0 : A->ptrlen;
-    stop = (A->rowmajor == CblasRowMajor) ? A->ptrlen - 1 : 1 + A->size1 + A->size2;
-    dir = (A->rowmajor == CblasRowMajor) ? Forward2Adjoint : Adjoint2Forward;
+    offset = (A->order == CblasRowMajor) ? 0 : A->ptrlen;
+    stop = (A->order == CblasRowMajor) ? A->ptrlen - 1 : 1 + A->size1 + A->size2;
+    dir = (A->order == CblasRowMajor) ? Forward2Adjoint : Adjoint2Forward;
   } else {
-    offset = (A->rowmajor == CblasRowMajor) ? A->ptrlen : 0;
-    stop = (A->rowmajor == CblasRowMajor) ? 1 + A->size1 + A->size2 : A->ptrlen - 1;
-    dir = (A->rowmajor == CblasRowMajor) ? Adjoint2Forward : Forward2Adjoint;
+    offset = (A->order == CblasRowMajor) ? A->ptrlen : 0;
+    stop = (A->order == CblasRowMajor) ? 1 + A->size1 + A->size2 : A->ptrlen - 1;
+    dir = (A->order == CblasRowMajor) ? Adjoint2Forward : Forward2Adjoint;
   }
-  sp_matrix_print(A);
 
   for (i = offset; i < stop; ++i) {
-    ok_memcpy_gpu(&ptr2, A->ptr + 1 + i, sizeof(ok_int));
-    if (ptr2 == ptr1) continue;
+    if (ptr_host[i + 1] == ptr_host[i]) continue;
     ok_memcpy_gpu(&val, v->data + (i - offset) * v->stride, sizeof(ok_float));
 
-    Asub.size = ptr2 - ptr1;
-    Asub.data = A->val + (size_t) ptr1;
+    Asub.size = ptr_host[i + 1] - ptr_host[i];
+    Asub.data = A->val + ptr_host[i];
     __thrust_vector_scale(&Asub, val);
-    ptr1 = ptr2;
   }
   __transpose_inplace(sparse_handle, A, dir);
   CUDA_CHECK_ERR;
-  sp_matrix_print(A);
-
 }
 
 void sp_matrix_scale_left(void * sparse_handle, 
@@ -317,7 +312,10 @@ void sp_matrix_print(const sp_matrix * A){
   ok_memcpy_gpu(ptr_host, A->ptr, A->ptrlen * sizeof(ok_int));
   CUDA_CHECK_ERR;
 
-  if (A->rowmajor == CblasRowMajor)
+
+
+
+  if (A->order == CblasRowMajor)
     printf("sparse CSR matrix:\n");
   else
     printf("sparse CSC matrix:\n");
@@ -325,7 +323,7 @@ void sp_matrix_print(const sp_matrix * A){
   printf("dims: %u, %u\n", (uint) A->size1, (uint) A->size2);
   printf("# nonzeros: %u\n", (uint) A->nnz);
 
-  if (A->rowmajor == CblasRowMajor)
+  if (A->order == CblasRowMajor)
     for(i = 0; i < A->ptrlen - 1; ++ i){
       ptr1 = ptr_host[i];
       ptr2 = ptr_host[i + 1];
@@ -358,7 +356,7 @@ void sp_blas_gemv(void * sparse_handle,
     csc, forward op -> apply stored adjoint operator
     csc, adjoint op -> apply stored forward operator */
 
-  if ((A->rowmajor == CblasRowMajor) != (transA == CblasTrans)){
+  if ((A->order == CblasRowMajor) != (transA == CblasTrans)){
     /* Use forward operator stored in A */
     CUSPARSE(csrmv)(
       *(sp_hdl->hdl), 

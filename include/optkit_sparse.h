@@ -21,7 +21,7 @@ typedef struct sp_matrix {
   size_t size1, size2, nnz, ptrlen;
   ok_float * val;
   ok_int * ind, * ptr;
-  CBLAS_ORDER_t rowmajor;
+  CBLAS_ORDER_t order;
 } sp_matrix;
 
 
@@ -53,6 +53,7 @@ void sp_matrix_memcpy_pattern_am(ok_int * ind, ok_int * ptr,
 
 /* elementwise, row-wise & column-wise math */
 void sp_matrix_abs(sp_matrix * A);
+void sp_matrix_pow(sp_matrix * A, const ok_float x);
 void sp_matrix_scale(sp_matrix * A, const ok_float alpha);
 void sp_matrix_scale_left(void * sparse_handle, sp_matrix * A, const vector * v);
 void sp_matrix_scale_right(void * sparse_handle, sp_matrix * A, const vector * v);
