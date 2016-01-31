@@ -254,12 +254,12 @@ void __sp_matrix_scale_diag(void * sparse_handle,
     csc, right scaling -> scale forward operator, tranpose data F2A */
 
   if (side == CblasLeft){
-    offset = (A->order == CblasRowMajor) ? 0 : A->nnz;    
+    offsetnz = (A->order == CblasRowMajor) ? 0 : A->nnz;    
     offset = (A->order == CblasRowMajor) ? 0 : A->ptrlen;
     stop = (A->order == CblasRowMajor) ? A->ptrlen - 1 : 1 + A->size1 + A->size2;
     dir = (A->order == CblasRowMajor) ? Forward2Adjoint : Adjoint2Forward;
   } else {
-    offset = (A->order == CblasRowMajor) ? A->nnz : 0;
+    offsetnz = (A->order == CblasRowMajor) ? A->nnz : 0;
     offset = (A->order == CblasRowMajor) ? A->ptrlen : 0;
     stop = (A->order == CblasRowMajor) ? 1 + A->size1 + A->size2 : A->ptrlen - 1;
     dir = (A->order == CblasRowMajor) ? Adjoint2Forward : Forward2Adjoint;
@@ -270,7 +270,7 @@ void __sp_matrix_scale_diag(void * sparse_handle,
     ok_memcpy_gpu(&scal, v->data + (i - offset) * v->stride, sizeof(ok_float));
 
     Asub.size = ptr_host[i + 1] - ptr_host[i];
-    Asub.data = A->val + ptr_host[i];
+    Asub.data = A->val + offsetnz + ptr_host[i];
     __thrust_vector_scale(&Asub, scal);
   }
   __transpose_inplace(sparse_handle, A, dir);
