@@ -624,6 +624,36 @@ matrix_abs(matrix * A){
   #endif
 }
 
+void
+matrix_abs(matrix * A, const ok_float x){
+  size_t i;
+  #ifndef OPTKIT_ORDER
+  vector row_col = (vector){0,0,OK_NULL};
+  if (A->rowmajor == CblasRowMajor)
+    for(i = 0; i < A->size1; ++i){
+      matrix_row(&row_col, A, i);
+      vector_pow(&row_col, x);
+    }
+  else{
+    for(i = 0; i < A->size2; ++i){
+      matrix_column(&row_col, A, i);
+      vector_pow(&row_col, x);
+    }
+  }
+  #elif OPTKIT_ORDER == 101
+  vector row = (vector){0,0,OK_NULL};
+  for(i = 0; i < A->size1; ++i){
+    matrix_row(&row, A, i);
+    vector_pow(&row, x);
+  }
+  #else
+  vector col = (vector){0,0,OK_NULL};
+  for(i = 0; i < A->size2; ++i){
+    matrix_column(&col, A, i);
+    vector_pow(&col, x);
+  }
+  #endif
+}
 
 #ifndef OPTKIT_ORDER
 int __matrix_order_compat(const matrix * A, const matrix * B, 
@@ -805,6 +835,35 @@ blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo,
     (int) A->size1, A->data, (int) A->ld, x->data, (int) x->stride); 
   CUDA_CHECK_ERR;
 }
+
+// void blas_sbmv(void * linalg_handle, CBLAS_UPLO_t Uplo,
+//   const size_t num_superdiag, const ok_float alpha, const vector * vecA, 
+//   const size_t lda, const vector * x, const ok_float beta, vector * y){
+
+//   cublasFillMode_t ul;
+
+//   #ifndef OPTKIT_ORDER
+//   if (A->rowmajor==CblasColMajor){
+//     ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+//   } else {
+//     ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
+//   }
+//   #elif OPTKIT_ORDER == 101
+//   ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
+//   #else
+//   ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+//   #endif
+
+
+//   CUBLAS(sbmv)(*(cublasHandle_t *) linalg_handle, ul,
+//     (int) y->size, (int) num_superdiag, alpha, vecA->data, (int) lda, 
+//     x->data, (int) x->stride, beta, y->data, (int) y->stride);
+// }
+
+// void blas_diagmv(void * linalg_handle, const ok_float alpha,
+//   const vector * vecA, const vector * x, const ok_float beta, vector * y){
+//   blas_sbmv(linalg_handle, 'U', 0, alpha, vecA, 1, x, beta, y);
+// }
 
 /* BLAS LEVEL 3 */
 

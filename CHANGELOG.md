@@ -10,8 +10,9 @@
 - TODO: cite POGS
 - TODO: thorough commenting
 - TODO: add unit tests for vector_pow, _recip, _sqrt
-- TODO: add unit tests for sp_matrix _scale, _abs, _memcpy variants
-
+- TODO: add unit tests for sp_matrix _scale, _abs, _pow, _memcpy variants
+- TODO: add unit tests for matrix_pow, _abs
+- TODO: debugging & unit tests for blas _sbmv, blas _diagmv
 
 ###v0.0.3 (alpha)
 - CPU Sparse Linear Algebra
