@@ -45,11 +45,6 @@ void sp_matrix_memcpy_vals_mm(sp_matrix * A, const sp_matrix * B);
 void sp_matrix_memcpy_vals_ma(void * sparse_handle, sp_matrix * A, 
   const ok_float * val);
 void sp_matrix_memcpy_vals_am(ok_float * val, const sp_matrix * A);
-void sp_matrix_memcpy_pattern_mm(sp_matrix * A, const sp_matrix * B);
-void sp_matrix_memcpy_pattern_ma(void * sparse_handle, sp_matrix * A, 
-  const ok_int * ind, const ok_int * ptr);
-void sp_matrix_memcpy_pattern_am(ok_int * ind, ok_int * ptr, 
-  const sp_matrix * A);
 
 /* elementwise, row-wise & column-wise math */
 void sp_matrix_abs(sp_matrix * A);

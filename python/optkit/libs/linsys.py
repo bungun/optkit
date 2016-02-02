@@ -270,9 +270,6 @@ class SparseLinsysLibs(object):
 			lib.sp_matrix_memcpy_vals_mm.argtypes = [sparse_matrix_p, sparse_matrix_p]
 			lib.sp_matrix_memcpy_vals_ma.argtypes = [c_void_p, sparse_matrix_p, ok_float_p]
 			lib.sp_matrix_memcpy_vals_am.argtypes = [ok_float_p, sparse_matrix_p]
-			lib.sp_matrix_memcpy_pattern_mm.argtypes = [sparse_matrix_p, sparse_matrix_p]
-			lib.sp_matrix_memcpy_pattern_ma.argtypes = [c_void_p, sparse_matrix_p, ok_int_p, ok_int_p]
-			lib.sp_matrix_memcpy_pattern_am.argtypes = [ok_int_p, ok_int_p, sparse_matrix_p]
 			lib.sp_matrix_abs.argtypes = [sparse_matrix_p]
 			lib.sp_matrix_pow.argtypes = [sparse_matrix_p, ok_float]
 			lib.sp_matrix_scale.argtypes = [sparse_matrix_p, ok_float]
@@ -291,9 +288,6 @@ class SparseLinsysLibs(object):
 			lib.sp_matrix_memcpy_vals_mm.restype = None
 			lib.sp_matrix_memcpy_vals_ma.restype = None
 			lib.sp_matrix_memcpy_vals_am.restype = None
-			lib.sp_matrix_memcpy_pattern_mm.restype = None
-			lib.sp_matrix_memcpy_pattern_ma.restype = None
-			lib.sp_matrix_memcpy_pattern_am.restype = None
 			lib.sp_matrix_abs.restype = None
 			lib.sp_matrix_pow.restype = None
 			lib.sp_matrix_scale.restype = None

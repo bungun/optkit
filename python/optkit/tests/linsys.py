@@ -785,9 +785,6 @@ def test_blas_methods(errors, m=4, n=3, A_in=None, VERBOSE_TEST=True,
 		# random symmetric banded matrix:
 		diags = max(1, min(4, n - 1))
 		Srand = RAND_ARR(n * diags)
-		Srand *= 0
-		Srand[::diags] += 2
-
 
 		# Srand[n : 2 * n - 1] += 2
 		S = Vector(Srand)
@@ -797,7 +794,6 @@ def test_blas_methods(errors, m=4, n=3, A_in=None, VERBOSE_TEST=True,
 		xrand = RAND_ARR(n)
 		x = Vector(xrand)
 		y = Vector(n)
-		linsys['print_var'](S)
 		backend.dense.blas_sbmv(backend.dense_blas_handle,
 			ok_enums.CblasLower, diags - 1, 1., S.c, x.c, 0., y.c)
 
@@ -1065,10 +1061,6 @@ def __test_sparse_Axpy(backend, linsys, A, x, y,
 def __test_sparse_scale(backend, linsys, A, left, right, x, y,
 	PPRINT, PRINT, TEST_EPS):
 
-	print "Ax"
-	print A.py.todense().dot(x.py)
-	print A.py.shape
-
 	# form A = diag(a_left) * A
 
 	PPRINT("y := diag(a_left) * A * x", '.')
@@ -1103,14 +1095,17 @@ def __test_sparse_transform(backend, linsys, A, x, y,
 	scal = np.random.rand()
 
 	PPRINT("scale A *= {}".format(scal), '.')
-	PRINT("{}(Ax) vs ({}A)x").format(scal, scal)
+	PRINT("{}(Ax) vs ({}A)x".format(scal, scal))
+
 	backend.sparse.sp_matrix_scale(A.c, scal)
 	backend.sparse.sp_blas_gemv(backend.sparse_handle, 
 		ok_enums.CblasNoTrans, 1, A.c, x.c, 0, y.c)		
 
+	A.py *= scal
+
 	linsys['sync'](x, y)
 	Ax_c = y.py
-	Ax_py = scal * A.py * x.py
+	Ax_py = A.py * x.py
 	PRINT("y (Py) - y (C)")
 	PRINT(Ax_py - Ax_c)
 	assert array_compare(Ax_py, Ax_c, eps=TEST_EPS)
@@ -1123,9 +1118,11 @@ def __test_sparse_transform(backend, linsys, A, x, y,
 	backend.sparse.sp_blas_gemv(backend.sparse_handle, 
 		ok_enums.CblasNoTrans, 1, A.c, x.c, 0, y.c)		
 
+	A.py.data = np.abs(A.py.data)
+
 	linsys['sync'](x, y)
 	Ax_c = y.py
-	Ax_py =  np.abs(A.py.todense()).dot(x.py)
+	Ax_py =  A.py * x.py
 	PRINT("y (Py) - y (C)")
 	PRINT(Ax_py - Ax_c)
 	assert array_compare(Ax_py, Ax_c, eps=TEST_EPS)
@@ -1139,21 +1136,155 @@ def __test_sparse_transform(backend, linsys, A, x, y,
 	backend.sparse.sp_blas_gemv(backend.sparse_handle, 
 		ok_enums.CblasNoTrans, 1, A.c, x.c, 0, y.c)		
 
+	A.py.data **= p 
+
 	linsys['sync'](x, y)
 	Ax_c = y.py
-	Ax_py =  np.abs(A.py.todense()).dot(x.py)
+	Ax_py =  A.py * x.py
 	PRINT("y (Py) - y (C)")
 	PRINT(Ax_py - Ax_c)
 	assert array_compare(Ax_py, Ax_c, eps=TEST_EPS)
 
 def __test_sparse_copy(backend, linsys, A, x, y,
 	PPRINT, PRINT, TEST_EPS):
+	
+	from optkit.api import SparseMatrix
+	ndarray_pointer = backend.lowtypes.ndarray_pointer
 
-	pass 
-	## for mm, ma, am:
-	# TODO: test full copy
-	# TODO: test value copy
-	# TODO: test pattern copy
+	m, n = A.shape
+	nnz = A.nnz
+
+	# ------------------------------------------------------------- #
+	# ----------------------- test full copy ---------------------- #
+	# ------------------------------------------------------------- #
+
+	PPRINT("full copy, sparse matrix -> sparse matrix", '.')
+	Ax_1 = np.zeros(m)
+	Ax_2 = np.zeros(m)
+
+	A_blank = SparseMatrix(m, n, nnz)
+	A_blank.py.indptr[:] = A.py.indptr[:]
+	A_blank.py.indices[:] = A.py.indices[:]
+	A_blank.py.data[:] = A.py.data[:]
+
+	backend.sparse.sp_matrix_memcpy_mm(A_blank.c, A.c)
+	backend.sparse.sp_blas_gemv(backend.sparse_handle,
+		ok_enums.CblasNoTrans, 1, A.c, x.c, 0, y.c)
+
+	linsys['sync'](x, y)
+	Ax_1 = y.py[:]
+
+	backend.sparse.sp_blas_gemv(backend.sparse_handle,
+		ok_enums.CblasNoTrans, 1, A_blank.c, x.c, 0, y.c)
+
+	linsys['sync'](x, y)
+	Ax_2 = y.py[:]
+
+	PRINT("A * x - A_copy * x")
+	PRINT(Ax_1 - Ax_2)
+	assert array_compare(Ax_1, Ax_2, eps=TEST_EPS)
+
+
+	PPRINT("full copy, arrays -> sparse matrix", '.')
+	A_blank.py *= 2
+
+	backend.sparse.sp_matrix_memcpy_ma(backend.sparse_handle, 
+		A_blank.c, ndarray_pointer(A_blank.py.data),
+		ndarray_pointer(A_blank.py.indices), 
+		ndarray_pointer(A_blank.py.indptr))
+
+	backend.sparse.sp_blas_gemv(backend.sparse_handle,
+		ok_enums.CblasNoTrans, 1, A_blank.c, x.c, 0, y.c)
+
+	linsys['sync'](x, y)
+	Ax_c = y.py[:]
+	Ax_py = A_blank.py * x.py
+
+	PRINT("Ax (Py) - Ax (c)")
+	PRINT(Ax_py - Ax_c)
+	assert array_compare(Ax_py, Ax_c, eps=TEST_EPS)
+
+	PPRINT("full copy, sparse matrix->arrays", '.')
+	A.py *= 2
+
+	backend.sparse.sp_matrix_memcpy_am(
+		ndarray_pointer(A.py.data),
+		ndarray_pointer(A.py.indices), 
+		ndarray_pointer(A.py.indptr),
+		A.c)
+
+	backend.sparse.sp_blas_gemv(backend.sparse_handle,
+		ok_enums.CblasNoTrans, 1, A.c, x.c, 0, y.c)
+
+	linsys['sync'](x, y)
+	Ax_c = y.py[:]
+	Ax_py = A.py * x.py
+
+	PRINT("Ax (Py) - Ax (c)")
+	PRINT(Ax_py - Ax_c)
+	assert array_compare(Ax_py, Ax_c, eps=TEST_EPS)
+
+	# ------------------------------------------------------------- #
+	# ---------------------- test value copy ---------------------- #
+	# ------------------------------------------------------------- #
+
+	PPRINT("value copy, sparse matrix -> sparse matrix", '.')
+	Ax_1 *= 0
+	Ax_2 *= 0
+
+	A_blank = SparseMatrix(A.py)
+	A_blank.py.data[:] *= 0
+
+	backend.sparse.sp_matrix_memcpy_vals_mm(A_blank.c, A.c)
+	backend.sparse.sp_blas_gemv(backend.sparse_handle,
+		ok_enums.CblasNoTrans, 1, A.c, x.c, 0, y.c)
+
+	linsys['sync'](x, y)
+	Ax_1 = y.py[:]
+
+	backend.sparse.sp_blas_gemv(backend.sparse_handle,
+		ok_enums.CblasNoTrans, 1, A_blank.c, x.c, 0, y.c)
+
+	linsys['sync'](x, y)
+	Ax_2 = y.py[:]
+
+	PRINT("A * x - A_copy * x")
+	PRINT(Ax_1 - Ax_2)
+	assert array_compare(Ax_1, Ax_2, eps=TEST_EPS)
+
+
+	PPRINT("value copy, arrays -> sparse matrix", '.')
+	A_blank.py *= 2
+
+	backend.sparse.sp_matrix_memcpy_vals_ma(backend.sparse_handle, 
+		A_blank.c, ndarray_pointer(A_blank.py.data))
+	backend.sparse.sp_blas_gemv(backend.sparse_handle,
+		ok_enums.CblasNoTrans, 1, A_blank.c, x.c, 0, y.c)
+
+	linsys['sync'](x, y)
+	Ax_c = y.py[:]
+	Ax_py = A_blank.py * x.py
+
+	PRINT("Ax (Py) - Ax (c)")
+	PRINT(Ax_py - Ax_c)
+	assert array_compare(Ax_py, Ax_c, eps=TEST_EPS)
+
+	PPRINT("value copy, sparse matrix->arrays", '.')
+	A.py *= 2
+
+	backend.sparse.sp_matrix_memcpy_vals_am(
+		ndarray_pointer(A.py.data), A.c)
+
+	backend.sparse.sp_blas_gemv(backend.sparse_handle,
+		ok_enums.CblasNoTrans, 1, A.c, x.c, 0, y.c)
+
+	linsys['sync'](x, y)
+	Ax_c = y.py[:]
+	Ax_py = A.py * x.py
+
+	PRINT("Ax (Py) - Ax (c)")
+	PRINT(Ax_py - Ax_c)
+	assert array_compare(Ax_py, Ax_c, eps=TEST_EPS)
 
 def test_sparse_methods(errors, m=20, n=10, frac_occupied=0.3,
 	VERBOSE_TEST=True, gpu=False, floatbits=64):
@@ -1213,77 +1344,51 @@ def test_sparse_methods(errors, m=20, n=10, frac_occupied=0.3,
 		y_empty = Vector(m)		
 		x_empty = Vector(n)
 
-		PPRINT("CSR matrix input", '/')
+		mat_labels = ['CSR', 'CSC']
+		for i, spmat_kind in enumerate([csr_matrix, csc_matrix]):
 
-		# Allocate A from CSR matrix
-		Acsr = csr_matrix(Arand)
-		A = SparseMatrix(Acsr)
+
+			PPRINT("{} matrix input".format(mat_labels[i]), '/')
+
+			# Allocate A from CSR/CSC matrix
+			Alocal = spmat_kind(Arand)
+			A = SparseMatrix(Alocal)
 	
-		# multiply Ax
-		__test_sparse_Ax(backend, linsys, A, x, y_empty, 
-			PPRINT, PRINT, TEST_EPS)
+			# test: multiply Ax
+			__test_sparse_Ax(backend, linsys, A, x, y_empty, 
+				PPRINT, PRINT, TEST_EPS)
 
-		# multiply A'y
-		__test_sparse_Aty(backend, linsys, A, x_empty, y, 
-			PPRINT, PRINT, TEST_EPS)
+			# test: multiply A'y
+			__test_sparse_Aty(backend, linsys, A, x_empty, y, 
+				PPRINT, PRINT, TEST_EPS)
 
-		# perform y = alpha Ax - beta y
-		__test_sparse_Axpy(backend, linsys, A, x, y,
-			PPRINT, PRINT, TEST_EPS)
-
-
-		a_left = RAND_ARR(m) * 0 + 2
-		a_right = RAND_ARR(n) * 0 + 2
-		al = Vector(a_left)
-		ar = Vector(a_right)
-		xrand *= 0
-		xrand += 1
-		xr = Vector(xrand)
-
-		# form diag(a_left) * A
-		__test_sparse_scale(backend, linsys, A, al, ar, xr, y_empty,
-			PPRINT, PRINT, TEST_EPS)
+			# test: perform y = alpha Ax - beta y
+			__test_sparse_Axpy(backend, linsys, A, x, y,
+				PPRINT, PRINT, TEST_EPS)
 
 
-		PPRINT("CSC matrix input", '/')
-		# (update yrand to match y)
+			a_left = RAND_ARR(m)
+			a_right = RAND_ARR(n)
+			al = Vector(a_left)
+			ar = Vector(a_right)
+			xrand *= 0
+			xrand += 1
+			xr = Vector(xrand)
 
-		# Allocate A from CSC matrix
-		Acsc  = csc_matrix(Arand)
-		A = SparseMatrix(Acsc)
+			# test: diagonal scaling (left and right)
+			__test_sparse_scale(backend, linsys, A, al, ar, xr, y_empty,
+				PPRINT, PRINT, TEST_EPS)
 
-		# multiply Ax
-		__test_sparse_Ax(backend, linsys, A, x, y_empty, 
-			PPRINT, PRINT, TEST_EPS)
+			# (reset A.c to match A.py)
+			A = SparseMatrix(Alocal)
 
-		# multiply A'y
-		__test_sparse_Aty(backend, linsys, A, x_empty, y, 
-			PPRINT, PRINT, TEST_EPS)
+			# test: scale, abs, pow
+			__test_sparse_transform(backend, linsys, A, xr, y_empty, 
+				PPRINT, PRINT, TEST_EPS)
 
-		# perform y = alpha Ax - beta y
-		__test_sparse_Axpy(backend, linsys, A, x, y,
-			PPRINT, PRINT, TEST_EPS)
-
-
-		a_left = RAND_ARR(m) * 0 + 2
-		a_right = RAND_ARR(n) * 0 + 2
-		al = Vector(a_left)
-		ar = Vector(a_right)
-		xrand *= 0
-		xrand += 1
-		xr = Vector(xrand)
-
-		# perform left * A and A * right
-		__test_sparse_scale(backend, linsys, A, al, ar, xr, y_empty,
-			PPRINT, PRINT, TEST_EPS)
-
-		# test scale, abs, pow
-		__test_sparse_transform(backend, linsys, A, xr, y_empty, 
-			PPRINT, PRINT, TEST_EPS)
-
-		# test copy methods
-		__test_sparse_copy(backend, linsys, A, xr, y_empty, 
-			PPRINT, PRINT, TEST_EPS)
+			# test: copy methods
+			__test_sparse_copy(backend, linsys, A, xr, y_empty, 
+				PPRINT, PRINT, TEST_EPS)
 		
 		return True
 	except:

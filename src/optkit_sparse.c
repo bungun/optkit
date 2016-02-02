@@ -150,27 +150,6 @@ sp_matrix_memcpy_vals_am(ok_float * val, const sp_matrix * A){
 }
 
 void 
-sp_matrix_memcpy_pattern_mm(sp_matrix * A, const sp_matrix * B){
-  memcpy(A->ind, B->ind, 2 * A->nnz * sizeof(ok_int));
-  memcpy(A->ptr, B->ptr, (A->size1 + A->size2 + 2) * sizeof(ok_int));  
-}
-
-void 
-sp_matrix_memcpy_pattern_ma(void * sparse_handle, sp_matrix * A, 
-  const ok_int * ind, const ok_int * ptr){
-  memcpy(A->ind, ind, A->nnz * sizeof(ok_int));
-  memcpy(A->ptr, ptr, A->ptrlen * sizeof(ok_int));
-  __transpose_inplace(A, Forward2Adjoint);
-}
-
-void 
-sp_matrix_memcpy_pattern_am(ok_int * ind, ok_int * ptr,
-  const sp_matrix * A){
-  memcpy(ind, A->ind, A->nnz * sizeof(ok_int));
-  memcpy(ptr, A-> ptr, A->ptrlen * sizeof(ok_int));
-}
-
-void 
 sp_matrix_abs(sp_matrix * A){
   size_t i;
   #ifdef _OPENMP

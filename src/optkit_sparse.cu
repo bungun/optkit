@@ -196,29 +196,6 @@ void sp_matrix_memcpy_vals_am(ok_float * val, const sp_matrix * A){
   CUDA_CHECK_ERR;
 }
 
-void sp_matrix_memcpy_pattern_mm(sp_matrix * A, const sp_matrix * B){
-  ok_memcpy_gpu(A->ind, B->ind, 2 * A->nnz * sizeof(ok_int));
-  ok_memcpy_gpu(A->ptr, B->ptr, (2 + A->size1 + A->size2) * sizeof(ok_int)); 
-  CUDA_CHECK_ERR;
-}
-
-void sp_matrix_memcpy_pattern_ma(void * sparse_handle, sp_matrix * A, 
-  const ok_int * ind, const ok_int * ptr){
-
-  ok_memcpy_gpu(A->ind, ind, A->nnz * sizeof(ok_int));
-  ok_memcpy_gpu(A->ptr, ptr, A->ptrlen * sizeof(ok_int));
-  CUDA_CHECK_ERR;
-  __transpose_inplace(sparse_handle, A, Forward2Adjoint);
-}
-
-void sp_matrix_memcpy_pattern_am(ok_int * ind, ok_int * ptr, 
-  const sp_matrix * A){
-  ok_memcpy_gpu(ind, A->ind, A->nnz * sizeof(ok_int));
-  ok_memcpy_gpu(ptr, A-> ptr, A->ptrlen * sizeof(ok_int));
-  CUDA_CHECK_ERR;
-}
-
-
 void sp_matrix_abs(sp_matrix * A){
   vector vals = (vector){2 * A->nnz, 1, A->val};
   __thrust_vector_abs(&vals);
