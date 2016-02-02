@@ -14,7 +14,8 @@ denselib_version(int * maj, int * min, int * change, int * status){
 }
 
 /* VECTOR methods */
-inline int __vector_exists(vector * v) {
+inline int 
+__vector_exists(vector * v) {
   if (v == OK_NULL){
     printf("Error: cannot write to uninitialized vector pointer\n");
     return 0;
@@ -23,44 +24,52 @@ inline int __vector_exists(vector * v) {
     return 1;
 }
 
-void vector_alloc(vector * v, size_t n) {
+void 
+vector_alloc(vector * v, size_t n) {
   if (!__vector_exists(v)) return;
   v->size = n;
   v->stride = 1;
   v->data = (ok_float *) malloc(n * sizeof(ok_float));
 }
 
-void vector_calloc(vector * v, size_t n) {
+void 
+vector_calloc(vector * v, size_t n) {
   vector_alloc(v, n);
   memset(v->data, 0, n * sizeof(ok_float));
 }
 
-void vector_free(vector * v) {
+void 
+vector_free(vector * v) {
   if (v->data != OK_NULL) ok_free(v->data);
 }
 
-inline void __vector_set(vector * v, size_t i, ok_float x) {
+inline void 
+__vector_set(vector * v, size_t i, ok_float x) {
   v->data[i * v->stride] = x;
 }
 
-ok_float __vector_get(const vector *v, size_t i) {
+ok_float 
+__vector_get(const vector *v, size_t i) {
   return v->data[i * v->stride];
 }
 
-void vector_set_all(vector * v, ok_float x) {
+void 
+vector_set_all(vector * v, ok_float x) {
 	uint i;
  	for (i = 0; i < v->size; ++i)
 		__vector_set(v, i, x);
 }
 
-void vector_subvector(vector * v_out, vector * v_in, size_t offset, size_t n) {
+void 
+vector_subvector(vector * v_out, vector * v_in, size_t offset, size_t n) {
   if (!__vector_exists(v_out)) return;
   v_out->size = n;
   v_out->stride = v_in->stride;
   v_out->data = v_in->data + offset * v_in->stride;
 }
 
-void vector_view_array(vector * v, ok_float * base, size_t n) {
+void 
+vector_view_array(vector * v, ok_float * base, size_t n) {
 	if (!__vector_exists(v)) return;
 	v->size = n;
 	v->stride = 1;
@@ -68,7 +77,8 @@ void vector_view_array(vector * v, ok_float * base, size_t n) {
 }
 
 
-void vector_memcpy_vv(vector * v1, const vector * v2) {
+void 
+vector_memcpy_vv(vector * v1, const vector * v2) {
 	uint i;
  	if ( v1->stride == 1 && v2->stride == 1) {
 		memcpy(v1->data, v2->data, v1->size * sizeof(ok_float));
@@ -78,7 +88,8 @@ void vector_memcpy_vv(vector * v1, const vector * v2) {
 	}
 }
 
-void vector_memcpy_va(vector * v, const ok_float *y, size_t stride_y) {
+void 
+vector_memcpy_va(vector * v, const ok_float *y, size_t stride_y) {
 	uint i;
 	if (v->stride == 1 && stride_y == 1) {
 		memcpy(v->data, y, v->size * sizeof(ok_float));
@@ -88,7 +99,8 @@ void vector_memcpy_va(vector * v, const ok_float *y, size_t stride_y) {
 	}
 }
 
-void vector_memcpy_av(ok_float *x, const vector *v, size_t stride_x) {
+void 
+vector_memcpy_av(ok_float *x, const vector *v, size_t stride_x) {
 	uint i;
 	if (v->stride ==1 && stride_x == 1) {
 		memcpy(x, v->data, v->size * sizeof(ok_float));
@@ -98,66 +110,77 @@ void vector_memcpy_av(ok_float *x, const vector *v, size_t stride_x) {
 	}
 }
 
-void vector_print(const vector * v) {
+void 
+vector_print(const vector * v) {
 	uint i;
 	for (i = 0; i < v->size; ++i)
 		printf("%e ", __vector_get(v, i));
 	printf("\n");
 }
 
-void vector_scale(vector * v, ok_float x) {
+void 
+vector_scale(vector * v, ok_float x) {
 	CBLAS(scal)( (int) v->size, x, v->data, (int) v->stride);
 }
 
-void vector_add(vector * v1, const vector * v2) {
+void 
+vector_add(vector * v1, const vector * v2) {
 	uint i;
 	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] += v2->data[i * v2->stride];
 }
 
-void vector_sub(vector * v1, const vector * v2) {
+void 
+vector_sub(vector * v1, const vector * v2) {
 	uint i;
 	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] -= v2->data[i * v2->stride];
 }
 
-void vector_mul(vector * v1, const vector * v2) {
+void 
+vector_mul(vector * v1, const vector * v2) {
 	uint i;
 	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] *= v2->data[i * v2->stride];
 }
 
-void vector_div(vector * v1, const vector * v2) {
+void 
+vector_div(vector * v1, const vector * v2) {
 	uint i;
 	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] /= v2->data[i * v2->stride];
 }
 
-void vector_add_constant(vector * v, const ok_float x) {
+void 
+vector_add_constant(vector * v, const ok_float x) {
   uint i;
   for (i = 0; i < v->size; ++i)
     v->data[i * v->stride] += x;
 }
 
-void vector_abs(vector * v) {
+void 
+vector_abs(vector * v) {
   uint i;
   for (i = 0; i < v->size; ++i)
     v->data[i * v->stride] = MATH(fabs)(v->data[i * v->stride]);
 }
 
-void vector_recip(vector * v) {
+void 
+vector_recip(vector * v) {
   uint i;
   for (i = 0; i < v->size; ++i)
     v->data[i * v->stride] = (ok_float) 1 / v->data[i * v->stride];
 }
 
-void vector_sqrt(vector * v) {
+void 
+vector_sqrt(vector * v) {
   uint i;
   for (i = 0; i < v->size; ++i)
     v->data[i * v->stride] = MATH(sqrt)(v->data[i * v->stride]);
 }
 
-void vector_pow(vector * v, const ok_float x) {
+void 
+vector_pow(vector * v, const ok_float x) {
   uint i;
   for (i = 0; i < v->size; ++i)
     v->data[i * v->stride] = MATH(pow)(v->data[i * v->stride], x);
@@ -165,7 +188,8 @@ void vector_pow(vector * v, const ok_float x) {
 
 
 /* MATRIX methods */
-inline int __matrix_exists(matrix * A) {
+inline int 
+__matrix_exists(matrix * A) {
   if (A == OK_NULL){
     printf("Error: cannot write to uninitialized matrix pointer\n");
     return 0;
@@ -175,7 +199,8 @@ inline int __matrix_exists(matrix * A) {
 }
 
 
-void matrix_alloc(matrix * A, size_t m, size_t n, CBLAS_ORDER_t ord) {
+void 
+matrix_alloc(matrix * A, size_t m, size_t n, CBLAS_ORDER_t ord) {
   A->size1 = m;
   A->size2 = n;
   A->data = (ok_float *) malloc(m * n * sizeof(ok_float));
@@ -191,19 +216,22 @@ void matrix_alloc(matrix * A, size_t m, size_t n, CBLAS_ORDER_t ord) {
 #endif
 }
 
-void matrix_calloc(matrix * A, size_t m, size_t n, CBLAS_ORDER_t ord) {
+void 
+matrix_calloc(matrix * A, size_t m, size_t n, CBLAS_ORDER_t ord) {
   if (!__matrix_exists(A)) return;
   matrix_alloc(A, m, n, ord);
   memset(A->data, 0, m * n * sizeof(ok_float));
 }
 
-void matrix_free(matrix * A) {
+void 
+matrix_free(matrix * A) {
   if (!__matrix_exists(A)) return;
   if (A->data != OK_NULL) ok_free(A->data);
 
 }
 
-void matrix_submatrix(matrix * A_sub, matrix * A, size_t i, size_t j, size_t n1, size_t n2){
+void 
+matrix_submatrix(matrix * A_sub, matrix * A, size_t i, size_t j, size_t n1, size_t n2){
   if (!__matrix_exists(A_sub)) return;
   if (!__matrix_exists(A)) return;
   A_sub->size1 = n1;
@@ -220,7 +248,8 @@ void matrix_submatrix(matrix * A_sub, matrix * A, size_t i, size_t j, size_t n1,
 }
 
 
-void matrix_row(vector * row, matrix * A, size_t i) {
+void 
+matrix_row(vector * row, matrix * A, size_t i) {
   if (!__vector_exists(row)) return;
   if (!__matrix_exists(A)) return;
   row->size = A->size2;
@@ -236,7 +265,8 @@ void matrix_row(vector * row, matrix * A, size_t i) {
   #endif
 }
 
-void matrix_column(vector * col, matrix *A, size_t j) {
+void 
+matrix_column(vector * col, matrix *A, size_t j) {
   if (!__vector_exists(col)) return;
   if (!__matrix_exists(A)) return;
   col->size = A->size1;
@@ -253,7 +283,8 @@ void matrix_column(vector * col, matrix *A, size_t j) {
 
 }
 
-void matrix_diagonal(vector * diag, matrix * A) {
+void 
+matrix_diagonal(vector * diag, matrix * A) {
   if (!__vector_exists(diag)) return;
   if (!__matrix_exists(A)) return;
   diag->data = A->data;
@@ -261,7 +292,8 @@ void matrix_diagonal(vector * diag, matrix * A) {
   diag->size = (size_t) (A->size1 <= A->size2) ? A->size1 : A->size2;
 }
 
-void matrix_cast_vector(vector * v, matrix * A) {
+void 
+matrix_cast_vector(vector * v, matrix * A) {
   if (!__vector_exists(v)) return;
   if (!__matrix_exists(A)) return;
   v->size = A->size1 * A->size2;
@@ -269,7 +301,8 @@ void matrix_cast_vector(vector * v, matrix * A) {
   v->data = A->data;
 }
 
-void matrix_view_array(matrix * A, const ok_float *base, size_t n1, size_t n2, CBLAS_ORDER_t ord) {
+void 
+matrix_view_array(matrix * A, const ok_float *base, size_t n1, size_t n2, CBLAS_ORDER_t ord) {
   if (!__matrix_exists(A)) return;
   A->size1 = n1;
   A->size2 = n2;
@@ -286,7 +319,8 @@ void matrix_view_array(matrix * A, const ok_float *base, size_t n1, size_t n2, C
   #endif
 }
 
-inline ok_float __matrix_get(const matrix * A, size_t i, size_t j) {
+inline ok_float 
+__matrix_get(const matrix * A, size_t i, size_t j) {
   #ifndef OPTKIT_ORDER
   if (A->order == CblasRowMajor)
     return A->data[i * A->ld + j];
@@ -300,7 +334,8 @@ inline ok_float __matrix_get(const matrix * A, size_t i, size_t j) {
 
 }
 
-inline void __matrix_set(matrix * A, size_t i, size_t j, ok_float x){
+inline void 
+__matrix_set(matrix * A, size_t i, size_t j, ok_float x){
   #ifndef OPTKIT_ORDER
   if (A->order == CblasRowMajor)
     A->data[i * A->ld + j] = x;
@@ -314,7 +349,8 @@ inline void __matrix_set(matrix * A, size_t i, size_t j, ok_float x){
 
 }
 
-void matrix_set_all(matrix * A, ok_float x) {
+void 
+matrix_set_all(matrix * A, ok_float x) {
   size_t i, j;
   if (!__matrix_exists(A)) return;
 
@@ -339,7 +375,8 @@ void matrix_set_all(matrix * A, ok_float x) {
   #endif
 }
 
-void matrix_memcpy_mm(matrix * A, const matrix * B) {
+void 
+matrix_memcpy_mm(matrix * A, const matrix * B) {
   #ifndef OPTKIT_ORDER
   uint i,j;
   #endif
@@ -361,7 +398,8 @@ void matrix_memcpy_mm(matrix * A, const matrix * B) {
   }
 }
 
-void matrix_memcpy_ma(matrix * A, const ok_float * B, 
+void 
+matrix_memcpy_ma(matrix * A, const ok_float * B, 
   const CBLAS_ORDER_t ord) {
 
   uint i,j;
@@ -379,7 +417,8 @@ void matrix_memcpy_ma(matrix * A, const ok_float * B,
   }
 }
 
-void matrix_memcpy_am(ok_float * A, const matrix * B,
+void 
+matrix_memcpy_am(ok_float * A, const matrix * B,
   const CBLAS_ORDER_t ord) {
   uint i,j;
   if (B->order == ord)
@@ -397,7 +436,8 @@ void matrix_memcpy_am(ok_float * A, const matrix * B,
 }
 
 
-void matrix_print(matrix * A) {
+void 
+matrix_print(matrix * A) {
   uint i,j;
   for (i = 0; i < A->size1; ++i) {
     for (j = 0; j < A->size2; ++j)
@@ -408,7 +448,8 @@ void matrix_print(matrix * A) {
 }
 
 
-void matrix_scale(matrix *A, ok_float x) {
+void 
+matrix_scale(matrix *A, ok_float x) {
   size_t i;
   #ifndef OPTKIT_ORDER
   vector row_col = (vector){0,0,OK_NULL};
@@ -438,10 +479,31 @@ void matrix_scale(matrix *A, ok_float x) {
   #endif
 }
 
-void matrix_abs(matrix * A) {
+void 
+matrix_scale_left(matrix * A, const vector * v){
+  size_t i;
+  vector row = (vector){0, 0, OK_NULL};
+  for(i = 0; i < A->size1; ++i){
+    matrix_row(&row, A, i);
+    vector_scale(&row, v->data[i]);
+  }
+}
+
+void 
+matrix_scale_right(matrix * A, const vector * v){
+  size_t i;
+  vector col = (vector){0, 0, OK_NULL};
+  for(i = 0; i < A->size2; ++i){
+    matrix_column(&col, A, i);
+    vector_scale(&col, v->data[i]);
+  }
+}
+
+void 
+matrix_abs(matrix * A) {
   size_t i;
   #ifndef OPTKIT_ORDER
-  vector row_col = (vector){0,0,OK_NULL};
+  vector row_col = (vector){0, 0, OK_NULL};
   if (A->order == CblasRowMajor)
     for(i = 0; i < A->size1; ++i){
       matrix_row(&row_col, A, i);
@@ -454,13 +516,13 @@ void matrix_abs(matrix * A) {
     }
   }
   #elif OPTKIT_ORDER == 101
-  vector row = (vector){0,0,OK_NULL};
+  vector row = (vector){0, 0, OK_NULL};
   for(i = 0; i < A->size1; ++i){
     matrix_row(&row, A, i);
     vector_abs(&row);
   }
   #else
-  vector col = (vector){0,0,OK_NULL};
+  vector col = (vector){0, 0, OK_NULL};
   for(i = 0; i < A->size2; ++i){
     matrix_column(&col, A, i);
     vector_abs(&col);
@@ -469,7 +531,8 @@ void matrix_abs(matrix * A) {
 }
 
 
-void matrix_pow(matrix * A, const ok_float x) {
+void 
+matrix_pow(matrix * A, const ok_float x) {
   size_t i;
   #ifndef OPTKIT_ORDER
   vector row_col = (vector){0,0,OK_NULL};
@@ -501,7 +564,8 @@ void matrix_pow(matrix * A, const ok_float x) {
 
 
 #ifndef OPTKIT_ORDER
-int __matrix_order_compat(const matrix * A, const matrix * B, 
+int 
+__matrix_order_compat(const matrix * A, const matrix * B, 
   const char * nm_A, const char * nm_B, const char * nm_routine){
 
   if (A->order == B->order) return 1;
@@ -514,7 +578,8 @@ int __matrix_order_compat(const matrix * A, const matrix * B,
 
 /* BLAS routines */
 
-inline int __blas_check_handle(void * linalg_handle){
+inline int 
+__blas_check_handle(void * linalg_handle){
   if (linalg_handle == OK_NULL) return 1;
   else { 
     printf("%s\n",
@@ -524,17 +589,20 @@ inline int __blas_check_handle(void * linalg_handle){
   }
 }
 
-void blas_make_handle(void ** linalg_handle){
+void 
+blas_make_handle(void ** linalg_handle){
   *linalg_handle = OK_NULL;
 }
 
-void blas_destroy_handle(void * linalg_handle){
+void 
+blas_destroy_handle(void * linalg_handle){
   linalg_handle = OK_NULL;
 }
 
 
 /* BLAS LEVEL 1 */
-void blas_axpy(void * linalg_handle, ok_float alpha, 
+void 
+blas_axpy(void * linalg_handle, ok_float alpha, 
                  const vector *x, vector *y) {
   #ifdef OK_DEBUG
   if ( !__blas_check_handle(linalg_handle) ) return;
@@ -583,7 +651,8 @@ blas_dot_inplace(void * linalg_handle, const vector * x, const vector * y,
 
 /* BLAS LEVEL 2 */
 
-void blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t transA, 
+void 
+blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t transA, 
                 ok_float alpha, const matrix *A, 
                const vector *x, ok_float beta, vector *y){
 
@@ -595,7 +664,8 @@ void blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t transA,
               beta, y->data, (int) y->stride);
 }
 
-void blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo, 
+void 
+blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo, 
                  CBLAS_TRANSPOSE_t transA, CBLAS_DIAG_t Diag, 
                  const matrix *A, vector *x){
 
@@ -606,23 +676,24 @@ void blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo,
               A->data, (int) A->ld, x->data, (int) x->stride); 
 }
 
-// void blas_sbmv(void * linalg_handle, CBLAS_UPLO_t Uplo,
-//   const size_t num_superdiag, const ok_float alpha, const vector * vecA, 
-//   const size_t lda, const vector * x, const ok_float beta, vector * y){
+void blas_sbmv(void * linalg_handle, CBLAS_UPLO_t Uplo,
+  const size_t num_superdiag, const ok_float alpha, const vector * vecA, 
+  const vector * x, const ok_float beta, vector * y){
 
-//   CBLAS(sbmv)(const enum CBLAS_ORDER order, Uplo,
-//     (int) y->size, (int) num_superdiag, alpha, vecA->data, (int) lda, 
-//     x->data, (int) x->stride, beta, y->data, (int) y->stride);
-// }
+  CBLAS(sbmv)(CblasColMajor, Uplo,
+    (int) y->size, (int) num_superdiag, alpha, vecA->data, (int) num_superdiag + 1, 
+    x->data, (int) x->stride, beta, y->data, (int) y->stride);
+}
 
-// void blas_diagmv(void * linalg_handle, const ok_float alpha,
-//   const vector * vecA, const vector * x, const ok_float beta, vector * y){
-//   blas_sbmv(linalg_handle, 'U', 0, alpha, vecA, 1, x, beta, y);
-// }
+void blas_diagmv(void * linalg_handle, const ok_float alpha,
+  const vector * vecA, const vector * x, const ok_float beta, vector * y){
+  blas_sbmv(linalg_handle, CblasLower, 0, alpha, vecA, x, beta, y);
+}
 
 
 /* BLAS LEVEL 3 */
-void blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo, 
+void 
+blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo, 
                  CBLAS_TRANSPOSE_t transA, ok_float alpha, 
                  const matrix * A, ok_float beta, matrix * C) {
 
@@ -640,7 +711,8 @@ void blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo,
   
 }
 
-void blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t transA, 
+void 
+blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t transA, 
                  CBLAS_TRANSPOSE_t transB, ok_float alpha, 
                  const matrix * A, const matrix * B, 
                  ok_float beta, matrix * C){
@@ -660,7 +732,8 @@ void blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t transA,
 
 }
 
-void blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side, 
+void 
+blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side, 
                  CBLAS_UPLO_t Uplo, CBLAS_TRANSPOSE_t transA,
                  CBLAS_DIAG_t Diag, ok_float alpha, 
                  const matrix *A, matrix *B) {
@@ -679,7 +752,8 @@ void blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side,
 /* LINEAR ALGEBRA routines */
 
 /* Non-Block Cholesky. */
-void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
+void 
+__linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
   ok_float l11;
   matrix l21, a22;
   size_t n = A->size1, i;
@@ -716,7 +790,8 @@ void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
 //
 // Stores result in Lower triangular part.
 */
-void linalg_cholesky_decomp(void * linalg_handle, matrix * A) {
+void 
+linalg_cholesky_decomp(void * linalg_handle, matrix * A) {
   matrix L11, L21, A22;
   size_t n = A->size1, blk_dim, i, n11;
 
@@ -752,14 +827,16 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A) {
 
 
 /* Cholesky solve */
-void linalg_cholesky_svx(void * linalg_handle, 
+void 
+linalg_cholesky_svx(void * linalg_handle, 
                            const matrix * L, vector * x) {
   blas_trsv(linalg_handle, CblasLower, CblasNoTrans, CblasNonUnit, L, x);
   blas_trsv(linalg_handle, CblasLower, CblasTrans, CblasNonUnit, L, x);
 }
 
 /* device reset */
-int ok_device_reset(){
+int 
+ok_device_reset(){
   return 0;
 }
 

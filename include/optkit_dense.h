@@ -62,6 +62,8 @@ void matrix_memcpy_ma(matrix * A, const ok_float *B, const CBLAS_ORDER_t ord);
 void matrix_memcpy_am(ok_float * A, const matrix *B, const CBLAS_ORDER_t ord);
 void matrix_print(matrix * A);
 void matrix_scale(matrix * A, ok_float x);
+void matrix_scale_left(matrix * A, const vector * v);
+void matrix_scale_right(matrix * A, const vector * v);
 void matrix_abs(matrix * A);
 void matrix_pow(matrix * A, const ok_float p);
 
@@ -92,7 +94,7 @@ void blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo,
 
 void blas_sbmv(void * linalg_handle, CBLAS_UPLO_t Uplo,
   const size_t num_superdiag, const ok_float alpha, const vector * vecA, 
-  const size_t lda, const vector * x, const ok_float beta, vector * y);
+  const vector * x, const ok_float beta, vector * y);
 
 void blas_diagmv(void * linalg_handle, const ok_float alpha,
   const vector * vecA, const vector * x, const ok_float beta, vector * y);

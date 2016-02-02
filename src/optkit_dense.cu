@@ -593,6 +593,26 @@ matrix_scale(matrix * A, ok_float x) {
   #endif
 }
 
+void 
+matrix_scale_left(matrix * A, const vector * v){
+  size_t i;
+  vector col = (vector){0, 0, OK_NULL};
+  for(i = 0; i < A->size2; ++i){
+    matrix_column(&col, A, i);
+    vector_mul(&col, v);
+  }
+}
+
+void 
+matrix_scale_right(matrix * A, const vector * v){
+  size_t i;
+  vector row = (vector){0, 0, OK_NULL};
+  for(i = 0; i < A->size1; ++i){
+    matrix_row(&row, A, i);
+    vector_mul(&row, v);
+  }
+}
+
 void
 matrix_abs(matrix * A){
   size_t i;
@@ -836,34 +856,34 @@ blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo,
   CUDA_CHECK_ERR;
 }
 
-// void blas_sbmv(void * linalg_handle, CBLAS_UPLO_t Uplo,
-//   const size_t num_superdiag, const ok_float alpha, const vector * vecA, 
-//   const size_t lda, const vector * x, const ok_float beta, vector * y){
+void blas_sbmv(void * linalg_handle, CBLAS_UPLO_t Uplo,
+  const size_t num_superdiag, const ok_float alpha, const vector * vecA, 
+  const vector * x, const ok_float beta, vector * y){
 
-//   cublasFillMode_t ul;
+  cublasFillMode_t ul;
 
-//   #ifndef OPTKIT_ORDER
-//   if (A->order==CblasColMajor){
-//     ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
-//   } else {
-//     ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
-//   }
-//   #elif OPTKIT_ORDER == 101
-//   ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
-//   #else
-//   ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
-//   #endif
+  #ifndef OPTKIT_ORDER
+  if (A->order==CblasColMajor){
+    ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+  } else {
+    ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
+  }
+  #elif OPTKIT_ORDER == 101
+  ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
+  #else
+  ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+  #endif
 
 
-//   CUBLAS(sbmv)(*(cublasHandle_t *) linalg_handle, ul,
-//     (int) y->size, (int) num_superdiag, alpha, vecA->data, (int) lda, 
-//     x->data, (int) x->stride, beta, y->data, (int) y->stride);
-// }
+  CUBLAS(sbmv)(*(cublasHandle_t *) linalg_handle, ul,
+    (int) y->size, (int) num_superdiag, alpha, vecA->data, (int) (num_superdiag + 1), 
+    x->data, (int) x->stride, beta, y->data, (int) y->stride);
+}
 
-// void blas_diagmv(void * linalg_handle, const ok_float alpha,
-//   const vector * vecA, const vector * x, const ok_float beta, vector * y){
-//   blas_sbmv(linalg_handle, 'U', 0, alpha, vecA, 1, x, beta, y);
-// }
+void blas_diagmv(void * linalg_handle, const ok_float alpha,
+  const vector * vecA, const vector * x, const ok_float beta, vector * y){
+  blas_sbmv(linalg_handle, 'U', 0, alpha, vecA, x, beta, y);
+}
 
 /* BLAS LEVEL 3 */
 

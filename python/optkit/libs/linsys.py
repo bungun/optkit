@@ -70,6 +70,11 @@ class DenseLinsysLibs(object):
 			lib.vector_mul.argtypes = [vector_p, vector_p]
 			lib.vector_div.argtypes = [vector_p, vector_p]
 			lib.vector_add_constant.argtypes = [vector_p, ok_float]
+			lib.vector_abs.argtypes = [vector_p]
+			lib.vector_recip.argtypes = [vector_p]
+			lib.vector_sqrt.argtypes = [vector_p]
+			lib.vector_pow.argtypes = [vector_p, ok_float]
+
 
 			## return values
 			lib.vector_alloc.restype = None
@@ -88,6 +93,11 @@ class DenseLinsysLibs(object):
 			lib.vector_mul.restype = None
 			lib.vector_div.restype = None
 			lib.vector_add_constant.restype = None
+			lib.vector_abs.restype = None
+			lib.vector_recip.restype = None
+			lib.vector_sqrt.restype = None
+			lib.vector_pow.restype = None
+
 
 			# Matrix
 			# ------
@@ -106,6 +116,10 @@ class DenseLinsysLibs(object):
 			lib.matrix_memcpy_am.argtypes = [ok_float_p, matrix_p, c_uint]
 			lib.matrix_print.argtypes = [matrix_p]
 			lib.matrix_scale.argtypes = [matrix_p, ok_float]
+			lib.matrix_scale_left.argtypes = [matrix_p, vector_p]
+			lib.matrix_scale_right.argtypes = [matrix_p, vector_p]
+			lib.matrix_abs.argtypes = [matrix_p]
+			lib.matrix_pow.argtypes = [matrix_p, ok_float]
 
 			## return values 
 			lib.matrix_alloc.restype = None
@@ -122,6 +136,11 @@ class DenseLinsysLibs(object):
 			lib.matrix_memcpy_am.restype = None
 			lib.matrix_print.restype = None
 			lib.matrix_scale.restype = None
+			lib.matrix_scale_left.restype = None
+			lib.matrix_scale_right.restype = None
+			lib.matrix_abs.restype = None
+			lib.matrix_pow.restype = None
+
 
 			# BLAS
 			# ----
@@ -136,9 +155,12 @@ class DenseLinsysLibs(object):
 			lib.blas_dot.argtypes = [c_void_p, vector_p, vector_p]
 			lib.blas_gemv.argtypes = [c_void_p, c_uint, ok_float, matrix_p, vector_p, ok_float, vector_p]
 			lib.blas_trsv.argtypes = [c_void_p, c_uint, c_uint, c_uint, matrix_p, vector_p]
+			lib.blas_sbmv.argtypes = [c_void_p, c_uint, c_size_t, ok_float, vector_p, vector_p, ok_float, vector_p]
+			lib.blas_diagmv.argtypes = [c_void_p, ok_float, vector_p, vector_p, ok_float, vector_p]
 			lib.blas_syrk.argtypes = [c_void_p, c_uint, c_uint, ok_float, matrix_p, ok_float, matrix_p]
 			lib.blas_gemm.argtypes = [c_void_p, c_uint, c_uint, ok_float, matrix_p, matrix_p, ok_float, matrix_p]
 			lib.blas_trsm.argtypes = [c_void_p, c_uint, c_uint, c_uint, c_uint, ok_float, matrix_p, matrix_p]
+
 
 			## return values 
 			lib.blas_make_handle.restype = None
@@ -150,6 +172,8 @@ class DenseLinsysLibs(object):
 			lib.blas_dot.restype = ok_float
 			lib.blas_gemv.restype = None
 			lib.blas_trsv.restype = None
+			lib.blas_sbmv.restype = None
+			lib.blas_diagmv.restype = None
 			lib.blas_syrk.restype = None
 			lib.blas_gemm.restype = None
 			lib.blas_trsm.restype = None
@@ -250,6 +274,7 @@ class SparseLinsysLibs(object):
 			lib.sp_matrix_memcpy_pattern_ma.argtypes = [c_void_p, sparse_matrix_p, ok_int_p, ok_int_p]
 			lib.sp_matrix_memcpy_pattern_am.argtypes = [ok_int_p, ok_int_p, sparse_matrix_p]
 			lib.sp_matrix_abs.argtypes = [sparse_matrix_p]
+			lib.sp_matrix_pow.argtypes = [sparse_matrix_p, ok_float]
 			lib.sp_matrix_scale.argtypes = [sparse_matrix_p, ok_float]
 			lib.sp_matrix_scale_left.argtypes = [c_void_p, sparse_matrix_p, vector_p]
 			lib.sp_matrix_scale_right.argtypes = [c_void_p, sparse_matrix_p, vector_p]
@@ -270,6 +295,7 @@ class SparseLinsysLibs(object):
 			lib.sp_matrix_memcpy_pattern_ma.restype = None
 			lib.sp_matrix_memcpy_pattern_am.restype = None
 			lib.sp_matrix_abs.restype = None
+			lib.sp_matrix_pow.restype = None
 			lib.sp_matrix_scale.restype = None
 			lib.sp_matrix_scale_left.restype = None
 			lib.sp_matrix_scale_right.restype = None			

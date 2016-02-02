@@ -251,6 +251,46 @@ def test_vector_methods(errors, n=3,VERBOSE_TEST=True,
 		PRINT(a.py)
 		assert all(a.py == 0.2)
 
+		arand = -2 + 4 * RAND_ARR(n)
+		for i in xrange(n):
+			if arand[i] == 0:
+				arand[i] += 1e-3
+		a = Vector(arand)
+
+		PRINT("Vector elementwise abs: |a|")
+		backend.dense.vector_abs(a.c)
+		linsys['sync'](a)
+		arand = np.abs(arand)
+		PRINT("|a| (Py) - |a| (C)")
+		PRINT(arand - a.py)
+		assert array_compare(arand, a.py, eps=TEST_EPS)
+
+
+		PRINT("Vector elementwise reciprocal: a^-1")
+		backend.dense.vector_recip(a.c)
+		arand **= -1
+		PRINT("a^-1 (Py) - a^-1 (C)")
+		PRINT(arand - a.py)
+		assert array_compare(arand, a.py, eps=TEST_EPS)	
+
+
+		PRINT("Vector elementwise square root: a^1/2")
+		backend.dense.vector_sqrt(a.c)
+		arand **= 0.5
+		PRINT("a^1/2 (Py) - a^1/2 (C)")
+		PRINT(arand - a.py)
+		assert array_compare(arand, a.py, eps=TEST_EPS)		
+
+		p_rand = -1 + 3 * np.random.rand()
+		PRINT("Vector elementwise power: a^p, p={}".format(p_rand))
+		backend.dense.vector_pow(a.c, p_rand)
+		arand **= p_rand
+		PRINT("a^p (Py) - a^p (C)")
+		PRINT(arand - a.py)
+		assert array_compare(arand, a.py, eps=TEST_EPS)		
+
+
+
 		return True
 
 	except:
@@ -534,6 +574,51 @@ def test_matrix_methods(errors, m=4, n=3, VERBOSE_TEST=True,
 		# sync(A3)
 		# assert array_compare(A3.py,A3_,eps=TEST_EPS)
 
+
+		# random matrix with no zeros
+		Arand = RAND_ARR(m, n) + 1e-3
+		A = Matrix(Arand)
+
+		# test matrix abs
+		PPRINT("matrix abs: A := |A|")
+		Arand = np.abs(Arand)
+		backend.dense.matrix_abs(A.c)
+		linsys['sync'](A)
+		assert array_compare(Arand, A.py)		
+
+		# test matrix pow
+		p_rand = -1 + 2 * np.random.rand()
+		PPRINT("matrix (elementwise) pow: A_ij := A_ij^p")
+		Arand = Arand ** p_rand
+		backend.dense.matrix_pow(A.c, p_rand)
+		linsys['sync'](A)
+		assert array_compare(Arand, A.py)	
+
+		left = RAND_ARR(m)
+		right = RAND_ARR(n)
+		lvec = Vector(left)
+		rvec = Vector(right)
+
+		# test left diagonal scaling
+		PPRINT("left diagonal scaling A := diag(v) * A")
+		for i, l in enumerate(left):
+			Arand[i, :] *= l
+		backend.dense.matrix_scale_left(A.c, lvec.c)
+
+		PRINT("A (Py) - A (C)")
+		linsys['sync'](A)
+		assert array_compare(Arand, A.py)
+
+		# test right diagonal scaling
+		PPRINT("right diagonal scaling A := A * diag(v)")
+		for j, r in enumerate(right):
+			Arand[:, j] *= r
+		backend.dense.matrix_scale_right(A.c, rvec.c)
+
+		PRINT("A (Py) - A (C)")
+		linsys['sync'](A)
+		assert array_compare(Arand, A.py)
+
 		return True
 
 	except:
@@ -695,6 +780,60 @@ def test_blas_methods(errors, m=4, n=3, A_in=None, VERBOSE_TEST=True,
 		PRINT(pysol)
 		PRINTVAR(xrand)
 		assert array_compare(xrand.py, pysol, eps=TEST_EPS);
+
+
+		# random symmetric banded matrix:
+		diags = max(1, min(4, n - 1))
+		Srand = RAND_ARR(n * diags)
+		Srand *= 0
+		Srand[::diags] += 2
+
+
+		# Srand[n : 2 * n - 1] += 2
+		S = Vector(Srand)
+
+		# test BLAS sbmv
+		PRINT("\nBLAS sbmv:")
+		xrand = RAND_ARR(n)
+		x = Vector(xrand)
+		y = Vector(n)
+		linsys['print_var'](S)
+		backend.dense.blas_sbmv(backend.dense_blas_handle,
+			ok_enums.CblasLower, diags - 1, 1., S.c, x.c, 0., y.c)
+
+
+		linsys['sync'](y)
+		Sx_c = y.py 
+		Sx_py = np.zeros(n)
+
+		for d in xrange(diags):
+			for j in xrange(n - d):
+				if d > 0:
+					Sx_py[d + j] += Srand[d + diags * j] * xrand[j]
+				Sx_py[j] += Srand[d + diags * j] * xrand[d + j]
+
+		PRINT("Sx (Py) - Sx (C):")
+		PRINT(Sx_py - Sx_c)
+		assert array_compare(Sx_py, Sx_c, eps=TEST_EPS)
+
+
+		# test diagmv
+		PRINT("\ndiagonal matrix * vector using BLAS sbmv:")
+		Drand = RAND_ARR(n)
+		D = Vector(Drand)
+		xrand = RAND_ARR(n)
+		x = Vector(xrand)
+		y = Vector(n)
+		backend.dense.blas_diagmv(backend.dense_blas_handle,
+			1., D.c, x.c, 0, y.c)
+		linsys['sync'](y)
+		Dx_c = y.py 
+		Dx_py = Drand * xrand
+		PRINT("Dx (Py) - Dx (C):")
+		PRINT(Dx_py - Dx_c)
+		assert array_compare(Dx_py, Dx_c, eps=TEST_EPS)
+
+
 
 
 		PPRINT("LEVEL 3",'.')
@@ -926,6 +1065,12 @@ def __test_sparse_Axpy(backend, linsys, A, x, y,
 def __test_sparse_scale(backend, linsys, A, left, right, x, y,
 	PPRINT, PRINT, TEST_EPS):
 
+	print "Ax"
+	print A.py.todense().dot(x.py)
+	print A.py.shape
+
+	# form A = diag(a_left) * A
+
 	PPRINT("y := diag(a_left) * A * x", '.')
 	backend.sparse.sp_matrix_scale_left(backend.sparse_handle, A.c, left.c)
 	backend.sparse.sp_blas_gemv(backend.sparse_handle, 
@@ -940,7 +1085,7 @@ def __test_sparse_scale(backend, linsys, A, left, right, x, y,
 
 	# form A = A * diag(a_right)
 	
-	PPRINT("y := A * diag(a_right) * A * x", '.')
+	PPRINT("y := A * diag(a_right) * x", '.')
 	backend.sparse.sp_matrix_scale_right(backend.sparse_handle, A.c, right.c)
 	backend.sparse.sp_blas_gemv(backend.sparse_handle, 
 		ok_enums.CblasNoTrans, 1, A.c, x.c, 0, y.c)		
@@ -951,6 +1096,64 @@ def __test_sparse_scale(backend, linsys, A, left, right, x, y,
 	PRINT("y (Py) - y (C)")
 	PRINT(Ax_py - Ax_c)
 	assert array_compare(Ax_py, Ax_c, eps=TEST_EPS)
+
+def __test_sparse_transform(backend, linsys, A, x, y, 
+	PPRINT, PRINT, TEST_EPS):
+
+	scal = np.random.rand()
+
+	PPRINT("scale A *= {}".format(scal), '.')
+	PRINT("{}(Ax) vs ({}A)x").format(scal, scal)
+	backend.sparse.sp_matrix_scale(A.c, scal)
+	backend.sparse.sp_blas_gemv(backend.sparse_handle, 
+		ok_enums.CblasNoTrans, 1, A.c, x.c, 0, y.c)		
+
+	linsys['sync'](x, y)
+	Ax_c = y.py
+	Ax_py = scal * A.py * x.py
+	PRINT("y (Py) - y (C)")
+	PRINT(Ax_py - Ax_c)
+	assert array_compare(Ax_py, Ax_c, eps=TEST_EPS)
+
+
+	PPRINT("A = abs(A)", '.')
+	PRINT("form y = |A|x in C and Python")
+
+	backend.sparse.sp_matrix_abs(A.c)
+	backend.sparse.sp_blas_gemv(backend.sparse_handle, 
+		ok_enums.CblasNoTrans, 1, A.c, x.c, 0, y.c)		
+
+	linsys['sync'](x, y)
+	Ax_c = y.py
+	Ax_py =  np.abs(A.py.todense()).dot(x.py)
+	PRINT("y (Py) - y (C)")
+	PRINT(Ax_py - Ax_c)
+	assert array_compare(Ax_py, Ax_c, eps=TEST_EPS)
+
+	p = -1 + 3 * np.random.rand()
+
+	PPRINT("A = A^pow", '.')
+	PRINT("form y = A^{} x in C and Python".format(p))
+
+	backend.sparse.sp_matrix_pow(A.c, p)
+	backend.sparse.sp_blas_gemv(backend.sparse_handle, 
+		ok_enums.CblasNoTrans, 1, A.c, x.c, 0, y.c)		
+
+	linsys['sync'](x, y)
+	Ax_c = y.py
+	Ax_py =  np.abs(A.py.todense()).dot(x.py)
+	PRINT("y (Py) - y (C)")
+	PRINT(Ax_py - Ax_c)
+	assert array_compare(Ax_py, Ax_c, eps=TEST_EPS)
+
+def __test_sparse_copy(backend, linsys, A, x, y,
+	PPRINT, PRINT, TEST_EPS):
+
+	pass 
+	## for mm, ma, am:
+	# TODO: test full copy
+	# TODO: test value copy
+	# TODO: test pattern copy
 
 def test_sparse_methods(errors, m=20, n=10, frac_occupied=0.3,
 	VERBOSE_TEST=True, gpu=False, floatbits=64):
@@ -1070,10 +1273,18 @@ def test_sparse_methods(errors, m=20, n=10, frac_occupied=0.3,
 		xrand += 1
 		xr = Vector(xrand)
 
-		# form diag(a_left) * A
+		# perform left * A and A * right
 		__test_sparse_scale(backend, linsys, A, al, ar, xr, y_empty,
 			PPRINT, PRINT, TEST_EPS)
 
+		# test scale, abs, pow
+		__test_sparse_transform(backend, linsys, A, xr, y_empty, 
+			PPRINT, PRINT, TEST_EPS)
+
+		# test copy methods
+		__test_sparse_copy(backend, linsys, A, xr, y_empty, 
+			PPRINT, PRINT, TEST_EPS)
+		
 		return True
 	except:
 		errors.append(format_exc())
