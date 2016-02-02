@@ -4,7 +4,7 @@
 - TODO: automate testing with nose2
 
 
-###v0.0.4 (next release)
+###v0.0.5 (next release)
 - TODO: error checking throughout GPU calls (and mirrored for CPU)
 - TODO: license
 - TODO: cite POGS
@@ -12,6 +12,10 @@
 - TODO: sparse equilibration
 - TODO: sparse projection
 - TODO: sparse POGS
+
+###v0.0.4 (alpha)
+- TODO: error checking throughout GPU calls (and mirrored for CPU)
+- TODO: license
 
 ###v0.0.3 (current)
 - CPU Sparse Linear Algebra
