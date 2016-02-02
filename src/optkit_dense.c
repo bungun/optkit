@@ -665,35 +665,35 @@ blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t transA,
 }
 
 void 
-blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo, 
+blas_trsv(void * linalg_handle, CBLAS_UPLO_t uplo, 
                  CBLAS_TRANSPOSE_t transA, CBLAS_DIAG_t Diag, 
                  const matrix *A, vector *x){
 
   #ifdef OK_DEBUG
   if ( !__blas_check_handle(linalg_handle) ) return;
   #endif
-  CBLAS(trsv)(A->order, Uplo, transA, Diag, (int) A->size1, 
+  CBLAS(trsv)(A->order, uplo, transA, Diag, (int) A->size1, 
               A->data, (int) A->ld, x->data, (int) x->stride); 
 }
 
-void blas_sbmv(void * linalg_handle, CBLAS_UPLO_t Uplo,
+void blas_sbmv(void * linalg_handle, CBLAS_ORDER_t order, CBLAS_UPLO_t uplo,
   const size_t num_superdiag, const ok_float alpha, const vector * vecA, 
   const vector * x, const ok_float beta, vector * y){
 
-  CBLAS(sbmv)(CblasColMajor, Uplo,
+  CBLAS(sbmv)(order, uplo,
     (int) y->size, (int) num_superdiag, alpha, vecA->data, (int) num_superdiag + 1, 
     x->data, (int) x->stride, beta, y->data, (int) y->stride);
 }
 
 void blas_diagmv(void * linalg_handle, const ok_float alpha,
   const vector * vecA, const vector * x, const ok_float beta, vector * y){
-  blas_sbmv(linalg_handle, CblasLower, 0, alpha, vecA, x, beta, y);
+  blas_sbmv(linalg_handle, CblasColMajor, CblasLower, 0, alpha, vecA, x, beta, y);
 }
 
 
 /* BLAS LEVEL 3 */
 void 
-blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo, 
+blas_syrk(void * linalg_handle, CBLAS_UPLO_t uplo, 
                  CBLAS_TRANSPOSE_t transA, ok_float alpha, 
                  const matrix * A, ok_float beta, matrix * C) {
 
@@ -706,7 +706,7 @@ blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo,
   #ifndef OPTKIT_ORDER
   if ( __matrix_order_compat(A, C, "A", "C", "blas_syrk") )
   #endif
-    CBLAS(syrk)(A->order, Uplo, transA, (int) C->size2 , k, alpha, 
+    CBLAS(syrk)(A->order, uplo, transA, (int) C->size2 , k, alpha, 
                 A->data, (int) A->ld, beta, C->data, (int) C->ld);
   
 }
@@ -734,7 +734,7 @@ blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t transA,
 
 void 
 blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side, 
-                 CBLAS_UPLO_t Uplo, CBLAS_TRANSPOSE_t transA,
+                 CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t transA,
                  CBLAS_DIAG_t Diag, ok_float alpha, 
                  const matrix *A, matrix *B) {
 
@@ -744,7 +744,7 @@ blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side,
   #ifndef OPTKIT_ORDER
   if ( __matrix_order_compat(A, B, "A", "B", "blas_trsm") )
   #endif
-    CBLAS(trsm)(A->order, Side, Uplo, transA, Diag,(int) B->size1, (int) B->size2, 
+    CBLAS(trsm)(A->order, Side, uplo, transA, Diag,(int) B->size1, (int) B->size2, 
                 alpha, A->data,(int) A->ld, B->data, (int) B->ld);
 
 }

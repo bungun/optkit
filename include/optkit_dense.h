@@ -88,11 +88,11 @@ void blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t transA,
                  ok_float alpha, const matrix * A, const vector * x, 
                  ok_float beta, vector * y);
 
-void blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo, 
+void blas_trsv(void * linalg_handle, CBLAS_UPLO_t uplo, 
                  CBLAS_TRANSPOSE_t transA, CBLAS_DIAG_t Diag, 
                  const matrix * A, vector * x);
 
-void blas_sbmv(void * linalg_handle, CBLAS_UPLO_t Uplo,
+void blas_sbmv(void * linalg_handle, CBLAS_ORDER_t order, CBLAS_UPLO_t uplo,
   const size_t num_superdiag, const ok_float alpha, const vector * vecA, 
   const vector * x, const ok_float beta, vector * y);
 
@@ -100,7 +100,7 @@ void blas_diagmv(void * linalg_handle, const ok_float alpha,
   const vector * vecA, const vector * x, const ok_float beta, vector * y);
 
 /* BLAS LEVEL 3 */
-void blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo, 
+void blas_syrk(void * linalg_handle, CBLAS_UPLO_t uplo, 
                  CBLAS_TRANSPOSE_t transA, ok_float alpha, 
                  const matrix *A, ok_float beta, matrix *C);
 
@@ -110,7 +110,7 @@ void blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t transA,
                  ok_float beta, matrix *C);
 
 void blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side, 
-                 CBLAS_UPLO_t Uplo, CBLAS_TRANSPOSE_t transA,
+                 CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t transA,
                  CBLAS_DIAG_t Diag, ok_float alpha, 
                  const matrix *A, matrix *B);
 

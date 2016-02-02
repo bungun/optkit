@@ -821,7 +821,7 @@ blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t transA,
 }
 
 void 
-blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo, 
+blas_trsv(void * linalg_handle, CBLAS_UPLO_t uplo, 
                  CBLAS_TRANSPOSE_t transA, CBLAS_DIAG_t Diag, 
                  const matrix *A, vector *x){
 
@@ -832,17 +832,17 @@ blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo,
   #ifndef OPTKIT_ORDER
   if (A->order==CblasColMajor){
     tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
-    ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+    ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
   } else {
     tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
-    ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
+    ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
   }
   #elif OPTKIT_ORDER == 101
   tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
-  ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
+  ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
   #else
   tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
-  ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+  ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
   #endif
 
   di = Diag==CblasNonUnit ? CUBLAS_DIAG_NON_UNIT : CUBLAS_DIAG_UNIT;  
@@ -856,39 +856,30 @@ blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo,
   CUDA_CHECK_ERR;
 }
 
-void blas_sbmv(void * linalg_handle, CBLAS_UPLO_t Uplo,
+
+void blas_sbmv(void * linalg_handle, CBLAS_ORDER_t order, CBLAS_UPLO_t uplo,
   const size_t num_superdiag, const ok_float alpha, const vector * vecA, 
   const vector * x, const ok_float beta, vector * y){
 
-  cublasFillMode_t ul;
-
-  #ifndef OPTKIT_ORDER
-  if (A->order==CblasColMajor){
-    ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
-  } else {
-    ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
-  }
-  #elif OPTKIT_ORDER == 101
-  ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
-  #else
-  ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
-  #endif
-
+  if (order == CblasRowMajor)
+    cublasFillMode_t ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+  else
+    cublasFillMode_t ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
 
   CUBLAS(sbmv)(*(cublasHandle_t *) linalg_handle, ul,
-    (int) y->size, (int) num_superdiag, alpha, vecA->data, (int) (num_superdiag + 1), 
-    x->data, (int) x->stride, beta, y->data, (int) y->stride);
+    (int) y->size, (int) num_superdiag, &alpha, vecA->data, (int) (num_superdiag + 1), 
+    x->data, (int) x->stride, &beta, y->data, (int) y->stride);
 }
 
 void blas_diagmv(void * linalg_handle, const ok_float alpha,
   const vector * vecA, const vector * x, const ok_float beta, vector * y){
-  blas_sbmv(linalg_handle, 'U', 0, alpha, vecA, x, beta, y);
+  blas_sbmv(linalg_handle, CblasLower, 0, alpha, vecA, x, beta, y);
 }
 
 /* BLAS LEVEL 3 */
 
 void 
-blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo, 
+blas_syrk(void * linalg_handle, CBLAS_UPLO_t uplo, 
                  CBLAS_TRANSPOSE_t transA, ok_float alpha, 
                  const matrix * A, ok_float beta, matrix * C) {
 
@@ -900,17 +891,17 @@ blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo,
   #ifndef OPTKIT_ORDER
   if (A->order==CblasColMajor){
     tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
-    ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+    ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
   } else {
     tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
-    ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
+    ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
   }
   #elif OPTKIT_ORDER == 101
   tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
-  ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
+  ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
   #else
   tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
-  ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+  ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
   #endif
 
   #ifndef OK_DEBUG
@@ -976,7 +967,7 @@ blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t transA,
 
 void 
 blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side, 
-                 CBLAS_UPLO_t Uplo, CBLAS_TRANSPOSE_t transA,
+                 CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t transA,
                  CBLAS_DIAG_t Diag, ok_float alpha, 
                  const matrix *A, matrix *B) {
 
