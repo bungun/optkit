@@ -13,8 +13,7 @@
 - TODO: sparse projection
 - TODO: sparse POGS
 
-###v0.0.3 (alpha)
-- TODO: update setup.py
+###v0.0.3 (current)
 - CPU Sparse Linear Algebra
 - GPU Sparse Linear Algebra
 - Python Sparse Linear Algebra bindings
@@ -23,7 +22,7 @@
 - Option to suppress [y, mu, nu] from POGS solver output (C and Py)
 - Version number calls in C, Py
 
-###v0.0.2 (current)
+###v0.0.2
 - C implementations of equilibration, projection and POGS (dense only)
 
 ###v0.0.1
@@ -63,3 +62,4 @@
 - adaptive alpha (line search) for POGS
 - change Python bindings from ctypes -> Cython?
 - DCP ADMM
+- installation manifest (text or yaml) for clean uninstall

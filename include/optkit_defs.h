@@ -19,7 +19,7 @@ extern "C" {
 #define OPTKIT_VERSION_MAJOR 0
 #define OPTKIT_VERSION_MINOR 0
 #define OPTKIT_VERSION_CHANGE 3
-#define OPTKIT_VERSION_STATUS 'a'
+#define OPTKIT_VERSION_STATUS 0 /* 'a' = alpha, 'b' = beta, 0 = release */
 
 
 #ifdef OK_DEBUG
