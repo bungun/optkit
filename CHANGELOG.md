@@ -14,6 +14,7 @@
 - TODO: sparse POGS
 
 ###v0.0.3 (alpha)
+- TODO: update setup.py
 - CPU Sparse Linear Algebra
 - GPU Sparse Linear Algebra
 - Python Sparse Linear Algebra bindings
