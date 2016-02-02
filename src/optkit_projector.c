@@ -4,6 +4,14 @@
 extern "C" {
 #endif
 
+void 
+projectorlib_version(int * maj, int * min, int * change, int * status){
+    * maj = OPTKIT_VERSION_MAJOR;
+    * min = OPTKIT_VERSION_MINOR;
+    * change = OPTKIT_VERSION_CHANGE;
+    * status = (int) OPTKIT_VERSION_STATUS;
+}
+
 /* Direct Projector methods */
 void 
 direct_projector_alloc(direct_projector * P, matrix * A){
@@ -11,7 +19,7 @@ direct_projector_alloc(direct_projector * P, matrix * A){
 
 	P->A = A;
 	P->L = (matrix *) malloc( sizeof(matrix) );
-	matrix_calloc(P->L, mindim, mindim, A->rowmajor);
+	matrix_calloc(P->L, mindim, mindim, A->order);
 	P->skinny = (uint) mindim == A->size2;
 	P->normalized = 0;
 }

@@ -1,3 +1,6 @@
+#ifndef OPTKIT_THRUST_H_GUARD
+#define OPTKIT_THRUST_H_GUARD
+
 #include "optkit_dense.h"
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
@@ -6,8 +9,11 @@
 #include <thrust/inner_product.h>
 #include <thrust/reduce.h>
 
-
-/* strided iterator from thrust:: examples. */
+/* ---------------------------------------------------------------- */
+/*                                                                  */
+/* ------------ strided iterator (from thrust:: examples) --------- */
+/*                                                                  */
+/* ---------------------------------------------------------------- */
 template <typename Iterator>
 class strided_range {
  public:
@@ -16,6 +22,7 @@ class strided_range {
   struct StrideF : public thrust::unary_function<diff_t, diff_t> {
     diff_t stride;
     StrideF(diff_t stride) : stride(stride) { }
+
     __host__ __device__
     diff_t operator()(const diff_t& i) const { 
       return stride * i;
@@ -38,7 +45,6 @@ class strided_range {
   strided_iterator_t end() const {
     return begin() + ((last - first) + (stride - 1)) / stride;
   }
-  
  protected:
   Iterator first;
   Iterator last;
@@ -48,7 +54,16 @@ class strided_range {
 typedef thrust::constant_iterator<ok_float> constant_iterator_t;
 typedef strided_range< thrust::device_ptr<ok_float> > strided_range_t;
 
-/* thrust:: methods */
+/* ---------------------------------------------------------------- */
+/*                                                                  */
+/* ------------------- thrust:: helper methods -------------------- */
+/*                                                                  */
+/* ---------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------- */
+/* --------------------- unary math ops --------------------------- */
+/* ---------------------------------------------------------------- */
+
 // x -> |x|
 struct AbsF : thrust::unary_function<ok_float, ok_float> {
   __device__ inline ok_float operator()(ok_float x) { return MATH(fabs)(x); }
@@ -74,6 +89,10 @@ struct PowF : thrust::unary_function<ok_float, const ok_float> {
   __device__ inline ok_float operator()(ok_float x) { return MATH(pow)(x, p); }
 };
 
+/* ---------------------------------------------------------------- */
+/* -----------------  optkit.vector -> strided range -------------- */
+/* ---------------------------------------------------------------- */
+
 inline strided_range_t
 __make_strided_range(vector * v){
   return strided_range_t(
@@ -88,12 +107,18 @@ __make_const_strided_range(const vector * v){
     thrust::device_pointer_cast(v->data + v->stride * v->size), v->stride);
 }
 
+/* ---------------------------------------------------------------- */
+/* -----------  map unary/binary ops to strided range(s) ---------- */
+/* ---------------------------------------------------------------- */
+
+/* unary op mapped to (strided range) */
 template <typename UnaryFunction>
 inline void
 __transform_r(strided_range_t r, UnaryFunction f){
   thrust::transform(r.begin(), r.end(), r.begin(), f);
 }
 
+/* binary op mapped to (strided range, strided range) */
 template <typename BinaryFunction>
 inline void 
 __transform_rr(strided_range_t r1, strided_range_t r2, BinaryFunction f){
@@ -101,6 +126,7 @@ __transform_rr(strided_range_t r1, strided_range_t r2, BinaryFunction f){
     r1.begin(), f);
 }
 
+/* binary op mapped to (strided range, constant) */
 template <typename BinaryFunction>
 inline void
 __transform_rc(strided_range_t r, ok_float x, BinaryFunction f){
@@ -108,12 +134,19 @@ __transform_rc(strided_range_t r, ok_float x, BinaryFunction f){
     r.begin(), f);
 }
 
+/* binary op mapped to (constant, strided range) */
 template <typename BinaryFunction>
 inline void
 __transform_cr(ok_float x, strided_range_t r, BinaryFunction f){
   thrust::transform(r.begin(), r.end(), constant_iterator_t(x),
     r.begin(), f);
 }
+
+/* ---------------------------------------------------------------- */
+/*                                                                  */
+/* --------- thrust:: elementwise optkit.vector operations -------- */
+/*                                                                  */
+/* ---------------------------------------------------------------- */
 
 inline void 
 __thrust_vector_scale(vector * v, ok_float x) {
@@ -178,3 +211,5 @@ __thrust_vector_pow(vector * v, const ok_float p){
   strided_range_t r = __make_strided_range(v);
   __transform_r(r, PowF(p));  
 }
+
+#endif /* OPTKIT_THRUST_H_GUARD */

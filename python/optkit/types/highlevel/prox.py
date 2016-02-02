@@ -8,22 +8,23 @@ class HighLevelProxTypes(object):
 	def __init__(self, backend):
 		backend = backend
 		ON_GPU = backend.device == 'gpu'
-		make_cfunctionvector = backend.make_cfunctionvector
-		release_cfunctionvector = backend.release_cfunctionvector
 		function_vector_memcpy_va = backend.prox.function_vector_memcpy_va
 		function_vector_memcpy_av = backend.prox.function_vector_memcpy_av
 		ndarray_pointer = backend.lowtypes.ndarray_pointer
 
 		class FunctionVector(object):
 			def __init__(self, n, **params):
-				backend.__LIBGUARD_ON__ = True
+				if not backend.linalg_contexts_exist:
+					backend.make_linalg_contexts()
+				backend.increment_cobject_count()
+
 				if not isinstance(n,int):
 					raise ValueError("optkit.FunctionVector must be initialized "
 						"with:\n -one `int`")
 
 				self.on_gpu = ON_GPU
 				self.size = n;			
-				self.c = make_cfunctionvector(self.size)
+				self.c = backend.make_cfunctionvector(self.size)
 				self.py = zeros(n, dtype=backend.lowtypes.function)
 				for i in xrange(n):	
 					self.py[i]= backend.lowtypes.function(0, 1, 0, 1, 0, 0)
@@ -174,7 +175,8 @@ class HighLevelProxTypes(object):
 					h_, a_, b_, c_, d_, e_))
 
 			def __del__(self):
-				if self.on_gpu: release_cfunctionvector(self.c)
+				backend.decrement_cobject_count()
+				if self.on_gpu: backend.release_cfunctionvector(self.c)
 
 			def isvalid(self):
 				for item in ['c','py','size','on_gpu']:

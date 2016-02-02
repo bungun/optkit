@@ -107,7 +107,7 @@ def main(errors, m = 10, n = 5, A_in=None, VERBOSE_TEST=True,
 		assert var_assert(d, e)
 
 		# get matrix layout
-		order = A.c.rowmajor
+		order = A.c.order
 
 		# random vector for output testing
 		x_rand = RAND_ARR(n)

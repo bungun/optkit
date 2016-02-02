@@ -7,6 +7,9 @@
 extern "C" {
 #endif
 
+void projectorlib_version(int * maj, int * min, int * change, int * status);
+
+
 typedef struct DirectProjector {
 	matrix * A;
 	matrix * L;

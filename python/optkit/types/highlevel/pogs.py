@@ -162,7 +162,7 @@ class HighLevelPogsTypes(object):
 
 		class SolverSettings(object):
 			def __init__(self, **options):
-				self.c = PogsSettings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None, None)
+				self.c = PogsSettings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None, None)
 				pogslib.set_default_settings(self.c)
 				self.update(**options)
 

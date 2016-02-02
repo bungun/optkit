@@ -4,8 +4,13 @@
 extern "C" {
 #endif
 
-
-
+void 
+equillib_version(int * maj, int * min, int * change, int * status){
+    * maj = OPTKIT_VERSION_MAJOR;
+    * min = OPTKIT_VERSION_MINOR;
+    * change = OPTKIT_VERSION_CHANGE;
+    * status = (int) OPTKIT_VERSION_STATUS;
+}
 
 void 
 sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out, 
