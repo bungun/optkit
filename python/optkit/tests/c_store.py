@@ -19,7 +19,6 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		if not backend.__LIBGUARD_ON__:
 			set_backend(GPU=gpu, double=floatbits == 64)
 
-		from optkit.api import Vector, Matrix, FunctionVector
 		from optkit.api import CPogsTypes
 		TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
 
@@ -36,6 +35,7 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		SolverInfo = CPogsTypes.SolverInfo
 		SolverOutput = CPogsTypes.SolverOutput
 		Solver = CPogsTypes.Solver
+		Objective = CPogsTypes.Objective
 
 		PRINT = println if VERBOSE_TEST else printvoid
 		PPRINT = pretty_print if VERBOSE_TEST else printvoid
@@ -69,8 +69,8 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		layout = ok_enums.CblasRowMajor if A.flags.c_contiguous \
 			else ok_enums.CblasColMajor
 
-		f = FunctionVector(m, b=1, h='Abs')
-		g = FunctionVector(n, h='IndGe0')
+		f = Objective(m, b=1, h='Abs')
+		g = Objective(n, h='IndGe0')
 
 
 		solver = lib.pogs_init(ndarray_pointer(A), m, n, layout,
@@ -125,7 +125,7 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 
 
 		PRINT("(DESTROY SOLVER)")
-		lib.pogs_finish(solver)
+		lib.pogs_finish(solver, int(backend.device_reset_allowed))
 
 		PPRINT("LOAD EXTRACTED SOLVER") 
 
@@ -139,8 +139,8 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		settings.c.resume = 1
 		lib.pogs_solve(solver, f.c, g.c, settings.c, info.c, output.c)
 		PRINT("SOLVER ITERATIONS:", info.c.k)
-		assert info.c.k <= k_orig
-		lib.pogs_finish(solver)
+		assert info.c.k <= k_orig or not info.c.converged
+		lib.pogs_finish(solver, int(backend.device_reset_allowed))
 
 		PPRINT("TEST PYTHON BINDINGS:")
 		PRINT("MAKE SOLVER")
@@ -176,13 +176,16 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		PRINT("third solver: {}".format(s3.info.c.obj))
 
 		FAC = 30 if backend.lowtypes.FLOAT_CAST == float32 else 10
-		assert s3.info.c.k <= s2.info.c.k
+		assert s3.info.c.k <= s2.info.c.k or not s3.info.c.converged
 		assert abs(s2.info.c.obj - s.info.c.obj) <= \
 			max(FAC * s.settings.c.reltol,
-				FAC * s.settings.c.reltol * abs(s.info.c.obj))
+				FAC * s.settings.c.reltol * abs(s.info.c.obj)) or \
+			not s2.info.c.converged or not s.info.c.converged
 		assert abs(s3.info.c.obj - s.info.c.obj) <= \
 			max(FAC * s.settings.c.reltol,
-				FAC * s.settings.c.reltol * abs(s.info.c.obj))
+				FAC * s.settings.c.reltol * abs(s.info.c.obj)) or \
+			not s3.info.c.converged or not s.info.c.converged
+
 
 		return True
 

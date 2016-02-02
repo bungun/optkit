@@ -16,6 +16,12 @@
 extern "C" {
 #endif
 
+#define OPTKIT_VERSION_MAJOR 0
+#define OPTKIT_VERSION_MINOR 0
+#define OPTKIT_VERSION_CHANGE 3
+#define OPTKIT_VERSION_STATUS 0 /* 'a' = alpha, 'b' = beta, 0 = release */
+
+
 #ifdef OK_DEBUG
 #define PRINT_DEBUG printf
 #else
@@ -24,11 +30,13 @@ extern "C" {
 
 
 #define OK_NULL 0
-#define ok_free(x) free(x); x=OK_NULL
+#define ok_free(x) free(x); x = OK_NULL
 
-
+ 
 typedef unsigned int uint;
+typedef int ok_int;
 
+/* C BLAS enums */
 typedef enum CBLAS_ORDER CBLAS_ORDER_t;
 typedef enum CBLAS_TRANSPOSE CBLAS_TRANSPOSE_t;
 typedef enum CBLAS_UPLO CBLAS_UPLO_t;
@@ -58,11 +66,11 @@ typedef enum CBLAS_SIDE CBLAS_SIDE_t;
 
 
 #if defined(OPTKIT_ROWMAJOR)
-#define OPTKIT_ORDER 101
+    #define OPTKIT_ORDER 101
 #elif defined(OPTKIT_COLMAJOR)
-#define OPTKIT_ORDER 102
+    #define OPTKIT_ORDER 102
 #else
-#undef OPTKIT_ORDER
+    #undef OPTKIT_ORDER
 #endif
 
 #define kZero (ok_float) 0

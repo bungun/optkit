@@ -1,19 +1,18 @@
 from optkit.utils import istypedtuple
 from numpy import zeros, ndarray
+from scipy.sparse import csr_matrix, csc_matrix
 
 class HighLevelLinsysTypes(object):
 	def __init__(self, backend):
 		backend = backend
 		ON_GPU = backend.device == 'gpu'
 		lowtypes = backend.lowtypes
-		make_cvector = backend.make_cvector
-		make_cmatrix = backend.make_cmatrix
-		release_cvector = backend.release_cvector
-		release_cmatrix = backend.release_cmatrix
 
 		class Vector(object):
 			def __init__(self, *x, **flags):
-				backend.__LIBGUARD_ON__ = True
+				if not backend.linalg_contexts_exist:
+					backend.make_linalg_contexts()
+				backend.increment_cobject_count()
 
 				valid = istypedtuple(x, 1, int)
 				if len(x)==1:
@@ -54,7 +53,7 @@ class HighLevelLinsysTypes(object):
 						data[:] = x[0][:]
 
 					self.py = data
-					self.c = make_cvector(self.py, copy_data = ON_GPU)
+					self.c = backend.make_cvector(self.py, copy_data = ON_GPU)
 					self.size = self.py.size
 				else:
 					# --------------------------------------------- #
@@ -73,8 +72,9 @@ class HighLevelLinsysTypes(object):
 							  	self.on_gpu, self.sync_required))
 
 			def __del__(self):
+				backend.decrement_cobject_count()
 				if self.is_view: return
-				if self.on_gpu: release_cvector(self.c)
+				if self.on_gpu: backend.release_cvector(self.c)
 
 			def isvalid(self):
 				for item in ['on_gpu','sync_required','is_view','size','c','py']:
@@ -93,9 +93,10 @@ class HighLevelLinsysTypes(object):
 		self.Vector = Vector
 
 		class Matrix(object):
-
 			def __init__(self, *A, **flags):
-				backend.__LIBGUARD_ON__ = True
+				if not backend.linalg_contexts_exist:
+					backend.make_linalg_contexts()
+				backend.increment_cobject_count()
 
 				# args are (int, int)
 				valid = istypedtuple(A,2,int)
@@ -149,7 +150,7 @@ class HighLevelLinsysTypes(object):
 							order=order)
 
 					self.py = data
-					self.c = make_cmatrix(self.py, copy_data = ON_GPU)
+					self.c = backend.make_cmatrix(self.py, copy_data = ON_GPU)
 					self.size1 = self.py.shape[0]
 					self.size2 = self.py.shape[1]
 				else:
@@ -176,8 +177,9 @@ class HighLevelLinsysTypes(object):
 
 
 			def __del__(self):
+				backend.decrement_cobject_count()
 				if self.is_view: return
-				if self.on_gpu: release_cmatrix(self.c)
+				if self.on_gpu: backend.release_cmatrix(self.c)
 
 
 			def isvalid(self):
@@ -195,12 +197,149 @@ class HighLevelLinsysTypes(object):
 				assert isinstance(self.c, lowtypes.matrix)
 				assert self.c.size1 == self.size1
 				assert self.c.size2 == self.size2
-				assert self.c.rowmajor
+				assert self.c.order
 				assert self.c.data is not None
 				return True
 
 		self.Matrix = Matrix
 
+		class SparseMatrix(object):
+
+			def __init__(self, *A, **flags):
+				if not backend.linalg_contexts_exist:
+					backend.make_linalg_contexts()
+				backend.increment_cobject_count()
+
+				# args are (int, int, int)
+				valid = istypedtuple(A, 3, int)
+				if not valid:
+					if len(A)==1:
+						# args are (ndarray)
+						if isinstance(A[0], (csr_matrix, csc_matrix)):
+							# ndarray is matrix
+							valid |= len(A[0].shape)==2
+					elif len(A)==2:
+						# args are (scipy.sparse matrix, ok_sparse_matrix)
+						if isinstance(A[0], (csr_matrix, csc_matrix)) and isinstance(A[1],lowtypes.sparse_matrix):
+							# ndarray and ok-matrix compatibly sized
+							valid |= A[0].shape[0] == A[1].size1 and \
+									 A[0].shape[1] == A[1].size2			
+					
+				if not valid:
+					print ("optkit.SparseMatrix must be initialized with\n"
+							"-three `int` arguments OR\n"
+							"-one `scipy.sparse.csc_matrix` (or csr_matrix) OR\n"
+							"-one `scipy.sparse.csc_matrix` (or csr_matrix) and"
+							" one `optkit.types.lowlevel.ok_matrix`"
+							" of compatible sizes.")
+					self.on_gpu = None
+					self.sync_required = None
+					self.py = None
+					self.c = None
+					self.size1 = None
+					self.size2 = None
+					self.nnz = None
+					self.shape = None
+					self.skinny = None
+					self.mindim = None
+					self.ptrlen = None
+					return
+
+				spmat_constructor = csc_matrix if backend.layout == 'col' else csr_matrix
+
+				self.on_gpu = ON_GPU
+				self.sync_required = ON_GPU
+				if istypedtuple(A, 3, int) or istypedtuple(A, 1, csc_matrix) or istypedtuple(A, 1, csr_matrix):
+
+					if len(A)==1:
+						data = spmat_constructor(A[0].astype(lowtypes.FLOAT_CAST))
+					else:
+						(m, n, nnz) = A
+						if nnz > m * n:
+							print str("# nonzeros nnz exceeds "
+								"matrix dimensions m * n, using  "
+								"nnz = m * n instead")
+							nnz = m * n
+
+						shape = (m, n)
+						ptrlen = n + 1 if backend.layout == 'col' else m + 1
+						ptr = zeros(ptrlen, dtype=int)
+						ind = zeros(nnz, dtype=int)
+
+
+						val = zeros(nnz, dtype=lowtypes.FLOAT_CAST) 
+						ptr_idx = 0
+						modbase = n + m + 1 - ptrlen # get size of complementary (non-compressed) dimension
+
+						# create a default sequentially filled initialization of 
+						# the sparse matrix so that the csc_matrix() or csr_matrix()
+						# constructor allocates & returns something with nnz nonzeros
+						for i in xrange(nnz):
+							ind[i] = i % modbase
+							ptr_idx = i / modbase
+							ptr[ptr_idx + 1] = i + 1
+						if ptr_idx < ptrlen:
+							ptr[ptr_idx + 1:] = nnz 
+
+						data = spmat_constructor((val, ind, ptr), shape=shape)
+
+					self.py = data
+					self.c = backend.make_csparsematrix(self.py)
+					self.size1 = self.py.shape[0]
+					self.size2 = self.py.shape[1]
+					self.nnz = self.py.nnz
+					self.ptrlen = data.shape[1] + 1 if backend.layout == 'col' else data.shape[1] + 1
+				else:
+					# --------------------------------------------- #
+					# python and C arrays provided to constructor, 	#
+					# used for constructing views					#
+					# --------------------------------------------- #
+					self.py = A[0]
+					self.c = A[1]
+					self.size1 = A[1].size1
+					self.size2 = A[1].size2
+					self.nnz = A[1].nnz
+					self.ptrlen = A[1].ptrlen
+				self.skinny = self.size1 >= self.size2
+				self.square = self.size1 == self.size2
+				self.mindim = min(self.size1, self.size2)
+				self.shape = (self.size1, self.size2)
+
+			def __str__(self):
+				return str("PY: {},\nC: {},\nSIZE: ({},{}), NNZ: {}\n"
+							  "on GPU? {}\nsync required? {}\n".format(
+							  str(self.py), str(self.c), 
+							  self.size1, self.size2, self.nnz,
+							  self.on_gpu, self.sync_required))
+
+
+			def __del__(self):
+				backend.decrement_cobject_count()
+				if self.on_gpu: backend.release_csparsematrix(self.c)
+
+
+			def isvalid(self):
+				for item in ['on_gpu','sync_required','shape','size1',
+							'size2','skinny','mindim','c','py']:
+					assert self.__dict__.has_key(item)
+					assert self.__dict__[item] is not None
+				if self.on_gpu:
+					assert self.sync_required
+				assert self.shape == (self.size1, self.size2)
+				assert self.skinny == (self.size1 >= self.size2)
+				assert self.mindim == min(self.size1, self.size2)
+				assert isinstance(self.py, (csr_matrix, csc_matrix))
+				assert self.py.shape == self.shape
+				assert isinstance(self.c, lowtypes.sparse_matrix)
+				assert self.c.size1 == self.size1
+				assert self.c.size2 == self.size2
+				assert self.c.nnz == self.nnz
+				assert self.c.val is not None
+				assert self.c.ind is not None
+				assert self.c.ptr is not None
+				return True
+
+		self.SparseMatrix = SparseMatrix
 
 class Range(object):
 	def __init__(self, ubound, idx1, idx2=None):

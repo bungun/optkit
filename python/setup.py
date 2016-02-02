@@ -56,14 +56,22 @@ class OptkitBuild(build):
         libs = []
         for precision in precisions:
             sparse = COMPILE_GPU_SPARSE if dev=='gpu' else COMPILE_CPU_SPARSE
-            matrices = ['dense', 'sparse'] if sparse else ['dense']
-            print('making libraries for:'
+            linsys_matrices = ['dense', 'sparse']
+            pogs_matrices = ['dense', 'sparse'] if sparse else ['dense'] 
+            print('making linsys libraries for:'
                 '\n\tDEVICE: {}\n\tPRECISION: {}\n\t MATRICES {}'.format(
-                device, precision, matrices))
-            for matrix in matrices:
+                device, precision, linsys_matrices))
+            for matrix in linsys_matrices:
                 libs.append('libok_{}_{}{}.{}'.format(matrix, device,
                     precision, EXT))
-                libs.append('libprox_{}{}.{}'.format(device, precision, EXT))
+            print('making prox libraries for:'
+                '\n\tDEVICE: {}\n\tPRECISION: {}'.format(
+                device, precision))
+            libs.append('libprox_{}{}.{}'.format(device, precision, EXT))
+            print('making pogs libraries for:'
+                '\n\tDEVICE: {}\n\tPRECISION: {}\n\t MATRICES {}'.format(
+                device, precision, pogs_matrices))
+            for matrix in pogs_matrices:
                 libs.append('libpogs_{}_{}{}.{}'.format(matrix, device,
                     precision, EXT))
 
@@ -100,7 +108,7 @@ class OptkitInstall(install):
 
 setup(
     name='optkit',
-    version='0.0.1',
+    version='0.0.3',
     author='Baris Ungun',
     author_email='ungun@stanford.edu',
     url='http://github.com/bungun/optkit/',

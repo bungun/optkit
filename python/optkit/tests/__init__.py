@@ -9,3 +9,4 @@ from optkit.tests.c_equil import test_cequil
 from optkit.tests.c_proj import test_cproj
 from optkit.tests.c_pogs import test_cpogs
 from optkit.tests.c_store import test_cstore
+from optkit.tests.version import test_version

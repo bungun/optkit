@@ -7,6 +7,7 @@
 extern "C" {
 #endif
 
+void denselib_version(int * maj, int * min, int * change, int * status);
 
 /* VECTOR definition and methods */
 
@@ -41,7 +42,7 @@ void vector_pow(vector *v, const ok_float x);
 typedef struct matrix {
   size_t size1, size2, ld;
   ok_float *data;
-  CBLAS_ORDER_t rowmajor;
+  CBLAS_ORDER_t order;
 } matrix;
 
 
@@ -61,8 +62,10 @@ void matrix_memcpy_ma(matrix * A, const ok_float *B, const CBLAS_ORDER_t ord);
 void matrix_memcpy_am(ok_float * A, const matrix *B, const CBLAS_ORDER_t ord);
 void matrix_print(matrix * A);
 void matrix_scale(matrix * A, ok_float x);
+void matrix_scale_left(matrix * A, const vector * v);
+void matrix_scale_right(matrix * A, const vector * v);
 void matrix_abs(matrix * A);
-
+void matrix_pow(matrix * A, const ok_float p);
 
 /* BLAS routines */
 
@@ -81,26 +84,33 @@ void blas_dot_inplace(void * linalg_handle, const vector * x,
   const vector * y, ok_float * deviceptr_result);
 
 /* BLAS LEVEL 2 */
-void blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t TransA, 
+void blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t transA, 
                  ok_float alpha, const matrix * A, const vector * x, 
                  ok_float beta, vector * y);
 
-void blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo, 
-                 CBLAS_TRANSPOSE_t TransA, CBLAS_DIAG_t Diag, 
+void blas_trsv(void * linalg_handle, CBLAS_UPLO_t uplo, 
+                 CBLAS_TRANSPOSE_t transA, CBLAS_DIAG_t Diag, 
                  const matrix * A, vector * x);
 
+void blas_sbmv(void * linalg_handle, CBLAS_ORDER_t order, CBLAS_UPLO_t uplo,
+  const size_t num_superdiag, const ok_float alpha, const vector * vecA, 
+  const vector * x, const ok_float beta, vector * y);
+
+void blas_diagmv(void * linalg_handle, const ok_float alpha,
+  const vector * vecA, const vector * x, const ok_float beta, vector * y);
+
 /* BLAS LEVEL 3 */
-void blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo, 
-                 CBLAS_TRANSPOSE_t Trans, ok_float alpha, 
+void blas_syrk(void * linalg_handle, CBLAS_UPLO_t uplo, 
+                 CBLAS_TRANSPOSE_t transA, ok_float alpha, 
                  const matrix *A, ok_float beta, matrix *C);
 
-void blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t TransA, 
-                 CBLAS_TRANSPOSE_t TransB, ok_float alpha, 
+void blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t transA, 
+                 CBLAS_TRANSPOSE_t transB, ok_float alpha, 
                  const matrix *A, const matrix *B, 
                  ok_float beta, matrix *C);
 
 void blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side, 
-                 CBLAS_UPLO_t Uplo, CBLAS_TRANSPOSE_t TransA,
+                 CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t transA,
                  CBLAS_DIAG_t Diag, ok_float alpha, 
                  const matrix *A, matrix *B);
 
@@ -110,6 +120,8 @@ void linalg_cholesky_svx(void * linalg_handle, const matrix * L,
                             vector * x);
 
 
+/* device reset */
+int ok_device_reset(void);
 
 #ifdef __cplusplus
 }

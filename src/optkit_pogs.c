@@ -4,6 +4,14 @@
 extern "C" {
 #endif
 
+void 
+pogslib_version(int * maj, int * min, int * change, int * status){
+    * maj = OPTKIT_VERSION_MAJOR;
+    * min = OPTKIT_VERSION_MINOR;
+    * change = OPTKIT_VERSION_CHANGE;
+    * status = (int) OPTKIT_VERSION_STATUS;
+}
+
 /* -------------------------------------------------------------------------------- */
 /* POGS private API:																*/
 /*																					*/
@@ -468,6 +476,17 @@ POGS(copy_output)(pogs_solver * solver, pogs_output * output){
 	vector * d = solver->M->d;
 	vector * e = solver->M->e;
 	pogs_variables * z = solver->z;
+	uint suppress = solver->settings->suppress;
+
+
+	/* ------------------------------------------------ */
+	/* suppression levels: 								*/
+	/* 0: suppress: none, 		return: (x, y, nu, mu)	*/
+	/* 1: suppress: mu,  		return: (x, y, nu)		*/
+	/* 2: suppress: (y, mu)		return: (x, nu)			*/
+	/* 3: suppress: (y, nu, mu)	return: (x)				*/
+	/* ------------------------------------------------ */
+
 
 	/* ------------- */
 	/* x = x^(k+1/2) */
@@ -475,20 +494,29 @@ POGS(copy_output)(pogs_solver * solver, pogs_output * output){
 	/* ------------- */
 	vector_memcpy_vv(z->temp->vec, z->primal12->vec);
 	vector_mul(z->temp->x, e);
-	vector_div(z->temp->y, d);
 	vector_memcpy_av(output->x, z->temp->x, 1);
-	vector_memcpy_av(output->y, z->temp->y, 1);
 
-	/* ---------------------- */
-	/* mu = -rho * xt^(k+1/2) */
-	/* nu = -rho * yt^(k+1/2) */
-	/* ---------------------- */
-	vector_memcpy_vv(z->temp->vec, z->dual12->vec);
-	vector_scale(z->temp->vec, -solver->rho);
-	vector_div(z->temp->x, e);
-	vector_mul(z->temp->y, d);
-	vector_memcpy_av(output->mu, z->temp->x, 1);
-	vector_memcpy_av(output->nu, z->temp->y, 1);
+	if (suppress < 2){
+		vector_div(z->temp->y, d);
+		vector_memcpy_av(output->y, z->temp->y, 1);
+	}
+
+
+	if (suppress < 3){
+		/* ---------------------- */
+		/* mu = -rho * xt^(k+1/2) */
+		/* nu = -rho * yt^(k+1/2) */
+		/* ---------------------- */
+		vector_memcpy_vv(z->temp->vec, z->dual12->vec);
+		vector_scale(z->temp->vec, -solver->rho);
+		vector_mul(z->temp->y, d);
+		vector_memcpy_av(output->nu, z->temp->y, 1);
+
+		if (suppress < 1){
+			vector_div(z->temp->x, e);
+			vector_memcpy_av(output->mu, z->temp->x, 1);
+		}
+	}
 }
 
 
@@ -572,6 +600,7 @@ set_default_settings(pogs_settings * s){
 	s->reltol = kRTOL;
 	s->maxiter = kMAXITER;
 	s->verbose = kVERBOSE;
+	s->suppress = kSUPPRESS;
 	s->adaptiverho = kADAPTIVE;
 	s->gapstop = kGAPSTOP;
 	s->warmstart = kWARMSTART;
@@ -636,8 +665,9 @@ pogs_solve(pogs_solver * solver, FunctionVector * f, FunctionVector * g,
 }
 
 void 
-pogs_finish(pogs_solver * solver){
+pogs_finish(pogs_solver * solver, int reset){
 	POGS(pogs_solver_free)(solver);
+	if (reset) ok_device_reset();
 }
 
 void
@@ -647,7 +677,7 @@ pogs(ok_float * A, FunctionVector * f, FunctionVector * g,
 	pogs_solver * solver = OK_NULL;
 	solver = pogs_init(A, f->size, g->size, ord, equil);
 	pogs_solve(solver, f, g, settings, info, output);
-	pogs_finish(solver);
+	pogs_finish(solver, 1);
 }
 
 

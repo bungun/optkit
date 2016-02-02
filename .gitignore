@@ -12,3 +12,9 @@ test
 *.dll
 
 *.pyc
+
+python/*operator*
+include/*graph*
+include/*cluster*
+src/*graph*
+src/*cluster*

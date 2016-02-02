@@ -1,26 +1,168 @@
-from optkit.types import ok_enums
+from optkit.types import ok_enums, ok_function_enums as fcn_enums
 from numpy import zeros, ndarray, savez, load as np_load
 from ctypes import c_void_p
 from os import path
 
 class HighLevelPogsTypes(object):
-	def __init__(self, backend, function_vector_type):
+	def __init__(self, backend):
 		FLOAT_CAST = backend.lowtypes.FLOAT_CAST
 		ndarray_pointer = backend.lowtypes.ndarray_pointer
 		PogsSettings = backend.pogs.pogs_settings
 		PogsInfo = backend.pogs.pogs_info
 		PogsOutput = backend.pogs.pogs_output
 		pogslib = backend.pogs
-		FunctionVector = function_vector_type
 
 		# TODO: set direct/indirect, e.g., 
 		# pogslib_direct = backend.pogs_direct
 		# pogslib_indirect = backend.pogs_indirect
 
+		# mirrors PyImplementations/prox/FunctionVector without
+		# c array pointer
+		class Objective(object):
+			def __init__(self, n, **params):
+				self.size = n
+				self.terms = zeros(n, dtype=backend.lowtypes.function)
+				self.c_ptr = ndarray_pointer(self.terms)
+				self.c = backend.lowtypes.function_vector(
+					self.size, self.c_ptr)
+				for i in xrange(n):
+					self.terms[i] = backend.lowtypes.function(0, 1, 0, 1, 0, 0)
+				self.set(**params)
+				if 'f' in params:
+					self.copy_from(params['f'])
+
+			def copy_from(self, obj):
+				if not isinstance(fv, Objective):
+					raise TypeError("Objective.copy() requires "
+						"Objective input")
+				if not obj.size==self.size:
+					raise ValueError("Incompatible dimensions")
+				self.terms[:] = fv.terms[:]				
+
+			@property			
+			def list(self):
+				return [backend.lowtypes.function(*self.terms[i]) for i in xrange(self.size)]
+
+			@property			
+			def arrays(self):
+				l = self.list
+				h = zeros(self.size, int)
+				a = zeros(self.size)
+				b = zeros(self.size)
+				c = zeros(self.size)
+				d = zeros(self.size)
+				e = zeros(self.size)
+
+				for i in xrange(self.size):
+					h[i] = l[i].h
+					a[i] = l[i].a
+					b[i] = l[i].b
+					c[i] = l[i].c
+					d[i] = l[i].d
+					e[i] = l[i].e
+
+				return h, a, b, c, d, e
+
+			def set(self, **params):
+				start = int(params['start']) if 'start' in params else 0
+				end = int(params['end']) if 'end' in params else self.size
+
+				if start < 0 : start = self.size + start
+				if end < 0 : end = self.size + end
+
+				range_length = len(self.terms[start:end])
+				if  range_length == 0: 
+					raise ValueError('index range [{}:{}] results in length-0 array '
+						'when python array slicing applied to an '
+						'optkit.HighLevelPogsTypes.Objective array'
+						' of length {}.'.format(start,end,self.size))
+				for item in ['a', 'b', 'c', 'd', 'e', 'h']:
+					if item in params:
+						if isinstance(params[item],(list, ndarray)):
+							if len(params[item]) != range_length:
+								raise ValueError('keyword argument {} of type {} '
+									'is incomptably sized with the requested '
+									'optkit.HighLevelPogsTypes.Objective'
+									' array slice [{}:{}]'.format(
+									item, type(params(item), start, end)))
+
+				objectives = self.list
+
+				#TODO: support complex slicing
+
+				if 'h' in params:
+					if isinstance(params['h'],(int, str)):
+						for i in xrange(start, end):
+							objectives[i].h = fcn_enums.safe_enum(params['h'])
+					elif isinstance(params['h'],(list, ndarray)):
+						for i in xrange(start, end):
+							objectives[i].h = fcn_enums.safe_enum(params['h'][i])
+
+				if 'a' in params:
+					if isinstance(params['a'],(int, float)):
+						for i in xrange(start, end):
+							objectives[i].a = params['a']
+					elif isinstance(params['a'],(list, ndarray)):
+						for i in xrange(start, end):
+							objectives[i].a = params['a'][i - start]
+
+				if 'b' in params:
+					if isinstance(params['b'],(int, float)):
+						for i in xrange(start, end):
+							objectives[i].b = params['b']
+					elif isinstance(params['b'],(list, ndarray)):
+						for i in xrange(start, end):
+							objectives[i].b = params['b'][i - start]
+
+				if 'c' in params:
+					if isinstance(params['c'],(int,float)):
+						for i in xrange(start, end):
+							objectives[i].c = max(params['c'], 0)
+					elif isinstance(params['c'],(list, ndarray)):
+						for i in xrange(start, end):
+							objectives[i].c = max(params['c'][i - start], 0)
+
+				if 'd' in params:
+					if isinstance(params['d'],(int, float)):
+						for i in xrange(start, end):
+							objectives[i].d = params['d']
+					elif isinstance(params['d'],(list, ndarray)):
+						for i in xrange(start, end):
+							objectives[i].d = params['d'][i - start]
+
+				if 'e' in params:
+					if isinstance(params['e'],(int,float)):
+						for i in xrange(start, end):
+							objectives[i].e = max(params['e'], 0)
+					elif isinstance(params['e'],(list, ndarray)):
+						for i in xrange(start, end):
+							objectives[i].e = max(params['e'][i - start], 0)
+
+				for i in xrange(self.size):
+					self.terms[i] = objectives[i]
+
+				
+			def __str__(self):
+				(h_, a_, b_, c_, d_, e_) = self.arrays
+
+				return str("size:\nh: {}\na: {}\nb: {}\n"
+					"c: {}\nd: {}\ne: {}".format(self.size,
+					h_, a_, b_, c_, d_, e_))
+
+			def isvalid(self):
+				for item in ['terms','size','c_ptr', 'c']:
+					assert self.__dict__.has_key(item)
+					assert self.__dict__[item] is not None
+				assert isinstance(self.terms, ndarray)
+				assert len(self.terms.shape) == 1
+				assert self.terms.size == self.size
+				return True	
+
+		self.Objective = Objective
 
 		class SolverSettings(object):
 			def __init__(self, **options):
-				self.c = PogsSettings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None, None)
+				self.c = PogsSettings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None, None)
 				pogslib.set_default_settings(self.c)
 				self.update(**options)
 
@@ -31,6 +173,7 @@ class HighLevelPogsTypes(object):
 				if 'reltol' in options: self.c.reltol = options['reltol']
 				if 'maxiter' in options: self.c.maxiter = options['maxiter']
 				if 'verbose' in options: self.c.verbose = options['verbose']
+				if 'suppress' in options: self.c.suppress = options['suppress']
 				if 'adaptiverho' in options: self.c.adaptiverho = options['adaptiverho']
 				if 'gapstop' in options: self.c.gapstop = options['gapstop']
 				if 'resume' in options: self.c.resume = options['resume']
@@ -45,6 +188,7 @@ class HighLevelPogsTypes(object):
 					"reltol: {}\n".format(self.c.reltol) +
 					"maxiter: {}\n".format(self.c.maxiter) +
 					"verbose: {}\n".format(self.c.verbose) +
+					"suppress: {}\n".format(self.c.suppress) +
 					"adaptiverho: {}\n".format(self.c.adaptiverho) +
 					"gapstop: {}\n".format(self.c.gapstop) +
 					"warmstart: {}\n".format(self.c.warmstart) +
@@ -57,6 +201,34 @@ class HighLevelPogsTypes(object):
 		class SolverInfo(object):
 			def __init__(self):
 				self.c = PogsInfo(0, 0, 0, 0, 0, 0, 0)
+
+			@property 
+			def iters(self):
+				return self.c.k
+
+			@property 
+			def solve_time(self):
+				return self.c.solve_time
+
+			@property 
+			def setup_time(self):
+				return self.c.setup_time
+
+			@property
+			def error(self):
+			    return self.c.error
+			
+			@property
+			def converged(self):
+			    return self.c.converged
+
+			@property
+			def objval(self):
+			    return self.c.obj
+
+			@property
+			def rho(self):
+				return self.c.rho
 
 			def __str__(self):
 				return str(
@@ -76,8 +248,11 @@ class HighLevelPogsTypes(object):
 				self.y = zeros(m, dtype=FLOAT_CAST)
 				self.mu = zeros(n, dtype=FLOAT_CAST)
 				self.nu = zeros(m, dtype=FLOAT_CAST)
-				self.c = PogsOutput(ndarray_pointer(self.x), ndarray_pointer(self.y),
-					ndarray_pointer(self.mu), ndarray_pointer(self.nu))
+				self.c = PogsOutput(
+					ndarray_pointer(self.x), 
+					ndarray_pointer(self.y),
+					ndarray_pointer(self.mu), 
+					ndarray_pointer(self.nu))
 
 			def __str__(self):
 				return str("x:\n{}\ny:\n{}\nmu:\n{}\nnu:\n{}\n".format(
@@ -111,7 +286,7 @@ class HighLevelPogsTypes(object):
 				self.output = SolverOutput(m, n)
 				self.settings.update(**options)
 				self.first_run = True
-
+				backend.increment_csolver_count()
 
 
 			def solve(self, f, g, **options):
@@ -119,11 +294,11 @@ class HighLevelPogsTypes(object):
 					Warning("No solver intialized, solve() call invalid")
 					return
 
-				if not (isinstance(f, FunctionVector) and \
-					isinstance(f, FunctionVector)):
+				if not (isinstance(f, Objective) and \
+					isinstance(f, Objective)):
 
 					raise TypeError(
-						'inputs f, g must be of type optkit.FunctionVector'
+						'inputs f, g must be of type optkit.HighLevelPogsTypes.Objective'
 						'\nprovided: {}, {}'.format(type(f), type(g)))
 
 				if not (f.size == self.m and g.size == self.n):
@@ -303,8 +478,10 @@ class HighLevelPogsTypes(object):
 						zprev=zprev, rho=rho[0])
 
 			def __del__(self):
+				backend.decrement_csolver_count() 
 				if self.c_solver is not None:
-					pogslib.pogs_finish(self.c_solver)
+					pogslib.pogs_finish(self.c_solver,
+						int(backend.device_reset_allowed))
 
 		self.Solver = Solver
 

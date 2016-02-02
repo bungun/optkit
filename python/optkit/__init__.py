@@ -1,5 +1,8 @@
 from os import getenv
 
+
+from optkit.api import OPTKIT_VERSION 
+
 # -------------------------------------------------	#
 #					   Backend 						#
 # ------------------------------------------------- #

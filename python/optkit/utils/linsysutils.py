@@ -1,5 +1,6 @@
 from optkit.types import ok_enums as enums
 from numpy import ndarray
+from scipy.sparse import csr_matrix, csc_matrix
 
 # low-level utilities
 class UtilMakeCVector(object):
@@ -58,6 +59,43 @@ class UtilMakeCMatrix(object):
 			return None
 			# TODO: error message (type, dims)
 
+
+class UtilMakeCSparseMatrix(object):
+	def __init__(self, sparse_handle, lowtypes, sparselib):
+		self.sparse_handle = sparse_handle
+		self.lowtypes = lowtypes
+		self.sparselib = sparselib
+		self.ndarray_pointer = lowtypes.ndarray_pointer
+
+	def __call__(self, A=None):	
+
+		if A is None:
+			return self.lowtypes.sparse_matrix(0, 0, 0, 0, 
+				None, None, None, enums.CblasRowMajor)
+		elif isinstance(A, (csr_matrix, csc_matrix)):
+			(m,n) = A.shape
+			if self.lowtypes.order == 'col' and not isinstance(A, csc_matrix):
+				A = csc_matrix(A)
+			elif self.lowtypes.order == 'row' and not isinstance(A, csr_matrix):
+				A = csr_matrix(A)
+
+			order = enums.CblasRowMajor if isinstance(A, csr_matrix) else \
+					enums.CblasColMajor
+
+			A_ = self.lowtypes.sparse_matrix(0, 0, 0, 0, 
+				None, None, None, order)
+			
+			self.sparselib.sp_matrix_calloc(A_, m, n, A.nnz, order)
+			self.sparselib.sp_matrix_memcpy_ma(self.sparse_handle, A_, 
+				self.ndarray_pointer(A.data),
+				self.ndarray_pointer(A.indices), 
+				self.ndarray_pointer(A.indptr), 
+				order)
+			return A_
+		else:
+			return None
+			# TODO: error message (type, dims)
+
 class UtilReleaseCVector(object):
 	def __init__(self, lowtypes, denselib):
 		self.lowtypes = lowtypes
@@ -73,3 +111,26 @@ class UtilReleaseCMatrix(object):
 	def __call__(self, A):
 		if isinstance(A, self.lowtypes.matrix):
 			self.denselib.matrix_free(A)
+
+class UtilReleaseCSparseMatrix(object):
+	def __init__(self, lowtypes, sparselib):
+		self.lowtypes = lowtypes
+		self.sparselib = sparselib
+	def __call__(self, A):
+		if isinstance(A, self.lowtypes.sparse_matrix):
+			self.sparselib.sp_matrix_free(A)
+
+# @curry
+# def util release_cvector(lowtypes, denselib, x):
+# 	if isinstance(x, self.lowtypes.vector):
+# 		self.denselib.vector_free(x)
+
+# @curry
+# def util_release_cmatrix(lowtypes, denselib, A):
+# 	if isinstance(A, self.lowtypes.matrix):
+# 		self.denselib.matrix_free(A)
+
+# @curry
+# def util_release_csparsematrix(lowtypes, sparselib, A):
+# 	if isinstance(A, self.lowtypes.sparse_matrix):
+# 		self.sparselib.sp_matrix_free(A)

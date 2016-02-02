@@ -10,6 +10,9 @@
 extern "C" {
 #endif
 
+void proxlib_version(int * maj, int * min, int * change, int * status);
+
+
 /* List of functions supported by the proximal operator library. */
 enum Function { 
                 FnZero, 		 /* f(x) = 0 */
@@ -262,23 +265,24 @@ __DEVICE__ inline ok_float ProxEval(const FunctionObj * f_obj,
   v = a * (v * rho - d) / (e + rho) - b;
   rho = (e + rho) / (c * a * a);
 
-  if (f_obj->h == FnAbs) v = ProxAbs(v, rho);
-  else if (f_obj->h == FnExp) v = ProxExp(v, rho);
-  else if (f_obj->h == FnHuber) v = ProxHuber(v, rho);
-  else if (f_obj->h == FnIdentity) v = ProxIdentity(v, rho);
-  else if (f_obj->h == FnIndBox01) v = ProxIndBox01(v, rho);
-  else if (f_obj->h == FnIndEq0) v = ProxIndEq0(v, rho);
-  else if (f_obj->h == FnIndGe0) v = ProxIndGe0(v, rho);
-  else if (f_obj->h == FnIndLe0) v = ProxIndLe0(v, rho);
-  else if (f_obj->h == FnLogistic) v = ProxLogistic(v, rho);
-  else if (f_obj->h == FnMaxNeg0) v = ProxMaxNeg0(v, rho);
-  else if (f_obj->h == FnMaxPos0) v = ProxMaxPos0(v, rho);
-  else if (f_obj->h == FnNegEntr) v = ProxNegEntr(v, rho);
-  else if (f_obj->h == FnNegLog) v = ProxNegLog(v, rho);  
-  else if (f_obj->h == FnRecipr) v = ProxRecipr(v, rho);
-  else if (f_obj->h == FnSquare) v = ProxSquare(v, rho);
-  else v = ProxZero(v, rho);
-
+  switch ( f_obj->h ) {
+    case FnAbs : v = ProxAbs(v, rho); break;
+    case FnExp : v = ProxExp(v, rho); break;
+    case FnHuber : v = ProxHuber(v, rho); break;
+    case FnIdentity : v = ProxIdentity(v, rho); break;
+    case FnIndBox01 : v = ProxIndBox01(v, rho); break;
+    case FnIndEq0 : v = ProxIndEq0(v, rho); break;
+    case FnIndGe0 : v = ProxIndGe0(v, rho); break;
+    case FnIndLe0 : v = ProxIndLe0(v, rho); break;
+    case FnLogistic : v = ProxLogistic(v, rho); break;
+    case FnMaxNeg0 : v = ProxMaxNeg0(v, rho); break;
+    case FnMaxPos0 : v = ProxMaxPos0(v, rho); break;
+    case FnNegEntr : v = ProxNegEntr(v, rho); break;
+    case FnNegLog : v = ProxNegLog(v, rho); break;
+    case FnRecipr : v = ProxRecipr(v, rho); break;
+    case FnSquare : v = ProxSquare(v, rho); break;
+    default : v = ProxZero(v, rho); break;
+  }
   return (v + b) / a;
 }
 
@@ -368,22 +372,24 @@ __DEVICE__ inline ok_float FuncEval(const FunctionObj * f_obj, ok_float x) {
   ok_float ex = f_obj->e * x * x / 2;
   x = f_obj->a * x - f_obj->b;
 
-  if (f_obj->h == FnAbs) x = FuncAbs(x);
-  else if (f_obj->h == FnExp) x = FuncExp(x);
-  else if (f_obj->h == FnHuber) x = FuncHuber(x);
-  else if (f_obj->h == FnIdentity) x = FuncIdentity(x);
-  else if (f_obj->h == FnIndBox01) x = FuncIndBox01(x);
-  else if (f_obj->h == FnIndEq0) x = FuncIndEq0(x);
-  else if (f_obj->h == FnIndGe0) x = FuncIndGe0(x);
-  else if (f_obj->h == FnIndLe0) x = FuncIndLe0(x);
-  else if (f_obj->h == FnLogistic) x = FuncLogistic(x);
-  else if (f_obj->h == FnMaxNeg0) x = FuncMaxNeg0(x);
-  else if (f_obj->h == FnMaxPos0) x = FuncMaxPos0(x);
-  else if (f_obj->h == FnNegEntr) x = FuncNegEntr(x);
-  else if (f_obj->h == FnNegLog) x = FuncNegLog(x);
-  else if (f_obj->h == FnRecipr) x = FuncRecipr(x);
-  else if (f_obj->h == FnSquare) x = FuncSquare(x);
-  else x = FuncZero(x);
+  switch ( f_obj->h ){
+    case FnAbs : x = FuncAbs(x); break;
+    case FnExp : x = FuncExp(x); break;
+    case FnHuber : x = FuncHuber(x); break;
+    case FnIdentity : x = FuncIdentity(x); break;
+    case FnIndBox01 : x = FuncIndBox01(x); break;
+    case FnIndEq0 : x = FuncIndEq0(x); break;
+    case FnIndGe0 : x = FuncIndGe0(x); break;
+    case FnIndLe0 : x = FuncIndLe0(x); break;
+    case FnLogistic : x = FuncLogistic(x); break;
+    case FnMaxNeg0 : x = FuncMaxNeg0(x); break;
+    case FnMaxPos0 : x = FuncMaxPos0(x); break;
+    case FnNegEntr : x = FuncNegEntr(x); break;
+    case FnNegLog : x = FuncNegLog(x); break;
+    case FnRecipr : x = FuncRecipr(x); break;
+    case FnSquare : x = FuncSquare(x); break;
+    default : x = FuncZero(x); break;
+  }
 
   return f_obj->c * x + dx + ex;
 }

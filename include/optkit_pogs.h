@@ -2,7 +2,7 @@
 #define OPTKIT_POGS_H_GUARD
 
 #include "optkit_dense.h"
-#include "optkit_prox.h"
+#include "optkit_prox.hpp"
 #include "optkit_equilibration.h"
 #include "optkit_projector.h"
 #include "optkit_timer.h"
@@ -10,6 +10,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+void pogslib_version(int * maj, int * min, int * change, int * status);
+
 
 #ifndef OPTKIT_INDIRECT
 typedef direct_projector projector;
@@ -35,6 +38,7 @@ const int kADAPTIVE = 1;
 const int kGAPSTOP = 0;
 const int kWARMSTART = 0;
 const uint kVERBOSE = 2u;
+const uint kSUPPRESS = 0u;
 const int kRESUME = 0;
 const ok_float kRHOMAX = (ok_float) 1e4;
 const ok_float kRHOMIN = (ok_float) 1e-4;
@@ -73,7 +77,7 @@ typedef struct POGSObjectives {
 
 typedef struct POGSSettings {
 	ok_float alpha, rho, abstol, reltol;
-	uint maxiter, verbose;
+	uint maxiter, verbose, suppress;
 	int adaptiverho, gapstop, warmstart, resume;
 	ok_float * x0, * nu0; 
 } pogs_settings;
@@ -114,14 +118,14 @@ typedef struct POGSSolver {
 } pogs_solver;
 
 
-int private_api_accessible();
-int is_direct();
+int private_api_accessible(void);
+int is_direct(void);
 void set_default_settings(pogs_settings * settings);
 pogs_solver * pogs_init(ok_float * A, size_t m, size_t n, 
 	CBLAS_ORDER_t ord, Equilibration_t equil);
 void pogs_solve(pogs_solver * solver, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output);
-void pogs_finish(pogs_solver * solver);
+void pogs_finish(pogs_solver * solver, int reset);
 void pogs(ok_float * A, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output,
 	CBLAS_ORDER_t ord, Equilibration_t equil);
