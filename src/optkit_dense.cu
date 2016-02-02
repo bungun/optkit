@@ -861,10 +861,11 @@ void blas_sbmv(void * linalg_handle, CBLAS_ORDER_t order, CBLAS_UPLO_t uplo,
   const size_t num_superdiag, const ok_float alpha, const vector * vecA, 
   const vector * x, const ok_float beta, vector * y){
 
+  cublasFillMode_t ul;
   if (order == CblasRowMajor)
-    cublasFillMode_t ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+    ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
   else
-    cublasFillMode_t ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+    ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
 
   CUBLAS(sbmv)(*(cublasHandle_t *) linalg_handle, ul,
     (int) y->size, (int) num_superdiag, &alpha, vecA->data, (int) (num_superdiag + 1), 
@@ -873,7 +874,7 @@ void blas_sbmv(void * linalg_handle, CBLAS_ORDER_t order, CBLAS_UPLO_t uplo,
 
 void blas_diagmv(void * linalg_handle, const ok_float alpha,
   const vector * vecA, const vector * x, const ok_float beta, vector * y){
-  blas_sbmv(linalg_handle, CblasLower, 0, alpha, vecA, x, beta, y);
+  blas_sbmv(linalg_handle, CblasColMajor, CblasLower, 0, alpha, vecA, x, beta, y);
 }
 
 /* BLAS LEVEL 3 */
