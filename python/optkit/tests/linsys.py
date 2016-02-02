@@ -268,6 +268,7 @@ def test_vector_methods(errors, n=3,VERBOSE_TEST=True,
 
 		PRINT("Vector elementwise reciprocal: a^-1")
 		backend.dense.vector_recip(a.c)
+		linsys['sync'](a)
 		arand **= -1
 		PRINT("a^-1 (Py) - a^-1 (C)")
 		PRINT(arand - a.py)
@@ -276,6 +277,7 @@ def test_vector_methods(errors, n=3,VERBOSE_TEST=True,
 
 		PRINT("Vector elementwise square root: a^1/2")
 		backend.dense.vector_sqrt(a.c)
+		linsys['sync'](a)
 		arand **= 0.5
 		PRINT("a^1/2 (Py) - a^1/2 (C)")
 		PRINT(arand - a.py)
@@ -284,6 +286,7 @@ def test_vector_methods(errors, n=3,VERBOSE_TEST=True,
 		p_rand = -1 + 3 * np.random.rand()
 		PRINT("Vector elementwise power: a^p, p={}".format(p_rand))
 		backend.dense.vector_pow(a.c, p_rand)
+		linsys['sync'](a)
 		arand **= p_rand
 		PRINT("a^p (Py) - a^p (C)")
 		PRINT(arand - a.py)
@@ -592,7 +595,7 @@ def test_matrix_methods(errors, m=4, n=3, VERBOSE_TEST=True,
 		Arand = Arand ** p_rand
 		backend.dense.matrix_pow(A.c, p_rand)
 		linsys['sync'](A)
-		assert array_compare(Arand, A.py)	
+		assert array_compare(Arand, A.py, eps=TEST_EPS)	
 
 		left = RAND_ARR(m)
 		right = RAND_ARR(n)
@@ -607,7 +610,7 @@ def test_matrix_methods(errors, m=4, n=3, VERBOSE_TEST=True,
 
 		PRINT("A (Py) - A (C)")
 		linsys['sync'](A)
-		assert array_compare(Arand, A.py)
+		assert array_compare(Arand, A.py, eps=TEST_EPS)
 
 		# test right diagonal scaling
 		PPRINT("right diagonal scaling A := A * diag(v)")
@@ -617,7 +620,7 @@ def test_matrix_methods(errors, m=4, n=3, VERBOSE_TEST=True,
 
 		PRINT("A (Py) - A (C)")
 		linsys['sync'](A)
-		assert array_compare(Arand, A.py)
+		assert array_compare(Arand, A.py, eps=TEST_EPS)
 
 		return True
 
@@ -795,7 +798,8 @@ def test_blas_methods(errors, m=4, n=3, A_in=None, VERBOSE_TEST=True,
 		x = Vector(xrand)
 		y = Vector(n)
 		backend.dense.blas_sbmv(backend.dense_blas_handle,
-			ok_enums.CblasLower, diags - 1, 1., S.c, x.c, 0., y.c)
+			ok_enums.CblasColMajor, ok_enums.CblasLower, 
+			diags - 1, 1., S.c, x.c, 0., y.c)
 
 
 		linsys['sync'](y)

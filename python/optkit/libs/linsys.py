@@ -155,7 +155,7 @@ class DenseLinsysLibs(object):
 			lib.blas_dot.argtypes = [c_void_p, vector_p, vector_p]
 			lib.blas_gemv.argtypes = [c_void_p, c_uint, ok_float, matrix_p, vector_p, ok_float, vector_p]
 			lib.blas_trsv.argtypes = [c_void_p, c_uint, c_uint, c_uint, matrix_p, vector_p]
-			lib.blas_sbmv.argtypes = [c_void_p, c_uint, c_size_t, ok_float, vector_p, vector_p, ok_float, vector_p]
+			lib.blas_sbmv.argtypes = [c_void_p, c_uint, c_uint, c_size_t, ok_float, vector_p, vector_p, ok_float, vector_p]
 			lib.blas_diagmv.argtypes = [c_void_p, ok_float, vector_p, vector_p, ok_float, vector_p]
 			lib.blas_syrk.argtypes = [c_void_p, c_uint, c_uint, ok_float, matrix_p, ok_float, matrix_p]
 			lib.blas_gemm.argtypes = [c_void_p, c_uint, c_uint, ok_float, matrix_p, matrix_p, ok_float, matrix_p]
