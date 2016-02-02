@@ -42,7 +42,41 @@ void sparse_operator_mul_t_fused(void * data, ok_float alpha,
 
 operator_t * sparse_operator_alloc(sp_matrix * A);
 
-void operator_free(operator_t * op);
+typedef struct difference_operator_data{
+	void * dense_handle;
+	size_t offset;
+	vector subvec_in, subvec_out;
+} difference_operator_data;
+
+void difference_operator_data_alloc(void ** data);
+void difference_operator_data_free(void * data);
+void difference_operator_mul(void * data, vector * input, vector * output);
+void difference_operator_mul_t(void * data, vector * input, vector * output);
+void difference_operator_mul_fused(void * data, ok_float alpha,
+	vector * input, ok_float beta, vector * output);
+void difference_operator_mul_t_fused(void * data, ok_float alpha,
+	vector * input, ok_float beta, vector * output);
+
+operator_t * difference_operator_alloc(sp_matrix * A);
+
+typedef struct block_difference_operator_data{
+	void * dense_handle;
+	size_t nblocks, * block_sizes, * offsets;
+	vector subvec_in, subvec_out;
+} difference_operator_data;
+
+void block_difference_operator_data_alloc(void ** data);
+void block_difference_operator_data_free(void * data);
+void block_difference_operator_mul(void * data, vector * input, vector * output);
+void block_difference_operator_mul_t(void * data, vector * input, vector * output);
+void block_difference_operator_mul_fused(void * data, ok_float alpha,
+	vector * input, ok_float beta, vector * output);
+void block_difference_operator_mul_t_fused(void * data, ok_float alpha,
+	vector * input, ok_float beta, vector * output);
+
+operator_t * block_difference_operator_alloc(sp_matrix * A);
+
+
 
 #ifdef __cplusplus
 }

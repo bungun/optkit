@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 typedef enum OPERATOR{
+	Null_Operator = 0,
 	Id_Operator = 101,
 	Neg_Operator = 102,
 	Add_Operator = 103,
@@ -29,6 +30,7 @@ typedef enum OPERATOR{
 	Difference_Operator = 504,
 	Upsampling_Operator = 505,
 	Downsampling_Operator = 506,
+	BlockDifference_Operator = 507,
 	DirectProjection_Operator = 901,
 	IndirectProjection_Operator = 902,
 	Other_Operator = 1000
@@ -43,8 +45,34 @@ typedef struct abstract_linear_operator{
 		ok_float beta, vector * output);
 	void (* fused_adjoint)(void * data, ok_float alpha, vector * input,
 		ok_float beta, vector * output);
+	void (* free)(void * data);
 	OPTKIT_OPERATOR kind;
 } operator_t;
+
+
+operator_t * operator_alloc(OPTKIT_OPERATOR kind,
+	size_t size1, size_t size2, void * data, 
+	void (* apply), void (* adjoint), 
+	void (* fused_apply), void (* fused_adjoint), 
+	void (* free)){
+
+	operator_t * op = (operator_t *) malloc( sizeof(operator_t) );
+	op->size1 = size1;
+	op->size2 = size2;
+	op->apply = apply;
+	op->adjoint = adjoint;
+	op->fused_apply = op->fused_apply;
+	op->fused_adjoint = op->fused_adjoint;
+	op->free = op->free;
+	op->kind = kind;
+	return op;
+}
+
+/* GENERIC OPERATOR FREE */
+void operator_free(operator_t * op){
+	if (op->free && op->data) op->free(op->data);
+	ok_free(op);
+}
 
 
 #ifdef __cplusplus

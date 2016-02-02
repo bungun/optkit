@@ -331,7 +331,7 @@ uint pcg_nonallocating(pcg_helper * helper,
 	const ok_float tol, const size_t maxiter, const int quiet){
 
 	/* convenience abbreviations */
-	cgls_helper * h = helper;
+	pcg_helper * h = helper;
 	vector * p = &(h->p), * q = &(h->q);  	/* iterate vectors */
 	vector * r = &(h->r), * z = &(h->z);   	/* residual, preconditioned var */
 	vector * x0 = &(h->z) 					/* alias for warmstart */
