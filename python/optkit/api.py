@@ -9,6 +9,11 @@ from optkit.py_implementations.pogs import POGSDirectSolver
 from os import getenv
 
 """
+Version query
+"""
+OPTKIT_VERSION = None
+
+"""
 Backend handle
 """
 backend = OKBackend()
@@ -16,7 +21,7 @@ backend = OKBackend()
 """
 Types
 """
-Vector = Matrix = FunctionVector = None
+Vector = Matrix = SparseMatrix = FunctionVector = None
 
 """
 Python implementations
@@ -32,18 +37,23 @@ C implementations
 """
 CPogsTypes = None
 PogsSolver = None
+PogsObjective = None
+
 
 """
 Backend switching
 """
 def set_backend(GPU=False, double=True, force_rowmajor=False,
 	force_colmajor=False):
+
 	# Backend
+	global OPTKIT_VERSION
 	global backend
 
 	# Types
 	global Vector
 	global Matrix
+	global SparseMatrix
 	global FunctionVector
 
 	## Python implementations
@@ -66,11 +76,13 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 	global DirectProjector
 	global CPogsTypes
 	global PogsSolver
+	global PogsObjective
 
 	# change backend
 	backend_name=backend.change(GPU=GPU, double=double, 
 		force_rowmajor=force_rowmajor, force_colmajor=force_colmajor)
 	
+	OPTKIT_VERSION = backend.version
 
 	# reset types
 	linsys_type_factory = HighLevelLinsysTypes(backend)
@@ -78,9 +90,10 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 
 	Vector = linsys_type_factory.Vector
 	Matrix = linsys_type_factory.Matrix
+	SparseMatrix = linsys_type_factory.SparseMatrix
 	FunctionVector = prox_type_factory.FunctionVector
 
-	linsys_core_kernels = LinsysCoreKernels(backend, Vector, Matrix)
+	linsys_core_kernels = LinsysCoreKernels(backend, Vector, Matrix, SparseMatrix)
 	linsys_extensions = LinsysExtensionKernels(linsys_core_kernels, Matrix)
 	prox_kernels = ProxKernels(backend, Vector, FunctionVector)
 
@@ -149,8 +162,9 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 
 
 	## C implemenetations
-	CPogsTypes = HighLevelPogsTypes(backend, FunctionVector)
+	CPogsTypes = HighLevelPogsTypes(backend)
 	PogsSolver = CPogsTypes.Solver
+	PogsObjective = CPogsTypes.Objective
 
 	print "optkit backend set to {}".format(backend.libname)
 

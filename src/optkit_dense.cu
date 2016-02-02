@@ -1,12 +1,21 @@
 #include "optkit_dense.h"
 #include "optkit_defs_gpu.h"
-#include "optkit_thrust.h"
+#include "optkit_thrust.hpp"
 
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+void 
+denselib_version(int * maj, int * min, int * change, int * status){
+    * maj = OPTKIT_VERSION_MAJOR;
+    * min = OPTKIT_VERSION_MINOR;
+    * change = OPTKIT_VERSION_CHANGE;
+    * status = (int) OPTKIT_VERSION_STATUS;
+  }
+
 
 __global__ void
 _get_cuda_nan(ok_float * val){
@@ -225,12 +234,12 @@ vector_pow(vector * v, const ok_float x) {
 /* MATRIX CUDA helper methods */
 __global__ void 
 __matrix_set(ok_float * data, ok_float x, size_t stride, 
-  size_t size1, size_t size2, CBLAS_ORDER_t rowmajor){
+  size_t size1, size_t size2, CBLAS_ORDER_t order){
   uint i, j;
   uint thread_id_row = blockIdx.x * blockDim.x + threadIdx.x;
   uint thread_id_col = blockIdx.y * blockDim.y + threadIdx.y;
   #ifndef OPTKIT_ORDER
-  if (rowmajor == CblasRowMajor)
+  if (order == CblasRowMajor)
     for (i = thread_id_row; i < size1; i += gridDim.x * blockDim.x)
       for (j = thread_id_col; j < size2; j += gridDim.y * blockDim.y)
         data[i * stride + j] = x;
@@ -257,7 +266,7 @@ __matrix_set_all(matrix * A, ok_float x) {
   dim3 grid_dim(grid_dimx, grid_dimy, 1u);
   dim3 block_dim(kBlockSize, kBlockSize - 1, 1u);
   __matrix_set<<<grid_dim, block_dim>>>(A->data, x, 
-    A->ld, A->size1, A->size2, A->rowmajor);
+    A->ld, A->size1, A->size2, A->order);
   CUDA_CHECK_ERR;
 }
 
@@ -303,13 +312,13 @@ matrix_alloc(matrix * A, size_t m, size_t n, CBLAS_ORDER_t ord) {
   ok_alloc_gpu(A->data, m * n * sizeof(ok_float));
   #ifndef OPTKIT_ORDER
   A->ld = (ord == CblasRowMajor) ? n : m;
-  A->rowmajor = ord;
+  A->order = ord;
   #elif OPTKIT_ORDER == 101
   A->ld = n;
-  A->rowmajor = CblasRowMajor;
+  A->order = CblasRowMajor;
   #else
   A->ld = m;
-  A->rowmajor = CblasColMajor;
+  A->order = CblasColMajor;
   #endif
 }
 
@@ -335,13 +344,13 @@ matrix_submatrix(matrix * A_sub, matrix * A, size_t i, size_t j, size_t n1, size
   A_sub->size2 = n2;
   A_sub->ld = A->ld;
   #ifndef OPTKIT_ORDER
-  A_sub->data = (A->rowmajor == CblasRowMajor) ? A->data + (i * A->ld) + j : A->data + i + (j * A->ld);
+  A_sub->data = (A->order == CblasRowMajor) ? A->data + (i * A->ld) + j : A->data + i + (j * A->ld);
   #elif OPTKIT_ORDER == 101
   A_sub->data = A->data + (i * A->ld) + j;
   #else
   A_sub->data = A->data + i + (j * A->ld);
   #endif
-  A_sub->rowmajor = A->rowmajor;
+  A_sub->order = A->order;
 }
 
 matrix
@@ -351,13 +360,13 @@ matrix_submatrix_gen(matrix * A, size_t i, size_t j, size_t n1, size_t n2){
     .size2 = n2,
     .ld = A->ld,
     #ifndef OPTKIT_ORDER
-    .data = (A->rowmajor == CblasRowMajor) ? A->data + (i * A->ld) + j : A->data + i + (j * A->ld),
+    .data = (A->order == CblasRowMajor) ? A->data + (i * A->ld) + j : A->data + i + (j * A->ld),
     #elif OPTKIT_ORDER == 101
     .data = A->data + (i * A->ld) + j,
     #else
     .data = A->data + i + (j * A->ld),
     #endif
-    .rowmajor = A->rowmajor
+    .order = A->order
   };
 
 }
@@ -368,8 +377,8 @@ matrix_row(vector * row, matrix * A, size_t i) {
   row->size = A->size2;
 
   #ifndef OPTKIT_ORDER
-  row->stride = (A->rowmajor == CblasRowMajor) ? 1 : A->ld;
-  row->data = (A->rowmajor == CblasRowMajor) ? A->data + (i * A->ld) : A->data + i;
+  row->stride = (A->order == CblasRowMajor) ? 1 : A->ld;
+  row->data = (A->order == CblasRowMajor) ? A->data + (i * A->ld) : A->data + i;
   #elif OPTKIT_ORDER == 101
   row->stride = 1;
   row->data = A->data + (i * A->ld);
@@ -384,8 +393,8 @@ matrix_column(vector * col, matrix *A, size_t j) {
   if (!__vector_exists(col)) return;
   col->size = A->size1;
   #ifndef OPTKIT_ORDER 
-  col->stride = (A->rowmajor == CblasRowMajor) ? A->ld : 1; 
-  col->data = (A->rowmajor == CblasRowMajor) ? A->data + j : A->data + (j * A->ld); 
+  col->stride = (A->order == CblasRowMajor) ? A->ld : 1; 
+  col->data = (A->order == CblasRowMajor) ? A->data + j : A->data + (j * A->ld); 
   #elif OPTKIT_ORDER == 101
   col->stride = A->ld;
   col->data = A->data + j; 
@@ -420,13 +429,13 @@ matrix_view_array(matrix * A, const ok_float *base, size_t n1,
 
   #ifndef OPTKIT_ORDER
   A->ld = (ord == CblasRowMajor) ? n2 : n1;
-  A->rowmajor = ord;
+  A->order = ord;
   #elif OPTKIT_ORDER == 101
   A->ld = n2;
-  A->rowmajor = CblasRowMajor;
+  A->order = CblasRowMajor;
   #else
   A->ld = n1;
-  A->rowmajor = CblasColMajor;
+  A->order = CblasColMajor;
   #endif
 }
 
@@ -446,9 +455,9 @@ matrix_memcpy_mm(matrix * A, const matrix * B) {
     printf("error: n-dimensions must match for matrix memcpy\n");
   else{
     #ifndef OPTKIT_ORDER
-    if (A->rowmajor == B->rowmajor)  
+    if (A->order == B->order)  
       ok_memcpy_gpu(A->data, B->data, A->size1 * A->size2 * sizeof(ok_float));
-    else if (A->rowmajor == CblasRowMajor){
+    else if (A->order == CblasRowMajor){
       /* A row major, B column major */
       grid_dim = calc_grid_dim(A->size1);
       for (i = 0; i < A->size1; ++i)
@@ -470,13 +479,13 @@ matrix_memcpy_mm(matrix * A, const matrix * B) {
 
 void 
 matrix_memcpy_ma(matrix * A, const ok_float * B, 
-  const CBLAS_ORDER_t rowmajor) {
+  const CBLAS_ORDER_t ord) {
   uint i, j, grid_dim;
   ok_float * row, * col;
 
-  if (rowmajor == A->rowmajor) {
+  if (ord == A->order) {
     ok_memcpy_gpu(A->data, B, A->size1 * A->size2 * sizeof(ok_float));
-  } else if (rowmajor == CblasColMajor) {
+  } else if (ord == CblasColMajor) {
     /* A row major, B column major */
     ok_alloc_gpu(col, A->size1 * sizeof(ok_float));
     grid_dim = calc_grid_dim(A->size1);
@@ -500,12 +509,12 @@ matrix_memcpy_ma(matrix * A, const ok_float * B,
 
 void 
 matrix_memcpy_am(ok_float * A, const matrix * B, 
-  const CBLAS_ORDER_t rowmajor) {
+  const CBLAS_ORDER_t ord) {
   uint i, j, grid_dim;
   ok_float * row, * col;
-  if (rowmajor == B->rowmajor) {
+  if (ord == B->order) {
     ok_memcpy_gpu(A, B->data, B->size1 * B->size2 * sizeof(ok_float));
-  } else if (rowmajor == CblasRowMajor) {
+  } else if (ord == CblasRowMajor) {
     /* A row major, B column major */
     ok_alloc_gpu(row, B->size2 * sizeof(ok_float));
     grid_dim = calc_grid_dim(B->size2);
@@ -534,10 +543,10 @@ matrix_print(matrix * A) {
 
   for (uint i = 0; i < A->size1; ++i) {
     matrix A_row  = matrix_submatrix_gen(A, i, 0, 1, A->size2); 
-    matrix_memcpy_am(A_row_host, &A_row, A->rowmajor);
+    matrix_memcpy_am(A_row_host, &A_row, A->order);
     for (uint j = 0; j < A->size2; ++j)
       #ifndef OPTKIT_ORDER
-      if (A->rowmajor == CblasRowMajor)
+      if (A->order == CblasRowMajor)
         printf("%0.2e ", A_row_host[j]);
       else
         printf("%0.2e ", A_row_host[j * A->ld]);
@@ -558,7 +567,7 @@ matrix_scale(matrix * A, ok_float x) {
   size_t i;
   #ifndef OPTKIT_ORDER
   vector row_col = (vector){0,0,OK_NULL};
-  if (A->rowmajor == CblasRowMajor)
+  if (A->order == CblasRowMajor)
     for(i = 0; i < A->size1; ++i){
       matrix_row(&row_col, A, i);
       vector_scale(&row_col, x);
@@ -584,12 +593,32 @@ matrix_scale(matrix * A, ok_float x) {
   #endif
 }
 
+void 
+matrix_scale_left(matrix * A, const vector * v){
+  size_t i;
+  vector col = (vector){0, 0, OK_NULL};
+  for(i = 0; i < A->size2; ++i){
+    matrix_column(&col, A, i);
+    vector_mul(&col, v);
+  }
+}
+
+void 
+matrix_scale_right(matrix * A, const vector * v){
+  size_t i;
+  vector row = (vector){0, 0, OK_NULL};
+  for(i = 0; i < A->size1; ++i){
+    matrix_row(&row, A, i);
+    vector_mul(&row, v);
+  }
+}
+
 void
 matrix_abs(matrix * A){
   size_t i;
   #ifndef OPTKIT_ORDER
   vector row_col = (vector){0,0,OK_NULL};
-  if (A->rowmajor == CblasRowMajor)
+  if (A->order == CblasRowMajor)
     for(i = 0; i < A->size1; ++i){
       matrix_row(&row_col, A, i);
       vector_abs(&row_col);
@@ -615,12 +644,42 @@ matrix_abs(matrix * A){
   #endif
 }
 
+void
+matrix_pow(matrix * A, const ok_float x){
+  size_t i;
+  #ifndef OPTKIT_ORDER
+  vector row_col = (vector){0,0,OK_NULL};
+  if (A->order == CblasRowMajor)
+    for(i = 0; i < A->size1; ++i){
+      matrix_row(&row_col, A, i);
+      vector_pow(&row_col, x);
+    }
+  else{
+    for(i = 0; i < A->size2; ++i){
+      matrix_column(&row_col, A, i);
+      vector_pow(&row_col, x);
+    }
+  }
+  #elif OPTKIT_ORDER == 101
+  vector row = (vector){0,0,OK_NULL};
+  for(i = 0; i < A->size1; ++i){
+    matrix_row(&row, A, i);
+    vector_pow(&row, x);
+  }
+  #else
+  vector col = (vector){0,0,OK_NULL};
+  for(i = 0; i < A->size2; ++i){
+    matrix_column(&col, A, i);
+    vector_pow(&col, x);
+  }
+  #endif
+}
 
 #ifndef OPTKIT_ORDER
 int __matrix_order_compat(const matrix * A, const matrix * B, 
   const char * nm_A, const char * nm_B, const char * nm_routine){
 
-  if (A->rowmajor == B->rowmajor) return 1;
+  if (A->order == B->order) return 1;
   printf("OPTKIT ERROR (%s) matrices %s and %s must have same layout.\n", 
          nm_routine, nm_A, nm_B);
   return 0;
@@ -726,7 +785,7 @@ blas_dot_inplace(void * linalg_handle, const vector * x, const vector * y,
 /* BLAS LEVEL 2 */
 
 void 
-blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t Trans, 
+blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t transA, 
                 ok_float alpha, const matrix *A, 
                const vector *x, ok_float beta, vector *y){
 
@@ -734,19 +793,19 @@ blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t Trans,
   int s1, s2;
 
   #ifndef OPTKIT_ORDER
-  if (A->rowmajor==CblasColMajor)
-    tA = (Trans == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
+  if (A->order==CblasColMajor)
+    tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
   else
-    tA = (Trans == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+    tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
 
-  s1 = (A->rowmajor==CblasRowMajor) ? (int) A->size2 : (int) A->size1;
-  s2 = (A->rowmajor==CblasRowMajor) ? (int) A->size1 : (int) A->size2;
+  s1 = (A->order==CblasRowMajor) ? (int) A->size2 : (int) A->size1;
+  s2 = (A->order==CblasRowMajor) ? (int) A->size1 : (int) A->size2;
   #elif OPTKIT_ORDER == 101
-  tA = (Trans == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+  tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
   s1 = (int) A->size2;
   s2 = (int) A->size1;
   #else
-  tA = (Trans == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
+  tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
   s1 = (int) A->size1;
   s2 = (int) A->size2;
   #endif
@@ -762,8 +821,8 @@ blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t Trans,
 }
 
 void 
-blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo, 
-                 CBLAS_TRANSPOSE_t Trans, CBLAS_DIAG_t Diag, 
+blas_trsv(void * linalg_handle, CBLAS_UPLO_t uplo, 
+                 CBLAS_TRANSPOSE_t transA, CBLAS_DIAG_t Diag, 
                  const matrix *A, vector *x){
 
   cublasOperation_t tA;
@@ -771,19 +830,19 @@ blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo,
   cublasFillMode_t ul;
 
   #ifndef OPTKIT_ORDER
-  if (A->rowmajor==CblasColMajor){
-    tA = (Trans == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
-    ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+  if (A->order==CblasColMajor){
+    tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
+    ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
   } else {
-    tA = (Trans == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
-    ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
+    tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+    ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
   }
   #elif OPTKIT_ORDER == 101
-  tA = (Trans == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
-  ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
+  tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+  ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
   #else
-  tA = (Trans == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
-  ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+  tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
+  ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
   #endif
 
   di = Diag==CblasNonUnit ? CUBLAS_DIAG_NON_UNIT : CUBLAS_DIAG_UNIT;  
@@ -797,32 +856,53 @@ blas_trsv(void * linalg_handle, CBLAS_UPLO_t Uplo,
   CUDA_CHECK_ERR;
 }
 
+
+void blas_sbmv(void * linalg_handle, CBLAS_ORDER_t order, CBLAS_UPLO_t uplo,
+  const size_t num_superdiag, const ok_float alpha, const vector * vecA, 
+  const vector * x, const ok_float beta, vector * y){
+
+  cublasFillMode_t ul;
+  if (order == CblasRowMajor)
+    ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+  else
+    ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+
+  CUBLAS(sbmv)(*(cublasHandle_t *) linalg_handle, ul,
+    (int) y->size, (int) num_superdiag, &alpha, vecA->data, (int) (num_superdiag + 1), 
+    x->data, (int) x->stride, &beta, y->data, (int) y->stride);
+}
+
+void blas_diagmv(void * linalg_handle, const ok_float alpha,
+  const vector * vecA, const vector * x, const ok_float beta, vector * y){
+  blas_sbmv(linalg_handle, CblasColMajor, CblasLower, 0, alpha, vecA, x, beta, y);
+}
+
 /* BLAS LEVEL 3 */
 
 void 
-blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo, 
-                 CBLAS_TRANSPOSE_t Trans, ok_float alpha, 
+blas_syrk(void * linalg_handle, CBLAS_UPLO_t uplo, 
+                 CBLAS_TRANSPOSE_t transA, ok_float alpha, 
                  const matrix * A, ok_float beta, matrix * C) {
 
   cublasOperation_t tA;
   cublasFillMode_t ul;
 
-  const int k = (Trans == CblasNoTrans) ? (int) A->size2 : (int) A->size1;
+  const int k = (transA == CblasNoTrans) ? (int) A->size2 : (int) A->size1;
 
   #ifndef OPTKIT_ORDER
-  if (A->rowmajor==CblasColMajor){
-    tA = (Trans == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
-    ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+  if (A->order==CblasColMajor){
+    tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
+    ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
   } else {
-    tA = (Trans == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
-    ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
+    tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+    ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
   }
   #elif OPTKIT_ORDER == 101
-  tA = (Trans == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
-  ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
+  tA = (transA == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T;
+  ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER;
   #else
-  tA = (Trans == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
-  ul = (Uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
+  tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
+  ul = (uplo == CblasLower) ? CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
   #endif
 
   #ifndef OK_DEBUG
@@ -839,36 +919,36 @@ blas_syrk(void * linalg_handle, CBLAS_UPLO_t Uplo,
 }
 
 void 
-blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t TransA, 
-                 CBLAS_TRANSPOSE_t TransB, ok_float alpha, 
+blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t transA, 
+                 CBLAS_TRANSPOSE_t transB, ok_float alpha, 
                  const matrix * A, const matrix * B, 
                  ok_float beta, matrix * C){
 
   cublasOperation_t tA, tB;
   int s1, s2;
 
-  const int k = (TransA == CblasNoTrans) ? (int) A->size2 : (int) A->size1; 
+  const int k = (transA == CblasNoTrans) ? (int) A->size2 : (int) A->size1; 
 
   #ifndef OPTKIT_ORDER
-  s1 = (A->rowmajor==CblasRowMajor) ? (int) C->size2 : (int) C->size1;
-  s2 = (A->rowmajor==CblasRowMajor) ? (int) C->size1 : (int) C->size2;
-  if (A->rowmajor==CblasColMajor){
-    tA = TransA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
-    tB = TransB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+  s1 = (A->order==CblasRowMajor) ? (int) C->size2 : (int) C->size1;
+  s2 = (A->order==CblasRowMajor) ? (int) C->size1 : (int) C->size2;
+  if (A->order==CblasColMajor){
+    tA = transA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+    tB = transB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
   } else {
-    tA = TransB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
-    tB = TransA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+    tA = transB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+    tB = transA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
   }
   #elif OPTKIT_ORDER == 101
   s1 = (int) C->size2;
   s2 = (int) C->size1;
-  tA = TransB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
-  tB = TransA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+  tA = transB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+  tB = transA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
   #else 
   s1 = (int) C->size1;
   s2 = (int) C->size2;
-  tA = TransA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
-  tB = TransB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+  tA = transA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
+  tB = transB == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
   #endif
 
   #ifndef OK_DEBUG
@@ -888,7 +968,7 @@ blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t TransA,
 
 void 
 blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side, 
-                 CBLAS_UPLO_t Uplo, CBLAS_TRANSPOSE_t Trans,
+                 CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t transA,
                  CBLAS_DIAG_t Diag, ok_float alpha, 
                  const matrix *A, matrix *B) {
 
@@ -1030,7 +1110,7 @@ linalg_cholesky_decomp(void * linalg_handle, matrix * A) {
 #endif
 
     __block_chol<<<1, block_dim, 0, stm>>>(A->data, i, (uint) A->ld,
-                                  (uint) A->rowmajor == CblasRowMajor);
+                                  (uint) A->order == CblasRowMajor);
     CUDA_CHECK_ERR;
 
 #ifdef OK_DEBUG
@@ -1053,7 +1133,7 @@ linalg_cholesky_decomp(void * linalg_handle, matrix * A) {
 
       __block_trsv<<<grid_dim, kTileSize, 0, stm>>>(A->data, i, 
                                   (uint) A->size1, (uint) A->ld,
-                                  (uint) A->rowmajor == CblasRowMajor);
+                                  (uint) A->order == CblasRowMajor);
 
       CUDA_CHECK_ERR;
 
@@ -1099,11 +1179,15 @@ linalg_cholesky_svx(void * linalg_handle,
 
   blas_trsv(linalg_handle, 
                   CblasLower, CblasTrans, CblasNonUnit, L, x);
-
-
-
 }
 
+
+/* device reset */
+int ok_device_reset(){
+  cudaDeviceReset();
+  CUDA_CHECK_ERR;
+  return 0;
+}
 
 
 #ifdef __cplusplus

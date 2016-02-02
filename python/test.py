@@ -19,38 +19,51 @@ def main(*args, **kwargs):
 	if '--cproj' in args: tests.append(test_cproj)
 	if '--cpogs' in args: tests.append(test_cpogs)
 	if '--cstore' in args: tests.append(test_cstore)
+	if '--version' in args: tests.append(test_version)
 
 
 	if len(tests)==0:
 		test_names = ['--linsys', '--prox', '--proj',
 		'--equil', '--norm', '--block', '--pogs', '--py_all',
-		'--cequil', '--cproj', '--cpogs', '--cstore', '--c_all']
+		'--cequil', '--cproj', '--cpogs', '--cstore', '--c_all',
+		'--version']
 
 		print str("no tests specified.\nuse optional arguments:\n"
 			"{}\nor\n--all\n to specify tests.".format(test_names))
 		
 	else:
-		libkeys = backend.dense_lib_loader.libs
+		libkeys_d = backend.dense_lib_loader.libs
+		libkeys_s = backend.sparse_lib_loader.libs
+		libkeys_px = backend.prox_lib_loader.libs
+		libkeys_pg = backend.pogs_lib_loader.libs
 
-		if libkeys['cpu64'] is not None:
+		libkeys = {}
+		for key in ['cpu64', 'cpu32', 'gpu64', 'gpu32']:
+			libkeys[key] = libkeys_d[key] is not None
+			libkeys[key] &= libkeys_s[key] is not None
+			libkeys[key] &= libkeys_px[key] is not None
+			libkeys[key] &= libkeys_pg[key] is not None
+
+
+		if libkeys['cpu64']:
 			backend.reset()
 			print "<<< CPU, FLOAT64 >>>"
 			for t in tests: passing += t(errors, *args, **kwargs)
 			tested += len(tests)
 			configs.append('cpu64')
-		if libkeys['cpu32'] is not None:
+		if libkeys['cpu32']:
 			backend.reset()
 			print "<<< CPU, FLOAT32 >>>"
 			for t in tests: passing += t(errors, 'float', *args, **kwargs)
 			tested += len(tests)
 			configs.append('cpu32')
-		if libkeys['gpu64'] is not None:
+		if libkeys['gpu64']:
 			backend.reset()
 			print "<<< GPU, FLOAT64 >>>"
 			for t in tests: passing += t(errors, 'gpu', *args, **kwargs)
 			tested += len(tests)
 			configs.append('gpu64')
-		if libkeys['gpu32'] is not None:
+		if libkeys['gpu32']:
 			backend.reset()
 			print "<<< GPU, FLOAT32 >>>"
 			for t in tests: passing += t(errors, 'gpu', 'float', *args, **kwargs)
@@ -75,7 +88,7 @@ if __name__== "__main__":
 
 	args += sys.argv
 	if '--all' in args:
-		args += ['--py_all', '--c_all']
+		args += ['--py_all', '--c_all', '--version']
 	if '--py_all' in args: 
 		args+=['--linsys','--allsub','--prox','--proj','--equil',
 			'--norm','--block','--pogs']
@@ -91,5 +104,9 @@ if __name__== "__main__":
 		pos = sys.argv.index('--file')
 		if len(sys.argv) > pos + 1:
 			kwargs['file']=str(sys.argv[pos+1])
+	if '--occupancy' in sys.argv:
+		pos = sys.argv.index('--occupancy')
+		if len(sys.argv) > pos + 1:
+			kwargs['occupancy']=max(0., min(1., float(sys.argv[pos+1])))
 
 	main(*args, **kwargs)

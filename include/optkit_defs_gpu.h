@@ -23,7 +23,7 @@ const unsigned int kMaxGridSize = 65535u;
   } while (0)
 #endif
 
-#define ok_alloc_gpu(x,n) \
+#define ok_alloc_gpu(x, n) \
   do { \
     cudaMalloc((void **) &x, n); \
     CUDA_CHECK_ERR; \

@@ -13,6 +13,7 @@ def blocksplitting_test(errors, m=None, n=None, A_in=None,
 
 		if not backend.__LIBGUARD_ON__:
 			set_backend(GPU=gpu, double=floatbits == 64)
+		backend.make_linalg_contexts()	
 
 		from optkit.api import Vector, Matrix, FunctionVector, \
 			linsys, DirectProjector, pogs

@@ -12,6 +12,7 @@ def normalize_and_project_test(errors, m=None, n=None, A_in=None,
 		from optkit.api import backend, set_backend
 		if not backend.__LIBGUARD_ON__:
 			set_backend(GPU=gpu, double=floatbits == 64)
+		backend.make_linalg_contexts()	
 
 		from optkit.api import Vector, Matrix, linsys, equil
 		TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)

@@ -16,8 +16,9 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		from optkit.api import backend, set_backend
 		if not backend.__LIBGUARD_ON__:
 			set_backend(GPU=gpu, double=floatbits == 64)
+		backend.make_linalg_contexts()	
 
-		from optkit.api import Vector, Matrix, FunctionVector
+		from optkit.api import Vector, Matrix
 		from optkit.api import CPogsTypes
 		TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
 
@@ -33,6 +34,7 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		SolverInfo = CPogsTypes.SolverInfo
 		SolverOutput = CPogsTypes.SolverOutput
 		Solver = CPogsTypes.Solver
+		Objective = CPogsTypes.Objective
 
 		PRINT = println if VERBOSE_TEST else printvoid
 		PPRINT = pretty_print if VERBOSE_TEST else printvoid
@@ -66,8 +68,8 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		layout = ok_enums.CblasRowMajor if A.flags.c_contiguous \
 			else ok_enums.CblasColMajor
 
-		f = FunctionVector(m, b=1, h='Abs')
-		g = FunctionVector(n, h='IndGe0')
+		f = Objective(m, b=1, h='Abs')
+		g = Objective(n, h='IndGe0')
 
 		solver = lib.pogs_init(ndarray_pointer(A), m, n, layout,
 			lib.enums.EquilSinkhorn)
@@ -134,28 +136,25 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 
 			# transfer function vectors to solver copies 
 			PPRINT('TRANSFER FUNCTION VECTORS TO LOCAL COPIES')
-			(_ , fa_i, _ , _ , fd_i, fe_i) = f.toarrays() 
-			(_ , ga_i, _ , _ , gd_i, ge_i) = g.toarrays() 
+			(_ , fa_i, _ , _ , fd_i, fe_i) = f.arrays 
+			(_ , ga_i, _ , _ , gd_i, ge_i) = g.arrays 
 
 			backend.prox.function_vector_memcpy_va(solver.contents.f, 
-				f.c.objectives);
+				f.c_ptr.objectives);
 			backend.prox.function_vector_memcpy_va(solver.contents.g, 
-				g.c.objectives);
+				g.c_ptr.objectives);
 
 
 			PPRINT('SCALE PROBLEM:')
-			lib.update_problem(solver, f.c, g.c)
+			lib.update_problem(solver, f.c_ptr, g.c_ptr)
 
-			backend.prox.function_vector_memcpy_av(f.c.objectives,
+			backend.prox.function_vector_memcpy_av(f.c_ptr.objectives,
 				solver.contents.f)
-			backend.prox.function_vector_memcpy_av(g.c.objectives,
+			backend.prox.function_vector_memcpy_av(g.c_ptr.objectives,
 				solver.contents.g)
 			
-			f.pull()
-			g.pull()
-
-			(_ , fa_f, _ , _ , fd_f, fe_f) = f.toarrays() 
-			(_ , ga_f, _ , _ , gd_f, ge_f) = g.toarrays() 
+			(_ , fa_f, _ , _ , fd_f, fe_f) = f.arrays 
+			(_ , ga_f, _ , _ , gd_f, ge_f) = g.arrays 
 			PRINT("f.a_{initial} / d  - f.a_{final}")
 			PRINT(fa_i / d_local - fa_f)
 			PRINT("f.d_{initial} / d  - f.d_{final}")
@@ -235,7 +234,7 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 
 			PPRINT("PROX")
 			PPRINT('Z^{1/2} = Prox_{rho, f,g}(Z)', '.')
-			lib.prox(backend.dense_blas_handle, f.c, g.c, solver.contents.z,
+			lib.prox(backend.dense_blas_handle, f.c_ptr, g.c_ptr, solver.contents.z,
 				solver.contents.rho)
 			load_all_local(z_local, solver.contents.z)
 
@@ -243,8 +242,8 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 
 			xarg_ = z_local['primal'][m:]-z_local['dual'][m:]
 			yarg_ = z_local['primal'][:m]-z_local['dual'][:m]
-			xout_ = prox_eval_python(g.tolist(),solver.contents.rho,xarg_)
-			yout_ = prox_eval_python(f.tolist(),solver.contents.rho,yarg_)
+			xout_ = prox_eval_python(g.list, solver.contents.rho, xarg_)
+			yout_ = prox_eval_python(f.list, solver.contents.rho, yarg_)
 
 			PRINT("\ny^{1/2} c - y^{1/2} python")
 			PRINT(z_local['primal12'][:m] - yout_)
@@ -298,8 +297,8 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 				solver, obj, res, eps, settings.c.gapstop, 0)	
 		
 
-			obj_py = func_eval_python(g.tolist(), z_local['primal12'][m:])
-			obj_py += func_eval_python(f.tolist(), z_local['primal12'][:m])
+			obj_py = func_eval_python(g.list, z_local['primal12'][m:])
+			obj_py += func_eval_python(f.list, z_local['primal12'][:m])
 			obj_gap_py = abs(np_dot(z_local['primal12'], z_local['dual12']))
 			obj_dua_py = obj_py - obj_gap_py
 
@@ -371,11 +370,13 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 				output.nu, eps=TEST_EPS)
 
 
-
 		# ------------------- public api tests ----------------------- #
 		PPRINT("POGS PUBLIC API SOLVE",'+')
+
+		# solve
 		lib.pogs_solve(solver, f.c, g.c, settings.c, info.c, output.c)
-		lib.pogs_finish(solver)
+		lib.pogs_finish(solver, int(backend.device_reset_allowed))
+
 
 		print info
 		# print output
@@ -385,9 +386,7 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		res_p = norm(A.dot(output.x) - output.y)
 		res_d = norm(A.T.dot(output.nu) + output.mu)
 		PRINT("PRIMAL FEASIBILITY: {}", res_p)
-		print norm(output.y)
 		PRINT("DUAL FEASIBILITY: {}", res_d)
-		print norm(output.mu)
 
 		if info.c.converged:
 			assert (res_p < 10 * settings.c.reltol * norm(output.y)) or \
@@ -403,7 +402,7 @@ def main(errors, m , n, A_in=None, VERBOSE_TEST=True,
 		s = Solver(A)
 		s.solve(f, g)
 		assert abs(s.info.c.obj - info.c.obj) < 10 * s.settings.c.reltol or \
-			s.info.c.converged == info.c.converged
+			not s.info.c.converged or not info.c.converged
 
 		PPRINT("COMPLETE",'/')
 

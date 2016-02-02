@@ -11,6 +11,7 @@ def dense_equil_test(errors, equil_method, A_in=None, VERBOSE_TEST=True,
 		from optkit.api import backend, set_backend
 		if not backend.__LIBGUARD_ON__:
 			set_backend(GPU=gpu, double=floatbits == 64)
+		backend.make_linalg_contexts()	
 
 		from optkit.api import Vector, Matrix, linsys, equil
 		TEST_EPS, RAND_ARR, MAT_ORDER = gen_test_defs(backend)
