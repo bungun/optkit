@@ -1,5 +1,5 @@
-#ifndef OPTKIT_OPERATOR_H_GUARD
-#define OPTKIT_OPERATOR_H_GUARD
+#ifndef OPTKIT_OPERATOR_H_
+#define OPTKIT_OPERATOR_H_
 
 #include "optkit_abstract_operator.h"
 #include "optkit_dense.h"
@@ -18,9 +18,9 @@ void dense_operator_data_alloc(void ** data);
 void dense_operator_data_free(void * data);
 void dense_operator_mul(void * data, vector * input, vector * output);
 void dense_operator_mul_t(void * data, vector * input, vector * output);
-void dense_operator_mul_fused(void * data, ok_float alpha, 
+void dense_operator_mul_fused(void * data, ok_float alpha,
 	vector * input, ok_float beta, vector * output);
-void dense_operator_mul_t_fused(void * data, ok_float alpha, 
+void dense_operator_mul_t_fused(void * data, ok_float alpha,
 	vector * input, ok_float beta, vector * output);
 
 operator_t * dense_operator_alloc(matrix * A);
@@ -82,4 +82,4 @@ operator_t * block_difference_operator_alloc(sp_matrix * A);
 }
 #endif
 
-#endif /* OPTKIT_OPERATOR_H_GUARD */
+#endif /* OPTKIT_OPERATOR_H_ */

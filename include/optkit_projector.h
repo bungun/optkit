@@ -1,5 +1,5 @@
-#ifndef OPTKIT_PROJECTOR_H_GUARD
-#define OPTKIT_PROJECTOR_H_GUARD
+#ifndef OPTKIT_PROJECTOR_H_
+#define OPTKIT_PROJECTOR_H_
 
 #include "optkit_dense.h"
 
@@ -21,7 +21,7 @@ typedef struct DirectProjector {
 void direct_projector_alloc(direct_projector * P, matrix * A);
 void direct_projector_initialize(void * linalg_handle, direct_projector * P,
 	int normalize);
-void direct_projector_project(void * linalg_handle, direct_projector * P, 
+void direct_projector_project(void * linalg_handle, direct_projector * P,
 	vector * x_in, vector * y_in, vector * x_out, vector * y_out);
 void direct_projector_free(direct_projector * P);
 
@@ -32,7 +32,7 @@ typedef struct IndirectProjector {
 void indirect_projector_alloc(direct_projector * P, matrix * A);
 void indirect_projector_initialize(void * linalg_handle, direct_projector * P,
 	int normalize);
-void indirect_projector_project(void * linalg_handle, direct_projector * P, 
+void indirect_projector_project(void * linalg_handle, direct_projector * P,
 	vector * x_in, vector * y_in, vector * x_out, vector * y_out);
 void indirect_projector_free(direct_projector * P);
 
@@ -41,4 +41,4 @@ void indirect_projector_free(direct_projector * P);
 }
 #endif
 
-#endif /* OPTKIT_PROJECTOR_H_GUARD */
+#endif /* OPTKIT_PROJECTOR_H_ */

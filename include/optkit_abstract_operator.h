@@ -1,5 +1,5 @@
-#ifndef OPTKIT_ABSTRACT_OPERATOR_H_GUARD
-#define OPTKIT_ABSTRACT_OPERATOR_H_GUARD
+#ifndef OPTKIT_ABSTRACT_OPERATOR_H_
+#define OPTKIT_ABSTRACT_OPERATOR_H_
 
 #include "optkit_defs.h"
 
@@ -13,7 +13,7 @@ typedef enum OPERATOR{
 	Neg_Operator = 102,
 	Add_Operator = 103,
 	Cat_Operator = 104,
-	Split_Operator = 105, 
+	Split_Operator = 105,
 	Dense_Operator = 201,
 	SparseCSR_Operator = 301,
 	SparseCSC_Operator = 302,
@@ -47,16 +47,17 @@ typedef struct abstract_linear_operator{
 		ok_float beta, vector * output);
 	void (* free)(void * data);
 	OPTKIT_OPERATOR kind;
-} operator_t;
+} operator;
 
 
-operator_t * operator_alloc(OPTKIT_OPERATOR kind,
-	size_t size1, size_t size2, void * data, 
-	void (* apply), void (* adjoint), 
-	void (* fused_apply), void (* fused_adjoint), 
+operator * operator_alloc(OPTKIT_OPERATOR kind,
+	size_t size1, size_t size2, void * data,
+	void (* apply), void (* adjoint),
+	void (* fused_apply), void (* fused_adjoint),
 	void (* free)){
 
-	operator_t * op = (operator_t *) malloc( sizeof(operator_t) );
+	operator * op;
+	op = malloc(sizeof(*op));
 	op->size1 = size1;
 	op->size2 = size2;
 	op->apply = apply;
@@ -69,7 +70,7 @@ operator_t * operator_alloc(OPTKIT_OPERATOR kind,
 }
 
 /* GENERIC OPERATOR FREE */
-void operator_free(operator_t * op){
+void operator_free(operator * op){
 	if (op->free && op->data) op->free(op->data);
 	ok_free(op);
 }
@@ -79,4 +80,4 @@ void operator_free(operator_t * op){
 }
 #endif
 
-#endif /* OPTKIT_ABSTRACT_OPERATOR_H_GUARD */
+#endif /* OPTKIT_ABSTRACT_OPERATOR_H_ */

@@ -1,5 +1,5 @@
-#ifndef OPTKIT_EQUILIBRATION_H_GUARD
-#define OPTKIT_EQUILIBRATION_H_GUARD
+#ifndef OPTKIT_EQUILIBRATION_H_
+#define OPTKIT_EQUILIBRATION_H_
 
 #include "optkit_dense.h"
 
@@ -9,14 +9,13 @@ extern "C" {
 
 void equillib_version(int * maj, int * min, int * change, int * status);
 
-
-void sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out, 
+void sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out,
 	vector * d, vector *e, CBLAS_ORDER_t ord);
-void dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out, 
+void dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out,
 	vector * d, vector * e, CBLAS_ORDER_t ord);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* OPTKIT_EQUILIBRATION_H_GUARD */
+#endif /* OPTKIT_EQUILIBRATION_H_ */

@@ -1,5 +1,5 @@
-#ifndef OPTKIT_POGS_H_GUARD
-#define OPTKIT_POGS_H_GUARD
+#ifndef OPTKIT_POGS_H_
+#define OPTKIT_POGS_H_
 
 #include "optkit_dense.h"
 #include "optkit_prox.hpp"
@@ -24,7 +24,7 @@ typedef indirect_projector projector;
 
 #ifndef OK_DEBUG_PYTHON
 #define POGS(x) __ ## x
-#else 
+#else
 #define POGS(x) x
 #endif
 
@@ -51,7 +51,7 @@ const ok_float kTAU = (ok_float) 0.8;
 typedef enum POGSEquilibrators {
 	EquilSinkhorn,
 	EquilDenseL2
-} Equilibration_t;
+} EQUILIBRATOR;
 
 typedef struct AdaptiveRhoParameters {
 	ok_float delta, l, u, xi;
@@ -79,7 +79,7 @@ typedef struct POGSSettings {
 	ok_float alpha, rho, abstol, reltol;
 	uint maxiter, verbose, suppress;
 	int adaptiverho, gapstop, warmstart, resume;
-	ok_float * x0, * nu0; 
+	ok_float * x0, * nu0;
 } pogs_settings;
 
 typedef struct POGSInfo {
@@ -96,7 +96,7 @@ typedef struct POGSOutput {
 typedef struct POGSMatrix {
 	matrix * A;
 	projector * P;
-	vector * d, * e; 
+	vector * d, * e;
 	ok_float normA;
 	int skinny, normalized, equilibrated;
 } pogs_matrix;
@@ -121,28 +121,29 @@ typedef struct POGSSolver {
 int private_api_accessible(void);
 int is_direct(void);
 void set_default_settings(pogs_settings * settings);
-pogs_solver * pogs_init(ok_float * A, size_t m, size_t n, 
-	CBLAS_ORDER_t ord, Equilibration_t equil);
+pogs_solver * pogs_init(ok_float * A, size_t m, size_t n,
+	CBLAS_ORDER ord, EQUILIBRATOR equil);
 void pogs_solve(pogs_solver * solver, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output);
 void pogs_finish(pogs_solver * solver, int reset);
 void pogs(ok_float * A, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output,
-	CBLAS_ORDER_t ord, Equilibration_t equil);
-pogs_solver * pogs_load_solver(ok_float * A_equil, 
-	ok_float * LLT_factorization, ok_float * d, 
-	ok_float * e, ok_float * z, ok_float * z12, ok_float * z_dual, 
-	ok_float * z_dual12, ok_float * z_prev, ok_float rho, 
-	size_t m, size_t n, CBLAS_ORDER_t ord);
-void pogs_extract_solver(pogs_solver * solver, ok_float * A_equil, 
-	ok_float * LLT_factorization, ok_float * d, 
-	ok_float * e, ok_float * z, ok_float * z12, ok_float * z_dual, 
-	ok_float * z_dual12, ok_float * z_prev, ok_float * rho, CBLAS_ORDER_t ord);
+	CBLAS_ORDER ord, EQUILIBRATOR equil);
+pogs_solver * pogs_load_solver(ok_float * A_equil,
+	ok_float * LLT_factorization, ok_float * d,
+	ok_float * e, ok_float * z, ok_float * z12, ok_float * z_dual,
+	ok_float * z_dual12, ok_float * z_prev, ok_float rho,
+	size_t m, size_t n, CBLAS_ORDER ord);
+void pogs_extract_solver(pogs_solver * solver, ok_float * A_equil,
+	ok_float * LLT_factorization, ok_float * d,
+	ok_float * e, ok_float * z, ok_float * z12, ok_float * z_dual,
+	ok_float * z_dual12, ok_float * z_prev, ok_float * rho,
+	CBLAS_ORDER ord);
 
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* OPTKIT_POGS_H_GUARD */
+#endif /* OPTKIT_POGS_H_ */
 
