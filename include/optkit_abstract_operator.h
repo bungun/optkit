@@ -50,12 +50,10 @@ typedef struct abstract_linear_operator{
 } operator;
 
 
-operator * operator_alloc(OPTKIT_OPERATOR kind,
-	size_t size1, size_t size2, void * data,
-	void (* apply), void (* adjoint),
-	void (* fused_apply), void (* fused_adjoint),
-	void (* free)){
-
+operator * operator_alloc(OPTKIT_OPERATOR kind, size_t size1, size_t size2,
+	void * data, void (* apply), void (* adjoint), void (* fused_apply),
+	void (* fused_adjoint), void (* free))
+{
 	operator * op;
 	op = malloc(sizeof(*op));
 	op->size1 = size1;
@@ -74,7 +72,6 @@ void operator_free(operator * op){
 	if (op->free && op->data) op->free(op->data);
 	ok_free(op);
 }
-
 
 #ifdef __cplusplus
 }

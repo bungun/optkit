@@ -395,7 +395,8 @@ __DEVICE__ inline ok_float FuncIndGe0(ok_float x)
         return 0;
 }
 
-__DEVICE__ inline ok_float FuncIndLe0(ok_float x){
+__DEVICE__ inline ok_float FuncIndLe0(ok_float x)
+{
         return 0;
 }
 
@@ -522,7 +523,7 @@ ok_float FuncEvalVector(const FunctionVector * f, const vector * x);
 
 
 #ifdef __cplusplus
-}      /* extern "C" */
+}
 #endif
 
 

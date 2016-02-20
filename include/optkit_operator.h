@@ -23,7 +23,7 @@ void dense_operator_mul_fused(void * data, ok_float alpha,
 void dense_operator_mul_t_fused(void * data, ok_float alpha,
 	vector * input, ok_float beta, vector * output);
 
-operator_t * dense_operator_alloc(matrix * A);
+operator * dense_operator_alloc(matrix * A);
 
 typedef struct sparse_operator_data{
 	void * dense_handle;
@@ -40,7 +40,7 @@ void sparse_operator_mul_fused(void * data, ok_float alpha,
 void sparse_operator_mul_t_fused(void * data, ok_float alpha,
 	vector * input, ok_float beta, vector * output);
 
-operator_t * sparse_operator_alloc(sp_matrix * A);
+operator * sparse_operator_alloc(sp_matrix * A);
 
 typedef struct difference_operator_data{
 	void * dense_handle;
@@ -57,7 +57,7 @@ void difference_operator_mul_fused(void * data, ok_float alpha,
 void difference_operator_mul_t_fused(void * data, ok_float alpha,
 	vector * input, ok_float beta, vector * output);
 
-operator_t * difference_operator_alloc(sp_matrix * A);
+operator * difference_operator_alloc(sp_matrix * A);
 
 typedef struct block_difference_operator_data{
 	void * dense_handle;
@@ -74,7 +74,7 @@ void block_difference_operator_mul_fused(void * data, ok_float alpha,
 void block_difference_operator_mul_t_fused(void * data, ok_float alpha,
 	vector * input, ok_float beta, vector * output);
 
-operator_t * block_difference_operator_alloc(sp_matrix * A);
+operator * block_difference_operator_alloc(sp_matrix * A);
 
 
 
