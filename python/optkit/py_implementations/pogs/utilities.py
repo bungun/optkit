@@ -4,7 +4,7 @@ from toolz import curry
 from os import path
 
 class PogsKernels(object):
-	def __init__(self, kernels, matrix_type, projector_type, pogs_types, 
+	def __init__(self, kernels, matrix_type, projector_type, pogs_types,
 		equil_methods):
 
 		self.call = kernels
@@ -39,7 +39,7 @@ class PogsKernels(object):
 		axpby_inplace = self.call['axpby_inplace']
 		prox_eval_kernel = self.call['prox_eval']
 
-		@curry 
+		@curry
 		def prox_eval(f, g, rho, admm_vars):
 			z=admm_vars
 			axpby_inplace(-1,z.dual.vec,1, z.primal.vec,z.temp.vec)
@@ -100,7 +100,7 @@ class PogsKernels(object):
 			self.call['func_eval'](g, z.primal12.x)
 		obj.d = obj.p - obj.gap
 
-	def update_residuals(self, A, rho, admm_vars, 
+	def update_residuals(self, A, rho, admm_vars,
 		obj, eps, res, force_exact=False):
 
 		z=admm_vars
@@ -123,8 +123,8 @@ class PogsKernels(object):
 
 	def iter_string(self, k, res, eps, obj):
 		return str("   {}: {:.3e}, {:.3e}, {:.3e}, {:.3e}, "
-					"{:.3e}, {:.3e}, {:.3e}".format(k, 
-					res.p, eps.d, res.d, eps.d, 
+					"{:.3e}, {:.3e}, {:.3e}".format(k,
+					res.p, eps.d, res.d, eps.d,
 					res.gap, eps.gap, obj.p))
 
 	def header_string(self):
@@ -233,7 +233,7 @@ class PogsKernels(object):
 		z.dual12.copy_from(z.primal12)
 		self.call['axpy'](-1, z.prev.vec, z.dual12.vec)
 		self.call['axpy'](1, z.dual.vec, z.dual12.vec)
-		
+
 		if alpha != None: self.overrelax(alpha,z.primal12,z.prev,z.dual,
 									overwrite=False)
 		self.call['axpy'](-1, z.primal.vec, z.dual.vec)
@@ -268,10 +268,10 @@ class PogsKernels(object):
 		if path.basename(output_file) == 0:
 			raise ValueError("filename not specified")
 		if '.npz' not in path.basename(output_file):
-			output_file += '.npz' 
+			output_file += '.npz'
 		proj_type = 'direct' if isinstance(solver_state.Proj,
 			self.DirectProjector) else 'indirect'
-		if proj_type == 'indirect': 
+		if proj_type == 'indirect':
 			raise ValueError('save for indirect projector not implemented')
 		else:
 			L = solver_state.Proj.L
@@ -289,8 +289,8 @@ class PogsKernels(object):
 
 
 		save(output_file, L_equil=L.py, A_equil=A.py,
-			de_equil=de.py, primal=primal.py, 
-			dual=dual.py, prev=prev.py, 
+			de_equil=de.py, primal=primal.py,
+			dual=dual.py, prev=prev.py,
 			primal12=primal12.py, dual12=dual12.py,
 			rho=rho, projector_type=proj_type)
 
@@ -298,13 +298,13 @@ class PogsKernels(object):
 	def load_solver_state(self, input_file):
 		if not isinstance(input_file, str):
 			raise TypeError("first argument must be string")
-		if not 'npz' in input_file: 
+		if not 'npz' in input_file:
 			raise ValueError("file ending in .npz expected")
 		if not path.isfile(input_file):
 			raise ValueError("input file cannot be opened")
 		with np.load(input_file) as data:
-			
-			for item in ['primal', 'primal12', 'dual', 'dual12', 
+
+			for item in ['primal', 'primal12', 'dual', 'dual12',
 				'prev', 'de_equil', 'A_equil', 'L_equil',
 				'rho', 'projector_type']:
 				if not data.has_key(item):
@@ -319,13 +319,13 @@ class PogsKernels(object):
 					self.Matrix(data['L_equil']))
 				Proj.normalized=True
 				z = self.ProblemVariables(*A.shape)
-				self.call['copy'](data['de_equil'], z.de.vec) 
-				self.call['copy'](data['prev'], z.prev.vec) 
-				self.call['copy'](data['primal'], z.primal.vec) 
-				self.call['copy'](data['primal12'], z.primal12.vec) 
-				self.call['copy'](data['dual'], z.dual.vec) 
-				self.call['copy'](data['dual12'], z.dual12.vec) 
-				solver_state = self.SolverState(A, Proj, 
+				self.call['copy'](data['de_equil'], z.de.vec)
+				self.call['copy'](data['prev'], z.prev.vec)
+				self.call['copy'](data['primal'], z.primal.vec)
+				self.call['copy'](data['primal12'], z.primal12.vec)
+				self.call['copy'](data['dual'], z.dual.vec)
+				self.call['copy'](data['dual12'], z.dual12.vec)
+				solver_state = self.SolverState(A, Proj,
 					z, data['rho'])
 
 				return solver_state

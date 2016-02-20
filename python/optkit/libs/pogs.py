@@ -65,7 +65,7 @@ class PogsLibs(object):
 
 			lib.enums = OKEquilibrationEnums()
 
-			## structs 
+			## structs
 			class PogsSettings(Structure):
 				_fields_ = [('alpha', ok_float),
 							('rho', ok_float),
@@ -102,28 +102,28 @@ class PogsLibs(object):
 				_fields_ = [('x', ok_float_p),
 							('y', ok_float_p),
 							('mu', ok_float_p),
-							('nu', ok_float_p)]		
+							('nu', ok_float_p)]
 
-			pogs_output_p = POINTER(PogsOutput)			
+			pogs_output_p = POINTER(PogsOutput)
 			lib.pogs_output = PogsOutput
 			lib.pogs_output_p = pogs_output_p
 
 
 			## arguments
 			lib.set_default_settings.argtypes = [pogs_settings_p]
-			lib.pogs_init.argtypes = [ok_float_p, 
+			lib.pogs_init.argtypes = [ok_float_p,
 				c_size_t, c_size_t, c_uint, c_uint]
-			lib.pogs_solve.argtypes = [c_void_p, function_vector_p, function_vector_p, 
+			lib.pogs_solve.argtypes = [c_void_p, function_vector_p, function_vector_p,
 				pogs_settings_p, pogs_info_p, pogs_output_p]
 			lib.pogs_finish.argtypes = [c_void_p, c_int]
 			lib.pogs.argtypes = [ok_float_p, function_vector_p, function_vector_p,
 				pogs_settings_p, pogs_info_p, pogs_output_p, c_uint, c_uint]
-			lib.pogs_load_solver.argtypes = [ok_float_p, 
-				ok_float_p, ok_float_p, ok_float_p, ok_float_p, ok_float_p, 
-				ok_float_p, ok_float_p, ok_float_p, ok_float, 
+			lib.pogs_load_solver.argtypes = [ok_float_p,
+				ok_float_p, ok_float_p, ok_float_p, ok_float_p, ok_float_p,
+				ok_float_p, ok_float_p, ok_float_p, ok_float,
 				c_size_t, c_size_t, c_uint]
-			lib.pogs_extract_solver.argtypes = [c_void_p, ok_float_p, 
-				ok_float_p, ok_float_p, ok_float_p, ok_float_p, ok_float_p, 
+			lib.pogs_extract_solver.argtypes = [c_void_p, ok_float_p,
+				ok_float_p, ok_float_p, ok_float_p, ok_float_p, ok_float_p,
 				ok_float_p, ok_float_p, ok_float_p, ok_float_p, c_uint]
 
 			## return types
@@ -138,13 +138,13 @@ class PogsLibs(object):
 			lib.private_api_accessible.restype = c_int
 			lib.full_api_accessible = lib.private_api_accessible()
 
-			# function to test whether compiled for 
+			# function to test whether compiled for
 			# direct/indirect projection
 			lib.is_direct.restype = c_int
 			lib.direct = lib.is_direct()
 
 			# Private API
-			# -----------			
+			# -----------
 			if lib.full_api_accessible:
 
 				## structs
@@ -246,23 +246,23 @@ class PogsLibs(object):
 				pogs_solver_p = POINTER(PogsSolver)
 				lib.pogs_solver = PogsSolver
 				lib.pogs_solver_p = pogs_solver_p
-				
+
 				## argtypes
 				lib.update_problem.argtypes = [pogs_solver_p,
 					function_vector_p, function_vector_p]
 				lib.initialize_variables.argtypes = [pogs_solver_p]
 				lib.pogs_solver_loop.argtypes = [pogs_solver_p, pogs_info_p]
-				lib.make_tolerances.argtypes = [pogs_settings_p, 
+				lib.make_tolerances.argtypes = [pogs_settings_p,
 					c_size_t, c_size_t]
 				lib.set_prev.argtypes = [pogs_variables_p]
-				lib.prox.argtypes = [c_void_p, function_vector_p, 
+				lib.prox.argtypes = [c_void_p, function_vector_p,
 					function_vector_p, pogs_variables_p, ok_float]
-				lib.project_primal.argtypes = [c_void_p, c_void_p, 
+				lib.project_primal.argtypes = [c_void_p, c_void_p,
 					pogs_variables_p, ok_float]
 				lib.update_dual.argtypes = [c_void_p, pogs_variables_p, ok_float]
 				lib.check_convergence.argtypes = [c_void_p, pogs_solver_p,
 					pogs_objectives_p, pogs_residuals_p, pogs_tolerances_p]
-				lib.adaptrho.argtypes = [pogs_solver_p, adapt_params_p, 
+				lib.adaptrho.argtypes = [pogs_solver_p, adapt_params_p,
 					pogs_residuals_p, pogs_tolerances_p, c_uint]
 				lib.copy_output.argtypes = [pogs_solver_p, pogs_output_p]
 
@@ -271,9 +271,9 @@ class PogsLibs(object):
 				lib.initialize_variables.restype = None
 				lib.pogs_solver_loop.restype = None
 				lib.make_tolerances.restype = PogsTolerances
-				lib.set_prev.restype = None 
+				lib.set_prev.restype = None
 				lib.prox.restype = None
-				lib.project_primal.restype = None 
+				lib.project_primal.restype = None
 				lib.update_dual.restype = None
 				lib.check_convergence.restype = c_int
 				lib.adaptrho.restype = None

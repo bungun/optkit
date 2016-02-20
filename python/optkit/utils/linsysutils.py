@@ -17,7 +17,7 @@ class UtilMakeCVector(object):
 				self.denselib.vector_view_array(x_, self.ndarray_pointer(x), x.size)
 			else:
 				self.denselib.vector_calloc(x_, x.size)
-				self.denselib.vector_memcpy_va(x_, self.ndarray_pointer(x), 1)	 
+				self.denselib.vector_memcpy_va(x_, self.ndarray_pointer(x), 1)
 			return x_
 		else:
 			return None
@@ -28,7 +28,7 @@ class UtilMakeCMatrix(object):
 		self.lowtypes = lowtypes
 		self.denselib = denselib
 		self.ndarray_pointer = lowtypes.ndarray_pointer
-	def __call__(self, A=None, copy_data=True):	
+	def __call__(self, A=None, copy_data=True):
 
 		if A is None:
 			return self.lowtypes.matrix(0,0,0,None,enums.CblasRowMajor)
@@ -48,11 +48,11 @@ class UtilMakeCMatrix(object):
 
 			A_ = self.lowtypes.matrix(0,0,0,None,order)
 			if not copy_data:
-				self.denselib.matrix_view_array(A_, self.ndarray_pointer(A), 
+				self.denselib.matrix_view_array(A_, self.ndarray_pointer(A),
 					m, n, order)
 			else:
 				self.denselib.matrix_calloc(A_, m, n, order)
-				self.denselib.matrix_memcpy_ma(A_, self.ndarray_pointer(A), 
+				self.denselib.matrix_memcpy_ma(A_, self.ndarray_pointer(A),
 					order)
 			return A_
 		else:
@@ -67,10 +67,10 @@ class UtilMakeCSparseMatrix(object):
 		self.sparselib = sparselib
 		self.ndarray_pointer = lowtypes.ndarray_pointer
 
-	def __call__(self, A=None):	
+	def __call__(self, A=None):
 
 		if A is None:
-			return self.lowtypes.sparse_matrix(0, 0, 0, 0, 
+			return self.lowtypes.sparse_matrix(0, 0, 0, 0,
 				None, None, None, enums.CblasRowMajor)
 		elif isinstance(A, (csr_matrix, csc_matrix)):
 			(m,n) = A.shape
@@ -82,14 +82,14 @@ class UtilMakeCSparseMatrix(object):
 			order = enums.CblasRowMajor if isinstance(A, csr_matrix) else \
 					enums.CblasColMajor
 
-			A_ = self.lowtypes.sparse_matrix(0, 0, 0, 0, 
+			A_ = self.lowtypes.sparse_matrix(0, 0, 0, 0,
 				None, None, None, order)
-			
+
 			self.sparselib.sp_matrix_calloc(A_, m, n, A.nnz, order)
-			self.sparselib.sp_matrix_memcpy_ma(self.sparse_handle, A_, 
+			self.sparselib.sp_matrix_memcpy_ma(self.sparse_handle, A_,
 				self.ndarray_pointer(A.data),
-				self.ndarray_pointer(A.indices), 
-				self.ndarray_pointer(A.indptr), 
+				self.ndarray_pointer(A.indices),
+				self.ndarray_pointer(A.indptr),
 				order)
 			return A_
 		else:

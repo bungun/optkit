@@ -53,14 +53,14 @@ class LinsysExtensionKernels(object):
 			nd = self.asum(self.diag(A))
 		else:
 			dA = self.diag(A)
-			nd = self.dot(dA,dA)		
+			nd = self.dot(dA,dA)
 		return nd
 
 	def gramian(self, A):
 		# returns A'A or AA'
 		(t1,t2) = ('T','N') if A.skinny else ('N','T')
 		AA = self.Matrix(A.mindim, A.mindim)
-		self.gemm(t1, t2, 1, A, A, 0, AA) 	
+		self.gemm(t1, t2, 1, A, A, 0, AA)
 		self.sync(AA)
 		return AA
 
@@ -69,4 +69,3 @@ class LinsysExtensionKernels(object):
 		def gemv_curried(A, tA, alpha, x, beta, y):
 			self.gemv(tA, alpha, A, x, beta, y)
 		return gemv_curried
-

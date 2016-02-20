@@ -1,11 +1,11 @@
 from optkit.types import ok_enums as enums
 from optkit.types.highlevel import Range
 from optkit.utils import istypedtuple
-from numpy import ndarray 
+from numpy import ndarray
 import sys
 
 class LinsysCoreKernels(object):
-	
+
 	def __init__(self, backend, vector_type, matrix_type, sparse_matrix_type):
 		if not backend.linalg_contexts_exist:
 			backend.make_linalg_contexts()
@@ -38,7 +38,7 @@ class LinsysCoreKernels(object):
 			elif not isinstance(a, (int, float, self.float)):
 				raise TypeError("input 'a' must be a (real) scalar\n"
 								"Provided:{}".format(type(x)))
-			else: 
+			else:
 				if devicecheck: device_compare(x)
 				denselib.vector_set_all(x.c,a)
 		self.set_all = set_all
@@ -74,14 +74,14 @@ class LinsysCoreKernels(object):
 			else:
 				raise TypeError("optkit.kernels.linsys.copy(dest, orig) defined "
 					  "only when arguments are type:\n\t"
-					  "(optkit.Vector, optkit.Vector)\n\t"	
+					  "(optkit.Vector, optkit.Vector)\n\t"
 					  "(optkit.Matrix, optkit.Matrix)\n\t"
-					  "(optkit.SparseMatrix, optkit.SparseMatrix)\n\t"	
-					  "(numpy.ndarray, optkit.Vector)\n\t"	
+					  "(optkit.SparseMatrix, optkit.SparseMatrix)\n\t"
+					  "(numpy.ndarray, optkit.Vector)\n\t"
 					  "(numpy.ndarray, optkit.Matrix)\n\t"
 					  "(scipy.sparse.csr_matrix, optkit.SparseMatrix)\n\t"
-					  "(scipy.sparse.csc_matrix, optkit.SparseMatrix).")	
-		self.copy = copy 
+					  "(scipy.sparse.csc_matrix, optkit.SparseMatrix).")
+		self.copy = copy
 
 		def view(x, *range_, **viewtype):
 			input_err = str("optkit.kernels.linsys.view: "
@@ -89,7 +89,7 @@ class LinsysCoreKernels(object):
 				"Valid argument & keyword argument combinations:\n"
 				"(`optkit.Vector`, `tuple(int,int)`)\n"
 				"(`optkit.Matrix`, diag=1)\n"
-				"(`optkit.Matrix`, `int`, [no keyword args, views row])\n"		
+				"(`optkit.Matrix`, `int`, [no keyword args, views row])\n"
 				"(`optkit.Matrix`, `int`, row=1)\n"
 				"(`optkit.Matrix`, `int`, col=1)\n"
 				"(`optkit.Matrix`, `tuple(int,int)`, `tuple(int,int)`)\n"
@@ -125,12 +125,12 @@ class LinsysCoreKernels(object):
 					raise TypeError(input_err)
 
 				rng1 = Range(x.size1, *range_[0])
-				rng2 = Range(x.size2, *range_[1])		
+				rng2 = Range(x.size2, *range_[1])
 				pyview = x.py[rng1.idx1:rng1.idx2,rng2.idx1:rng2.idx2]
 				cview = backend.lowtypes.matrix(0, 0, 0, None, x.c.order)
-				denselib.matrix_submatrix(cview,x.c, 
-										 rng1.idx1, rng2.idx1, 
-										 rng1.elements, rng2.elements)		
+				denselib.matrix_submatrix(cview,x.c,
+										 rng1.idx1, rng2.idx1,
+										 rng1.elements, rng2.elements)
 				return Matrix(pyview, cview, is_view=1)
 			elif isinstance(x, Matrix) and len(range_) == 1:
 				idx = range_[0]
@@ -146,13 +146,13 @@ class LinsysCoreKernels(object):
 					if not 'row' in viewtype:
 						Warning("keyword argument `row=1`, `col=1` or `diag=1` "
 						  "not provided, assuming row view")
-				return Vector(pyview,cview, is_view=1)			
+				return Vector(pyview,cview, is_view=1)
 			elif 'diag' in viewtype:
 				cview = backend.lowtypes.vector(0, 0, None)
 				denselib.matrix_diagonal(cview, x.c)
 				pyview = x.py.diagonal().copy()
 				return Vector(pyview, cview, sync_required=1, is_view=1)
-			else: 
+			else:
 				raise TypeError(input_err)
 
 		self.view = view
@@ -167,7 +167,7 @@ class LinsysCoreKernels(object):
 				if not isinstance(x, (Vector, Matrix)):
 					raise TypeError("optkit.kernels.linsys.sync undefined for "
 						  "types other than:\n optkit.Vector "
-						  "\n optkit.Matrix.")	
+						  "\n optkit.Matrix.")
 				else:
 					if not x.sync_required: return
 					if	devicecheck: device_compare(x)
@@ -177,7 +177,7 @@ class LinsysCoreKernels(object):
 							denselib.vector_memcpy_va(x.c, ndarray_pointer(x.py),
 								x.py.strides[0]/x.py.itemsize)
 						else:
-							denselib.vector_memcpy_av(ndarray_pointer(x.py), x.c, 
+							denselib.vector_memcpy_av(ndarray_pointer(x.py), x.c,
 								x.py.strides[0]/x.py.itemsize)
 					else:
 						order = enums.CblasRowMajor if x.py.flags.c_contiguous \
@@ -208,7 +208,7 @@ class LinsysCoreKernels(object):
 		def add(const_x, y):
 			if isinstance(const_x, Vector) and isinstance(y, Vector):
 				if	devicecheck: device_compare(const_x, y)
-				if dimcheck and y.size != const_x.size: 
+				if dimcheck and y.size != const_x.size:
 					raise ValueError("optkit.kernels.linsys.add---"
 						   "incompatible Vector dimensions\n"
 						   "const_x: {}, y: {}".format(const_x.size, y.size))
@@ -227,7 +227,7 @@ class LinsysCoreKernels(object):
 		def sub(const_x, y):
 			if isinstance(const_x, Vector) and isinstance(y, Vector):
 				if	devicecheck: device_compare(const_x, y)
-				if dimcheck and y.size != const_x.size: 
+				if dimcheck and y.size != const_x.size:
 					raise ValueError("Error: optkit.kernels.linsys.sub---"
 						   "incompatible Vector dimensions\n"
 						   "const_x: {}, y: {}".format(const_x.size, y.size))
@@ -246,7 +246,7 @@ class LinsysCoreKernels(object):
 		def mul(const_x, y):
 			if isinstance(const_x, Vector) and isinstance(y, Vector):
 				if	devicecheck: device_compare(const_x, y)
-				if dimcheck and y.size != const_x.size: 
+				if dimcheck and y.size != const_x.size:
 					raise ValueError("Error: optkit.kernels.linsys.mul---"
 						   "incompatible Vector dimensions\n"
 						   "const_x: {}, y: {}".format(const_x.size, y.size))
@@ -256,7 +256,7 @@ class LinsysCoreKernels(object):
 				denselib.vector_scale(y.c, const_x);
 			elif isinstance(const_x, (int, float, self.float)) and isinstance(y, Matrix):
 				if	devicecheck: device_compare(y)
-				denselib.matrix_scale(y.c, const_x);		
+				denselib.matrix_scale(y.c, const_x);
 			else:
 				raise TypeError("optkit.kernels.linsys.mul(x,y) defined for : \n"
 					  "\t(optkit.Vector, optkit.Vector) \n"
@@ -269,7 +269,7 @@ class LinsysCoreKernels(object):
 		def div(const_x, y):
 			if isinstance(const_x, Vector) and isinstance(y, Vector):
 				if	devicecheck: device_compare(const_x, y)
-				if dimcheck and y.size != const_x.size: 
+				if dimcheck and y.size != const_x.size:
 					raise ValueError("Error: optkit.kernels.linsys.div---"
 						   "incompatible Vector dimensions\n"
 						   "const_x: {}, y: {}".format(const_x.size, y.size))
@@ -277,10 +277,10 @@ class LinsysCoreKernels(object):
 					denselib.vector_div(y.c, const_x.c);
 			elif isinstance(const_x, (int, float, self.float)) and isinstance(y, Vector):
 				if	devicecheck: device_compare(y)
-				denselib.vector_scale(y.c, 1./const_x);		
+				denselib.vector_scale(y.c, 1./const_x);
 			elif isinstance(const_x, (int, float, self.float)) and isinstance(y, Matrix):
 				if	devicecheck: device_compare(y)
-				denselib.matrix_scale(y.c, 1./const_x);		
+				denselib.matrix_scale(y.c, 1./const_x);
 			else:
 				raise TypeError("optkit.kernels.linsys.div(x,y) defined for : \n"
 					  "\t(optkit.Vector, optkit.Vector) \n"
@@ -294,28 +294,28 @@ class LinsysCoreKernels(object):
 
 		self.elemwise_inverse = elemwise_inverse
 
-		def elemwise_sqrt(v):	
+		def elemwise_sqrt(v):
 			pass
 
 		self.elemwise_sqrt = elemwise_sqrt
 
-		def elemwise_inverse_sqrt(v):	
+		def elemwise_inverse_sqrt(v):
 			pass
 
 		self.elemwise_inverse_sqrt = elemwise_inverse_sqrt
 
 		def dot(x, y):
 			if typecheck and not \
-				   (isinstance(x, Vector) and 
+				   (isinstance(x, Vector) and
 					isinstance(y, Vector)):
 				raise TypeError("optkit.kernels.linsys.dot(x,y) defined for : \n"
 					  "\t(optkit.Vector, optkit.Vector).")
-			
-			if dimcheck and y.size != x.size: 
+
+			if dimcheck and y.size != x.size:
 				raise ValueError("optkit.kernels.linsys.dot---"
 					   "incompatible Vector dimensions\n"
 					   "x: {}, y: {}".format(x.size, y.size))
-		 	
+
 			if	devicecheck: device_compare(x, y)
 
 		 	return denselib.blas_dot(dense_blas_handle, x.c,y.c)
@@ -350,7 +350,7 @@ class LinsysCoreKernels(object):
 				valid &= isinstance(const_x, Vector)
 				valid &= isinstance(y, Vector)
 				if not valid:
-					raise TypeError ("optkit.kernels.linsys.axpy(alpha, x, y) " 
+					raise TypeError ("optkit.kernels.linsys.axpy(alpha, x, y) "
 						"defined for: \n\t(int/float, optkit.Vector, optkit.Vector).")
 			if dimcheck and const_x.size != y.size:
 					raise ValueError("optkit.kernels.linsys.axpy---"
@@ -360,20 +360,20 @@ class LinsysCoreKernels(object):
 			if	devicecheck: device_compare(const_x, y)
 
 
-			denselib.blas_axpy(dense_blas_handle, alpha, const_x.c, y.c)			
+			denselib.blas_axpy(dense_blas_handle, alpha, const_x.c, y.c)
 
 		self.axpy = axpy
 
 		def gemv(tA, alpha, A, x, beta, y):
 			if typecheck:
 				valid = isinstance(alpha, (int, float, self.float))
-				valid &= isinstance(A, Matrix)   
-				valid &= isinstance(x, Vector) 
+				valid &= isinstance(A, Matrix)
+				valid &= isinstance(x, Vector)
 				valid &= isinstance(beta, (int, float, self.float))
 				valid &= isinstance(y, Vector)
 				if not valid:
 					raise TypeError(
-					"optkit.kernels.linsys.gemv(ta,alpha, A, x, beta, y) " 
+					"optkit.kernels.linsys.gemv(ta,alpha, A, x, beta, y) "
 					"defined for : \n\t(str, int/float, optkit.Matrix, "
 					"optkit.Vector, int/float, optkit.Vector).\nProvided:"
 					"\n\t({},{},{},{},{},{})".format(type(tA),type(alpha),
@@ -391,7 +391,7 @@ class LinsysCoreKernels(object):
 					dim_in = A.size2
 					dim_out = A.size1
 					tsym = ""
-				if (x.size!= dim_in or y.size != dim_out): 
+				if (x.size!= dim_in or y.size != dim_out):
 					raise ValueError("optkit.kernels.linsys.gemv---"
 					   "incompatible dimensions for y=A{} * x\n"
 					   "A: {},{}\n x: {}, y: {}".format(tsym,
@@ -400,7 +400,7 @@ class LinsysCoreKernels(object):
 			if	devicecheck: device_compare(A, x, y)
 
 
-			At = enums.CblasTrans if tA =='T' else enums.CblasNoTrans			
+			At = enums.CblasTrans if tA =='T' else enums.CblasNoTrans
 			denselib.blas_gemv(dense_blas_handle, At, alpha, A.c, x.c, beta, y.c)
 
 		self.gemv = gemv
@@ -408,15 +408,15 @@ class LinsysCoreKernels(object):
 		def gemm(tA, tB, alpha, A, B, beta, C):
 			if typecheck:
 				valid=isinstance(alpha, (int, float, self.float))
-				valid &= isinstance(A, Matrix)  
-				valid &= isinstance(B, Matrix) 
-				valid &= isinstance(beta, (int, float, self.float)) 
+				valid &= isinstance(A, Matrix)
+				valid &= isinstance(B, Matrix)
+				valid &= isinstance(beta, (int, float, self.float))
 				valid &= isinstance(C, Matrix)
-				if not valid: 
+				if not valid:
 					raise TypeError(
 					"optkit.kernels.linsys.gemm(tA,tB,alpha, A, B, beta, C) "
-					"defined for:\n\t(str,str,int/float, optkit.Matrix, " 
-					"optkit.Matrix, int/float, optkit.Matrix)\nProvided:" 
+					"defined for:\n\t(str,str,int/float, optkit.Matrix, "
+					"optkit.Matrix, int/float, optkit.Matrix)\nProvided:"
 					"\n\t({},{},{},{},{},{},{}).".format(
 						type(tA),type(tB),type(alpha),type(A),
 						type(B),type(beta),type(C)))
@@ -431,17 +431,17 @@ class LinsysCoreKernels(object):
 
 				if (C.size1 != outer_dim_L or \
 							 inner_dim_L != inner_dim_R or \
-							 C.size2 != outer_dim_R): 
+							 C.size2 != outer_dim_R):
 					raise ValueError("Error: optkit.kernels.linsys.gemm---"
 					   "incompatible dimensions for C=A{} * B{}\n"
 					   "A: {}x{}\nB: {}x{}\nC: {}x{}".format(
-					   	tsymA, tsymB, A.size1, A.size2, B.size1, 
+					   	tsymA, tsymB, A.size1, A.size2, B.size1,
 					   	B.size2, C.size1, C.size2))
 
 
 			if	devicecheck: device_compare(A, B, C)
 
-				
+
 			At = enums.CblasTrans if tA =='T' else enums.CblasNoTrans
 			Bt = enums.CblasTrans if tB =='T' else enums.CblasNoTrans
 
@@ -477,7 +477,7 @@ class LinsysCoreKernels(object):
 						  "only when second argument is of"
 						  "type opkit.Vector.")
 
-			if dimcheck and (x.size != L.size2 or x.size != L.size2): 
+			if dimcheck and (x.size != L.size2 or x.size != L.size2):
 				raise ValueError("Error: optkit.kernels.linsys.cholesky_solve---"
 					   "incompatible dimensions for x:=inv(L) * x\n"
 					   "L: {}x{}\nx: {}".format(L.size1, L.size2, x.size))

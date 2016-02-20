@@ -29,7 +29,7 @@ class OptkitBuild(build):
                 'Compiling optkit---CPU only'
 
     devices = ['cpu', 'gpu'] if NVCC else ['cpu']
-    precisions = ['32', '64'] 
+    precisions = ['32', '64']
 
 
     for prec in precisions:
@@ -57,7 +57,7 @@ class OptkitBuild(build):
         for precision in precisions:
             sparse = COMPILE_GPU_SPARSE if dev=='gpu' else COMPILE_CPU_SPARSE
             linsys_matrices = ['dense', 'sparse']
-            pogs_matrices = ['dense', 'sparse'] if sparse else ['dense'] 
+            pogs_matrices = ['dense', 'sparse'] if sparse else ['dense']
             print('making linsys libraries for:'
                 '\n\tDEVICE: {}\n\tPRECISION: {}\n\t MATRICES {}'.format(
                 device, precision, linsys_matrices))
@@ -113,7 +113,7 @@ setup(
     author_email='ungun@stanford.edu',
     url='http://github.com/bungun/optkit/',
     package_dir={'optkit': 'optkit'},
-    packages=['optkit', 
+    packages=['optkit',
               'optkit.libs',
               'optkit.utils',
               'optkit.types',

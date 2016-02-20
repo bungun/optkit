@@ -51,7 +51,7 @@ class DenseLinsysLibs(object):
 			ok_float_p = lowtypes.ok_float_p
 			vector_p = lowtypes.vector_p
 			matrix_p = lowtypes.matrix_p
-			# Vector 
+			# Vector
 			# ------
 			## arguments
 			lib.vector_alloc.argtypes = [vector_p, c_size_t]
@@ -121,7 +121,7 @@ class DenseLinsysLibs(object):
 			lib.matrix_abs.argtypes = [matrix_p]
 			lib.matrix_pow.argtypes = [matrix_p, ok_float]
 
-			## return values 
+			## return values
 			lib.matrix_alloc.restype = None
 			lib.matrix_calloc.restype = None
 			lib.matrix_free.restype = None
@@ -162,7 +162,7 @@ class DenseLinsysLibs(object):
 			lib.blas_trsm.argtypes = [c_void_p, c_uint, c_uint, c_uint, c_uint, ok_float, matrix_p, matrix_p]
 
 
-			## return values 
+			## return values
 			lib.blas_make_handle.restype = None
 			lib.blas_destroy_handle.restype = None
 			lib.blas_axpy.restype = None
@@ -252,12 +252,12 @@ class SparseLinsysLibs(object):
 			lib.sp_make_handle.argtypes = [c_void_p]
 			lib.sp_destroy_handle.argtypes = [c_void_p]
 
-			## return values 
+			## return values
 			lib.sp_make_handle.restype = None
 			lib.sp_destroy_handle.restype = None
 
 
-			# Sparse Matrix 
+			# Sparse Matrix
 			# -------------
 
 			## arguments
@@ -277,7 +277,7 @@ class SparseLinsysLibs(object):
 			lib.sp_matrix_scale_right.argtypes = [c_void_p, sparse_matrix_p, vector_p]
 			lib.sp_matrix_print.argtypes = [sparse_matrix_p]
 
-			## return values 
+			## return values
 			lib.sp_make_handle.restype = None
 			lib.sp_matrix_alloc.restype = None
 			lib.sp_matrix_calloc.restype = None
@@ -292,7 +292,7 @@ class SparseLinsysLibs(object):
 			lib.sp_matrix_pow.restype = None
 			lib.sp_matrix_scale.restype = None
 			lib.sp_matrix_scale_left.restype = None
-			lib.sp_matrix_scale_right.restype = None			
+			lib.sp_matrix_scale_right.restype = None
 			lib.sp_matrix_print.restype = None
 
 			# Sparse BLAS
@@ -301,7 +301,7 @@ class SparseLinsysLibs(object):
 			## arguments
 			lib.sp_blas_gemv.argtypes = [c_void_p, c_uint, ok_float, sparse_matrix_p, vector_p, ok_float, vector_p]
 
-			## return values 
+			## return values
 			lib.sp_blas_gemv.restype = None
 
 			return lib

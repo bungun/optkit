@@ -1,6 +1,5 @@
 from numpy import ndarray
-import sys 
-
+import sys
 
 class EquilibrationMethods(object):
 	def __init__(self, kernels, vector_type, matrix_type):
@@ -116,5 +115,3 @@ class EquilibrationMethods(object):
 			call['mul'](d.py[i], call['view'](A_out, i, row=1))
 		for j in xrange(n):
 			call['mul'](e.py[j], call['view'](A_out, j, col=1))
-
-

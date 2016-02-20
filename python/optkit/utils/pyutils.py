@@ -1,14 +1,14 @@
 from optkit.types import ok_enums as enums
 from ctypes import c_uint
 from operator import and_, add as op_add
-from toolz import curry 
+from toolz import curry
 from numpy import ndarray, squeeze, abs as np_abs, max as np_max
 
 def version_string(major, minor, change, status):
 	v = "{}.{}.{}".format(major, minor, change)
 	if status:
 		v+= "-{}".format(chr(status))
-	return v 
+	return v
 
 def istypedtuple(x,n, type_):
 	valid = isinstance(x,tuple)
@@ -38,10 +38,10 @@ def var_assert(*var, **vartype):
 		if 'selfchecking' in vartype:
 			assert vartype['selfchecking']==('isvalid' in dir(v))
 		if 'isvalid' in  v.__dict__:
-			assert v.isvalid() 
+			assert v.isvalid()
 	return True
 
-@curry 
+@curry
 def rel_compare(eps, first, second):
 	if first == 0 and second == 0: return True
 	return abs(first - second) / max(abs(first), abs(second)) < eps
@@ -57,7 +57,7 @@ def array_compare(a1, a2, eps=0., expect=True):
 	# check relative tolerance
 	if not valid and eps > 0:
 		rcomp = rel_compare(eps)
-		valid |= reduce(and_, map(rcomp, 
+		valid |= reduce(and_, map(rcomp,
 			[a1.item(i) for i in xrange(a1.size)],
 			[a2.item(i) for i in xrange(a2.size)]))
 

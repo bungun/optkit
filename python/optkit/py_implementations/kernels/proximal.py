@@ -53,7 +53,7 @@ class ProxKernels(object):
 			if self.devicecheck: self.device_compare(f)
 			f.push()
 
-	
+
 
 	def print_function_vector(self, f):
 		if not isinstance(f, self.FunctionVector):
@@ -76,7 +76,7 @@ class ProxKernels(object):
 			if not f.size == x.size:
 				raise TypeError("argument sizes incompatible"
 						"size f: {}\nsize x: {}\n".format(f.size, x.size))
-		
+
 		if self.devicecheck: self.device_compare(f, x, x_out)
 
 		return self.proxlib.FuncEvalVector(f.c, x.c)

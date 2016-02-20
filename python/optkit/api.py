@@ -63,7 +63,7 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 	# Prox calls
 	global prox
 
-	# Projector 
+	# Projector
 	global DirectProjector
 
 	# Equilibration methods
@@ -79,9 +79,9 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 	global PogsObjective
 
 	# change backend
-	backend_name=backend.change(GPU=GPU, double=double, 
+	backend_name=backend.change(GPU=GPU, double=double,
 		force_rowmajor=force_rowmajor, force_colmajor=force_colmajor)
-	
+
 	OPTKIT_VERSION = backend.version
 
 	# reset types
@@ -100,7 +100,7 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 	# reset linsys calls
 	# (reset core)
 	linsys = {}
-	linsys['set_all'] = linsys_core_kernels.set_all	
+	linsys['set_all'] = linsys_core_kernels.set_all
 	linsys['copy'] = linsys_core_kernels.copy
 	linsys['view'] = linsys_core_kernels.view
 	linsys['sync'] = linsys_core_kernels.sync
@@ -148,7 +148,7 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 
 	# (projection)
 	DirectProjector = DirectProjectorFactory(
-		base_kernels, Matrix).DirectProjector 
+		base_kernels, Matrix).DirectProjector
 
 	# (equilibration)
 	equil_methods = EquilibrationMethods(base_kernels, Vector, Matrix)
@@ -157,7 +157,7 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 	equil['sinkhornknopp'] = equil_methods.sinkhornknopp
 
 	# (solver)
-	pogs = POGSDirectSolver(backend, base_kernels, Vector, Matrix, 
+	pogs = POGSDirectSolver(backend, base_kernels, Vector, Matrix,
 		FunctionVector, DirectProjector, equil_methods)
 
 
@@ -173,15 +173,12 @@ def set_backend(GPU=False, double=True, force_rowmajor=False,
 INITIALIZATION BEHAVIOR:
 """
 
-
 default_device = getenv('OPTKIT_DEFAULT_DEVICE', 'cpu')
 default_precision = getenv('OPTKIT_DEFAULT_FLOATBITS', '64')
 default_order = getenv('OPTKIT_DEFAULT_ORDER', '')
 
 
-set_backend(GPU=(default_device == 'gpu'), 
+set_backend(GPU=(default_device == 'gpu'),
 	double=(default_precision == '64'),
 	force_rowmajor=(default_order == 'row'),
 	force_colmajor=(default_order == 'col'))
-
-

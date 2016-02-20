@@ -17,11 +17,11 @@ class DirectProjectorFactory(object):
 		# forms chol(I+A'A) or chol(I+AA')
 		def make_projector(A, normalize=True):
 			L = gramian(A) # L = A'A or AA'
-			sync(L)	
+			sync(L)
 
 			normA = 1.
 			mean_diagonal = mean_diag(L)
-			if normalize: 
+			if normalize:
 				div(mean_diagonal,L)
 				div(mean_diagonal**0.5,A)
 			normA = mean_diagonal**0.5
@@ -41,7 +41,7 @@ class DirectProjectorFactory(object):
 				self.L = L
 				self.normA = normA
 				self.normalized = normalize
-				
+
 			def __call__(self, x, y, x_out, y_out):
 				if self.A.skinny:
 					# x = cholsolve(c + A^Td)
@@ -67,10 +67,9 @@ class DirectProjectorFactory(object):
 			def isvalid(self):
 				assert var_assert(self.A, self.L, self.Matrix)
 				assert self.A.mindim == self.L.size1
-				assert self.A.mindim == self.L.size2		
+				assert self.A.mindim == self.L.size2
 				assert isinstance(self.normA,float)
 				assert isinstance(self.normalized,(bool,int))
 				return True
 
 		self.DirectProjector = DirectProjector
-

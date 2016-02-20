@@ -126,4 +126,3 @@ The projection, matrix equilibration, and POGS solver algorithms are Python adap
 The following people have been, and are, involved in the development and maintenance of optkit
 + Baris Ungun (principal developer)
 + Stephen Boyd (methods and math)
-

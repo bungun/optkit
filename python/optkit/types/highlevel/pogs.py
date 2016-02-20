@@ -12,7 +12,7 @@ class HighLevelPogsTypes(object):
 		PogsOutput = backend.pogs.pogs_output
 		pogslib = backend.pogs
 
-		# TODO: set direct/indirect, e.g., 
+		# TODO: set direct/indirect, e.g.,
 		# pogslib_direct = backend.pogs_direct
 		# pogslib_indirect = backend.pogs_indirect
 
@@ -37,13 +37,13 @@ class HighLevelPogsTypes(object):
 						"Objective input")
 				if not obj.size==self.size:
 					raise ValueError("Incompatible dimensions")
-				self.terms[:] = fv.terms[:]				
+				self.terms[:] = fv.terms[:]
 
-			@property			
+			@property
 			def list(self):
 				return [backend.lowtypes.function(*self.terms[i]) for i in xrange(self.size)]
 
-			@property			
+			@property
 			def arrays(self):
 				l = self.list
 				h = zeros(self.size, int)
@@ -71,7 +71,7 @@ class HighLevelPogsTypes(object):
 				if end < 0 : end = self.size + end
 
 				range_length = len(self.terms[start:end])
-				if  range_length == 0: 
+				if  range_length == 0:
 					raise ValueError('index range [{}:{}] results in length-0 array '
 						'when python array slicing applied to an '
 						'optkit.HighLevelPogsTypes.Objective array'
@@ -141,7 +141,7 @@ class HighLevelPogsTypes(object):
 				for i in xrange(self.size):
 					self.terms[i] = objectives[i]
 
-				
+
 			def __str__(self):
 				(h_, a_, b_, c_, d_, e_) = self.arrays
 
@@ -156,7 +156,7 @@ class HighLevelPogsTypes(object):
 				assert isinstance(self.terms, ndarray)
 				assert len(self.terms.shape) == 1
 				assert self.terms.size == self.size
-				return True	
+				return True
 
 		self.Objective = Objective
 
@@ -182,7 +182,7 @@ class HighLevelPogsTypes(object):
 
 			def __str__(self):
 				return str(
-					"alpha: {}\n".format(self.c.alpha) + 
+					"alpha: {}\n".format(self.c.alpha) +
 					"rho: {}\n".format(self.c.rho) +
 					"abstol: {}\n".format(self.c.abstol) +
 					"reltol: {}\n".format(self.c.reltol) +
@@ -195,29 +195,29 @@ class HighLevelPogsTypes(object):
 					"resume: {}\n".format(self.c.resume) +
 					"x0: {}\n".format(self.c.x0) +
 					"nu0: {}\n".format(self.c.nu0))
-		
+
 		self.SolverSettings = SolverSettings
 
 		class SolverInfo(object):
 			def __init__(self):
 				self.c = PogsInfo(0, 0, 0, 0, 0, 0, 0)
 
-			@property 
+			@property
 			def iters(self):
 				return self.c.k
 
-			@property 
+			@property
 			def solve_time(self):
 				return self.c.solve_time
 
-			@property 
+			@property
 			def setup_time(self):
 				return self.c.setup_time
 
 			@property
 			def error(self):
 			    return self.c.error
-			
+
 			@property
 			def converged(self):
 			    return self.c.converged
@@ -232,7 +232,7 @@ class HighLevelPogsTypes(object):
 
 			def __str__(self):
 				return str(
-					"error: {}\n".format(self.c.err) + 
+					"error: {}\n".format(self.c.err) +
 					"converged: {}\n".format(self.c.converged) +
 					"iterations: {}\n".format(self.c.k) +
 					"objective: {}\n".format(self.c.obj) +
@@ -249,14 +249,14 @@ class HighLevelPogsTypes(object):
 				self.mu = zeros(n, dtype=FLOAT_CAST)
 				self.nu = zeros(m, dtype=FLOAT_CAST)
 				self.c = PogsOutput(
-					ndarray_pointer(self.x), 
+					ndarray_pointer(self.x),
 					ndarray_pointer(self.y),
-					ndarray_pointer(self.mu), 
+					ndarray_pointer(self.mu),
 					ndarray_pointer(self.nu))
 
 			def __str__(self):
 				return str("x:\n{}\ny:\n{}\nmu:\n{}\nnu:\n{}\n".format(
-					str(self.x), str(self.y), 
+					str(self.x), str(self.y),
 					str(self.mu), str(self.nu)))
 
 		self.SolverOutput = SolverOutput
@@ -269,7 +269,7 @@ class HighLevelPogsTypes(object):
 				except:
 					raise TypeError('input must be a 2-d numpy ndarray')
 
-				self.A = FLOAT_CAST(A) 
+				self.A = FLOAT_CAST(A)
 				self.shape = (self.m, self.n) = (m, n) = A.shape
 				self.layout = layout = ok_enums.CblasRowMajor if \
 					A.flags.c_contiguous else ok_enums.CblasColMajor
@@ -290,7 +290,7 @@ class HighLevelPogsTypes(object):
 
 
 			def solve(self, f, g, **options):
-				if self.c_solver is None: 
+				if self.c_solver is None:
 					Warning("No solver intialized, solve() call invalid")
 					return
 
@@ -311,17 +311,17 @@ class HighLevelPogsTypes(object):
 				# TODO : logic around resume, warmstart, rho input
 
 				self.settings.update(**options)
-				pogslib.pogs_solve(self.c_solver, f.c, g.c, 
+				pogslib.pogs_solve(self.c_solver, f.c, g.c,
 					self.settings.c, self.info.c, self.output.c)
 				self.first_run = False
 
 			def load(self, directory, name):
 				filename = path.join(directory, name)
-				if not '.npz' in name: 
+				if not '.npz' in name:
 					filename += '.npz'
 
 				err = 0
-				try:	
+				try:
 					data = np_load(filename)
 				except:
 					data = {}
@@ -331,7 +331,7 @@ class HighLevelPogsTypes(object):
 					A_equil = FLOAT_CAST(data['A_equil'])
 				elif path.exists(path.join(directory, 'A_equil.npy')):
 					A_equil = FLOAT_CAST(np_load(path.join(directory, 'A_equil.npy')))
-				else: 
+				else:
 					err = 1
 
 
@@ -383,7 +383,7 @@ class HighLevelPogsTypes(object):
 
 				if 'zt' in data:
 					zt = FLOAT_CAST(data['zt'])
-				else:	
+				else:
 					zt = zeros(self.m + self.n, dtype=FLOAT_CAST)
 
 				if 'zt12' in data:
@@ -408,16 +408,16 @@ class HighLevelPogsTypes(object):
 					pogslib.pogs_finish(self.c_solver)
 
 				self.c_solver = pogslib.pogs_load_solver(
-					ndarray_pointer(A_equil), 
-					LLT_ptr, ndarray_pointer(d), 
+					ndarray_pointer(A_equil),
+					LLT_ptr, ndarray_pointer(d),
 					ndarray_pointer(e), ndarray_pointer(z),
 					ndarray_pointer(z12), ndarray_pointer(zt),
-					ndarray_pointer(zt12), ndarray_pointer(zprev), 
+					ndarray_pointer(zt12), ndarray_pointer(zprev),
 					rho, self.m, self.n, order)
 
-			def save(self, directory, name, 
+			def save(self, directory, name,
 				save_equil=True, save_factorization=True):
-				if self.c_solver is None: 
+				if self.c_solver is None:
 					Warning("No solver intialized, save() call invalid")
 					return
 
@@ -427,7 +427,7 @@ class HighLevelPogsTypes(object):
 
 				if not path.exists(directory):
 					Warning("specified directory does not exist")
-					return 
+					return
 				if path.exists(filename):
 					Warning("specified filepath already exists"
 						"and would be overwritten, aborting.")
@@ -454,40 +454,33 @@ class HighLevelPogsTypes(object):
 				rho = zeros(1, dtype=FLOAT_CAST)
 
 
-				pogslib.pogs_extract_solver(self.c_solver, 
-					ndarray_pointer(A_equil), 
-					LLT_ptr, ndarray_pointer(d), 
+				pogslib.pogs_extract_solver(self.c_solver,
+					ndarray_pointer(A_equil),
+					LLT_ptr, ndarray_pointer(d),
 					ndarray_pointer(e), ndarray_pointer(z),
 					ndarray_pointer(z12), ndarray_pointer(zt),
-					ndarray_pointer(zt12), ndarray_pointer(zprev), 
+					ndarray_pointer(zt12), ndarray_pointer(zprev),
 					ndarray_pointer(rho), order)
 
 				if isinstance(LLT, ndarray) and save_factorization:
-					savez(filename, 
+					savez(filename,
 						A_equil=A_equil, LLT=LLT, d=d, e=e,
 						z=z, z12=z12, zt=zt, zt12=zt12,
 						zprev=zprev, rho=rho[0])
 				elif save_equil:
-					savez(filename, 
+					savez(filename,
 						A_equil=A_equil, d=d, e=e,
 						z=z, z12=z12, zt=zt, zt12=zt12,
 						zprev=zprev, rho=rho[0])
 				else:
-					savez(filename, 
+					savez(filename,
 						z=z, z12=z12, zt=zt, zt12=zt12,
 						zprev=zprev, rho=rho[0])
 
 			def __del__(self):
-				backend.decrement_csolver_count() 
+				backend.decrement_csolver_count()
 				if self.c_solver is not None:
 					pogslib.pogs_finish(self.c_solver,
 						int(backend.device_reset_allowed))
 
 		self.Solver = Solver
-
-
-
-
-
-
-
