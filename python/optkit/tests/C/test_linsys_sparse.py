@@ -34,7 +34,7 @@ class SparseLibsTestCase(unittest.TestCase):
 		for (gpu, single_precision) in CONDITIONS:
 			dlib = self.dense_libs.get(single_precision=single_precision,
 									   gpu=gpu)
-			lib = self.sparse_libs.get(single_precision=single_precision,
+			lib = self.sparse_libs.get(dlib, single_precision=single_precision,
 									   gpu=gpu)
 			if lib is None:
 				continue
@@ -48,7 +48,7 @@ class SparseLibsTestCase(unittest.TestCase):
 		for (gpu, single_precision) in CONDITIONS:
 			dlib = self.dense_libs.get(single_precision=single_precision,
 									   gpu=gpu)
-			lib = self.sparse_libs.get(single_precision=single_precision,
+			lib = self.sparse_libs.get(dlib, single_precision=single_precision,
 									   gpu=gpu)
 			if lib is None:
 				continue
@@ -61,7 +61,7 @@ class SparseLibsTestCase(unittest.TestCase):
 		for (gpu, single_precision) in CONDITIONS:
 			dlib = self.dense_libs.get(single_precision=single_precision,
 									   gpu=gpu)
-			lib = self.sparse_libs.get(single_precision=single_precision,
+			lib = self.sparse_libs.get(dlib, single_precision=single_precision,
 									   gpu=gpu)
 			if lib is None:
 				continue
@@ -131,7 +131,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 		for (gpu, single_precision) in CONDITIONS:
 			dlib = self.dense_libs.get(single_precision=single_precision,
 									   gpu=gpu)
-			lib = self.sparse_libs.get(single_precision=single_precision,
+			lib = self.sparse_libs.get(dlib, single_precision=single_precision,
 									   gpu=gpu)
 			if lib is None:
 				continue
@@ -184,7 +184,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 		for (gpu, single_precision) in CONDITIONS:
 			dlib = self.dense_libs.get(single_precision=single_precision,
 									   gpu=gpu)
-			lib = self.sparse_libs.get(single_precision=single_precision,
+			lib = self.sparse_libs.get(dlib, single_precision=single_precision,
 									   gpu=gpu)
 			if lib is None:
 				continue
@@ -265,7 +265,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 		for (gpu, single_precision) in CONDITIONS:
 			dlib = self.dense_libs.get(single_precision=single_precision,
 									   gpu=gpu)
-			lib = self.sparse_libs.get(single_precision=single_precision,
+			lib = self.sparse_libs.get(dlib, single_precision=single_precision,
 									   gpu=gpu)
 			if lib is None:
 				continue
@@ -318,7 +318,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 		for (gpu, single_precision) in CONDITIONS:
 			dlib = self.dense_libs.get(single_precision=single_precision,
 									   gpu=gpu)
-			lib = self.sparse_libs.get(single_precision=single_precision,
+			lib = self.sparse_libs.get(dlib, single_precision=single_precision,
 									   gpu=gpu)
 			if lib is None:
 				continue
@@ -379,7 +379,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 		for (gpu, single_precision) in CONDITIONS:
 			dlib = self.dense_libs.get(single_precision=single_precision,
 									   gpu=gpu)
-			lib = self.sparse_libs.get(single_precision=single_precision,
+			lib = self.sparse_libs.get(dlib, single_precision=single_precision,
 									   gpu=gpu)
 			if lib is None:
 				continue
