@@ -1,12 +1,10 @@
-from optkit.utils import istypedtuple
 from numpy import zeros, ndarray
 from scipy.sparse import csr_matrix, csc_matrix
+from optkit.utils import istypedtuple
 
-class HighLevelLinsysTypes(object):
+class LinsysTypes(object):
 	def __init__(self, backend):
-		backend = backend
 		ON_GPU = backend.device == 'gpu'
-		lowtypes = backend.lowtypes
 
 		class Vector(object):
 			def __init__(self, *x, **flags):
@@ -19,15 +17,15 @@ class HighLevelLinsysTypes(object):
 					if isinstance(x[0], ndarray):
 						valid |= len(x[0].shape) == 1
 				elif len(x)==2:
-					if isinstance(x[0], ndarray) and isinstance(x[1], lowtypes.vector):
+					if isinstance(x[0], ndarray) and isinstance(x[1],
+						backend.dense.vector):
 						valid |= ( len(x[0].shape) == 1 and \
-									len(x[0]) == x[1].size)			
-
+									len(x[0]) == x[1].size)
 
 				if not valid:
 					data = None
 					print ("optkit.Vector must be initialized with:\n"
-							"-one `int` OR\n" 
+							"-one `int` OR\n"
 							"-one 1-dimensional `numpy.ndarray`, OR\n"
 							"-one 1-dimensional `numpy.ndarray` and"
 							" one `optkit.types.lowlevel.ok_vector` with"
@@ -43,13 +41,13 @@ class HighLevelLinsysTypes(object):
 
 				self.is_view = 'is_view' in flags
 				self.on_gpu = ON_GPU
-				self.sync_required = ON_GPU 
+				self.sync_required = ON_GPU
 
 				if len(x) == 1:
 					if istypedtuple(x, 1, int):
-						data = zeros(x, dtype=lowtypes.FLOAT_CAST)				
+						data = zeros(x, dtype=backend.dense.pyfloat)
 					else:
-						data = zeros(len(x[0]), dtype=lowtypes.FLOAT_CAST)
+						data = zeros(len(x[0]), dtype=backend.dense.pyfloat)
 						data[:] = x[0][:]
 
 					self.py = data
@@ -68,7 +66,7 @@ class HighLevelLinsysTypes(object):
 			def __str__(self):
 				return str("PY: {},\nC: {},\nSIZE: {}\n"
 							  "on GPU? {}\nsync required? {}\n".format(
-							  str(self.py), str(self.c), self.size, 
+							  str(self.py), str(self.c), self.size,
 							  	self.on_gpu, self.sync_required))
 
 			def __del__(self):
@@ -77,7 +75,8 @@ class HighLevelLinsysTypes(object):
 				if self.on_gpu: backend.release_cvector(self.c)
 
 			def isvalid(self):
-				for item in ['on_gpu','sync_required','is_view','size','c','py']:
+				for item in ['on_gpu', 'sync_required', 'is_view', 'size', 'c',
+					'py']:
 					assert self.__dict__.has_key(item)
 					assert self.__dict__[item] is not None
 				if self.on_gpu:
@@ -85,7 +84,7 @@ class HighLevelLinsysTypes(object):
 				assert isinstance(self.py, ndarray)
 				assert len(self.py.shape) == 1
 				assert self.py.size == self.size
-				assert isinstance(self.c, lowtypes.vector)
+				assert isinstance(self.c, backend.dense.vector)
 				assert self.c.size == self.size
 				assert self.c.data is not None
 				return True
@@ -108,13 +107,14 @@ class HighLevelLinsysTypes(object):
 							valid |= len(A[0].shape)==2
 					elif len(A)==2:
 						# args are (ndarray, ok_matrix)
-						if isinstance(A[0],ndarray) and isinstance(A[1],lowtypes.matrix):
+						if isinstance(A[0],ndarray) and isinstance(A[1],
+							backend.dense.matrix):
 							# ndarray is matrix
 							if len(A[0].shape)==2:
 								# ndarray and ok-matrix compatibly sized
 								valid |= A[0].shape[0] == A[1].size1 and \
-										 A[0].shape[1] == A[1].size2			
-					
+										 A[0].shape[1] == A[1].size2
+
 
 				if not valid:
 					print ("optkit.Matrix must be initialized with\n"
@@ -142,11 +142,11 @@ class HighLevelLinsysTypes(object):
 				self.sync_required = ON_GPU
 				if len(A)==1 or istypedtuple(A,2,int):
 					if len(A)==1:
-						data = zeros(A[0].shape,dtype=lowtypes.FLOAT_CAST, 
+						data = zeros(A[0].shape,dtype=backend.dense.pyfloat,
 							order=order)
 						data[:]=A[0][:]
 					else:
-						data = zeros(A,dtype=lowtypes.FLOAT_CAST,
+						data = zeros(A,dtype=backend.dense.pyfloat,
 							order=order)
 
 					self.py = data
@@ -171,8 +171,8 @@ class HighLevelLinsysTypes(object):
 			def __str__(self):
 				return str("PY: {},\nC: {},\nSIZE: ({},{}),\n"
 							  "on GPU? {}\nsync required? {}\n".format(
-							  str(self.py), str(self.c), 
-							  self.size1,self.size2, 
+							  str(self.py), str(self.c),
+							  self.size1,self.size2,
 							  self.on_gpu, self.sync_required))
 
 
@@ -194,7 +194,7 @@ class HighLevelLinsysTypes(object):
 				assert self.mindim == min(self.size1, self.size2)
 				assert isinstance(self.py, ndarray)
 				assert self.py.shape == self.shape
-				assert isinstance(self.c, lowtypes.matrix)
+				assert isinstance(self.c, backend.matrix)
 				assert self.c.size1 == self.size1
 				assert self.c.size2 == self.size2
 				assert self.c.order
@@ -220,18 +220,19 @@ class HighLevelLinsysTypes(object):
 							valid |= len(A[0].shape)==2
 					elif len(A)==2:
 						# args are (scipy.sparse matrix, ok_sparse_matrix)
-						if isinstance(A[0], (csr_matrix, csc_matrix)) and isinstance(A[1],lowtypes.sparse_matrix):
+						if isinstance(A[0], (csr_matrix, csc_matrix)) and \
+							isinstance(A[1], backend.sparse.sparse_matrix):
 							# ndarray and ok-matrix compatibly sized
 							valid |= A[0].shape[0] == A[1].size1 and \
-									 A[0].shape[1] == A[1].size2			
-					
+									 A[0].shape[1] == A[1].size2
+
 				if not valid:
 					print ("optkit.SparseMatrix must be initialized with\n"
-							"-three `int` arguments OR\n"
-							"-one `scipy.sparse.csc_matrix` (or csr_matrix) OR\n"
-							"-one `scipy.sparse.csc_matrix` (or csr_matrix) and"
-							" one `optkit.types.lowlevel.ok_matrix`"
-							" of compatible sizes.")
+						"-three `int` arguments OR\n"
+						"-one `scipy.sparse.csc_matrix` (or csr_matrix) OR\n"
+						"-one `scipy.sparse.csc_matrix` (or csr_matrix) and"
+						" one `optkit.types.lowlevel.ok_matrix`"
+						" of compatible sizes.")
 					self.on_gpu = None
 					self.sync_required = None
 					self.py = None
@@ -245,14 +246,18 @@ class HighLevelLinsysTypes(object):
 					self.ptrlen = None
 					return
 
-				spmat_constructor = csc_matrix if backend.layout == 'col' else csr_matrix
+				spmat_constructor = csc_matrix if backend.layout == 'col' else \
+					csr_matrix
 
 				self.on_gpu = ON_GPU
 				self.sync_required = ON_GPU
-				if istypedtuple(A, 3, int) or istypedtuple(A, 1, csc_matrix) or istypedtuple(A, 1, csr_matrix):
+				if istypedtuple(A, 3, int) or \
+					istypedtuple(A, 1, csc_matrix) or \
+					istypedtuple(A, 1, csr_matrix):
 
 					if len(A)==1:
-						data = spmat_constructor(A[0].astype(lowtypes.FLOAT_CAST))
+						data = spmat_constructor(A[0].astype(
+							backend.dense.pyfloat))
 					else:
 						(m, n, nnz) = A
 						if nnz > m * n:
@@ -267,19 +272,21 @@ class HighLevelLinsysTypes(object):
 						ind = zeros(nnz, dtype=int)
 
 
-						val = zeros(nnz, dtype=lowtypes.FLOAT_CAST) 
+						val = zeros(nnz, dtype=lowtypes.backend.dense.pyfloat)
 						ptr_idx = 0
-						modbase = n + m + 1 - ptrlen # get size of complementary (non-compressed) dimension
+						# get size of complementary (non-compressed) dimension
+						modbase = n + m + 1 - ptrlen
 
-						# create a default sequentially filled initialization of 
-						# the sparse matrix so that the csc_matrix() or csr_matrix()
-						# constructor allocates & returns something with nnz nonzeros
+						# create a default sequentially filled initialization of
+						# the sparse matrix so that the csc_matrix() or
+						# csr_matrix() constructor allocates & returns
+						# something with nnz nonzeros
 						for i in xrange(nnz):
 							ind[i] = i % modbase
 							ptr_idx = i / modbase
 							ptr[ptr_idx + 1] = i + 1
 						if ptr_idx < ptrlen:
-							ptr[ptr_idx + 1:] = nnz 
+							ptr[ptr_idx + 1:] = nnz
 
 						data = spmat_constructor((val, ind, ptr), shape=shape)
 
@@ -288,7 +295,8 @@ class HighLevelLinsysTypes(object):
 					self.size1 = self.py.shape[0]
 					self.size2 = self.py.shape[1]
 					self.nnz = self.py.nnz
-					self.ptrlen = data.shape[1] + 1 if backend.layout == 'col' else data.shape[1] + 1
+					self.ptrlen = data.shape[1] + 1 if backend.layout == 'col' \
+						else data.shape[1] + 1
 				else:
 					# --------------------------------------------- #
 					# python and C arrays provided to constructor, 	#
@@ -308,7 +316,7 @@ class HighLevelLinsysTypes(object):
 			def __str__(self):
 				return str("PY: {},\nC: {},\nSIZE: ({},{}), NNZ: {}\n"
 							  "on GPU? {}\nsync required? {}\n".format(
-							  str(self.py), str(self.c), 
+							  str(self.py), str(self.c),
 							  self.size1, self.size2, self.nnz,
 							  self.on_gpu, self.sync_required))
 

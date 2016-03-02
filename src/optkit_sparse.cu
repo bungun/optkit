@@ -1,7 +1,6 @@
 #include "optkit_sparse.h"
 #include "optkit_defs_gpu.h"
 #include "optkit_thrust.hpp"
-#include <cusparse.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,7 +49,7 @@ void __int_set_all(ok_int * data, ok_int val, size_t stride, size_t size)
 }
 
 void __transpose_inplace(void * sparse_handle, sp_matrix * A,
-        SPARSE_TRANSPOSE_DIRECTION_t dir)
+        SPARSE_TRANSPOSE_DIRECTION dir)
 {
         ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
         int size1, size2;
@@ -86,34 +85,67 @@ void __transpose_inplace(void * sparse_handle, sp_matrix * A,
 }
 
 
-void sp_make_handle(void ** sparse_handle)
+ok_status sp_make_handle(void ** sparse_handle)
 {
+	ok_status err = OPTKIT_SUCCESS;
         ok_sparse_handle * ok_hdl;
         ok_hdl = malloc(sizeof(*ok_hdl));
         ok_hdl->hdl = malloc(sizeof(cusparseHandle_t));
         ok_hdl->descr = malloc(sizeof(cusparseMatDescr_t));
         cusparseCreate(ok_hdl->hdl);
         CUDA_CHECK_ERR;
+        // err = CUSPARSE_CHECK_ERR ( cusparseCreat(ok_hdl->hdl); )
+
+        // if (!err)
+        // err = CUSPARSE_CHECK_ERR ( cusparseCreateMatDescr(ok_hdl->descr); )
         cusparseCreateMatDescr(ok_hdl->descr);
         CUDA_CHECK_ERR;
+
+        // if (!err)
         * sparse_handle = (void *) ok_hdl;
+        // else
+        // * sprase_handle = OK_NULL;
+        return err;
 }
 
-void sp_destroy_handle(void * sparse_handle)
+ok_status sp_destroy_handle(void * sparse_handle)
 {
+	ok_status err = OPTKIT_SUCCESS;
         ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
         cusparseDestroy(*(sp_hdl->hdl));
         CUDA_CHECK_ERR;
+       	// err = OK_CHECK_CUSPARSE( cusparseDestroy(*(sp_hdl->hdl)) );
+
         cusparseDestroyMatDescr(*(sp_hdl->descr));
         CUDA_CHECK_ERR;
+        // if (!err)
+	// err = OK_CHECK_CUSPARSE( cusparseDestroyMatDescr(*(sp_hdl->descr)) );
+
+        // if (!err)
         ok_free(sp_hdl->descr);
         ok_free(sp_hdl->hdl);
         ok_free(sparse_handle);
+
+        return err
 }
 
 void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
-        CBLAS_ORDER_t order)
+        enum CBLAS_ORDER order)
 {
+ //        ok_status err;
+ //        /* Store forward and adjoint operators */
+ //        A->size1 = m;
+ //        A->size2 = n;
+ //        A->nnz = nnz;
+ //        A->ptrlen = (order == CblasColMajor) ? n + 1 : m + 1;
+ //        err = ok_alloc_gpu(A->val, 2 * nnz * sizeof(ok_float));
+ //        if (!err)
+	//         err = ok_alloc_gpu(A->ind, 2 * nnz * sizeof(ok_int));
+	// if (!err)
+	// 	err = ok_alloc_gpu(A->ptr, (2 + m + n) * sizeof(ok_int));
+ //        A->order = order;
+ //        return err;
+
         /* Store forward and adjoint operators */
         A->size1 = m;
         A->size2 = n;
@@ -127,8 +159,18 @@ void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
 }
 
 void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
-        CBLAS_ORDER_t order)
+        enum CBLAS_ORDER order)
 {
+	// ok_status err = OPTKIT_SUCCESS;
+	// err = sp_matrix_alloc(A, m, n, nnz, order);
+	// if (!err)
+	// 	err = __float_set_all(A->val, (ok_float) 0, 1, 2 * nnz);
+	// if (!err)
+	// 	err = __int_set_all(A->ind, (ok_int) 0, 1, 2 * nnz);
+	// if (!err)
+	// 	err = __int_set_all(A->ptr, (ok_int) 0, 1,
+	// 		2 + A->size1 + A->size2);
+	// return err;
         sp_matrix_alloc(A, m, n, nnz, order);
         __float_set_all(A->val, (ok_float) 0, 1, 2 * nnz);
         __int_set_all(A->ind, (ok_int) 0, 1, 2 * nnz);
@@ -138,10 +180,21 @@ void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
 
 void sp_matrix_free(sp_matrix * A)
 {
+        // ok_status err = OPTKIT_SUCCESS;
+        // err = ok_free_gpu(A->val);
+        // if (!err)
+	       //  err = ok_free_gpu(A->ind);
+        // if (!err)
+	       //  err = ok_free_gpu(A->ptr);
         ok_free_gpu(A->val);
         ok_free_gpu(A->ind);
         ok_free_gpu(A->ptr);
+        A->size1 = (size_t) 0;
+        A->size2 = (size_t) 0;
+        A->nnz = (size_t) 0;
+        A->ptrlen = (size_t) 0;
         CUDA_CHECK_ERR;
+        // return err;
 }
 
 void sp_matrix_memcpy_mm(sp_matrix * A, const sp_matrix * B)
@@ -212,6 +265,7 @@ void sp_matrix_scale(sp_matrix * A, const ok_float alpha)
         vector vals = (vector){2 * A->nnz, 1, A->val};
         __thrust_vector_scale(&vals, alpha);
         CUDA_CHECK_ERR;
+        // return CUDA_CHECK_ERR( __thrust_vector_scale(&vals, alpha) );
 }
 
 /*
@@ -224,7 +278,7 @@ void sp_matrix_scale(sp_matrix * A, const ok_float alpha)
  *      csc, right scaling -> scale forward operator, tranpose data F2A
  */
 void __sp_matrix_scale_diag(void * sparse_handle, sp_matrix * A,
-        const vector * v, CBLAS_SIDE_t side)
+        const vector * v, enum CBLAS_SIDE side)
 {
         size_t i, offset, offsetnz, stop;
         vector Asub = (vector){0, 1, OK_NULL};
@@ -340,7 +394,7 @@ void sp_matrix_print(const sp_matrix * A)
  *      csc, forward op -> apply stored adjoint operator
  *      csc, adjoint op -> apply stored forward operator
  */
-void sp_blas_gemv(void * sparse_handle, CBLAS_TRANSPOSE_t transA,
+void sp_blas_gemv(void * sparse_handle, enum CBLAS_TRANSPOSE transA,
         ok_float alpha, sp_matrix * A, vector * x, ok_float beta, vector * y)
 {
         ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;

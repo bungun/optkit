@@ -1,16 +1,14 @@
-from optkit.types import ok_function_enums as fcn_enums
-from optkit.utils import UtilMakeCFunctionVector, UtilReleaseCFunctionVector
 from ctypes import c_uint
 from numpy import ones, zeros, ndarray
+from optkit.utils import UtilMakeCFunctionVector, UtilReleaseCFunctionVector
 
 
-class HighLevelProxTypes(object):
+class ProxTypes(object):
 	def __init__(self, backend):
 		backend = backend
 		ON_GPU = backend.device == 'gpu'
 		function_vector_memcpy_va = backend.prox.function_vector_memcpy_va
 		function_vector_memcpy_av = backend.prox.function_vector_memcpy_av
-		ndarray_pointer = backend.lowtypes.ndarray_pointer
 
 		class FunctionVector(object):
 			def __init__(self, n, **params):
@@ -23,10 +21,10 @@ class HighLevelProxTypes(object):
 						"with:\n -one `int`")
 
 				self.on_gpu = ON_GPU
-				self.size = n;			
+				self.size = n;
 				self.c = backend.make_cfunctionvector(self.size)
 				self.py = zeros(n, dtype=backend.lowtypes.function)
-				for i in xrange(n):	
+				for i in xrange(n):
 					self.py[i]= backend.lowtypes.function(0, 1, 0, 1, 0, 0)
 				self.set(**params)
 				if 'f' in params:
@@ -40,7 +38,7 @@ class HighLevelProxTypes(object):
 					raise ValueError("Incompatible dimensions")
 				self.py[:] = fv.py[:]
 				self.push()
- 
+
 
 			def tolist(self):
 				return [backend.lowtypes.function(*self.py[i]) for i in xrange(self.size)]
@@ -72,7 +70,7 @@ class HighLevelProxTypes(object):
 				if end < 0 : end = self.size + end
 
 				range_length = len(self.py[start:end])
-				if  range_length == 0: 
+				if  range_length == 0:
 					raise ValueError('index range [{}:{}] results in length-0 array '
 						'when python array slicing applied to a FunctionVector '
 						' of length {}.'.format(start,end,self.size))
@@ -143,12 +141,12 @@ class HighLevelProxTypes(object):
 				for i in xrange(self.size):
 					self.py[i] = objectives[i]
 				self.push()
-				
+
 			def push(self):
-				function_vector_memcpy_va(self.c, ndarray_pointer(self.py))	
+				function_vector_memcpy_va(self.c, ndarray_pointer(self.py))
 
 			def pull(self):
-				function_vector_memcpy_av(ndarray_pointer(self.py), self.c)	
+				function_vector_memcpy_av(ndarray_pointer(self.py), self.c)
 
 
 			def __str__(self):
@@ -185,7 +183,7 @@ class HighLevelProxTypes(object):
 				assert isinstance(self.py, ndarray)
 				assert len(self.py.shape) == 1
 				assert self.py.size == self.size
-				assert self.size == self.c.size	
-				return True	
+				assert self.size == self.c.size
+				return True
 
 		self.FunctionVector = FunctionVector

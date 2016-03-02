@@ -21,18 +21,18 @@ typedef struct sp_matrix {
         size_t size1, size2, nnz, ptrlen;
         ok_float * val;
         ok_int * ind, * ptr;
-        CBLAS_ORDER order;
+        enum CBLAS_ORDER order;
 } sp_matrix;
 
 
 /* memory management */
-void sp_make_handle(void ** sparse_handle);
-void sp_destroy_handle(void * sparse_handle);
+ok_status sp_make_handle(void ** sparse_handle);
+ok_status sp_destroy_handle(void * sparse_handle);
 
 void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n,
-        size_t nnz, CBLAS_ORDER order);
+        size_t nnz, enum CBLAS_ORDER order);
 void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n,
-        size_t nnz, CBLAS_ORDER order);
+        size_t nnz, enum CBLAS_ORDER order);
 void sp_matrix_free(sp_matrix * A);
 
 /* copy, I/O */
@@ -59,8 +59,8 @@ void sp_matrix_scale_right(void * sparse_handle, sp_matrix * A,
 void sp_matrix_print(const sp_matrix * A);
 
 /* matrix multiplication */
-void sp_blas_gemv(void * sparse_handle, CBLAS_TRANSPOSE transA, ok_float alpha,
-        sp_matrix * A, vector * x, ok_float beta, vector * y);
+void sp_blas_gemv(void * sparse_handle, enum CBLAS_TRANSPOSE transA,
+	ok_float alpha, sp_matrix * A, vector * x, ok_float beta, vector * y);
 
 #ifdef __cplusplus
 }

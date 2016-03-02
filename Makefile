@@ -67,17 +67,6 @@ ifdef OPTKIT_DEBUG_PYTHON
 OPT_FLAGS += -DOK_DEBUG_PYTHON
 endif
 
-ORDER=
-ifneq ($(ROWMAJOR), 0)
-ORDER=row_
-OPT_FLAGS += -DOPTKIT_ROWMAJOR
-else
-ifneq ($(COLMAJOR), 0)
-ORDER=col_
-OPT_FLAGS += -DOPTKIT_COLMAJOR
-endif
-endif
-
 CXXFLAGS += $(OPT_FLAGS)
 CUXXFLAGS += $(OPT_FLAGS)
 
@@ -151,7 +140,7 @@ libpogs_sparse:
 	#pogs equil projector $(LINSYSLIBS) libprox
 	# mkdir -p $(OUT) \	
 	# $(CXX) $(CXXFLAGS) -shared -o \
-	# $(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED)  \
+	# $(OUT)$@_$(DEVICETAG)$(PRECISION).$(SHARED)  \
 	# $(POGS_STATIC_DEPS) $(LDFLAGS)
 	# $(OUT)$libok_dense_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
 	# $(OUT)$libok_sparse_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
@@ -160,27 +149,27 @@ libpogs_sparse:
 libprojector: projector $(DENSETARG) $(SPARSETARG)
 	mkdir -p $(OUT)	
 	$(CXX) $(CXXFLAGS) -shared -o \
-	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
+	$(OUT)$@_$(DEVICETAG)$(PRECISION).$(SHARED) \
 	$(PROJ_STATIC_DEPS) $(LDFLAGS)
 
 
 libequil: equil $(DENSETARG) $(SPARSETARG)
 	mkdir -p $(OUT)	
 	$(CXX) $(CXXFLAGS) -shared -o \
-	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED)  \
+	$(OUT)$@_$(DEVICETAG)$(PRECISION).$(SHARED)  \
 	$(EQUIL_STATIC_DEPS) $(LDFLAGS)
 
 
 libok_dense: $(DENSETARG)
 	mkdir -p $(OUT)
 	$(CXX) $(CXXFLAGS) -shared -o \
-	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
+	$(OUT)$@_$(DEVICETAG)$(PRECISION).$(SHARED) \
 	$(DENSESTATIC) $(LDFLAGS)
 
 libok_sparse: $(SPARSETARG)
 	mkdir -p $(OUT)
 	$(CXX) $(CXXFLAGS) -shared -o \
-	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
+	$(OUT)$@_$(DEVICETAG)$(PRECISION).$(SHARED) \
 	$(SPARSESTATIC) $(SPARSE_STATIC_DEPS ) $(LDFLAGS) 
 
 

@@ -122,23 +122,23 @@ int private_api_accessible(void);
 int is_direct(void);
 void set_default_settings(pogs_settings * settings);
 pogs_solver * pogs_init(ok_float * A, size_t m, size_t n,
-	CBLAS_ORDER ord, EQUILIBRATOR equil);
+	enum CBLAS_ORDER ord, EQUILIBRATOR equil);
 void pogs_solve(pogs_solver * solver, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output);
 void pogs_finish(pogs_solver * solver, int reset);
 void pogs(ok_float * A, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output,
-	CBLAS_ORDER ord, EQUILIBRATOR equil);
+	enum CBLAS_ORDER ord, EQUILIBRATOR equil);
 pogs_solver * pogs_load_solver(ok_float * A_equil,
 	ok_float * LLT_factorization, ok_float * d,
 	ok_float * e, ok_float * z, ok_float * z12, ok_float * z_dual,
 	ok_float * z_dual12, ok_float * z_prev, ok_float rho,
-	size_t m, size_t n, CBLAS_ORDER ord);
+	size_t m, size_t n, enum CBLAS_ORDER ord);
 void pogs_extract_solver(pogs_solver * solver, ok_float * A_equil,
 	ok_float * LLT_factorization, ok_float * d,
 	ok_float * e, ok_float * z, ok_float * z12, ok_float * z_dual,
 	ok_float * z_dual12, ok_float * z_prev, ok_float * rho,
-	CBLAS_ORDER ord);
+	enum CBLAS_ORDER ord);
 
 
 #ifdef __cplusplus

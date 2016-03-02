@@ -63,18 +63,19 @@ void __transpose_inplace(sp_matrix * A, SPARSE_TRANSPOSE_DIRECTION dir)
                                 A->ind, A->ptr);
 }
 
-void sp_make_handle(void ** sparse_handle)
+ok_status sp_make_handle(void ** sparse_handle)
 {
         * sparse_handle = OK_NULL;
+        return OPTKIT_SUCCESS;
 }
 
-void sp_destroy_handle(void * sparse_handle)
+ok_status sp_destroy_handle(void * sparse_handle)
 {
-        return;
+        return OPTKIT_SUCCESS;
 }
 
 void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
-        CBLAS_ORDER_t order)
+        enum CBLAS_ORDER order)
 {
         /* Stored forward and adjoint operators */
         A->size1 = m;
@@ -88,7 +89,7 @@ void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
 }
 
 void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
-        CBLAS_ORDER_t order)
+        enum CBLAS_ORDER order)
 {
         sp_matrix_alloc(A, m, n, nnz, order);
         memset(A->val, 0, 2 * nnz * sizeof(ok_float));
@@ -101,6 +102,10 @@ void sp_matrix_free(sp_matrix * A)
         ok_free(A->val);
         ok_free(A->ind);
         ok_free(A->ptr);
+        A->size1 = (size_t) 0;
+        A->size2 = (size_t) 0;
+        A->nnz = (size_t) 0;
+        A->ptrlen = (size_t) 0;
 }
 
 void sp_matrix_memcpy_mm(sp_matrix * A, const sp_matrix * B)
@@ -171,7 +176,8 @@ void sp_matrix_scale(sp_matrix * A, const ok_float alpha)
   CBLAS(scal)( (int) (2 * A->nnz), alpha, A->val, 1);
 }
 
-void __sp_matrix_scale_diag(sp_matrix * A, const vector * v, CBLAS_SIDE_t side)
+void __sp_matrix_scale_diag(sp_matrix * A, const vector * v,
+	enum CBLAS_SIDE side)
 {
   size_t i, offset, offsetnz, stop;
   SPARSE_TRANSPOSE_DIRECTION dir;
@@ -267,7 +273,7 @@ void sp_matrix_print(const sp_matrix * A)
  *      csc, forward op -> adjoint
  *      csc, adjoint op -> forward
  */
-void sp_blas_gemv(void * sparse_handle, CBLAS_TRANSPOSE_t transA,
+void sp_blas_gemv(void * sparse_handle, enum CBLAS_TRANSPOSE transA,
         ok_float alpha, sp_matrix * A, vector * x, ok_float beta, vector * y)
 {
         size_t ptrlen, i;

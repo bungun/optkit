@@ -93,6 +93,8 @@ void vector_free(vector * v)
 {
         if (v != OK_NULL)
                 if (v->data != OK_NULL) ok_free_gpu(v->data);
+        v->size = (size_t) 0;
+        v->stride = (size_t) 0;
 }
 
 void vector_set_all(vector * v, ok_float x)
@@ -320,7 +322,7 @@ inline int __matrix_exists(matrix * A)
         }
 }
 
-void matrix_alloc(matrix * A, size_t m, size_t n, CBLAS_ORDER ord)
+void matrix_alloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord)
 {
         A->size1 = m;
         A->size2 = n;
@@ -329,7 +331,7 @@ void matrix_alloc(matrix * A, size_t m, size_t n, CBLAS_ORDER ord)
         A->order = ord;
 }
 
-void matrix_calloc(matrix * A, size_t m, size_t n, CBLAS_ORDER ord)
+void matrix_calloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord)
 {
         if (!__matrix_exists(A))
                 return;
@@ -343,6 +345,10 @@ void matrix_free(matrix * A)
         if (A == OK_NULL || A->data != OK_NULL)
                 return;
         ok_free_gpu(A->data);
+        A->size1 = (size_t) 0;
+        A->size2 = (size_t) 0;
+        A->ld = (size_t) 0;
+
 }
 
 void matrix_submatrix(matrix * A_sub, matrix * A, size_t i, size_t j, size_t n1,
@@ -407,7 +413,7 @@ void matrix_cast_vector(vector * v, matrix * A
 }
 
 void matrix_view_array(matrix * A, const ok_float *base, size_t n1,
-                       size_t n2, CBLAS_ORDER ord)
+                       size_t n2, enum CBLAS_ORDER ord)
 {
         if (!__matrix_exists(A))
                 return;
@@ -435,7 +441,7 @@ void matrix_memcpy_mm(matrix * A, const matrix * B)
                 return;
         }
 
-        if (A->order == B->order) {
+        if (A->order == B->ovoid rder) {
                 ok_memcpy_gpu(A->data, B->data,
                               A->size1 * A->size2 * sizeof(ok_float));
         } else if (A->order == CblasRowMajor) {
@@ -462,7 +468,8 @@ void matrix_memcpy_mm(matrix * A, const matrix * B)
  *      A->order != ord, ord == CblasColMajor (A row major, B col major)
  *      A->order != ord, ord == CblasRowMajor (A col major, B row major)
  */
-void matrix_memcpy_ma(matrix * A, const ok_float * B, const CBLAS_ORDER ord)
+void matrix_memcpy_ma(matrix * A, const ok_float * B,
+	const enum CBLAS_ORDER ord)
 {
         uint i, j, grid_dim;
         ok_float * row, * col;
@@ -500,7 +507,8 @@ void matrix_memcpy_ma(matrix * A, const ok_float * B, const CBLAS_ORDER ord)
  *      ord != B->order, ord == CblasRowMajor (A row major, B col major)
  *      ord != B->ord, order == CblasColMajor (A col major, B row major)
  */
-void matrix_memcpy_am(ok_float * A, const matrix * B, const CBLAS_ORDER ord)
+void matrix_memcpy_am(ok_float * A, const matrix * B,
+	const enum CBLAS_ORDER ord)
 {
         uint i, j, grid_dim;
         ok_float * row, * col;
@@ -714,8 +722,9 @@ void blas_dot_inplace(void * linalg_handle, const vector * x, const vector * y,
 
 /* BLAS LEVEL 2 */
 
-void blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE transA, ok_float alpha,
-        const matrix *A, const vector *x, ok_float beta, vector *y)
+void blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
+	ok_float alpha, const matrix *A, const vector *x, ok_float beta,
+	vector *y)
 {
         cublasOperation_t tA;
         int s1, s2;
@@ -737,9 +746,10 @@ void blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE transA, ok_float alpha,
         CUDA_CHECK_ERR;
 }
 
-void blas_trsv(void * linalg_handle, CBLAS_UPLO uplo, CBLAS_TRANSPOSE transA,
-        CBLAS_DIAG Diag, const matrix *A, vector *x) {
-
+void blas_trsv(void * linalg_handle, enum CBLAS_UPLO uplo,
+	enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, const matrix *A,
+	vector *x)
+{
         cublasOperation_t tA;
         cublasDiagType_t di;
         cublasFillMode_t ul;
@@ -765,9 +775,9 @@ void blas_trsv(void * linalg_handle, CBLAS_UPLO uplo, CBLAS_TRANSPOSE transA,
 }
 
 
-void blas_sbmv(void * linalg_handle, CBLAS_ORDER order, CBLAS_UPLO uplo,
-        const size_t num_superdiag, const ok_float alpha, const vector * vecA,
-        const vector * x, const ok_float beta, vector * y)
+void blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
+	enum CBLAS_UPLO uplo, const size_t num_superdiag, const ok_float alpha,
+	const vector * vecA, const vector * x, const ok_float beta, vector * y)
 {
         cublasFillMode_t ul;
         if (order == CblasRowMajor)
@@ -791,8 +801,9 @@ void blas_diagmv(void * linalg_handle, const ok_float alpha,
 }
 
 /* BLAS LEVEL 3 */
-void blas_syrk(void * linalg_handle, CBLAS_UPLO uplo, CBLAS_TRANSPOSE transA,
-        ok_float alpha, const matrix * A, ok_float beta, matrix * C)
+void blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
+	enum CBLAS_TRANSPOSE transA, ok_float alpha, const matrix * A,
+	ok_float beta, matrix * C)
 {
 
         cublasOperation_t tA;
@@ -824,8 +835,8 @@ void blas_syrk(void * linalg_handle, CBLAS_UPLO uplo, CBLAS_TRANSPOSE transA,
         CUDA_CHECK_ERR;
 }
 
-void blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE transA,
-        CBLAS_TRANSPOSE transB, ok_float alpha, const matrix * A,
+void blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
+        enum CBLAS_TRANSPOSE transB, ok_float alpha, const matrix * A,
         const matrix * B, ok_float beta, matrix * C)
 {
         cublasOperation_t tA, tB;
@@ -859,8 +870,8 @@ void blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE transA,
 }
 
 
-void blas_trsm(void * linalg_handle, CBLAS_SIDE Side, CBLAS_UPLO uplo,
-        CBLAS_TRANSPOSE transA, CBLAS_DIAG Diag, ok_float alpha,
+void blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side, enum CBLAS_UPLO uplo,
+        enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, ok_float alpha,
         const matrix *A, matrix *B)
 {
         printf("Method `blas_trsm()` not implemented for GPU\n");
@@ -872,7 +883,8 @@ void blas_trsm(void * linalg_handle, CBLAS_SIDE Side, CBLAS_UPLO uplo,
  */
 
 /* cholesky decomposition of a single block */
-__global__ void __block_chol(ok_float * A, uint iter, uint ld, CBLAS_ORDER ord)
+__global__ void __block_chol(ok_float * A, uint iter, uint ld,
+	enum CBLAS_ORDER ord)
 {
 
         uint col, row, mat_dim, global_col, global_row, i;
@@ -887,7 +899,7 @@ __global__ void __block_chol(ok_float * A, uint iter, uint ld, CBLAS_ORDER ord)
         global_col = iter * kTileSize + col;
         global_row = iter * kTileSize + row;
 
-        void (* get)(ok_float * A, uint i, uint j, uint stride) =
+        ok_float& (* get)(ok_float * A, uint i, uint j, uint stride) =
                 (ord == CblasRowMajor) ? __matrix_get_r : __matrix_get_c;
 
         (L, row, col, kTileLD) = get(A, global_row, global_col, ld);
@@ -920,7 +932,7 @@ __global__ void __block_chol(ok_float * A, uint iter, uint ld, CBLAS_ORDER ord)
 }
 
 __global__ void __block_trsv(ok_float * A, uint iter, uint n,
-                             uint ld, CBLAS_ORDER ord)
+                             uint ld, enum CBLAS_ORDER ord)
 {
         uint tile_idx, row, global_row, global_col, i, j;
         const uint kTileLD = kTileSize + 1u;
@@ -932,7 +944,7 @@ __global__ void __block_trsv(ok_float * A, uint iter, uint n,
         global_col = iter * kTileSize;
         global_row = iter * kTileSize + row;
 
-        void (* get)(ok_float * A, uint i, uint j, uint stride) =
+        ok_float& (* get)(ok_float * A, uint i, uint j, uint stride) =
                 (ord == CblasRowMajor) ? __matrix_get_r : __matrix_get_c;
 
          * Load A -> L column-wise.

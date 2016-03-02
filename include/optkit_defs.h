@@ -9,6 +9,7 @@
 
 #ifdef __CUDACC__
 #include "cublas_v2.h"
+#include <cusparse.h>
 #endif
 
 
@@ -35,6 +36,13 @@ extern "C" {
 
 typedef unsigned int uint;
 typedef int ok_int;
+typedef enum optkit_status {
+	OPTKIT_SUCCESS = 0,
+	OPTKIT_ERROR = 1,
+	OPTKIT_ERROR_CUDA = 2,
+	OPTKIT_ERROR_CUBLAS = 3,
+	OPTKIT_ERROR_CUSPARSE = 4
+} ok_status;
 
 #ifndef FLOAT
         #define CBLAS(x) cblas_d ## x
@@ -42,7 +50,6 @@ typedef int ok_int;
         typedef double ok_float;
         #define MACHINETOL (ok_float) 10e-10
         #define OK_NAN ((ok_float)0x7ff8000000000000)
-        #endif
         #define OK_FLOAT_MAX FLT_MAX
 #else
         #define CBLAS(x) cblas_s ## x
@@ -51,15 +58,6 @@ typedef int ok_int;
         #define MACHINETOL (ok_float) 10e-5
         #define OK_NAN ((ok_float)0x7fc00000)
         #define OK_FLOAT_MAX DBL_MAX
-#endif
-
-
-#if defined(OPTKIT_ROWMAJOR)
-#define OPTKIT_ORDER 101
-#elif defined(OPTKIT_COLMAJOR)
-#define OPTKIT_ORDER 102
-#else
-#undef OPTKIT_ORDER
 #endif
 
 #define kZero (ok_float) 0

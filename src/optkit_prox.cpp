@@ -16,7 +16,7 @@ void function_vector_alloc(FunctionVector * f, size_t n)
 {
 	if (f->objectives != OK_NULL) ok_free(f->objectives);
 	f->size = n;
-	f->objectives = malloc(n * sizeof(FunctionObj));
+	f->objectives = (FunctionObj *) malloc(n * sizeof(FunctionObj));
 }
 
 void function_vector_calloc(FunctionVector * f, size_t n)
@@ -60,6 +60,7 @@ void function_vector_mul(FunctionVector * f, const vector * v)
 	size_t i;
 	vector el = (vector){f->size,
 		sizeof(FunctionObj) / sizeof(ok_float), OK_NULL};
+
 
 	el.data = &(f->objectives->a);
 	for (i = 0; i < f->size; ++i)

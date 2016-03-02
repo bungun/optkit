@@ -1,4 +1,3 @@
-from optkit.types import ok_function_enums as fcn_enums
 from numpy import log, exp, cos, arccos, sign, inf, nan,\
 					 zeros, copy as np_copy
 
@@ -7,40 +6,40 @@ low-level utilities
 """
 class UtilMakeCFunctionVector(object):
 	def __init__(self, lowtypes, proxlib):
-		self.lowtypes = lowtypes
 		self.proxlib = proxlib
 	def __call__(self, n=None):
 		if n is None:
-			return self.lowtypes.function_vector(0,None)
+			return self.proxlib.function_vector(0, None)
 		elif isinstance(n, int):
-			f_ = self.lowtypes.function_vector(0,None)
+			f_ = self.proxlib.function_vector(0,None)
 			self.proxlib.function_vector_calloc(f_, n)
 			return f_
 		else:
 			return None
-			# TODO: error message (type, dims)		
+			# TODO: error message (type, dims)
 
 class UtilReleaseCFunctionVector(object):
-	def __init__(self, lowtypes, proxlib):
-		self.lowtypes = lowtypes
+	def __init__(self, proxlib):
 		self.proxlib = proxlib
 	def __call__(self, f):
-		if isinstance(f, self.lowtypes.function_vector):
+		if isinstance(f, self.proxlib.function_vector):
 			self.proxlib.function_vector_free(f)
 
 
 """
 Python function/prox eval
 """
-# ref: http://keithbriggs.info/software/LambertW.c
 def lambertw(x):
+	"""
+	ref: http://keithbriggs.info/software/LambertW.c
+	"""
 	EM1 = 0.3678794411714423215955237701614608
   	E = 2.7182818284590452353602874713526625
   	if x == inf or x == nan or x < -EM1:
   		raise ValueError("bad argument ({}) to lambertw.\n"
   						"dom[lambert w]=[-{},infty)".format(
   						x,EM1))
-  	elif x == 0: 
+  	elif x == 0:
   		return 0
   	elif x < -EM1 + 1e-4:
   		q = x + EM1
@@ -61,19 +60,20 @@ def lambertw(x):
   		else:
   			w = log(x)
 	  	if x > 3:
-	  		w = -log(w) 
+	  		w = -log(w)
 	  	for i in xrange(10):
-	  		e=exp(w)	
+	  		e=exp(w)
 	  		t = w*e-x
 	  		p = w+1
 	  		t /= (e*p-0.5*(p+1)*(t/p))
 	  		w -= t
 	  	return w
 
-
-# /* Find the root of a cubic x^3 + px^2 + qx + r = 0 with a single positive root.
-# ref: http://math.stackexchange.com/questions/60376 */
 def cubicsolve(p,q,r):
+	"""
+	Find the root of a cubic x^3 + px^2 + qx + r = 0 with a single positive root
+	ref: http://math.stackexchange.com/questions/60376
+	"""
 	s = p/3.
 	a = -pow(s, 2) + q/3.
 	b = pow(s, 3) - s * q/2. + r/2.
@@ -127,8 +127,6 @@ def proxlog(xi,rhoi):
 
 	return x
 
-
-
 def enum_to_func(e):
 	if e == 0: return 'Zero'
 	if e == 1: return 'Abs'
@@ -147,13 +145,12 @@ def enum_to_func(e):
 	if e == 14: return 'Recipr'
 	if e == 15: return 'Square'
 
-# ------------------------------------------------------------- #
-# assumes f has a field f.py, an list of FunctionObject			#
-# instances, where each element has fields a, b, c, d and e of 	#
-# type float32/64 and a field h of type uint 					#
-# ------------------------------------------------------------- #
-def func_eval_python(f,x):
 
+def func_eval_python(f, x):
+	"""
+	Assumes f is a list of FunctionObject instances, where each element has
+	fields a, b, c, d and e of type float32/64 and a field h of type uint
+	"""
 	def ffunc(h, xi):
 	 	func = enum_to_func(h)
 		if func == 'Abs':
@@ -184,59 +181,52 @@ def func_eval_python(f,x):
 			return 0
 		return h
 
-	def feval(f_, x_):
-		xi = f_.a * x_ - f_.b
-		xi = ffunc(f_.h, xi)
-		return f_.c * x + f_.d * x_ + f_.e * x_ * x_
-
 	val = 0
 	for i, ff in enumerate(f):
-		xi = ff.a * x[i] - ff.b 
+		xi = ff.a * x[i] - ff.b
 		xi = ffunc(ff.h, xi)
-		val += ff.c * xi + ff.d * x[i] + ff.e * x[i] * x[i]
+		val += ff.c * xi + ff.d * x[i] + 0.5 * ff.e * x[i] * x[i]
 	return val
 
 
-
-# ------------------------------------------------------------- #
-# assumes f has a field f.py, a list of FunctionObject			#
-# instances, where each element has fields a, b, c, d and e of 	#
-# type float32/64 and a field h of type uint 					#
-# ------------------------------------------------------------- #
-def prox_eval_python(f,rho,x):
+def prox_eval_python(f, rho, x):
+	"""
+	Assumes f is a list of FunctionObject instances, where each element has
+	fields a, b, c, d and e of type float32/64 and a field h of type uint
+	"""
 	def pfunc(h, xi, rhoi):
 	 	func = enum_to_func(h)
 		if func =='Abs':
-			return max(xi-1./rhoi,0)+min(xi+1./rhoi,0)
+			return max(xi - 1./rhoi, 0) + min(xi + 1./rhoi, 0)
 		elif func == 'NegEntr':
-			return lambertw(exp(rhoi*xi-1)*rhoi)/rhoi
+			return lambertw(exp(rhoi*xi - 1) * rhoi) / rhoi
 		elif func == 'Exp':
-			return xi-lambertw(exp(xi)/rhoi)
+			return xi - lambertw(exp(xi) / rhoi)
 		elif func == 'Huber':
-			return xi*rhoi/(1.+rhoi) if abs(xi)<(1+1./rhoi) \
-										else xi-sign(xi)/rhoi
+			return xi * rhoi / (1.+rhoi) if abs(xi) < (1 + 1./rhoi) \
+				else xi - sign(xi) / rhoi
 		elif func == 'Identity':
 			return xi - 1./rhoi
 		elif func == 'IndBox01':
-			return min(max(xi,0),1)
+			return min(max(xi, 0), 1)
 		elif func == 'IndEq0':
 			return 0
 		elif func == 'IndGe0':
-			return max(xi,0)
+			return max(xi, 0)
 		elif func == 'IndLe0':
-			return min(xi,0)
+			return min(xi, 0)
 		elif func == 'Logistic':
 			fprox = proxlog(xi, rhoi)
 		elif func == 'MaxNeg0':
-			return xi+1./rhoi if xi <= -1./rhoi else max(xi,0)
+			return xi + 1./rhoi if xi <= -1./rhoi else max(xi, 0)
 		elif func == 'MaxPos0':
-			return xi-1./rhoi if xi >= 1./rhoi else min(xi,0)
+			return xi - 1./rhoi if xi >= 1./rhoi else min(xi ,0)
 		elif func == 'NegLog':
-			return (xi + (xi**2 + 4/rhoi)**0.5)/2
+			return (xi + (xi**2 + 4/rhoi)**0.5) / 2
 		elif func == 'Recipr':
-			return cubicsolve(-max(xi,0),0,-1./rhoi)
+			return cubicsolve(-max(xi, 0), 0, -1./rhoi)
 		elif func == 'Square':
-			return rhoi * xi/(1.+rhoi)	
+			return rhoi * xi / (1. + rhoi)
 		else:
 			return xi
 		return fprox
@@ -246,7 +236,7 @@ def prox_eval_python(f,rho,x):
 		rho_ = (f_.e + rho) / (f_.c * f_.a * f_.a)
 		x_ = pfunc(f_.h, x_, rho_)
 		return (x_ + f_.b) / f_.a
-		
+
 	x_out = zeros(len(f))
 	x_out[:] = map(fprox, f, x)
 

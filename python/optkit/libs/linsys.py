@@ -1,56 +1,77 @@
-from ctypes import CDLL, c_int, c_uint, c_size_t, c_void_p
-from subprocess import check_output
-from os import path, uname, getenv
-from numpy import float32
-from site import getsitepackages
+from numpy import float32, float64
+from ctypes import c_int, c_uint, c_size_t, c_void_p, c_float, c_double, \
+	POINTER, Structure
+from optkit.libs.loader import retrieve_libs, validate_lib
 
 class DenseLinsysLibs(object):
 	def __init__(self):
-		self.libs = {}
-		local_c_build = path.abspath(path.join(path.dirname(__file__),
-			'..', '..', '..', 'build'))
-		search_results = ""
-		use_local = getenv('OPTKIT_USE_LOCALLIBS', 0)
-
-		# NB: no windows support
-		ext = "dylib" if uname()[0] == "Darwin" else "so"
-		for device in ['gpu', 'cpu']:
-			for precision in ['32', '64']:
-				for order in ['', 'col_', 'row_']:
-					lib_tag = '{}{}{}'.format(order, device, precision)
-					lib_name = 'libok_dense_{}{}{}.{}'.format(
-						order, device, precision, ext)
-					lib_path = getsitepackages()[0]
-					if not use_local and path.exists(path.join(lib_path, lib_name)):
-						lib_path = path.join(lib_path, lib_name)
-					else:
-						lib_path = path.join(local_c_build, lib_name)
-
-					try:
-						lib = CDLL(lib_path)
-						self.libs[lib_tag]=lib
-					except (OSError, IndexError):
-						search_results += str("library {} not found at {}.\n".format(
-							lib_name, lib_path))
-						self.libs[lib_tag] = None
-
+		self.libs, search_results = retrieve_libs('libok_dense_')
 		if all([self.libs[k] is None for k in self.libs]):
 			raise ValueError('No backend libraries were located:\n{}'.format(
 				search_results))
 
-	def get(self, lowtypes, GPU=False):
-		device = 'gpu' if GPU else 'cpu'
-		precision = '32' if lowtypes.FLOAT_CAST == float32 else '64'
-		lib_key = '{}'.format(lowtypes.order)
-		if lib_key != '': lib_key += '_'
-		lib_key += '{}{}'.format(device, precision)
+	def get(self, single_precision=False, gpu=False):
+		device = 'gpu' if gpu else 'cpu'
+		precision = '32' if single_precision else '64'
+		lib_key = '{}{}'.format(device, precision)
+		if lib_key not in self.libs:
+			return None
+		elif self.libs[lib_key] is None:
+			return None
 
-		if self.libs[lib_key] is not None:
-			lib = self.libs[lib_key]
-			ok_float = lowtypes.ok_float
-			ok_float_p = lowtypes.ok_float_p
-			vector_p = lowtypes.vector_p
-			matrix_p = lowtypes.matrix_p
+		lib = self.libs[lib_key]
+		if lib.INITIALIZED:
+			return lib
+		else:
+			class OKEnums(object):
+				CblasRowMajor = c_uint(101).value
+				CblasColMajor = c_uint(102).value
+				CblasNoTrans = c_uint(111).value
+				CblasTrans = c_uint(112).value
+				CblasConjTrans = c_uint(113).value
+				CblasUpper = c_uint(121).value
+				CblasLower = c_uint(122).value
+				CblasNonUnit = c_uint(131).value
+				CblasUnit = c_uint(132).value
+				CblasLeft = c_uint(141).value
+				CblasRight = c_uint(142).value
+
+			lib.enums = OKEnums()
+
+			# low-level c types, as defined for optkit
+			# ----------------------------------------
+			ok_float = lib.ok_float = c_float if single_precision else c_double
+			ok_int = lib.ok_int = c_int
+
+			lib.pyfloat = float32 if single_precision else float64
+
+			# pointers to C types
+			c_int_p = lib.c_int_p = POINTER(c_int)
+			ok_float_p = lib.ok_float_p = POINTER(ok_float)
+			ok_int_p = lib.ok_int_p = POINTER(ok_int)
+
+			# low-level optkit types
+			# ----------------------
+
+			# vector struct
+			class ok_vector(Structure):
+				_fields_ = [('size', c_size_t),
+							('stride', c_size_t),
+							('data', ok_float_p)]
+			lib.vector = ok_vector
+			vector_p = lib.vector_p = POINTER(lib.vector)
+
+			# matrix struct
+			class ok_matrix(Structure):
+				_fields_ = [('size1', c_size_t),
+							('size2', c_size_t),
+							('ld', c_size_t),
+							('data', ok_float_p),
+							('order', c_uint)]
+			matrix = lib.matrix = ok_matrix
+			matrix_p = lib.matrix_p = POINTER(lib.matrix)
+
+
 			# Vector
 			# ------
 			## arguments
@@ -58,7 +79,8 @@ class DenseLinsysLibs(object):
 			lib.vector_calloc.argtypes = [vector_p, c_size_t]
 			lib.vector_free.argtypes = [vector_p]
 			lib.vector_set_all.argtypes = [vector_p, ok_float]
-			lib.vector_subvector.argtypes = [vector_p, vector_p, c_size_t, c_size_t]
+			lib.vector_subvector.argtypes = [vector_p, vector_p, c_size_t,
+												c_size_t]
 			lib.vector_view_array.argtypes = [vector_p, ok_float_p, c_size_t]
 			lib.vector_memcpy_vv.argtypes = [vector_p, vector_p]
 			lib.vector_memcpy_va.argtypes = [vector_p, ok_float_p, c_size_t]
@@ -105,11 +127,13 @@ class DenseLinsysLibs(object):
 			lib.matrix_alloc.argtypes = [matrix_p, c_size_t, c_size_t, c_uint]
 			lib.matrix_calloc.argtypes = [matrix_p, c_size_t, c_size_t, c_uint]
 			lib.matrix_free.argtypes = [matrix_p]
-			lib.matrix_submatrix.argtypes = [matrix_p, matrix_p, c_size_t, c_size_t, c_size_t, c_size_t]
+			lib.matrix_submatrix.argtypes = [matrix_p, matrix_p, c_size_t,
+												c_size_t, c_size_t, c_size_t]
 			lib.matrix_row.argtypes = [vector_p, matrix_p, c_size_t]
 			lib.matrix_column.argtypes = [vector_p, matrix_p, c_size_t]
 			lib.matrix_diagonal.argtypes = [vector_p, matrix_p]
-			lib.matrix_view_array.argtypes = [matrix_p, ok_float_p, c_size_t, c_size_t, c_uint]
+			lib.matrix_view_array.argtypes = [matrix_p, ok_float_p, c_size_t,
+												c_size_t, c_uint]
 			lib.matrix_set_all.argtypes = [matrix_p, ok_float]
 			lib.matrix_memcpy_mm.argtypes = [matrix_p, matrix_p]
 			lib.matrix_memcpy_ma.argtypes = [matrix_p, ok_float_p, c_uint]
@@ -153,18 +177,26 @@ class DenseLinsysLibs(object):
 			lib.blas_scal.argtypes = [c_void_p, ok_float, vector_p]
 			lib.blas_asum.argtypes = [c_void_p, vector_p]
 			lib.blas_dot.argtypes = [c_void_p, vector_p, vector_p]
-			lib.blas_gemv.argtypes = [c_void_p, c_uint, ok_float, matrix_p, vector_p, ok_float, vector_p]
-			lib.blas_trsv.argtypes = [c_void_p, c_uint, c_uint, c_uint, matrix_p, vector_p]
-			lib.blas_sbmv.argtypes = [c_void_p, c_uint, c_uint, c_size_t, ok_float, vector_p, vector_p, ok_float, vector_p]
-			lib.blas_diagmv.argtypes = [c_void_p, ok_float, vector_p, vector_p, ok_float, vector_p]
-			lib.blas_syrk.argtypes = [c_void_p, c_uint, c_uint, ok_float, matrix_p, ok_float, matrix_p]
-			lib.blas_gemm.argtypes = [c_void_p, c_uint, c_uint, ok_float, matrix_p, matrix_p, ok_float, matrix_p]
-			lib.blas_trsm.argtypes = [c_void_p, c_uint, c_uint, c_uint, c_uint, ok_float, matrix_p, matrix_p]
+			lib.blas_gemv.argtypes = [c_void_p, c_uint, ok_float, matrix_p,
+										vector_p, ok_float, vector_p]
+			lib.blas_trsv.argtypes = [c_void_p, c_uint, c_uint, c_uint,
+										matrix_p, vector_p]
+			lib.blas_sbmv.argtypes = [c_void_p, c_uint, c_uint, c_size_t,
+										ok_float, vector_p, vector_p, ok_float,
+										vector_p]
+			lib.blas_diagmv.argtypes = [c_void_p, ok_float, vector_p, vector_p,
+										ok_float, vector_p]
+			lib.blas_syrk.argtypes = [c_void_p, c_uint, c_uint, ok_float,
+										matrix_p, ok_float, matrix_p]
+			lib.blas_gemm.argtypes = [c_void_p, c_uint, c_uint, ok_float,
+										matrix_p, matrix_p, ok_float, matrix_p]
+			lib.blas_trsm.argtypes = [c_void_p, c_uint, c_uint, c_uint, c_uint,
+										ok_float, matrix_p, matrix_p]
 
 
 			## return values
-			lib.blas_make_handle.restype = None
-			lib.blas_destroy_handle.restype = None
+			lib.blas_make_handle.restype = c_uint
+			lib.blas_destroy_handle.restype = c_uint
 			lib.blas_axpy.restype = None
 			lib.blas_nrm2.restype = ok_float
 			lib.blas_scal.restype = None
@@ -191,60 +223,57 @@ class DenseLinsysLibs(object):
 			# DEVICE
 			# ------
 			lib.ok_device_reset.argtypes = []
-			lib.ok_device_reset.restype = None
+			lib.ok_device_reset.restype = c_uint
 
+			lib.FLOAT = single_precision
+			lib.GPU = gpu
+			lib.INITIALIZED = True
 			return lib
 
 
 class SparseLinsysLibs(object):
 	def __init__(self):
-		self.libs = {}
-		local_c_build = path.abspath(path.join(path.dirname(__file__),
-			'..', '..', '..', 'build'))
-		search_results = ""
-		use_local = getenv('OPTKIT_USE_LOCALLIBS', 0)
-
-		# NB: no windows support
-		ext = "dylib" if uname()[0] == "Darwin" else "so"
-		for device in ['gpu', 'cpu']:
-			for precision in ['32', '64']:
-				for order in ['', 'col_', 'row_']:
-					lib_tag = '{}{}{}'.format(order, device, precision)
-					lib_name = 'libok_sparse_{}{}{}.{}'.format(
-						order, device, precision, ext)
-					lib_path = getsitepackages()[0]
-					if not use_local and path.exists(path.join(lib_path, lib_name)):
-						lib_path = path.join(lib_path, lib_name)
-					else:
-						lib_path = path.join(local_c_build, lib_name)
-
-					try:
-						lib = CDLL(lib_path)
-						self.libs[lib_tag]=lib
-					except (OSError, IndexError):
-						search_results += str("library {} not found at {}.\n".format(
-							lib_name, lib_path))
-						self.libs[lib_tag] = None
-
+		self.libs, search_results = retrieve_libs('libok_sparse_')
 		if all([self.libs[k] is None for k in self.libs]):
 			raise ValueError('No backend libraries were located:\n{}'.format(
 				search_results))
 
-	def get(self, lowtypes, GPU=False):
-		device = 'gpu' if GPU else 'cpu'
-		precision = '32' if lowtypes.FLOAT_CAST == float32 else '64'
-		lib_key = '{}'.format(lowtypes.order)
-		if lib_key != '': lib_key += '_'
-		lib_key += '{}{}'.format(device, precision)
+	def get(self, denselib, single_precision=False, gpu=False):
+		device = 'gpu' if gpu else 'cpu'
+		precision = '32' if single_precision else '64'
+		lib_key = '{}{}'.format(device, precision)
 
-		if self.libs[lib_key] is not None:
-			lib = self.libs[lib_key]
-			ok_float = lowtypes.ok_float
-			ok_float_p = lowtypes.ok_float_p
-			ok_int = lowtypes.ok_int
-			ok_int_p = lowtypes.ok_int_p
-			vector_p = lowtypes.vector_p
-			sparse_matrix_p = lowtypes.sparse_matrix_p
+		if lib_key not in self.libs:
+			return None
+		elif self.libs[lib_key] is None:
+			return None
+
+		validate_lib(denselib, 'denselib', 'vector_calloc', type(self),
+			single_precision, gpu)
+
+		lib = self.libs[lib_key]
+		if lib.INITIALIZED:
+			return lib
+		else:
+			ok_float = denselib.ok_float
+			ok_float_p = lib.ok_float_p = denselib.ok_float_p
+			ok_int = denselib.ok_int
+			ok_int_p = lib.ok_int_p = denselib.ok_int_p
+			vector_p = denselib.vector_p
+
+			# sparse matrix struct
+			class ok_sparse_matrix(Structure):
+				_fields_ = [('size1', c_size_t),
+							('size2', c_size_t),
+							('nnz', c_size_t),
+							('ptrlen', c_size_t),
+							('val', ok_float_p),
+							('ind', ok_int_p),
+							('ptr', ok_int_p),
+							('order', c_uint)]
+
+			lib.sparse_matrix = ok_sparse_matrix
+			sparse_matrix_p = lib.sparse_matrix_p = POINTER(lib.sparse_matrix)
 
 			# Sparse Handle
 			# -------------
@@ -253,32 +282,40 @@ class SparseLinsysLibs(object):
 			lib.sp_destroy_handle.argtypes = [c_void_p]
 
 			## return values
-			lib.sp_make_handle.restype = None
-			lib.sp_destroy_handle.restype = None
+			lib.sp_make_handle.restype = c_uint
+			lib.sp_destroy_handle.restype = c_uint
 
 
 			# Sparse Matrix
 			# -------------
-
 			## arguments
-			lib.sp_matrix_alloc.argtypes = [sparse_matrix_p, c_size_t, c_size_t, c_size_t, c_uint]
-			lib.sp_matrix_calloc.argtypes = [sparse_matrix_p, c_size_t, c_size_t, c_size_t, c_uint]
+			lib.sp_matrix_alloc.argtypes = [sparse_matrix_p, c_size_t, c_size_t,
+											c_size_t, c_uint]
+			lib.sp_matrix_calloc.argtypes = [sparse_matrix_p, c_size_t,
+											 c_size_t, c_size_t, c_uint]
 			lib.sp_matrix_free.argtypes = [sparse_matrix_p]
-			lib.sp_matrix_memcpy_mm.argtypes = [sparse_matrix_p, sparse_matrix_p]
-			lib.sp_matrix_memcpy_ma.argtypes = [c_void_p, sparse_matrix_p, ok_float_p, ok_int_p, ok_int_p]
-			lib.sp_matrix_memcpy_am.argtypes = [ok_float_p, ok_int_p, ok_int_p, sparse_matrix_p]
-			lib.sp_matrix_memcpy_vals_mm.argtypes = [sparse_matrix_p, sparse_matrix_p]
-			lib.sp_matrix_memcpy_vals_ma.argtypes = [c_void_p, sparse_matrix_p, ok_float_p]
-			lib.sp_matrix_memcpy_vals_am.argtypes = [ok_float_p, sparse_matrix_p]
+			lib.sp_matrix_memcpy_mm.argtypes = [sparse_matrix_p,
+												sparse_matrix_p]
+			lib.sp_matrix_memcpy_ma.argtypes = [c_void_p, sparse_matrix_p,
+												ok_float_p, ok_int_p, ok_int_p]
+			lib.sp_matrix_memcpy_am.argtypes = [ok_float_p, ok_int_p, ok_int_p,
+												sparse_matrix_p]
+			lib.sp_matrix_memcpy_vals_mm.argtypes = [sparse_matrix_p,
+													 sparse_matrix_p]
+			lib.sp_matrix_memcpy_vals_ma.argtypes = [c_void_p, sparse_matrix_p,
+													 ok_float_p]
+			lib.sp_matrix_memcpy_vals_am.argtypes = [ok_float_p,
+													 sparse_matrix_p]
 			lib.sp_matrix_abs.argtypes = [sparse_matrix_p]
 			lib.sp_matrix_pow.argtypes = [sparse_matrix_p, ok_float]
 			lib.sp_matrix_scale.argtypes = [sparse_matrix_p, ok_float]
-			lib.sp_matrix_scale_left.argtypes = [c_void_p, sparse_matrix_p, vector_p]
-			lib.sp_matrix_scale_right.argtypes = [c_void_p, sparse_matrix_p, vector_p]
+			lib.sp_matrix_scale_left.argtypes = [c_void_p, sparse_matrix_p,
+												 vector_p]
+			lib.sp_matrix_scale_right.argtypes = [c_void_p, sparse_matrix_p,
+												  vector_p]
 			lib.sp_matrix_print.argtypes = [sparse_matrix_p]
 
 			## return values
-			lib.sp_make_handle.restype = None
 			lib.sp_matrix_alloc.restype = None
 			lib.sp_matrix_calloc.restype = None
 			lib.sp_matrix_free.restype = None
@@ -299,9 +336,14 @@ class SparseLinsysLibs(object):
 			# -----------
 
 			## arguments
-			lib.sp_blas_gemv.argtypes = [c_void_p, c_uint, ok_float, sparse_matrix_p, vector_p, ok_float, vector_p]
+			lib.sp_blas_gemv.argtypes = [c_void_p, c_uint, ok_float,
+										 sparse_matrix_p, vector_p, ok_float,
+										 vector_p]
 
 			## return values
 			lib.sp_blas_gemv.restype = None
 
+			lib.FLOAT = single_precision
+			lib.GPU = gpu
+			lib.INITIALIZED = True
 			return lib

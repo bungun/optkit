@@ -13,7 +13,7 @@ void equillib_version(int * maj, int * min, int * change, int * status)
 }
 
 void sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out,
-	vector * d, vector * e, CBLAS_ORDER_t ord)
+	vector * d, vector * e, enum CBLAS_ORDER ord)
 {
 	size_t m = A_out->size1, n = A_out->size2, k, NUMITER=10;
 	ok_float sqrtm, sqrtn, nrm_d2, nrm_e2, fac;
@@ -21,11 +21,13 @@ void sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out,
 	sqrtm = MATH(sqrt)( (ok_float) m);
 	sqrtn = MATH(sqrt)( (ok_float) n);
 
+
 	if (A_in == A_out->data) {
 		printf("Error: Sinkhorn-Knopp equilibration requires \
 			distinct arrays A_in and A_out.");
 		return;
 	}
+
 	matrix_memcpy_ma(A_out, A_in, ord);
 	matrix_abs(A_out);
 	vector_set_all(d, kOne);
@@ -55,7 +57,7 @@ void sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out,
 }
 
 void dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out,
-	vector * d, vector * e, CBLAS_ORDER_t ord)
+	vector * d, vector * e, enum CBLAS_ORDER ord)
 {
 	size_t k, m = A_out->size1, n = A_out->size2;
 	vector a = (vector){0, 0, OK_NULL};

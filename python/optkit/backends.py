@@ -11,7 +11,7 @@ import gc
 
 # CPU32, CPU64, GPU32, GPU64
 class OKBackend(object):
-	def __init__(self, GPU=False, single_precision=False):
+	def __init__(self, gpu=False, single_precision=False):
 		self.version = None
 		self.device = None
 		self.precision = None
@@ -37,54 +37,56 @@ class OKBackend(object):
 		self.dense_blas_handle = c_void_p(0)
 		self.sparse_handle = c_void_p(0)
 
-		self.__LIBGUARD_ON__ = False
-		self.__HANDLES_MADE__ = False
-		self.__CSOLVER_COUNT__ = 0
-		self.__COBJECT_COUNT__ = 0
+		self.__LIBGUARD_ON = False
+		self.__HANDLES_MADE = False
+		self.__CSOLVER_COUNT = 0
+		self.__COBJECT_COUNT = 0
 		self.__set_lib()
 
 		self.make_linalg_contexts()
 
 	def reset(self):
-		self.__LIBGUARD_ON__ = False
+		self.__LIBGUARD_ON = False
 		self.destroy_linalg_contexts()
 
 	def make_linalg_contexts(self):
-		if not self.__HANDLES_MADE__:
+		if not self.__HANDLES_MADE:
 			self.destroy_linalg_contexts()
-			if self.dense is not None: self.dense.blas_make_handle(byref(self.dense_blas_handle))
-			if self.sparse is not None: self.sparse.sp_make_handle(byref(self.sparse_handle))
-			self.__HANDLES_MADE__ = True
+			if self.dense is not None: self.dense.blas_make_handle(byref(
+				self.dense_blas_handle))
+			if self.sparse is not None: self.sparse.sp_make_handle(byref(
+				self.sparse_handle))
+			self.__HANDLES_MADE = True
 
-			self.make_cvector = UtilMakeCVector(self.lowtypes, self.dense)
-			self.release_cvector = UtilReleaseCVector(self.lowtypes, self.dense)
-			self.make_cmatrix = UtilMakeCMatrix(self.lowtypes, self.dense)
-			self.release_cmatrix = UtilReleaseCMatrix(self.lowtypes, self.dense)
-			self.make_csparsematrix = UtilMakeCSparseMatrix(self.sparse_handle, self.lowtypes, self.sparse)
-			self.release_csparsematrix = UtilReleaseCSparseMatrix(self.lowtypes, self.sparse)
-			self.make_cfunctionvector = UtilMakeCFunctionVector(self.lowtypes, self.prox)
-			self.release_cfunctionvector = UtilReleaseCFunctionVector(self.lowtypes, self.prox)
-
+			self.make_cvector = UtilMakeCVector(self.dense)
+			self.release_cvector = UtilReleaseCVector(self.dense)
+			self.make_cmatrix = UtilMakeCMatrix(self.dense)
+			self.release_cmatrix = UtilReleaseCMatrix(self.dense)
+			self.make_csparsematrix = UtilMakeCSparseMatrix(self.dense,
+				self.sparse)
+			self.release_csparsematrix = UtilReleaseCSparseMatrix(self.sparse)
+			self.make_cfunctionvector = UtilMakeCFunctionVector(self.prox)
+			self.release_cfunctionvector = UtilReleaseCFunctionVector(self.prox)
 
 	def destroy_linalg_contexts(self):
-		if self.__COBJECT_COUNT__ > 0:
+		if self.__COBJECT_COUNT > 0:
 			gc.collect()
-			if self.__COBJECT_COUNT__ > 0:
+			if self.__COBJECT_COUNT > 0:
 				RuntimeError(str("All optkit objects "
 					"(Vector, Matrix, SparseMatrix, FunctionVector) "
 					"must be out of scope to reset backend "
 					"linear algebra contexts"))
 
-		if self.__HANDLES_MADE__:
-			if self.dense is not None: 
+		if self.__HANDLES_MADE:
+			if self.dense is not None:
 				self.dense.blas_destroy_handle(self.dense_blas_handle)
-			if self.sparse is not None: 
+			if self.sparse is not None:
 				self.sparse.sp_destroy_handle(self.sparse_handle)
-			self.__HANDLES_MADE__ = False
+			self.__HANDLES_MADE = False
 		if self.device_reset_allowed:
 			self.dense.ok_device_reset()
 
-		self.make_cvector = None 
+		self.make_cvector = None
 		self.release_cvector = None
 		self.make_cmatrix = None
 		self.release_cmatrix = None
@@ -94,31 +96,31 @@ class OKBackend(object):
 		self.release_cfunctionvector = None
 
 
-	@property	
+	@property
 	def device_reset_allowed(self):
-		return self.__CSOLVER_COUNT__ == 0 and not self.__HANDLES_MADE__
+		return self.__CSOLVER_COUNT == 0 and not self.__HANDLES_MADE
 
 	@property
 	def linalg_contexts_exist(self):
-		return self.__HANDLES_MADE__
+		return self.__HANDLES_MADE
 
 	@property
 	def libguard_active(self):
-		return self.__LIBGUARD_ON__
+		return self.__LIBGUARD_ON
 
 	def increment_cobject_count(self):
-		self.__COBJECT_COUNT__ += 1
-		self.__LIBGUARD_ON__ = True
+		self.__COBJECT_COUNT += 1
+		self.__LIBGUARD_ON = True
 
 	def decrement_cobject_count(self):
-		self.__COBJECT_COUNT__ -= 1
-		self.__LIBGUARD_ON__ = self.__COBJECT_COUNT__ == 0
+		self.__COBJECT_COUNT -= 1
+		self.__LIBGUARD_ON = self.__COBJECT_COUNT == 0
 
 	def increment_csolver_count(self):
-		self.__CSOLVER_COUNT__ += 1
+		self.__CSOLVER_COUNT += 1
 
 	def decrement_csolver_count(self):
-		self.__CSOLVER_COUNT__ -= 1
+		self.__CSOLVER_COUNT -= 1
 
 
 	def __get_version(self):
@@ -152,22 +154,20 @@ class OKBackend(object):
 					valid &= self.sparse_lib_loader.libs[lib_key] is not None
 					valid &= self.pogs_lib_loader.libs[lib_key] is not None
 					if valid:
-						self.lowtypes = LowLevelTypes(
-							single_precision = prec=='32', order=layout)
 						self.device = dev
 						self.precision = prec
 						self.layout = layout
-						self.libname = lib_key 
+						self.libname = lib_key
 						self.dense = self.dense_lib_loader.get(
-							self.lowtypes, GPU=dev=='gpu')
-						self.prox = self.prox_lib_loader.get(
-							self.lowtypes, GPU=dev=='gpu')
-						self.sparse = self.sparse_lib_loader.get(
-							self.lowtypes, GPU=dev=='gpu')
-						self.pogs = self.pogs_lib_loader.get(
-							self.lowtypes, GPU=dev=='gpu')
-						
-						return 
+							single_precision=prec=='32', gpu=dev == 'gpu')
+						self.prox = self.prox_lib_loader.get(self.dense,
+							single_precision=prec=='32', gpu=dev == 'gpu')
+						self.sparse = self.sparse_lib_loader.get(self.dense,
+							single_precision=prec=='32', gpu=dev == 'gpu')
+						self.pogs = self.pogs_lib_loader.get(self.dense,
+							self.prox, single_precision=prec=='32',
+							gpu=dev == 'gpu')
+						return
 					else:
 						print str('Libraries for configuration {} '
 							'not found. Trying next layout/device/precision '
@@ -176,23 +176,23 @@ class OKBackend(object):
 
 		raise RuntimeError("No libraries found for backend.")
 
-	def change(self, GPU=False, double=True, 
+	def change(self, gpu=False, double=True,
 		force_rowmajor=False, force_colmajor=False,
 		checktypes=None, checkdims=None, checkdevices=None):
 
-		if self.__LIBGUARD_ON__:
-			print str('Backend cannot be changed once ' 
+		if self.__LIBGUARD_ON:
+			print str('Backend cannot be changed once '
 				'Vector/Matrix/FunctionVector objects have been created.\n')
 			return
 
 		precision = '64' if double else '32'
 		device = 'gpu' if GPU else 'cpu'
-		order = 'row' if force_rowmajor else 'col' if force_colmajor else '' 
+		order = 'row' if force_rowmajor else 'col' if force_colmajor else ''
 
 		self.destroy_linalg_contexts()
 		self.__set_lib(device=device, precision=precision, order=order)
 		self.__get_version()
-		
+
 		if checktypes is not None: self.typecheck = checktypes
 		if checkdims is not None: self.dimcheck = checkdims
 		if checkdevices is not None: self.devicecheck = checkdevices

@@ -1,59 +1,40 @@
-from ctypes import CDLL, POINTER, Structure, c_int, c_uint, c_size_t, c_void_p
-from subprocess import check_output
-from os import path, uname, getenv
-from numpy import float32
-from site import getsitepackages
+from ctypes import POINTER, Structure, c_int, c_uint, c_size_t, c_void_p
+from optkit.libs.loader import retrieve_libs, validate_lib
 
 class PogsLibs(object):
 	def __init__(self, dense=True):
-		self.libs = {}
-		local_c_build = path.abspath(path.join(path.dirname(__file__),
-			'..', '..', '..', 'build'))
-		search_results = ""
-		use_local = getenv('OPTKIT_USE_LOCALLIBS', 0)
-		densetag = 'dense' if dense else 'sparse'
-
-
-		# NB: no windows support
-		ext = "dylib" if uname()[0] == "Darwin" else "so"
-		for device in ['gpu', 'cpu']:
-			for precision in ['32', '64']:
-				for order in ['', 'col_', 'row_']:
-					lib_tag = '{}{}{}'.format(order, device, precision)
-					lib_name = 'libpogs_{}_{}{}{}.{}'.format(
-						densetag, order, device, precision, ext)
-					lib_path = getsitepackages()[0]
-					if not use_local and path.exists(path.join(lib_path, lib_name)):
-						lib_path = path.join(lib_path, lib_name)
-					else:
-						lib_path = path.join(local_c_build, lib_name)
-
-					try:
-						lib = CDLL(lib_path)
-						self.libs[lib_tag]=lib
-					except (OSError, IndexError):
-						search_results += str("library {} not found at {}.\n".format(
-							lib_name, lib_path))
-						self.libs[lib_tag]=None
-
+		if dense:
+			self.libs, search_results = retrieve_libs('libpogs_dense_')
+		else:
+			self.libs, search_results = retrieve_libs('libpogs_sparse_')
 		if all([self.libs[k] is None for k in self.libs]):
 			raise ValueError('No backend libraries were located:\n{}'.format(
 				search_results))
 
-	def get(self, lowtypes, GPU=False):
-		device = 'gpu' if GPU else 'cpu'
-		precision = '32' if lowtypes.FLOAT_CAST == float32 else '64'
-		lib_key = '{}'.format(lowtypes.order)
-		if lib_key != '': lib_key += '_'
-		lib_key += '{}{}'.format(device, precision)
+	def get(self, denselib, proxlib, single_precision=False, gpu=False):
+		device = 'gpu' if gpu else 'cpu'
+		precision = '32' if single_precision else '64'
+		lib_key = '{}{}'.format(device, precision)
 
-		if self.libs[lib_key] is not None:
-			lib = self.libs[lib_key]
-			ok_float = lowtypes.ok_float
-			ok_float_p = lowtypes.ok_float_p
-			vector_p = lowtypes.vector_p
-			matrix_p = lowtypes.matrix_p
-			function_vector_p = lowtypes.function_vector_p
+		if lib_key not in self.libs:
+			return None
+		elif self.libs[lib_key] is None:
+			return None
+
+		validate_lib(denselib, 'denselib', 'vector_calloc', type(self),
+			single_precision, gpu)
+		validate_lib(proxlib, 'proxlib', 'function_vector_calloc', type(self),
+			single_precision, gpu)
+
+		lib = self.libs[lib_key]
+		if lib.INITIALIZED:
+			return lib
+		else:
+			ok_float = denselib.ok_float
+			ok_float_p = denselib.ok_float_p
+			vector_p = denselib.vector_p
+			matrix_p = denselib.matrix_p
+			function_vector_p = proxlib.function_vector_p
 
 			# Public API
 			# ----------
@@ -111,20 +92,27 @@ class PogsLibs(object):
 
 			## arguments
 			lib.set_default_settings.argtypes = [pogs_settings_p]
-			lib.pogs_init.argtypes = [ok_float_p,
-				c_size_t, c_size_t, c_uint, c_uint]
-			lib.pogs_solve.argtypes = [c_void_p, function_vector_p, function_vector_p,
-				pogs_settings_p, pogs_info_p, pogs_output_p]
+			lib.pogs_init.argtypes = [ok_float_p, c_size_t, c_size_t, c_uint,
+									  c_uint]
+			lib.pogs_solve.argtypes = [c_void_p, function_vector_p,
+									   function_vector_p, pogs_settings_p,
+									   pogs_info_p, pogs_output_p]
 			lib.pogs_finish.argtypes = [c_void_p, c_int]
-			lib.pogs.argtypes = [ok_float_p, function_vector_p, function_vector_p,
-				pogs_settings_p, pogs_info_p, pogs_output_p, c_uint, c_uint]
-			lib.pogs_load_solver.argtypes = [ok_float_p,
-				ok_float_p, ok_float_p, ok_float_p, ok_float_p, ok_float_p,
-				ok_float_p, ok_float_p, ok_float_p, ok_float,
-				c_size_t, c_size_t, c_uint]
+			lib.pogs.argtypes = [ok_float_p, function_vector_p,
+								 function_vector_p, pogs_settings_p,
+								 pogs_info_p, pogs_output_p, c_uint, c_uint]
+			lib.pogs_load_solver.argtypes = [ok_float_p, ok_float_p,
+											 ok_float_p, ok_float_p,
+											 ok_float_p, ok_float_p,
+											 ok_float_p, ok_float_p,
+											 ok_float_p, ok_float, c_size_t,
+											 c_size_t, c_uint]
 			lib.pogs_extract_solver.argtypes = [c_void_p, ok_float_p,
-				ok_float_p, ok_float_p, ok_float_p, ok_float_p, ok_float_p,
-				ok_float_p, ok_float_p, ok_float_p, ok_float_p, c_uint]
+												ok_float_p, ok_float_p,
+												ok_float_p, ok_float_p,
+												ok_float_p, ok_float_p,
+												ok_float_p, ok_float_p,
+												ok_float_p, c_uint]
 
 			## return types
 			lib.set_default_settings.restype = None
@@ -249,19 +237,24 @@ class PogsLibs(object):
 
 				## argtypes
 				lib.update_problem.argtypes = [pogs_solver_p,
-					function_vector_p, function_vector_p]
+											   function_vector_p,
+											   function_vector_p]
 				lib.initialize_variables.argtypes = [pogs_solver_p]
 				lib.pogs_solver_loop.argtypes = [pogs_solver_p, pogs_info_p]
-				lib.make_tolerances.argtypes = [pogs_settings_p,
-					c_size_t, c_size_t]
+				lib.make_tolerances.argtypes = [pogs_settings_p, c_size_t,
+												c_size_t]
 				lib.set_prev.argtypes = [pogs_variables_p]
 				lib.prox.argtypes = [c_void_p, function_vector_p,
-					function_vector_p, pogs_variables_p, ok_float]
+									 function_vector_p, pogs_variables_p,
+									 ok_float]
 				lib.project_primal.argtypes = [c_void_p, c_void_p,
-					pogs_variables_p, ok_float]
-				lib.update_dual.argtypes = [c_void_p, pogs_variables_p, ok_float]
+											   pogs_variables_p, ok_float]
+				lib.update_dual.argtypes = [c_void_p, pogs_variables_p,
+											ok_float]
 				lib.check_convergence.argtypes = [c_void_p, pogs_solver_p,
-					pogs_objectives_p, pogs_residuals_p, pogs_tolerances_p]
+												  pogs_objectives_p,
+												  pogs_residuals_p,
+												  pogs_tolerances_p]
 				lib.adaptrho.argtypes = [pogs_solver_p, adapt_params_p,
 					pogs_residuals_p, pogs_tolerances_p, c_uint]
 				lib.copy_output.argtypes = [pogs_solver_p, pogs_output_p]
@@ -313,4 +306,7 @@ class PogsLibs(object):
 				lib.pogs_variables_p = AttributeError
 				lib.pogs_solver_p = AttributeError
 
+			lib.FLOAT = single_precision
+			lib.GPU = gpu
+			lib.INITIALIZED = True
 			return lib

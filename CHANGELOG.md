@@ -8,14 +8,13 @@
 - TODO: error checking throughout GPU calls (and mirrored for CPU)
 - TODO: license
 - TODO: cite POGS
-- TODO: thorough commenting
+- TODO: thorough documentation
 - TODO: sparse equilibration
 - TODO: sparse projection
 - TODO: sparse POGS
 
 ###v0.0.4 (alpha)
-- TODO: error checking throughout GPU calls (and mirrored for CPU)
-- TODO: license
+- TODO: fix slow module loading
 
 ###v0.0.3 (current)
 - CPU Sparse Linear Algebra

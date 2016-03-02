@@ -1,2 +1,0 @@
-class IndirectProjector(Projector):
-	pass

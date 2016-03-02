@@ -1,4 +1,3 @@
-
 # optkit
 
 ## About `optkit`

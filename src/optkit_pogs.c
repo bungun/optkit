@@ -16,20 +16,20 @@ void pogslib_version(int * maj, int * min, int * change, int * status)
  * POGS private API:
  *
  * void pogs_matrix_alloc(pogs_matrix ** M, size_t m, size_t n,
- *		CBLAS_ORDER_t ord)
+ *		enum CBLAS_ORDER ord)
  * void pogs_matrix_free(pogs_matrix * M)
  * void block_vector_alloc(block_vector ** z, size_t m, size_t n)
  * void block_vector_free(block_vector * z)
  * void pogs_variables_alloc(pogs_variables ** z, size_t m, size_t n)
  * void pogs_variables_free(pogs_variables * z)
  * void pogs_solver_alloc(pogs_solver ** solver, size_t m, size_t n,
- *		CBLAS_ORDER_t ord)
+ *		enum CBLAS_ORDER ord)
  * void pogs_solver_free(pogs_solver * solver)
  * void update_settings(pogs_settings * settings, const pogs_settings * input)
  * void updatae_problem(pogs_solver * solver,
  *		FunctionVector * f, FunctionVector *g)
  * void equilibrate(void * linalg_handle, ok_float * A_orig, pogs_matrix * M,
- *		Equilibration_t equil, CBLAS_ORDER_t ord)
+ *		EQUILIBRATOR equil, enum CBLAS_ORDER ord)
  *		ok_float estimate_norm(void * linalg_handle, pogs_matrix * M)
  * void normalize_DAE(void * linalg_handle, pogs_matrix * M)
  * void initialize_variables(pogs_solver * solver)
@@ -76,7 +76,7 @@ int is_direct()
 }
 
 void POGS(pogs_matrix_alloc)(pogs_matrix ** M, size_t m, size_t n,
-	CBLAS_ORDER_t ord)
+	enum CBLAS_ORDER ord)
 {
 	pogs_matrix * M_ = OK_NULL;
 	M_ = malloc(sizeof(*M_));
@@ -157,11 +157,12 @@ void POGS(pogs_variables_free)(pogs_variables * z)
 }
 
 void POGS(pogs_solver_alloc)(pogs_solver ** solver, size_t m, size_t n,
-	  CBLAS_ORDER_t ord)
+	  enum CBLAS_ORDER ord)
 {
 	pogs_solver * s = OK_NULL;
 	s = malloc(sizeof(*s));
 	s->settings = malloc(sizeof(*(s->settings)));
+	set_default_settings(s->settings);
 	s->f = malloc(sizeof(*(s->f)));
 	s->g = malloc(sizeof(*(s->g)));
 	s->f->objectives = OK_NULL;
@@ -197,7 +198,7 @@ void POGS(update_settings)(pogs_settings * settings,
 
 
 void POGS(equilibrate)(void * linalg_handle, ok_float * A_orig, pogs_matrix * M,
-	Equilibration_t equil, CBLAS_ORDER_t ord)
+	EQUILIBRATOR equil, enum CBLAS_ORDER ord)
 {
 	if (equil == EquilSinkhorn)
 		sinkhorn_knopp(linalg_handle, A_orig, M->A, M->d, M->e, ord);
@@ -505,9 +506,12 @@ void POGS(copy_output)(pogs_solver * solver, pogs_output * output)
 
 void POGS(print_header_string)()
 {
-	printf("   #%s    %s    %s   %s   %s      %s    %s\n",
-		"res_ori", "eps_pri", "res_dual", "eps_dual",
+	printf("\n   #    %s    %s    %s   %s   %s        %s    %s\n",
+		"res_pri", "eps_pri", "res_dual", "eps_dual",
 		"gap", "eps_gap", "objective");
+	printf("   -    %s    %s    %s   %s   %s        %s    %s\n",
+		"-------", "-------", "--------", "--------",
+		"---", "-------", "---------");
 }
 
 void POGS(print_iter_string)(pogs_residuals * res, pogs_tolerances * eps,
@@ -543,7 +547,7 @@ void POGS(pogs_solver_loop)(pogs_solver * solver, pogs_info * info)
 		POGS(print_header_string)();
 
 	/* iterate until converged, or error/maxiter reached */
-	for (k = 1; !err; ++k) {
+	for (k = 1; !err && k <= settings->maxiter; ++k) {
 		POGS(set_prev)(z);
 		POGS(prox)(linalg_handle, solver->f, solver->g, z, solver->rho);
 		POGS(project_primal)(linalg_handle, solver->M->P, z,
@@ -553,10 +557,10 @@ void POGS(pogs_solver_loop)(pogs_solver * solver, pogs_info * info)
 		converged = POGS(check_convergence)(linalg_handle, solver,
 			&obj, &res, &eps, settings->gapstop);
 
-		if (settings->verbose > 0 &&
-			(k % PRINT_ITER == 0 ||
-				converged ||
-				k == settings->maxiter))
+		if (settings->verbose > 0 && (k % PRINT_ITER == 0 ||
+		  	 		      converged ||
+			 		      k == settings->maxiter)
+		   )
 			POGS(print_iter_string)(&res, &eps, &obj, k);
 
 		if (converged || k == settings->maxiter)
@@ -596,8 +600,8 @@ void set_default_settings(pogs_settings * s)
 }
 
 
-pogs_solver * pogs_init(ok_float * A, size_t m, size_t n, CBLAS_ORDER_t ord,
-	Equilibration_t equil)
+pogs_solver * pogs_init(ok_float * A, size_t m, size_t n, enum CBLAS_ORDER ord,
+	EQUILIBRATOR equil)
 {
 	pogs_solver * solver = OK_NULL;
 	OK_TIMER t = tic();
@@ -655,7 +659,7 @@ void pogs_finish(pogs_solver * solver, int reset)
 
 void pogs(ok_float * A, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output,
-	CBLAS_ORDER_t ord, EQUILIBRATOR equil)
+	enum CBLAS_ORDER ord, EQUILIBRATOR equil)
 {
 	pogs_solver * solver = OK_NULL;
 	solver = pogs_init(A, f->size, g->size, ord, equil);
@@ -667,7 +671,7 @@ void pogs(ok_float * A, FunctionVector * f, FunctionVector * g,
 pogs_solver * pogs_load_solver(ok_float * A_equil, ok_float * LLT_factorization,
 	ok_float * d, ok_float * e, ok_float * z, ok_float * z12,
 	ok_float * z_dual, ok_float * z_dual12, ok_float * z_prev, ok_float rho,
-	size_t m, size_t n, CBLAS_ORDER_t ord)
+	size_t m, size_t n, enum CBLAS_ORDER ord)
 {
 	pogs_solver * solver = OK_NULL;
 	POGS(pogs_solver_alloc)(&solver, m , n, ord);
@@ -695,7 +699,7 @@ pogs_solver * pogs_load_solver(ok_float * A_equil, ok_float * LLT_factorization,
 void pogs_extract_solver(pogs_solver * solver, ok_float * A_equil,
 	ok_float * LLT_factorization, ok_float * d, ok_float * e, ok_float * z,
 	ok_float * z12, ok_float * z_dual, ok_float * z_dual12,
-	ok_float * z_prev, ok_float * rho, CBLAS_ORDER_t ord)
+	ok_float * z_prev, ok_float * rho, enum CBLAS_ORDER ord)
 {
 	matrix_memcpy_am(A_equil, solver->M->A, ord);
 

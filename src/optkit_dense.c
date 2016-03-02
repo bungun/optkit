@@ -44,6 +44,8 @@ void vector_calloc(vector * v, size_t n)
 void vector_free(vector * v)
 {
         if (v->data != OK_NULL) ok_free(v->data);
+        v->size = (size_t) 0;
+        v->stride = (size_t) 0;
 }
 
 inline void __vector_set(vector * v, size_t i, ok_float x)
@@ -204,24 +206,16 @@ inline int __matrix_exists(matrix * A)
 }
 
 
-void matrix_alloc(matrix * A, size_t m, size_t n, CBLAS_ORDER ord)
+void matrix_alloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord)
 {
         A->size1 = m;
         A->size2 = n;
         A->data = (ok_float *) malloc(m * n * sizeof(ok_float));
-#ifndef OPTKIT_ORDER
         A->ld = (ord == CblasRowMajor) ? n : m;
         A->order = ord;
-#elif OPTKIT_ORDER == 101
-        A->ld = n;
-        A->order = CblasRowMajor;
-#else
-        A->ld = m;
-        A->order = CblasColMajor;
-#endif
 }
 
-void matrix_calloc(matrix * A, size_t m, size_t n, CBLAS_ORDER ord)
+void matrix_calloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord)
 {
         if (!__matrix_exists(A)) return;
         matrix_alloc(A, m, n, ord);
@@ -234,6 +228,9 @@ void matrix_free(matrix * A)
                 return;
         if (A->data != OK_NULL)
                 ok_free(A->data);
+        A->size1 = (size_t) 0;
+        A->size2 = (size_t) 0;
+        A->ld = (size_t) 0;
 }
 
 void matrix_submatrix(matrix * A_sub, matrix * A,
@@ -258,7 +255,7 @@ void matrix_row(vector * row, matrix * A, size_t i)
         if (!__vector_exists(row))
                 return;
         if (!__matrix_exists(A))
-                return
+                return;
         row->size = A->size2;
         row->stride = (A->order == CblasRowMajor) ? 1 : A->ld;
         row->data = (A->order == CblasRowMajor) ?
@@ -302,7 +299,7 @@ void matrix_cast_vector(vector * v, matrix * A)
 }
 
 void matrix_view_array(matrix * A, const ok_float *base, size_t n1, size_t n2,
-        CBLAS_ORDER ord)
+        enum CBLAS_ORDER ord)
 {
         if (!__matrix_exists(A))
                 return;
@@ -313,35 +310,26 @@ void matrix_view_array(matrix * A, const ok_float *base, size_t n1, size_t n2,
         A->order = ord;
 }
 
-inline ok_float __matrix_get(const matrix * A, size_t i, size_t j)
+ok_float __matrix_get_colmajor(const matrix * A, size_t i, size_t j)
 {
-#ifndef OPTKIT_ORDER
-        if (A->order == CblasRowMajor)
-                return A->data[i * A->ld + j];
-        else
-                return A->data[i + j * A->ld];
-#elif OPTKIT_ORDER == 101
-        return A->data[i * A->ld + j];
-#else
         return A->data[i + j * A->ld];
-#endif
-
 }
 
-inline void __matrix_set(matrix * A, size_t i, size_t j, ok_float x)
+ok_float __matrix_get_rowmajor(const matrix * A, size_t i, size_t j)
 {
-#ifndef OPTKIT_ORDER
-        if (A->order == CblasRowMajor)
-                A->data[i * A->ld + j] = x;
-        else
-                A->data[i + j * A->ld] = x;
-#elif OPTKIT_ORDER == 101
-        A->data[i * A->ld + j] = x;
-#else
-        A->data[i + j * A->ld] = x;
-#endif
-
+        return A->data[i * A->ld + j];
 }
+
+void __matrix_set_rowmajor(matrix * A, size_t i, size_t j, ok_float x)
+{
+        A->data[i * A->ld + j] = x;
+}
+
+void __matrix_set_colmajor(matrix * A, size_t i, size_t j, ok_float x)
+{
+        A->data[i + j * A->ld] = x;
+}
+
 
 void matrix_set_all(matrix * A, ok_float x)
 {
@@ -352,11 +340,11 @@ void matrix_set_all(matrix * A, ok_float x)
         if (A->order == CblasRowMajor)
                 for (i = 0; i < A->size1; ++i)
                         for (j = 0; j < A->size2; ++j)
-                                __matrix_set(A, i, j, x);
+                                __matrix_set_rowmajor(A, i, j, x);
         else
                 for (j = 0; j < A->size2; ++j)
                         for (i = 0; i < A->size1; ++i)
-                                __matrix_set(A, i, j, x);
+                                __matrix_set_colmajor(A, i, j, x);
 }
 
 void matrix_memcpy_mm(matrix * A, const matrix * B)
@@ -370,57 +358,65 @@ void matrix_memcpy_mm(matrix * A, const matrix * B)
                 return;
         }
 
-        if (A->order == B->order)
-                memcpy(A->data, B->data, A->size1 * A->size2 *
-                        sizeof(ok_float));
-        else
-                for (i = 0; i < A->size1; ++i)
-                        for (j = 0; j < A->size2; ++j)
-                                  __matrix_set(A, i, j, __matrix_get(B, i , j));
+        void (* mset)(matrix * M, size_t i, size_t j, ok_float x) =
+        	(A->order == CblasRowMajor) ?
+        	__matrix_set_rowmajor : __matrix_set_colmajor;
+
+        ok_float (* mget)(const matrix * M, size_t i, size_t j) =
+        	(B->order == CblasRowMajor) ?
+        	__matrix_get_rowmajor : __matrix_get_colmajor;
+
+        for (i = 0; i < A->size1; ++i)
+                for (j = 0; j < A->size2; ++j)
+                          mset(A, i, j, mget(B, i , j));
 }
 
-void matrix_memcpy_ma(matrix * A, const ok_float * B, const CBLAS_ORDER ord)
+void matrix_memcpy_ma(matrix * A, const ok_float * B,
+	const enum CBLAS_ORDER ord)
 {
         uint i, j;
-        if (A->order == ord) {
-                memcpy(A->data, B, A->size1 * A->size2 * sizeof(ok_float));
-                return;
-        }
+        void (* mset)(matrix * M, size_t i, size_t j, ok_float x) =
+        	(A->order == CblasRowMajor) ?
+        	__matrix_set_rowmajor : __matrix_set_colmajor;
 
         if (ord == CblasRowMajor)
                 for (i = 0; i < A->size1; ++i)
                         for (j = 0; j < A->size2; ++j)
-                                __matrix_set(A, i, j, B[i * A->size2 + j]);
+                                mset(A, i, j, B[i * A->size2 + j]);
         else
                 for (i = 0; i < A->size1; ++i)
                         for (j = 0; j < A->size2; ++j)
-                                __matrix_set(A, i, j, B[i + j * A->size1]);
+                                mset(A, i, j, B[i + j * A->size1]);
 }
 
-void matrix_memcpy_am(ok_float * A, const matrix * B, const CBLAS_ORDER ord)
+void matrix_memcpy_am(ok_float * A, const matrix * B,
+	const enum CBLAS_ORDER ord)
 {
         uint i, j;
-        if (B->order == ord) {
-                memcpy(A, B->data, B->size1 * B->size2 * sizeof(ok_float));
-                return;
-        }
+        ok_float (* mget)(const matrix * M, size_t i, size_t j) =
+        	(B->order == CblasRowMajor) ?
+        	__matrix_get_rowmajor : __matrix_get_colmajor;
 
         if (ord == CblasRowMajor)
                 for (i = 0; i < B->size1; ++i)
                         for (j = 0; j < B->size2; ++j)
-                                A[i + j * B->size1] = __matrix_get(B, i, j);
+                                A[i * B->size2 + j] = mget(B, i, j);
         else
                 for (j = 0; j < B->size2; ++j)
                         for (i = 0; i < B->size1; ++i)
-                                A[i * B->size2 + j] = __matrix_get(B, i, j);
+                                A[i + B->size1 * j] = mget(B, i, j);
 }
 
 void matrix_print(matrix * A)
 {
         uint i, j;
+	ok_float (* mget)(const matrix * M, size_t i, size_t j) =
+		(A->order == CblasRowMajor) ?
+		__matrix_get_rowmajor : __matrix_get_colmajor;
+
         for (i = 0; i < A->size1; ++i) {
                 for (j = 0; j < A->size2; ++j)
-                        printf("%e ", __matrix_get(A, i, j));
+                        printf("%e ", mget(A, i, j));
                 printf("\n");
         }
         printf("\n");
@@ -512,11 +508,17 @@ int __matrix_order_compat(const matrix * A, const matrix * B, const char * nm_A,
  * BLAS routines
  * =============
  */
-void blas_make_handle(void ** linalg_handle)
-        { *linalg_handle = OK_NULL; }
+ok_status blas_make_handle(void ** linalg_handle)
+{
+	*linalg_handle = OK_NULL;
+	return OPTKIT_SUCCESS;
+}
 
-void blas_destroy_handle(void * linalg_handle)
-        { linalg_handle = OK_NULL; }
+ok_status blas_destroy_handle(void * linalg_handle)
+{
+	linalg_handle = OK_NULL;
+	return OPTKIT_SUCCESS;
+}
 
 
 /* BLAS LEVEL 1 */
@@ -558,24 +560,27 @@ void blas_dot_inplace(void * linalg_handle, const vector * x, const vector * y,
 
 /* BLAS LEVEL 2 */
 
-void blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE_t transA, ok_float alpha,
-        const matrix *A, const vector *x, ok_float beta, vector *y)
+void blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
+	ok_float alpha, const matrix *A, const vector *x, ok_float beta,
+	vector *y)
 {
         CBLAS(gemv)(A->order, transA, (int) A->size1, (int) A->size2, alpha,
                 A->data, (int) A->ld, x->data, (int) x->stride, beta,
                 y->data, (int) y->stride);
 }
 
-void blas_trsv(void * linalg_handle, CBLAS_UPLO_t uplo,
-        CBLAS_TRANSPOSE_t transA, CBLAS_DIAG_t Diag, const matrix *A, vector *x)
+void blas_trsv(void * linalg_handle, enum CBLAS_UPLO uplo,
+        enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, const matrix *A,
+        vector *x)
 {
         CBLAS(trsv)(A->order, uplo, transA, Diag, (int) A->size1, A->data,
                 (int) A->ld, x->data, (int) x->stride);
 }
 
-void blas_sbmv(void * linalg_handle, CBLAS_ORDER order, CBLAS_UPLO_t uplo,
-        const size_t num_superdiag, const ok_float alpha, const vector * vecA,
-        const vector * x, const ok_float beta, vector * y)
+void blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
+	enum CBLAS_UPLO uplo, const size_t num_superdiag,
+	const ok_float alpha, const vector * vecA, const vector * x,
+	const ok_float beta, vector * y)
 {
         CBLAS(sbmv)(order, uplo, (int) y->size, (int) num_superdiag, alpha,
                 vecA->data, (int) num_superdiag + 1, x->data, (int) x->stride,
@@ -592,48 +597,43 @@ void blas_diagmv(void * linalg_handle, const ok_float alpha,
 
 /* BLAS LEVEL 3 */
 
-void blas_syrk(void * linalg_handle, CBLAS_UPLO_t uplo,
-        CBLAS_TRANSPOSE_t transA, ok_float alpha, const matrix * A,
+void blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
+        enum CBLAS_TRANSPOSE transA, ok_float alpha, const matrix * A,
         ok_float beta, matrix * C)
 {
         const int k = (transA == CblasNoTrans) ?
                       (int) A->size2 :
                       (int) A->size1;
 
-#ifndef OPTKIT_ORDER
         if (!( __matrix_order_compat(A, C, "A", "C", "blas_syrk") ))
-#endif
-        CBLAS(syrk)(A->order, uplo, transA, (int) C->size2 , k, alpha, A->data,
+        	return;
+        CBLAS(syrk)(A->order, uplo, transA, (int) C->size2, k, alpha, A->data,
                 (int) A->ld, beta, C->data, (int) C->ld);
 }
 
-void blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE_t transA,
-        CBLAS_TRANSPOSE_t transB, ok_float alpha, const matrix * A,
+void blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
+        enum CBLAS_TRANSPOSE transB, ok_float alpha, const matrix * A,
         const matrix * B, ok_float beta, matrix * C)
 {
         const int NA = (transA == CblasNoTrans) ?
                         (int) A->size2 :
                         (int) A->size1;
 
-#ifndef OPTKIT_ORDER
         if (!( __matrix_order_compat(A, B, "A", "B", "gemm") &&
                 __matrix_order_compat(A, C, "A", "C", "blas_gemm") ))
                 return;
-#endif
         CBLAS(gemm)(A->order, transA, transB, (int) C->size1, (int) C->size2,
                 NA, alpha, A->data, (int) A->ld, B->data, (int) B->ld,
                 beta, C->data, (int) C->ld);
 }
 
-void blas_trsm(void * linalg_handle, CBLAS_SIDE_t Side, CBLAS_UPLO_t uplo,
-        CBLAS_TRANSPOSE_t transA, CBLAS_DIAG_t Diag, ok_float alpha,
-        const matrix *A, matrix *B)
+void blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side,
+	enum CBLAS_UPLO uplo, enum CBLAS_TRANSPOSE transA,
+	enum CBLAS_DIAG Diag, ok_float alpha, const matrix *A, matrix *B)
 {
 
-#ifndef OPTKIT_ORDER
         if (!( __matrix_order_compat(A, B, "A", "B", "blas_trsm") ))
                 return;
-#endif
         CBLAS(trsm)(A->order, Side, uplo, transA, Diag, (int) B->size1,
                 (int) B->size2, alpha, A->data,(int) A->ld, B->data,
                 (int) B->ld);
@@ -651,16 +651,25 @@ void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
         matrix l21, a22;
         size_t n = A->size1, i;
 
+        /* get order-specific matrix getter/setter */
+        void (* mset)(matrix * M, size_t i, size_t j, ok_float x) =
+        	(A->order == CblasRowMajor) ?
+        	__matrix_set_rowmajor : __matrix_set_colmajor;
+        ok_float (* mget)(const matrix * M, size_t i, size_t j) =
+        	(A->order == CblasRowMajor) ?
+        	__matrix_get_rowmajor : __matrix_get_colmajor;
+
+
         l21= (matrix){0, 0, 0, OK_NULL, CblasRowMajor};
         a22= (matrix){0, 0, 0, OK_NULL, CblasRowMajor};
 
         for (i = 0; i < n; ++i) {
                 /* L11 = sqrt(A11) */
-                l11 = (ok_float) MATH(sqrt)(__matrix_get(A, i, i));
-                __matrix_set(A, i, i, l11);
+                l11 = (ok_float) MATH(sqrt)(mget(A, i, i));
+                mset(A, i, i, l11);
 
                 if (i + 1 == n)
-                        break;
+                	break;
 
                 /* L21 = A21 / L11 */
                 matrix_submatrix(&l21, A, i + 1, i, n - i - 1, 1);
@@ -701,7 +710,7 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
                 matrix_submatrix(&L11, A, i, i, n11, n11);
                 __linalg_cholesky_decomp_noblk(linalg_handle, &L11);
 
-                if (i + blk_dim == n)
+                if (i + blk_dim >= n)
                         break;
 
                 /* L21 = A21 L21^-T */
@@ -726,9 +735,9 @@ void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x)
 }
 
 /* device reset */
-int ok_device_reset()
+ok_status ok_device_reset()
 {
-        return 0;
+        return OPTKIT_SUCCESS;
 }
 
 

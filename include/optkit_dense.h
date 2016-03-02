@@ -41,11 +41,11 @@ void vector_pow(vector * v, const ok_float x);
 typedef struct matrix {
   size_t size1, size2, ld;
   ok_float *data;
-  CBLAS_ORDER order;
+  enum CBLAS_ORDER order;
 } matrix;
 
-void matrix_alloc(matrix * A, size_t m, size_t n, CBLAS_ORDER ord);
-void matrix_calloc(matrix * A, size_t m, size_t n, CBLAS_ORDER ord);
+void matrix_alloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord);
+void matrix_calloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord);
 void matrix_free(matrix * A);
 void matrix_submatrix(matrix * A_sub, matrix * A, size_t i, size_t j,
         size_t n1, size_t n2);
@@ -54,11 +54,13 @@ void matrix_column(vector * col, matrix * A, size_t j);
 void matrix_diagonal(vector * diag, matrix * A);
 void matrix_cast_vector(vector * v, matrix * A);
 void matrix_view_array(matrix * A, const ok_float * base, size_t n1, size_t n2,
-        CBLAS_ORDER ord);
+        enum CBLAS_ORDER ord);
 void matrix_set_all(matrix * A, ok_float x);
 void matrix_memcpy_mm(matrix * A, const matrix *B);
-void matrix_memcpy_ma(matrix * A, const ok_float *B, const CBLAS_ORDER ord);
-void matrix_memcpy_am(ok_float * A, const matrix *B, const CBLAS_ORDER ord);
+void matrix_memcpy_ma(matrix * A, const ok_float *B,
+	const enum CBLAS_ORDER ord);
+void matrix_memcpy_am(ok_float * A, const matrix *B,
+	const enum CBLAS_ORDER ord);
 void matrix_print(matrix * A);
 void matrix_scale(matrix * A, ok_float x);
 void matrix_scale_left(matrix * A, const vector * v);
@@ -69,8 +71,8 @@ void matrix_pow(matrix * A, const ok_float p);
 /* BLAS routines */
 
 /* BLAS context */
-void blas_make_handle(void ** linalg_handle);
-void blas_destroy_handle(void * linalg_handle);
+ok_status blas_make_handle(void ** linalg_handle);
+ok_status blas_destroy_handle(void * linalg_handle);
 
 
 /* BLAS LEVEL 1 */
@@ -84,29 +86,32 @@ void blas_dot_inplace(void * linalg_handle, const vector * x, const vector * y,
         ok_float * deviceptr_result);
 
 /* BLAS LEVEL 2 */
-void blas_gemv(void * linalg_handle, CBLAS_TRANSPOSE transA, ok_float alpha,
-        const matrix * A, const vector * x, ok_float beta, vector * y);
+void blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
+	ok_float alpha, const matrix * A, const vector * x, ok_float beta,
+	vector * y);
 
-void blas_trsv(void * linalg_handle, CBLAS_UPLO uplo, CBLAS_TRANSPOSE transA,
-        CBLAS_DIAG Diag, const matrix * A, vector * x);
+void blas_trsv(void * linalg_handle, enum CBLAS_UPLO uplo,
+	enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, const matrix * A,
+	vector * x);
 
-void blas_sbmv(void * linalg_handle, CBLAS_ORDER order, CBLAS_UPLO uplo,
-        const size_t num_superdiag, const ok_float alpha, const vector * vecA,
-        const vector * x, const ok_float beta, vector * y);
+void blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
+	enum CBLAS_UPLO uplo, const size_t num_superdiag, const ok_float alpha,
+	const vector * vecA, const vector * x, const ok_float beta, vector * y);
 
 void blas_diagmv(void * linalg_handle, const ok_float alpha,
   const vector * vecA, const vector * x, const ok_float beta, vector * y);
 
 /* BLAS LEVEL 3 */
-void blas_syrk(void * linalg_handle, CBLAS_UPLO uplo, CBLAS_TRANSPOSE transA,
-        ok_float alpha, const matrix *A, ok_float beta, matrix *C);
+void blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
+	enum CBLAS_TRANSPOSE transA, ok_float alpha, const matrix *A,
+	ok_float beta, matrix *C);
 
-void blas_gemm(void * linalg_handle, CBLAS_TRANSPOSE transA,
-        CBLAS_TRANSPOSE transB, ok_float alpha, const matrix *A,
+void blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
+        enum CBLAS_TRANSPOSE transB, ok_float alpha, const matrix *A,
         const matrix *B, ok_float beta, matrix *C);
 
-void blas_trsm(void * linalg_handle, CBLAS_SIDE Side, CBLAS_UPLO uplo,
-        CBLAS_TRANSPOSE transA, CBLAS_DIAG Diag, ok_float alpha,
+void blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side, enum CBLAS_UPLO uplo,
+        enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, ok_float alpha,
         const matrix *A, matrix *B);
 
 /* LINEAR ALGEBRA routines */
@@ -115,7 +120,7 @@ void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x);
 
 
 /* device reset */
-int ok_device_reset(void);
+ok_status ok_device_reset(void);
 
 #ifdef __cplusplus
 }

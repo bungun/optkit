@@ -1,16 +1,15 @@
-from optkit.types import ok_enums, ok_function_enums as fcn_enums
-from numpy import zeros, ndarray, savez, load as np_load
+from numpy import zeros, ndarray, savez, load as np_load, float32, float64
 from ctypes import c_void_p
 from os import path
 
-class HighLevelPogsTypes(object):
+class PogsTypes(object):
 	def __init__(self, backend):
-		FLOAT_CAST = backend.lowtypes.FLOAT_CAST
-		ndarray_pointer = backend.lowtypes.ndarray_pointer
+		FLOAT_CAST = float32 if backend.dense.FLOAT else float64
 		PogsSettings = backend.pogs.pogs_settings
 		PogsInfo = backend.pogs.pogs_info
 		PogsOutput = backend.pogs.pogs_output
 		pogslib = backend.pogs
+		denselib = backend.dense
 
 		# TODO: set direct/indirect, e.g.,
 		# pogslib_direct = backend.pogs_direct
@@ -22,11 +21,16 @@ class HighLevelPogsTypes(object):
 			def __init__(self, n, **params):
 				self.size = n
 				self.terms = zeros(n, dtype=backend.lowtypes.function)
-				self.c_ptr = ndarray_pointer(self.terms)
-				self.c = backend.lowtypes.function_vector(
-					self.size, self.c_ptr)
+				self.c_ptr = self.terms.ctypes.data_as(backend.prox.function)
+				self.c = backend.proxlib.function_vector(self.size, self.c_ptr)
+				self.__h = zeros(self.size, int)
+				self.__a = zeros(self.size)
+				self.__b = zeros(self.size)
+				self.__c = zeros(self.size)
+				self.__d = zeros(self.size)
+				self.__e = zeros(self.size)
 				for i in xrange(n):
-					self.terms[i] = backend.lowtypes.function(0, 1, 0, 1, 0, 0)
+					self.terms[i] = backend.proxlib.function(0, 1, 0, 1, 0, 0)
 				self.set(**params)
 				if 'f' in params:
 					self.copy_from(params['f'])
@@ -41,27 +45,13 @@ class HighLevelPogsTypes(object):
 
 			@property
 			def list(self):
-				return [backend.lowtypes.function(*self.terms[i]) for i in xrange(self.size)]
+				return [backend.proxlib.function(*self.terms[i]) \
+					for i in xrange(self.size)]
 
 			@property
 			def arrays(self):
-				l = self.list
-				h = zeros(self.size, int)
-				a = zeros(self.size)
-				b = zeros(self.size)
-				c = zeros(self.size)
-				d = zeros(self.size)
-				e = zeros(self.size)
-
-				for i in xrange(self.size):
-					h[i] = l[i].h
-					a[i] = l[i].a
-					b[i] = l[i].b
-					c[i] = l[i].c
-					d[i] = l[i].d
-					e[i] = l[i].e
-
-				return h, a, b, c, d, e
+				return self.__h, self.__a, self.__b, self.__c, self.__d,
+					self.__e
 
 			def set(self, **params):
 				start = int(params['start']) if 'start' in params else 0
@@ -72,7 +62,7 @@ class HighLevelPogsTypes(object):
 
 				range_length = len(self.terms[start:end])
 				if  range_length == 0:
-					raise ValueError('index range [{}:{}] results in length-0 array '
+					ValueError('index range [{}:{}] results in length-0 array '
 						'when python array slicing applied to an '
 						'optkit.HighLevelPogsTypes.Objective array'
 						' of length {}.'.format(start,end,self.size))
@@ -80,66 +70,54 @@ class HighLevelPogsTypes(object):
 					if item in params:
 						if isinstance(params[item],(list, ndarray)):
 							if len(params[item]) != range_length:
-								raise ValueError('keyword argument {} of type {} '
+								ValueError('keyword argument {} of type {} '
 									'is incomptably sized with the requested '
 									'optkit.HighLevelPogsTypes.Objective'
 									' array slice [{}:{}]'.format(
 									item, type(params(item), start, end)))
 
-				objectives = self.list
 
 				#TODO: support complex slicing
-
 				if 'h' in params:
 					if isinstance(params['h'],(int, str)):
-						for i in xrange(start, end):
-							objectives[i].h = fcn_enums.safe_enum(params['h'])
+						self.__h[start : end] = proxlib.enums.validate(
+							params['h'])
 					elif isinstance(params['h'],(list, ndarray)):
-						for i in xrange(start, end):
-							objectives[i].h = fcn_enums.safe_enum(params['h'][i])
+						self.__h[start : end] = map(proxlib.enums.validate,
+							params['h'])
 
 				if 'a' in params:
-					if isinstance(params['a'],(int, float)):
-						for i in xrange(start, end):
-							objectives[i].a = params['a']
-					elif isinstance(params['a'],(list, ndarray)):
-						for i in xrange(start, end):
-							objectives[i].a = params['a'][i - start]
+					if isinstance(params['a'], (int, float, list, ndarray)):
+						self.__a[start : end] = params['a']
 
 				if 'b' in params:
-					if isinstance(params['b'],(int, float)):
-						for i in xrange(start, end):
-							objectives[i].b = params['b']
-					elif isinstance(params['b'],(list, ndarray)):
-						for i in xrange(start, end):
-							objectives[i].b = params['b'][i - start]
+					if isinstance(params['b'], (int, float, list, ndarray)):
+						self.__b[start : end] = params['b']
 
 				if 'c' in params:
-					if isinstance(params['c'],(int,float)):
-						for i in xrange(start, end):
-							objectives[i].c = max(params['c'], 0)
-					elif isinstance(params['c'],(list, ndarray)):
-						for i in xrange(start, end):
-							objectives[i].c = max(params['c'][i - start], 0)
+					if isinstance(params['e'], (int, float)
+						self.__b[start : end] = proxlib.enums.validate_ce(
+							params['e'])
+					elif isinstance(params['c'], (list, ndarray)):
+						self.__b[start : end] = map(proxlib.enums.validate_ce,
+							params['c'])
 
 				if 'd' in params:
-					if isinstance(params['d'],(int, float)):
-						for i in xrange(start, end):
-							objectives[i].d = params['d']
-					elif isinstance(params['d'],(list, ndarray)):
-						for i in xrange(start, end):
-							objectives[i].d = params['d'][i - start]
+					if isinstance(params['d'], (int, float, list, ndarray)):
+						self.__b[start : end] = params['d']
 
 				if 'e' in params:
-					if isinstance(params['e'],(int,float)):
-						for i in xrange(start, end):
-							objectives[i].e = max(params['e'], 0)
-					elif isinstance(params['e'],(list, ndarray)):
-						for i in xrange(start, end):
-							objectives[i].e = max(params['e'][i - start], 0)
+					if isinstance(params['e'], (int, float)
+						self.__b[start : end] = proxlib.enums.validate_ce(
+							params['e'])
+					elif isinstance(params['e'], (list, ndarray)):
+						self.__b[start : end] = map(proxlib.enums.validate_ce,
+							params['e'])
 
-				for i in xrange(self.size):
-					self.terms[i] = objectives[i]
+
+				for i in xrange(start, end):
+					self.terms[i] = proxlib.function(self.__h[i], self.__a[i],
+						self.__b[i], self.__c[i], self.__d[i], self.__e[i])
 
 
 			def __str__(self):
@@ -162,7 +140,8 @@ class HighLevelPogsTypes(object):
 
 		class SolverSettings(object):
 			def __init__(self, **options):
-				self.c = PogsSettings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None, None)
+				self.c = PogsSettings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None,
+					None)
 				pogslib.set_default_settings(self.c)
 				self.update(**options)
 
@@ -177,8 +156,10 @@ class HighLevelPogsTypes(object):
 				if 'adaptiverho' in options: self.c.adaptiverho = options['adaptiverho']
 				if 'gapstop' in options: self.c.gapstop = options['gapstop']
 				if 'resume' in options: self.c.resume = options['resume']
-				if 'x0' in options: self.c.x0 = ndarray_pointer(options['x0'])
-				if 'nu0' in options: self.c.nu0 = ndarray_pointer(options['nu0'])
+				if 'x0' in options: self.c.x0 = options['x0'].ctypes.data_as(
+					denselib.ok_float_p)
+				if 'nu0' in options: self.c.nu0 = options['nu0'].ctypes.data_as(
+					denselib.ok_float_p)
 
 			def __str__(self):
 				return str(
@@ -248,11 +229,10 @@ class HighLevelPogsTypes(object):
 				self.y = zeros(m, dtype=FLOAT_CAST)
 				self.mu = zeros(n, dtype=FLOAT_CAST)
 				self.nu = zeros(m, dtype=FLOAT_CAST)
-				self.c = PogsOutput(
-					ndarray_pointer(self.x),
-					ndarray_pointer(self.y),
-					ndarray_pointer(self.mu),
-					ndarray_pointer(self.nu))
+				self.c = PogsOutput(self.x.ctypes.data_as(denselib.ok_float_p),
+					self.y.ctypes.data_as(denselib.ok_float_p),
+					self.mu.ctypes.data_as(denselib.ok_float_p),
+					self.nu.ctypes.data_as(denselib.ok_float_p))
 
 			def __str__(self):
 				return str("x:\n{}\ny:\n{}\nmu:\n{}\nnu:\n{}\n".format(
@@ -271,12 +251,12 @@ class HighLevelPogsTypes(object):
 
 				self.A = FLOAT_CAST(A)
 				self.shape = (self.m, self.n) = (m, n) = A.shape
-				self.layout = layout = ok_enums.CblasRowMajor if \
-					A.flags.c_contiguous else ok_enums.CblasColMajor
+				self.layout = layout = denselib.enums.CblasRowMajor if \
+					A.flags.c_contiguous else denselib.enums.CblasColMajor
 
 				if 'no_init' not in args:
-					self.c_solver = pogslib.pogs_init(
-						ndarray_pointer(self.A), m , n,
+					self.c_solver = pogslib.pogs_init(self.A.ctypes.data_as(
+						denselib.ok_float_p), m , n,
 						layout, pogslib.enums.EquilSinkhorn)
 				else:
 					self.c_solver = None
@@ -328,37 +308,44 @@ class HighLevelPogsTypes(object):
 
 
 				if 'A_equil' in data:
-					A_equil = FLOAT_CAST(data['A_equil'])
+					A_equil = data['A_equil'].astype(FLOAT_CAST)
 				elif path.exists(path.join(directory, 'A_equil.npy')):
-					A_equil = FLOAT_CAST(np_load(path.join(directory, 'A_equil.npy')))
+					A_equil = np_load(path.join(directory,
+						'A_equil.npy')).astype(FLOAT_CAST)
 				else:
 					err = 1
 
 
-				if 'LLT' in data:
-					LLT = FLOAT_CAST(data['LLT'])
-					LLT_ptr = ndarray_pointer(LLT)
+				if not err and 'LLT' in data:
+					LLT = data['LLT'].astype(FLOAT_CAST)
 				elif path.exists(path.join(directory, 'LLT.npy')):
 					LLT = FLOAT_CAST(np_load(path.join(directory, 'LLT.npy')))
-					LLT_ptr = ndarray_pointer(LLT)
+					LLT_ptr = LLT.ctypes.data_as(denselib.ok_float_p)
 				else:
 					if pogslib.direct:
 						err = 1
 					else:
 						LLT_ptr = c_void_p()
 
+				if not err:
+					LLT_ptr = LLT.ctypes.data_as(denselib.ok_float_p)
+				else:
+					LLT_ptr = None
 
-				if 'd' in data:
-					d = FLOAT_CAST(data['d'])
+
+				if not err and 'd' in data:
+					d = data['d'].astype(FLOAT_CAST)
 				elif path.exists(path.join(directory, 'd.npy')):
-					d = FLOAT_CAST(np_load(path.join(directory, 'd.npy')))
+					d = np_load(path.join(directory, 'd.npy')).astype(
+						FLOAT_CAST)
 				else:
 					err = 1
 
-				if 'e' in data:
-					e = FLOAT_CAST(data['e'])
+				if not err and 'e' in data:
+					e = data['e'].astype(FLOAT_CAST)
 				elif path.exists(path.join(directory, 'e.npy')):
-					e = FLOAT_CAST(np_load(path.join(directory, 'e.npy')))
+					e = np_load(path.join(directory, 'e.npy')).astype(
+						FLOAT_CAST)
 				else:
 					err = 1
 
@@ -372,27 +359,27 @@ class HighLevelPogsTypes(object):
 							snippet))
 
 				if 'z' in data:
-					z = FLOAT_CAST(data['z'])
+					z = data['z'].astype(FLOAT_CAST)
 				else:
 					z = zeros(self.m + self.n, dtype=FLOAT_CAST)
 
 				if 'z12' in data:
-					z12 = FLOAT_CAST(data['z12'])
+					z12 = data['z12'].astype(FLOAT_CAST)
 				else:
 					z12 = zeros(self.m + self.n, dtype=FLOAT_CAST)
 
 				if 'zt' in data:
-					zt = FLOAT_CAST(data['zt'])
+					zt = data['zt'].astype(FLOAT_CAST)
 				else:
 					zt = zeros(self.m + self.n, dtype=FLOAT_CAST)
 
 				if 'zt12' in data:
-					zt12 = FLOAT_CAST(data['zt12'])
+					zt12 = data['zt12'].astype(FLOAT_CAST)
 				else:
 					zt12 = zeros(self.m + self.n, dtype=FLOAT_CAST)
 
 				if 'zprev' in data:
-					zprev = FLOAT_CAST(data['zprev'])
+					zprev = data['zprev'].astype(FLOAT_CAST)
 				else:
 					zprev = zeros(self.m + self.n, dtype=FLOAT_CAST)
 
@@ -401,18 +388,20 @@ class HighLevelPogsTypes(object):
 				else:
 					rho = 1.
 
-				order = ok_enums.CblasRowMajor if A_equil.flags.c_contiguous \
-					else ok_enums.CblasColMajor
+				order = denselib.enums.CblasRowMajor if \
+					A_equil.flags.c_contiguous else denselib.enums.CblasColMajor
 
 				if self.c_solver is not None:
 					pogslib.pogs_finish(self.c_solver)
 
 				self.c_solver = pogslib.pogs_load_solver(
-					ndarray_pointer(A_equil),
-					LLT_ptr, ndarray_pointer(d),
-					ndarray_pointer(e), ndarray_pointer(z),
-					ndarray_pointer(z12), ndarray_pointer(zt),
-					ndarray_pointer(zt12), ndarray_pointer(zprev),
+					A_equil.ctypes.data_as(denselib.ok_float_p), LLT_ptr,
+					d.ctypes.data_as(denselib.ok_float_p),
+					e.ctypes.data_as(denselib.ok_float_p),
+					z.ctypes.data_as(denselib.ok_float_p),
+					zt.ctypes.data_as(denselib.ok_float_p),
+					zt12.ctypes.data_as(denselib.ok_float_p),
+					zprev.ctypes.data_as(denselib.ok_float_p),
 					rho, self.m, self.n, order)
 
 			def save(self, directory, name,
@@ -437,12 +426,13 @@ class HighLevelPogsTypes(object):
 				A_equil = zeros((self.m, self.n), dtype=FLOAT_CAST)
 				if pogslib.direct:
 					LLT = zeros((mindim, mindim), dtype=FLOAT_CAST)
-					LLT_ptr = ndarray_pointer(LLT)
+					LLT_ptr = LLT.ctypes.data_as(denselib.ok_float_p)
 				else:
 					LLT = c_void_p()
 					LLT_ptr = LLT
-				order = ok_enums.CblasRowMajor if A_equil.flags.c_contiguous \
-					else ok_enums.CblasRowMajor
+				order = denselib.enums.CblasRowMajor if \
+					A_equil.flags.c_contiguous else denselib.enums.CblasColMajor
+
 
 				d = zeros(self.m, dtype=FLOAT_CAST)
 				e = zeros(self.n, dtype=FLOAT_CAST)
@@ -455,12 +445,15 @@ class HighLevelPogsTypes(object):
 
 
 				pogslib.pogs_extract_solver(self.c_solver,
-					ndarray_pointer(A_equil),
-					LLT_ptr, ndarray_pointer(d),
-					ndarray_pointer(e), ndarray_pointer(z),
-					ndarray_pointer(z12), ndarray_pointer(zt),
-					ndarray_pointer(zt12), ndarray_pointer(zprev),
-					ndarray_pointer(rho), order)
+					A_equil.ctypes.data_as(denselib.ok_float_p), LLT_ptr,
+					d.ctypes.data_as(denselib.ok_float_p),
+					e.ctypes.data_as(denselib.ok_float_p),
+					z.ctypes.data_as(denselib.ok_float_p),
+					z12.ctypes.data_as(denselib.ok_float_p),
+					zt.ctypes.data_as(denselib.ok_float_p),
+					zt12.ctypes.data_as(denselib.ok_float_p),
+					zprev.ctypes.data_as(denselib.ok_float_p),
+					rho.ctypes.data_as(denselib.ok_float_p), order)
 
 				if isinstance(LLT, ndarray) and save_factorization:
 					savez(filename,

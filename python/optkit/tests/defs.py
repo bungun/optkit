@@ -1,18 +1,24 @@
-from operator import add as op_add
-from numpy.random import rand
-from numpy import zeros, float64
+from os import getenv, path
 
-def gen_test_defs(backend):
-	TEST_EPS=1e-5 if backend.lowtypes.FLOAT_CAST == float64 else 1e-3
-	MAT_ORDER = 'F' if backend.layout == 'col' else 'C'
+VERBOSE_TEST = getenv('OPTKIT_TESTING_VERBOSE', False)
 
-	def RAND_ARR(*dims):
-		if len(dims)==2 and MAT_ORDER != 'C':
-			arr = zeros(shape=dims, order='F')
-			arr[:] = rand(*dims)[:]
-			return arr.astype(backend.lowtypes.FLOAT_CAST)
-		else:
-			return rand(*dims).astype(backend.lowtypes.FLOAT_CAST)
+# library conditions: gpu = True/False, single_precision = True/False
+CONDITIONS = [(a, b) for a in (True, False) for b in (True, False)]
 
+# todo: modify test code to use env specified test conditions if availabe
+DEFAULT_ROWS = getenv('OPTKIT_TESTING_DEFAULT_NROWS', None)
+DEFAULT_COLS = getenv('OPTKIT_TESTING_DEFAULT_NCOLS', None)
+DEFAULT_MATRIX_PATH = getenv('OPTKIT_TESTING_DEFAULT_MATRIX', None)
 
-	return TEST_EPS, RAND_ARR, MAT_ORDER
+if DEFAULT_MATRIX_PATH is not None:
+	if not path.exsists(DEFAULT_MATRIX_PATH):
+		DEFAULT_MATRIX_PATH = None
+	elif not DEFAULT_MATRIX_PATH.endswith('.npy'):
+		DEFAULT_MATRIX_PATH = None
+
+def version_string(major, minor, change, status):
+	v = "{}.{}.{}".format(major, minor, change)
+	if status:
+		v.join("-{}".format(chr(status)))
+	return v
+
