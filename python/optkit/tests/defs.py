@@ -1,4 +1,5 @@
 from os import getenv, path
+import numpy as np
 
 VERBOSE_TEST = getenv('OPTKIT_TESTING_VERBOSE', False)
 
@@ -15,6 +16,25 @@ if DEFAULT_MATRIX_PATH is not None:
 		DEFAULT_MATRIX_PATH = None
 	elif not DEFAULT_MATRIX_PATH.endswith('.npy'):
 		DEFAULT_MATRIX_PATH = None
+
+if DEFAULT_ROWS is not None:
+	try:
+		DEFAULT_ROWS = int(DEFAULT_ROWS)
+	except:
+		DEFAULT_ROWS = None
+if DEFAULT_COLS is not None:
+	try:
+		DEFAULT_COLS = int(DEFAULT_COLS)
+	except:
+		DEFAULT_COLS = None
+
+DEFAULT_SHAPE = (500, 800)
+
+if DEFAULT_ROWS is not None:
+	DEFAULT_SHAPE[0] = DEFAULT_ROWS
+if DEFAULT_COLS is not None:
+	DEFAULT_SHAPE[1] = DEFAULT_COLS
+
 
 def version_string(major, minor, change, status):
 	v = "{}.{}.{}".format(major, minor, change)

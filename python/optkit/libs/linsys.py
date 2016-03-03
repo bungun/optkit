@@ -255,6 +255,7 @@ class SparseLinsysLibs(object):
 		if lib.INITIALIZED:
 			return lib
 		else:
+			lib.pyfloat = denselib.pyfloat
 			ok_float = denselib.ok_float
 			ok_float_p = lib.ok_float_p = denselib.ok_float_p
 			ok_int = denselib.ok_int

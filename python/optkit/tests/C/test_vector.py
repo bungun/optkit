@@ -16,10 +16,10 @@ class VectorTestCase(unittest.TestCase):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	@staticmethod
-	def make_vec_triplet(lib, size_, pytype):
+	def make_vec_triplet(lib, size_):
 			a = lib.vector(0, 0, None)
 			lib.vector_calloc(a, size_)
-			a_py = np.zeros(size_).astype(pytype)
+			a_py = np.zeros(size_).astype(lib.pyfloat)
 			a_ptr = a_py.ctypes.data_as(lib.ok_float_p)
 			return a, a_py, a_ptr
 
@@ -58,12 +58,11 @@ class VectorTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			pytype = np.float32 if single_precision else np.float64
 			len_v = 10 + int(1000 * np.random.rand())
 
-			v, v_py, v_ptr = self.make_vec_triplet(lib, len_v, pytype)
+			v, v_py, v_ptr = self.make_vec_triplet(lib, len_v)
 
-			w, w_py, w_ptr = self.make_vec_triplet(lib, len_v, pytype)
+			w, w_py, w_ptr = self.make_vec_triplet(lib, len_v)
 
 			# set_all
 			set_val = 5
@@ -91,7 +90,7 @@ class VectorTestCase(unittest.TestCase):
 
 			# view_array
 			if not gpu:
-				u_rand = np.random.rand(len_v).astype(pytype)
+				u_rand = np.random.rand(len_v).astype(lib.pyfloat)
 				u_ptr = u_rand.ctypes.data_as(lib.ok_float_p)
 				u = lib.vector(0, 0, None)
 				lib.vector_view_array(u, u_ptr, u_rand.size)
@@ -109,10 +108,9 @@ class VectorTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			pytype = np.float32 if single_precision else np.float64
 			len_v = 10 + int(10 * np.random.rand())
 
-			v, v_py, v_ptr = self.make_vec_triplet(lib, len_v, pytype)
+			v, v_py, v_ptr = self.make_vec_triplet(lib, len_v)
 
 			offset_sub = 3
 			len_sub = 3
@@ -120,7 +118,7 @@ class VectorTestCase(unittest.TestCase):
 			lib.vector_subvector(v_sub, v, offset_sub, len_sub)
 			self.assertEqual(v_sub.size, 3)
 			self.assertEqual(v_sub.stride, v.stride)
-			v_sub_py = np.zeros(len_sub).astype(pytype)
+			v_sub_py = np.zeros(len_sub).astype(lib.pyfloat)
 			v_sub_ptr = v_sub_py.ctypes.data_as(lib.ok_float_p)
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(v_sub_ptr, v_sub, 1)
@@ -136,15 +134,14 @@ class VectorTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			pytype = np.float32 if single_precision else np.float64
 			len_v = 10 + int(1000 * np.random.rand())
 
 			val1 = 12 * np.random.rand()
 			val2 = 5 * np.random.rand()
 			len_v = 10 + int(10 * np.random.rand())
 
-			v, v_py, v_ptr = self.make_vec_triplet(lib, len_v, pytype)
-			w, w_py, w_ptr = self.make_vec_triplet(lib, len_v, pytype)
+			v, v_py, v_ptr = self.make_vec_triplet(lib, len_v)
+			w, w_py, w_ptr = self.make_vec_triplet(lib, len_v)
 
 			# constant addition
 			lib.vector_add_constant(v, val1)

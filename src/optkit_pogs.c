@@ -294,8 +294,8 @@ void POGS(update_objective)(void * linalg_handle, FunctionVector * f,
 }
 
 /*
- * eps_primal = eps_abs + eps_rel * sqrt(m) * ||y^k||
- * eps_dual = eps_abs + eps_rel * sqrt(n) * ||x^k||
+ * eps_primal = eps_abs + eps_rel * sqrt(m) * ||y^k+1/2||
+ * eps_dual = eps_abs + eps_rel * sqrt(n) * ||xt^k+1/2||
  * eps_gap = eps_abs + eps_rel * sqrt(mn) * ||z^k|| * ||z^k+1/2||
  */
 void POGS(update_tolerances)(void * linalg_handle, pogs_variables * z,
@@ -314,10 +314,10 @@ void POGS(update_tolerances)(void * linalg_handle, pogs_variables * z,
 
 /*
  * residual for primal feasibility
- *	||Ax^(k+1/2) - y^(k+1/2)|| / || y^(k+1/2)||
+ *	||Ax^(k+1/2) - y^(k+1/2)||
  *
  * residual for dual feasibility
- * 	||A'yt^(k+1/2) - xt^(k+1/2)|| / || xt^(k+1/2)||
+ * 	||A'yt^(k+1/2) - xt^(k+1/2)||
  */
 void POGS(update_residuals)(void * linalg_handle, pogs_solver * solver,
 	pogs_objectives * obj, pogs_residuals * res, pogs_tolerances * eps)

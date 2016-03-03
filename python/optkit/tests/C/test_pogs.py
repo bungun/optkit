@@ -3,7 +3,7 @@ import os
 import numpy as np
 from ctypes import c_void_p, byref, cast, addressof
 from optkit.libs import DenseLinsysLibs, ProxLibs, PogsLibs
-from optkit.tests.defs import CONDITIONS
+from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
 
 ALPHA_DEFAULT = 1.7
@@ -57,13 +57,13 @@ class PogsVariablesLocal():
 	def __init__(self, m, n, pytype):
 		self.m = m
 		self.n = n
-		self.z = np.zeros(m + n, dtype=pytype)
-		self.z12 = np.zeros(m + n, dtype=pytype)
-		self.zt = np.zeros(m + n, dtype=pytype)
-		self.zt12 = np.zeros(m + n, dtype=pytype)
-		self.prev = np.zeros(m + n, dtype=pytype)
-		self.d = np.zeros(m, dtype=pytype)
-		self.e = np.zeros(n, dtype=pytype)
+		self.z = np.zeros(m + n).astype(pytype)
+		self.z12 = np.zeros(m + n).astype(pytype)
+		self.zt = np.zeros(m + n).astype(pytype)
+		self.zt12 = np.zeros(m + n).astype(pytype)
+		self.prev = np.zeros(m + n).astype(pytype)
+		self.d = np.zeros(m).astype(pytype)
+		self.e = np.zeros(n).astype(pytype)
 
 	@property
 	def x(self):
@@ -98,11 +98,11 @@ class PogsVariablesLocal():
 		return self.zt12[:self.m]
 
 class PogsOutputLocal():
-	def __init__(self, denselib, pogslib, m, n, pytype):
-		self.x = np.zeros(n, dtype=pytype)
-		self.y = np.zeros(m, dtype=pytype)
-		self.mu = np.zeros(n, dtype=pytype)
-		self.nu = np.zeros(m, dtype=pytype)
+	def __init__(self, denselib, pogslib, m, n):
+		self.x = np.zeros(n).astype(denselib.pyfloat)
+		self.y = np.zeros(m).astype(denselib.pyfloat)
+		self.mu = np.zeros(n).astype(denselib.pyfloat)
+		self.nu = np.zeros(m).astype(denselib.pyfloat)
 		self.ptr = pogslib.pogs_output(
 				cast(self.x.ctypes.get_data(), denselib.ok_float_p),
 				cast(self.y.ctypes.get_data(), denselib.ok_float_p),
@@ -126,11 +126,18 @@ class PogsTestCase(unittest.TestCase):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		self.shape = (4, 8)
-		# self.shape = (150, 250)
-		self.A_test = np.random.rand(*self.shape)
-		self.x_test = np.random.rand(self.shape[1])
+		self.shape = None
+		if DEFAULT_MATRIX_PATH is not None:
+			try:
+				self.A_test = np.load(DEFAULT_MATRIX_PATH)
+				self.shape = A.shape
+			except:
+				pass
+		if self.shape is None:
+			self.shape = DEFAULT_SHAPE
+			self.A_test = np.random.rand(*self.shape)
 
+		self.x_test = np.random.rand(self.shape[1])
 
 	def load_to_local(self, denselib, py_vector, c_vector):
 		denselib.vector_memcpy_av(
@@ -155,11 +162,10 @@ class PogsTestCase(unittest.TestCase):
 		self.load_to_local(denselib, py_vars.e, solver.contents.M.contents.e)
 
 
-	def pogs_equilibration(self, denselib, solver, A, localA, localvars,
-						   pytype):
+	def pogs_equilibration(self, denselib, solver, A, localA, localvars):
 		m, n = A.shape
-		d_local = np.zeros(m, dtype=pytype)
-		e_local = np.zeros(n, dtype=pytype)
+		d_local = np.zeros(m).astype(denselib.pyfloat)
+		e_local = np.zeros(n).astype(denselib.pyfloat)
 		self.load_to_local(denselib, d_local, solver.contents.M.contents.d)
 		self.load_to_local(denselib, e_local, solver.contents.M.contents.e)
 
@@ -168,8 +174,7 @@ class PogsTestCase(unittest.TestCase):
 		DAEx = d_local * A.dot(e_local * x_rand)
 		self.assertTrue(np.allclose(A_eqx, DAEx))
 
-	def pogs_projector(self, denselib, pogslib, blas_handle, solver, localA,
-					   pytype):
+	def pogs_projector(self, denselib, pogslib, blas_handle, solver, localA):
 
 		m, n = localA.shape
 
@@ -184,10 +189,10 @@ class PogsTestCase(unittest.TestCase):
 		denselib.vector_calloc(y_out, m)
 
 
-		x_in_py = np.random.rand(n).astype(pytype)
-		y_in_py = np.random.rand(m).astype(pytype)
-		x_out_py = np.zeros(n, dtype=pytype)
-		y_out_py = np.zeros(m, dtype=pytype)
+		x_in_py = np.random.rand(n).astype(denselib.pyfloat)
+		y_in_py = np.random.rand(m).astype(denselib.pyfloat)
+		x_out_py = np.zeros(n).astype(denselib.pyfloat)
+		y_out_py = np.zeros(m).astype(denselib.pyfloat)
 
 		x_in_ptr = x_in_py.ctypes.data_as(denselib.ok_float_p)
 		y_in_ptr = y_in_py.ctypes.data_as(denselib.ok_float_p)
@@ -272,14 +277,14 @@ class PogsTestCase(unittest.TestCase):
 		self.assertTrue(np.allclose(g_c0, g_c1))
 
 	def pogs_warmstart(self, denselib, pogslib, solver, settings, localA,
-					   localvars, pytype):
+					   localvars):
 
 		m, n = localA.shape
 
 		rho = solver.contents.rho
 
-		x_rand = np.random.rand(n).astype(pytype)
-		nu_rand = np.random.rand(m).astype(pytype)
+		x_rand = np.random.rand(n).astype(denselib.pyfloat)
+		nu_rand = np.random.rand(m).astype(denselib.pyfloat)
 
 		x_ptr = x_rand.ctypes.data_as(denselib.ok_float_p)
 		nu_ptr = nu_rand.ctypes.data_as(denselib.ok_float_p)
@@ -568,13 +573,11 @@ class PogsTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			pytype = np.float32 if single_precision else np.float64
-
 			for rowmajor in (True, False):
 				order = dlib.enums.CblasRowMajor if rowmajor else \
 						dlib.enums.CblasColMajor
 
-				A = self.A_test.astype(pytype)
+				A = self.A_test.astype(dlib.pyfloat)
 				A_ptr = A.ctypes.data_as(dlib.ok_float_p)
 				m, n = A.shape
 				solver = lib.pogs_init(A_ptr, m, n, order,
@@ -599,14 +602,13 @@ class PogsTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
 			f = pxlib.function_vector(0, None)
 			g = pxlib.function_vector(0, None)
 			pxlib.function_vector_calloc(f, m)
 			pxlib.function_vector_calloc(g, n)
-			f_py = np.zeros(m, dtype=pxlib.function)
-			g_py = np.zeros(n, dtype=pxlib.function)
+			f_py = np.zeros(m).astype(pxlib.function)
+			g_py = np.zeros(n).astype(pxlib.function)
 			for i in xrange(m):
 				f_py[i] = pxlib.function(pxlib.enums.Abs, 1, 1, 1, 0, 0)
 
@@ -621,14 +623,14 @@ class PogsTestCase(unittest.TestCase):
 						dlib.enums.CblasColMajor
 				pyorder = 'C' if rowmajor else 'F'
 
-				A = np.zeros((m, n), dtype=pytype, order=pyorder)
+				A = np.zeros((m, n), order=pyorder).astype(dlib.pyfloat)
 				A += self.A_test
 				A_ptr = A.ctypes.data_as(dlib.ok_float_p)
 				m, n = A.shape
 				solver = lib.pogs_init(A_ptr, m, n, order,
 									   lib.enums.EquilSinkhorn)
 
-				output = PogsOutputLocal(dlib, lib, m, n, pytype)
+				output = PogsOutputLocal(dlib, lib, m, n)
 
 				info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan, np.nan)
 				settings = lib.pogs_settings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -636,26 +638,24 @@ class PogsTestCase(unittest.TestCase):
 				lib.set_default_settings(settings)
 
 
-				localvars = PogsVariablesLocal(m, n, pytype)
+				localvars = PogsVariablesLocal(m, n, dlib.pyfloat)
 
 				if lib.full_api_accessible:
-					localA = np.zeros((m, n), dtype=pytype, order=pyorder)
+					localA = np.zeros(
+							(m, n), order=pyorder).astype(dlib.pyfloat)
 					localA_ptr = localA.ctypes.data_as(dlib.ok_float_p)
-					dlib.matrix_memcpy_am(localA_ptr,
-										  solver.contents.M.contents.A, order)
+					dlib.matrix_memcpy_am(
+							localA_ptr, solver.contents.M.contents.A, order)
 
 					res = lib.pogs_residuals(0, 0, 0)
 					tols = lib.make_tolerances(settings, m, n)
 					obj = lib.pogs_objectives(0, 0, 0)
 
 
-					self.pogs_equilibration(dlib, solver, A, localA, localvars,
-										    pytype)
-					self.pogs_projector(dlib, lib, hdl, solver, localA, pytype)
+					self.pogs_equilibration(dlib, solver, A, localA, localvars)
+					self.pogs_projector(dlib, lib, hdl, solver, localA)
 					self.pogs_scaling(dlib, pxlib, lib, solver, f, f_py, g,
 									  g_py, localvars)
-					# self.pogs_warmstart(dlib, lib, solver, settings, localA,
-										# localvars, pytype)
 					self.pogs_primal_update(dlib, lib, solver, localvars)
 					self.pogs_prox(dlib, pxlib, lib, hdl, solver, f, f_py, g,
 								   g_py, localvars)
@@ -694,15 +694,14 @@ class PogsTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
 			f = pxlib.function_vector(0, None)
 			g = pxlib.function_vector(0, None)
 
 			pxlib.function_vector_calloc(f, m)
 			pxlib.function_vector_calloc(g, n)
-			f_py = np.zeros(m, dtype=pxlib.function)
-			g_py = np.zeros(n, dtype=pxlib.function)
+			f_py = np.zeros(m).astype(pxlib.function)
+			g_py = np.zeros(n).astype(pxlib.function)
 			f_ptr = f_py.ctypes.data_as(pxlib.function_p)
 			g_ptr = g_py.ctypes.data_as(pxlib.function_p)
 			for i in xrange(m):
@@ -720,14 +719,14 @@ class PogsTestCase(unittest.TestCase):
 						dlib.enums.CblasColMajor
 				pyorder = 'C' if rowmajor else 'F'
 
-				A = np.zeros((m, n), dtype=pytype, order=pyorder)
+				A = np.zeros((m, n), order=pyorder).astype(dlib.pyfloat)
 				A += self.A_test
 				A_ptr = A.ctypes.data_as(dlib.ok_float_p)
 				m, n = A.shape
 				solver = lib.pogs_init(A_ptr, m, n, order,
 									   lib.enums.EquilSinkhorn)
 
-				output = PogsOutputLocal(dlib, lib, m, n, pytype)
+				output = PogsOutputLocal(dlib, lib, m, n)
 
 				info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan, np.nan)
 				settings = lib.pogs_settings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -739,10 +738,17 @@ class PogsTestCase(unittest.TestCase):
 				lib.pogs_finish(solver, 0)
 
 				if info.converged:
-					primal_feas = A.dot(output.x) - output.y
-					dual_feas = A.T.dot(output.nu) + output.mu
-					self.assertTrue(all(primal_feas <= 10 * settings.reltol))
-					self.assertTrue(all(dual_feas <= 10 * settings.reltol))
+					rtol = settings.reltol
+					atolm = settings.abstol * (m**0.5)
+					atoln = settings.abstol * (n**0.5)
+					y_norm = np.linalg.norm(output.y)
+					mu_norm = np.linalg.norm(output.mu)
+
+					primal_feas = np.linalg.norm(A.dot(output.x) - output.y)
+					dual_feas = np.linalg.norm(A.T.dot(output.nu) + output.mu)
+
+					self.assertTrue(primal_feas <= 10 * (atolm + rtol * y_norm))
+					self.assertTrue(dual_feas <= 10 * (atolm + rtol * y_norm))
 
 			pxlib.function_vector_free(f)
 			pxlib.function_vector_free(g)
@@ -766,15 +772,14 @@ class PogsTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
 			f = pxlib.function_vector(0, None)
 			g = pxlib.function_vector(0, None)
 
 			pxlib.function_vector_calloc(f, m)
 			pxlib.function_vector_calloc(g, n)
-			f_py = np.zeros(m, dtype=pxlib.function)
-			g_py = np.zeros(n, dtype=pxlib.function)
+			f_py = np.zeros(m).astype(pxlib.function)
+			g_py = np.zeros(n).astype(pxlib.function)
 			f_ptr = f_py.ctypes.data_as(pxlib.function_p)
 			g_ptr = g_py.ctypes.data_as(pxlib.function_p)
 			for i in xrange(m):
@@ -792,11 +797,11 @@ class PogsTestCase(unittest.TestCase):
 						dlib.enums.CblasColMajor
 				pyorder = 'C' if rowmajor else 'F'
 
-				A = np.zeros((m, n), dtype=pytype, order=pyorder)
+				A = np.zeros((m, n), order=pyorder).astype(dlib.pyfloat)
 				A += self.A_test
 				A_ptr = A.ctypes.data_as(dlib.ok_float_p)
 				m, n = A.shape
-				output = PogsOutputLocal(dlib, lib, m, n, pytype)
+				output = PogsOutputLocal(dlib, lib, m, n)
 
 				info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan, np.nan)
 				settings = lib.pogs_settings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -808,10 +813,17 @@ class PogsTestCase(unittest.TestCase):
 					lib.enums.EquilSinkhorn)
 
 				if info.converged:
-					primal_feas = A.dot(output.x) - output.y
-					dual_feas = A.T.dot(output.nu) + output.mu
-					self.assertTrue(all(primal_feas <= 10 * settings.reltol))
-					self.assertTrue(all(dual_feas <= 10 * settings.reltol))
+					rtol = settings.reltol
+					atolm = settings.abstol * (m**0.5)
+					atoln = settings.abstol * (n**0.5)
+					y_norm = np.linalg.norm(output.y)
+					mu_norm = np.linalg.norm(output.mu)
+
+					primal_feas = np.linalg.norm(A.dot(output.x) - output.y)
+					dual_feas = np.linalg.norm(A.T.dot(output.nu) + output.mu)
+
+					self.assertTrue(primal_feas <= 10 * (atolm + rtol * y_norm))
+					self.assertTrue(dual_feas <= 10 * (atolm + rtol * y_norm))
 
 
 			pxlib.function_vector_free(f)
@@ -836,18 +848,17 @@ class PogsTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
-			x_rand = np.random.rand(n).astype(pytype)
-			nu_rand = np.random.rand(m).astype(pytype)
+			x_rand = np.random.rand(n).astype(dlib.pyfloat)
+			nu_rand = np.random.rand(m).astype(dlib.pyfloat)
 
 			f = pxlib.function_vector(0, None)
 			g = pxlib.function_vector(0, None)
 
 			pxlib.function_vector_calloc(f, m)
 			pxlib.function_vector_calloc(g, n)
-			f_py = np.zeros(m, dtype=pxlib.function)
-			g_py = np.zeros(n, dtype=pxlib.function)
+			f_py = np.zeros(m).astype(pxlib.function)
+			g_py = np.zeros(n).astype(pxlib.function)
 			f_ptr = f_py.ctypes.data_as(pxlib.function_p)
 			g_ptr = g_py.ctypes.data_as(pxlib.function_p)
 			for i in xrange(m):
@@ -865,14 +876,14 @@ class PogsTestCase(unittest.TestCase):
 						dlib.enums.CblasColMajor
 				pyorder = 'C' if rowmajor else 'F'
 
-				A = np.zeros((m, n), dtype=pytype, order=pyorder)
+				A = np.zeros((m, n), order=pyorder).astype(dlib.pyfloat)
 				A += self.A_test
 				A_ptr = A.ctypes.data_as(dlib.ok_float_p)
 				m, n = A.shape
 				solver = lib.pogs_init(A_ptr, m, n, order,
 									   lib.enums.EquilSinkhorn)
 
-				output = PogsOutputLocal(dlib, lib, m, n, pytype)
+				output = PogsOutputLocal(dlib, lib, m, n)
 
 				info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan, np.nan)
 				settings = lib.pogs_settings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -892,11 +903,12 @@ class PogsTestCase(unittest.TestCase):
 					# test warmstart feed
 
 					rho = solver.contents.rho
-					localA = np.zeros((m, n), dtype=pytype, order=pyorder)
+					localA = np.zeros(
+							(m, n), order=pyorder).astype(dlib.pyfloat)
 					localA_ptr = localA.ctypes.data_as(dlib.ok_float_p)
-					dlib.matrix_memcpy_am(localA_ptr,
-										  solver.contents.M.contents.A, order)
-					localvars = PogsVariablesLocal(m, n, pytype)
+					dlib.matrix_memcpy_am(
+							localA_ptr, solver.contents.M.contents.A, order)
+					localvars = PogsVariablesLocal(m, n, dlib.pyfloat)
 					self.load_all_local(dlib, localvars, solver)
 					self.assertTrue(np.allclose(x_rand,
 												localvars.e * localvars.x))
@@ -996,18 +1008,17 @@ class PogsTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
-			x_rand = np.random.rand(n).astype(pytype)
-			nu_rand = np.random.rand(m).astype(pytype)
+			x_rand = np.random.rand(n).astype(dlib.pyfloat)
+			nu_rand = np.random.rand(m).astype(dlib.pyfloat)
 
 			f = pxlib.function_vector(0, None)
 			g = pxlib.function_vector(0, None)
 
 			pxlib.function_vector_calloc(f, m)
 			pxlib.function_vector_calloc(g, n)
-			f_py = np.zeros(m, dtype=pxlib.function)
-			g_py = np.zeros(n, dtype=pxlib.function)
+			f_py = np.zeros(m).astype(pxlib.function)
+			g_py = np.zeros(n).astype(pxlib.function)
 			f_ptr = f_py.ctypes.data_as(pxlib.function_p)
 			g_ptr = g_py.ctypes.data_as(pxlib.function_p)
 			for i in xrange(m):
@@ -1025,14 +1036,14 @@ class PogsTestCase(unittest.TestCase):
 						dlib.enums.CblasColMajor
 				pyorder = 'C' if rowmajor else 'F'
 
-				A = np.zeros((m, n), dtype=pytype, order=pyorder)
+				A = np.zeros((m, n), order=pyorder).astype(dlib.pyfloat)
 				A += self.A_test
 				A_ptr = A.ctypes.data_as(dlib.ok_float_p)
 				m, n = A.shape
 				solver = lib.pogs_init(A_ptr, m, n, order,
 									   lib.enums.EquilSinkhorn)
 
-				output = PogsOutputLocal(dlib, lib, m, n, pytype)
+				output = PogsOutputLocal(dlib, lib, m, n)
 
 				info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan, np.nan)
 				settings = lib.pogs_settings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1045,24 +1056,25 @@ class PogsTestCase(unittest.TestCase):
 				k_orig = info.k
 
 				mindim = min(m, n)
-				A_equil = np.zeros((m, n), order=pyorder).astype(pytype)
+				A_equil = np.zeros(
+						(m, n), order=pyorder).astype(dlib.pyfloat)
 				A_equil_ptr = A_equil.ctypes.data_as(dlib.ok_float_p)
 				if lib.direct:
 					LLT = np.zeros((mindim, mindim), order=pyorder)
-					LLT = LLT.astype(pytype)
+					LLT = LLT.astype(dlib.pyfloat)
 					LLT_ptr = LLT.ctypes.data_as(dlib.ok_float_p)
 				else:
 					LLT = c_void_p()
 					LLT_ptr = LLT
 
-				d = np.zeros(m).astype(pytype)
-				e = np.zeros(n).astype(pytype)
-				z = np.zeros(m + n).astype(pytype)
-				z12 = np.zeros(m + n).astype(pytype)
-				zt = np.zeros(m + n).astype(pytype)
-				zt12 = np.zeros(m + n).astype(pytype)
-				zprev = np.zeros(m + n).astype(pytype)
-				rho = np.zeros(1).astype(pytype)
+				d = np.zeros(m).astype(dlib.pyfloat)
+				e = np.zeros(n).astype(dlib.pyfloat)
+				z = np.zeros(m + n).astype(dlib.pyfloat)
+				z12 = np.zeros(m + n).astype(dlib.pyfloat)
+				zt = np.zeros(m + n).astype(dlib.pyfloat)
+				zt12 = np.zeros(m + n).astype(dlib.pyfloat)
+				zprev = np.zeros(m + n).astype(dlib.pyfloat)
+				rho = np.zeros(1).astype(dlib.pyfloat)
 
 				d_ptr =d.ctypes.data_as(dlib.ok_float_p)
 				e_ptr = e.ctypes.data_as(dlib.ok_float_p)

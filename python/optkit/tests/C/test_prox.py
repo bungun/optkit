@@ -3,7 +3,8 @@ import os
 import numpy as np
 from ctypes import c_int, byref, c_void_p
 from optkit.libs import DenseLinsysLibs, ProxLibs
-from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string
+from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string, \
+							  DEFAULT_SHAPE
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
 
 class ProxLibsTestCase(unittest.TestCase):
@@ -90,7 +91,7 @@ class ProxTestCase(unittest.TestCase):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		self.shape = (150, 250)
+		self.shape = DEFAULT_SHAPE
 		self.scalefactor = 5
 
 	@staticmethod
@@ -221,12 +222,10 @@ class ProxTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			pytype = np.float32 if single_precision else np.float64
-
 			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
 			v = dlib.vector(0, 0, None)
 			dlib.vector_calloc(v, m)
-			v_py = np.zeros(m).astype(pytype)
+			v_py = np.zeros(m).astype(dlib.pyfloat)
 			v_ptr = v_py.ctypes.data_as(dlib.ok_float_p)
 
 			for i in xrange(m):
@@ -288,16 +287,14 @@ class ProxTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			pytype = np.float32 if single_precision else np.float64
-
 			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
 			x = dlib.vector(0, 0, None)
-			x_py = np.zeros(m).astype(pytype)
+			x_py = np.zeros(m).astype(dlib.pyfloat)
 			x_ptr = x_py.ctypes.data_as(dlib.ok_float_p)
 			dlib.vector_calloc(x, m)
 
 			xout = dlib.vector(0, 0, None)
-			xout_py = np.zeros(m).astype(pytype)
+			xout_py = np.zeros(m).astype(dlib.pyfloat)
 			xout_ptr = xout_py.ctypes.data_as(dlib.ok_float_p)
 			dlib.vector_calloc(xout, m)
 

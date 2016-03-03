@@ -3,7 +3,8 @@ import os
 import numpy as np
 from ctypes import c_float, c_int, c_void_p, Structure, byref
 from optkit.libs import DenseLinsysLibs, SparseLinsysLibs
-from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string
+from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string, \
+							  DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
 
 class DenseLibsTestCase(unittest.TestCase):
 	@classmethod
@@ -106,24 +107,32 @@ class DenseBLASTestCase(unittest.TestCase):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		self.shape = (150, 250)
-		self.A_test = np.random.rand(*self.shape)
+		self.shape = None
+		if DEFAULT_MATRIX_PATH is not None:
+			try:
+				self.A_test = np.load(DEFAULT_MATRIX_PATH)
+				self.shape = A.shape
+			except:
+				pass
+		if self.shape is None:
+			self.shape = DEFAULT_SHAPE
+			self.A_test = np.random.rand(*self.shape)
 
 	@staticmethod
-	def make_vec_triplet(lib, size_, pytype):
+	def make_vec_triplet(lib, size_):
 			a = lib.vector(0, 0, None)
 			lib.vector_calloc(a, size_)
-			a_py = np.zeros(size_).astype(pytype)
+			a_py = np.zeros(size_).astype(lib.pyfloat)
 			a_ptr = a_py.ctypes.data_as(lib.ok_float_p)
 			return a, a_py, a_ptr
 
 	@staticmethod
-	def make_mat_triplet(lib, shape, pytype, rowmajor=True):
+	def make_mat_triplet(lib, shape, rowmajor=True):
 		order = 101 if rowmajor else 102
 		pyorder = 'C' if rowmajor else 'F'
 		A = lib.matrix(0, 0, 0, None, order)
 		lib.matrix_calloc(A, shape[0], shape[1], order)
-		A_py = np.zeros(shape, order=pyorder).astype(pytype)
+		A_py = np.zeros(shape, order=pyorder).astype(lib.pyfloat)
 		A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
 		return A, A_py, A_ptr
 
@@ -138,10 +147,9 @@ class DenseBLASTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
-			v, v_py, v_ptr = self.make_vec_triplet(lib, m, pytype)
-			w, w_py, w_ptr = self.make_vec_triplet(lib, m, pytype)
+			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
+			w, w_py, w_ptr = self.make_vec_triplet(lib, m)
 
 			v_py += np.random.rand(m)
 			w_py += np.random.rand(m)
@@ -164,9 +172,8 @@ class DenseBLASTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
-			v, v_py, v_ptr = self.make_vec_triplet(lib, m, pytype)
+			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
 			v_py += np.random.rand(m)
 			lib.vector_memcpy_va(v, v_ptr, 1)
 			answer = lib.blas_nrm2(hdl, v)
@@ -186,9 +193,8 @@ class DenseBLASTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
-			v, v_py, v_ptr = self.make_vec_triplet(lib, m, pytype)
+			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
 			v_py += np.random.rand(m)
 			lib.vector_memcpy_va(v, v_ptr, 1)
 			answer = lib.blas_asum(hdl, v)
@@ -210,9 +216,8 @@ class DenseBLASTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
-			v, v_py, v_ptr = self.make_vec_triplet(lib, m, pytype)
+			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
 			v_py += v_rand
 			lib.vector_memcpy_va(v, v_ptr, 1)
 			alpha = np.random.rand()
@@ -235,10 +240,9 @@ class DenseBLASTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
-			v, v_py, v_ptr = self.make_vec_triplet(lib, m, pytype)
-			w, w_py, w_ptr = self.make_vec_triplet(lib, m, pytype)
+			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
+			w, w_py, w_ptr = self.make_vec_triplet(lib, m)
 
 			v_py += np.random.rand(m)
 			w_py += np.random.rand(m)
@@ -264,17 +268,16 @@ class DenseBLASTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
 						lib.enums.CblasColMajor
 
 				# make A, x, y
-				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n), pytype,
+				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n),
 													   rowmajor=rowmajor)
-				x, x_py, x_ptr = self.make_vec_triplet(lib, n, pytype)
-				y, y_py, y_ptr = self.make_vec_triplet(lib, m, pytype)
+				x, x_py, x_ptr = self.make_vec_triplet(lib, n)
+				y, y_py, y_ptr = self.make_vec_triplet(lib, m)
 
 				# populate A, x, y (in Py and C)
 				A_py += self.A_test
@@ -336,16 +339,15 @@ class DenseBLASTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
 						lib.enums.CblasColMajor
 
 				# make L, x
-				L, L_py, L_ptr = self.make_mat_triplet(lib, (n, n), pytype,
+				L, L_py, L_ptr = self.make_mat_triplet(lib, (n, n),
 													   rowmajor=rowmajor)
-				x, x_py, x_ptr = self.make_vec_triplet(lib, n, pytype)
+				x, x_py, x_ptr = self.make_vec_triplet(lib, n)
 
 				# populate L, x
 				L_py += L_test
@@ -386,13 +388,12 @@ class DenseBLASTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
 			# make symmetric banded "matrix" S stored as vector s,
 			# and vectors x, y
-			s, s_py, s_ptr = self.make_vec_triplet(lib, n * diags, pytype)
-			x, x_py, x_ptr = self.make_vec_triplet(lib, n, pytype)
-			y, y_py, y_ptr = self.make_vec_triplet(lib, n, pytype)
+			s, s_py, s_ptr = self.make_vec_triplet(lib, n * diags)
+			x, x_py, x_ptr = self.make_vec_triplet(lib, n)
+			y, y_py, y_ptr = self.make_vec_triplet(lib, n)
 
 			# populate vectors
 			s_py += s_test
@@ -445,13 +446,12 @@ class DenseBLASTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
 			# make diagonal "matrix" D stored as vector d,
 			# and vectors x, y
-			d, d_py, d_ptr = self.make_vec_triplet(lib, n, pytype)
-			x, x_py, x_ptr = self.make_vec_triplet(lib, n, pytype)
-			y, y_py, y_ptr = self.make_vec_triplet(lib, n, pytype)
+			d, d_py, d_ptr = self.make_vec_triplet(lib, n)
+			x, x_py, x_ptr = self.make_vec_triplet(lib, n)
+			y, y_py, y_ptr = self.make_vec_triplet(lib, n)
 
 			# populate vectors
 			d_py += d_test
@@ -492,18 +492,17 @@ class DenseBLASTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
 						lib.enums.CblasColMajor
 
 				# make A, x, y
-				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n), pytype,
+				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n),
 													   rowmajor=rowmajor)
-				B, B_py, B_ptr = self.make_mat_triplet(lib, (m, n), pytype,
+				B, B_py, B_ptr = self.make_mat_triplet(lib, (m, n),
 													   rowmajor=rowmajor)
-				C, C_py, C_ptr = self.make_mat_triplet(lib, (n, n), pytype,
+				C, C_py, C_ptr = self.make_mat_triplet(lib, (n, n),
 													   rowmajor=rowmajor)
 
 				# populate
@@ -548,7 +547,6 @@ class DenseBLASTestCase(unittest.TestCase):
 
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
 			for rowmajor in [True]:
 				order = lib.enums.CblasRowMajor if rowmajor else \
@@ -556,9 +554,9 @@ class DenseBLASTestCase(unittest.TestCase):
 
 
 				# make A, x, y
-				A, A_py, A_ptr = self.make_mat_triplet(lib, (n, n), pytype,
+				A, A_py, A_ptr = self.make_mat_triplet(lib, (n, n),
 													   rowmajor=rowmajor)
-				B, B_py, B_ptr = self.make_mat_triplet(lib, (n, n), pytype,
+				B, B_py, B_ptr = self.make_mat_triplet(lib, (n, n),
 													   rowmajor=rowmajor)
 
 				# populate
@@ -614,16 +612,15 @@ class DenseBLASTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
 						lib.enums.CblasColMajor
 
 				# make A, x, y
-				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n), pytype,
+				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n),
 													   rowmajor=rowmajor)
-				L, L_py, L_ptr = self.make_mat_triplet(lib, (n, n), pytype,
+				L, L_py, L_ptr = self.make_mat_triplet(lib, (n, n),
 													   rowmajor=rowmajor)
 
 				# populate
@@ -659,24 +656,32 @@ class DenseLinalgTestCase(unittest.TestCase):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		self.shape = (150, 250)
-		self.A_test = np.random.rand(*self.shape)
+		self.shape = None
+		if DEFAULT_MATRIX_PATH is not None:
+			try:
+				self.A_test = np.load(DEFAULT_MATRIX_PATH)
+				self.shape = A.shape
+			except:
+				pass
+		if self.shape is None:
+			self.shape = DEFAULT_SHAPE
+			self.A_test = np.random.rand(*self.shape)
 
 	@staticmethod
-	def make_vec_triplet(lib, size_, pytype):
+	def make_vec_triplet(lib, size_):
 			a = lib.vector(0, 0, None)
 			lib.vector_calloc(a, size_)
-			a_py = np.zeros(size_).astype(pytype)
+			a_py = np.zeros(size_).astype(lib.pyfloat)
 			a_ptr = a_py.ctypes.data_as(lib.ok_float_p)
 			return a, a_py, a_ptr
 
 	@staticmethod
-	def make_mat_triplet(lib, shape, pytype, rowmajor=True):
+	def make_mat_triplet(lib, shape, rowmajor=True):
 		order = 101 if rowmajor else 102
 		pyorder = 'C' if rowmajor else 'F'
 		A = lib.matrix(0, 0, 0, None, order)
 		lib.matrix_calloc(A, shape[0], shape[1], order)
-		A_py = np.zeros(shape, order=pyorder).astype(pytype)
+		A_py = np.zeros(shape, order=pyorder).astype(lib.pyfloat)
 		A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
 		return A, A_py, A_ptr
 
@@ -699,7 +704,6 @@ class DenseLinalgTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
@@ -707,9 +711,8 @@ class DenseLinalgTestCase(unittest.TestCase):
 
 				# allocate L, x
 				L, L_py, L_ptr = self.make_mat_triplet(lib, (mindim, mindim),
-													   pytype,
 													   rowmajor=rowmajor)
-				x, x_py, x_ptr = self.make_vec_triplet(lib, mindim, pytype)
+				x, x_py, x_ptr = self.make_vec_triplet(lib, mindim)
 
 				# populate matrices/vector
 				L_py += AA_test

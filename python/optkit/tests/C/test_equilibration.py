@@ -3,7 +3,7 @@ import os
 import numpy as np
 from ctypes import c_void_p, byref
 from optkit.libs import DenseLinsysLibs, EquilibrationLibs
-from optkit.tests.defs import CONDITIONS
+from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
 
 class EquilLibsTestCase(unittest.TestCase):
 	"""
@@ -34,8 +34,17 @@ class EquilLibsTestCase(unittest.TestCase):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		self.shape = (150, 250)
-		self.A_test = np.random.rand(*self.shape)
+		self.shape = None
+		if DEFAULT_MATRIX_PATH is not None:
+			try:
+				self.A_test = np.load(DEFAULT_MATRIX_PATH)
+				self.shape = A.shape
+			except:
+				pass
+		if self.shape is None:
+			self.shape = DEFAULT_SHAPE
+			self.A_test = np.random.rand(*self.shape)
+
 		self.x_test = np.random.rand(self.shape[1])
 
 	def test_libs_exist(self):
@@ -51,10 +60,10 @@ class EquilLibsTestCase(unittest.TestCase):
 		self.assertTrue(any(eqlibs))
 
 	@staticmethod
-	def equilibrate(dlib, equilibration_method, hdl, pytype, order, pyorder,
-					shape, A_test, x_test):
+	def equilibrate(dlib, equilibration_method, hdl, order, pyorder, A_test,
+					x_test):
 
-		m, n = shape
+		m, n = shape = A_test.shape
 
 		# declare C matrix, vectors
 		A = dlib.matrix(0, 0, 0, None, order)
@@ -66,15 +75,15 @@ class EquilLibsTestCase(unittest.TestCase):
 		dlib.vector_calloc(e, n)
 
 		# declare Py matrix, vectors, and corresponding pointers
-		A_py = np.zeros(shape, order=pyorder).astype(pytype)
-		d_py = np.zeros(m).astype(pytype)
-		e_py = np.zeros(n).astype(pytype)
+		A_py = np.zeros(shape, order=pyorder).astype(dlib.pyfloat)
+		d_py = np.zeros(m).astype(dlib.pyfloat)
+		e_py = np.zeros(n).astype(dlib.pyfloat)
 
 		A_ptr = A_py.ctypes.data_as(dlib.ok_float_p)
 		d_ptr = d_py.ctypes.data_as(dlib.ok_float_p)
 		e_ptr = e_py.ctypes.data_as(dlib.ok_float_p)
 
-		A_in_ptr = A_test.astype(pytype).ctypes.data_as(dlib.ok_float_p)
+		A_in_ptr = A_test.astype(dlib.pyfloat).ctypes.data_as(dlib.ok_float_p)
 
 		order_in = dlib.enums.CblasRowMajor if A_test.flags.c_contiguous else \
 				   dlib.enums.CblasColMajor
@@ -106,7 +115,6 @@ class EquilLibsTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
 			for rowmajor in (True, False):
 				order = dlib.enums.CblasRowMajor if rowmajor else \
@@ -114,8 +122,7 @@ class EquilLibsTestCase(unittest.TestCase):
 				pyorder = 'C' if rowmajor else 'F'
 
 				A_eqx, DAEx = self.equilibrate(dlib, lib.dense_l2, hdl,
-											   pytype, order, pyorder,
-											   self.shape, self.A_test,
+											   order, pyorder, self.A_test,
 											   self.x_test)
 
 				self.assertTrue(np.allclose(A_eqx, DAEx))
@@ -135,7 +142,6 @@ class EquilLibsTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
 			for rowmajor in (True, False):
 				order = dlib.enums.CblasRowMajor if rowmajor else \
@@ -143,8 +149,7 @@ class EquilLibsTestCase(unittest.TestCase):
 				pyorder = 'C' if rowmajor else 'F'
 
 				A_eqx, DAEx = self.equilibrate(dlib, lib.sinkhorn_knopp, hdl,
-											   pytype, order, pyorder,
-											   self.shape, self.A_test,
+											   order, pyorder, self.A_test,
 											   self.x_test)
 
 				self.assertTrue(np.allclose(A_eqx, DAEx))

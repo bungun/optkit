@@ -3,7 +3,7 @@ import os
 import numpy as np
 from ctypes import c_void_p, byref
 from optkit.libs import DenseLinsysLibs, EquilibrationLibs, ProjectorLibs
-from optkit.tests.defs import CONDITIONS
+from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
 
 class ProjectorLibsTestCase(unittest.TestCase):
 	"""
@@ -52,16 +52,24 @@ class DirectProjectorTestCase(unittest.TestCase):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		self.shape = (4, 8)
-		# self.shape = (150, 250)
-		self.A_test = np.random.rand(*self.shape)
+		self.shape = None
+		if DEFAULT_MATRIX_PATH is not None:
+			try:
+				self.A_test = np.load(DEFAULT_MATRIX_PATH)
+				self.shape = A.shape
+			except:
+				pass
+		if self.shape is None:
+			self.shape = DEFAULT_SHAPE
+			self.A_test = np.random.rand(*self.shape)
+
 		self.x_test = np.random.rand(self.shape[1])
 		self.y_test = np.random.rand(self.shape[0])
 
 
 	@staticmethod
-	def project(projectorlib, denselib, blas_handle, pytype, order, A,
-				x, y, normalize=False):
+	def project(projectorlib, denselib, blas_handle, order, A, x, y,
+				normalize=False):
 		"""Direct projection
 
 			Given matrix A \in R^{m x n}, and input vectors y \in R^m
@@ -87,6 +95,8 @@ class DirectProjectorTestCase(unittest.TestCase):
 
 			should hold elementwise to float/double precision
 		"""
+
+		pytype = denselib.pyfloat
 
 		m, n = A.shape
 		skinny = 1 if m >= n else 0
@@ -147,7 +157,7 @@ class DirectProjectorTestCase(unittest.TestCase):
 
 	@staticmethod
 	def equil_project(projectorlib, denselib, equilibration_method, proj_test,
-					  blas_handle, pytype, order, A, x, y, normalize=False):
+					  blas_handle, order, A, x, y, normalize=False):
 		"""Equilibrated direct projection
 
 			Given matrix A \in R^{m x n}, and input vectors y \in R^m
@@ -165,6 +175,8 @@ class DirectProjectorTestCase(unittest.TestCase):
 
 			should hold elementwise to float/double precision
 		"""
+
+		pytype = denselib.pyfloat
 
 		A = A.astype(pytype)
 		m, n = A.shape
@@ -199,8 +211,8 @@ class DirectProjectorTestCase(unittest.TestCase):
 		denselib.vector_memcpy_av(e_ptr, e, 1)
 
 
-		x_p, y_p = proj_test(projectorlib, denselib, blas_handle, pytype,
-							 order, A_equil_py, x, y, normalize=normalize)
+		x_p, y_p = proj_test(projectorlib, denselib, blas_handle, order,
+							 A_equil_py, x, y, normalize=normalize)
 
 		denselib.matrix_free(A_equil)
 		denselib.vector_free(d)
@@ -226,16 +238,15 @@ class DirectProjectorTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
 			for rowmajor in (True, False):
 				order = dlib.enums.CblasRowMajor if rowmajor else \
 						dlib.enums.CblasColMajor
 
 				for normalize in (False, True):
-					x_proj, y_proj = self.project(plib, dlib, hdl, pytype,
-												  order, self.A_test,
-												  self.x_test, self.y_test,
+					x_proj, y_proj = self.project(plib, dlib, hdl, order,
+												  self.A_test, self.x_test,
+												  self.y_test,
 												  normalize=normalize)
 
 					self.assertTrue(np.allclose(self.A_test.dot(x_proj),
@@ -266,7 +277,6 @@ class DirectProjectorTestCase(unittest.TestCase):
 				continue
 
 			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
-			pytype = np.float32 if single_precision else np.float64
 
 			for rowmajor in (True, False):
 				order = dlib.enums.CblasRowMajor if rowmajor else \
@@ -275,8 +285,7 @@ class DirectProjectorTestCase(unittest.TestCase):
 				for normalize in (False, True):
 					x_proj, y_proj = self.equil_project(plib, dlib,
 												  elib.sinkhorn_knopp,
-												  self.project,
-												  hdl, pytype, order,
+												  self.project, hdl, order,
 												  self.A_test, self.x_test,
 												  self.y_test,
 												  normalize=normalize)

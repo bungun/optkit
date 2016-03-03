@@ -45,7 +45,7 @@ class OKFunctionEnums(object):
 					   self.__str2fun.keys()))
 				return c_uint(0).value
 			else:
-				return c_uint(self.enum_dict[h]).value
+				return c_uint(self.dict[h]).value
 		else:
 			TypeError('optkit.types.Function, field "h" can be initialized '
 				'with arguments of type:\n "int", "c_int", or "str"\n')
@@ -55,6 +55,8 @@ class OKFunctionEnums(object):
 			ValueError('Function parameters "c" and "e" must be strictly '
 				'positive for function to be convex:\n'
 				'f(x) =def= c * h(ax - b) + dx + ex^2\n, with h convex.')
+		else:
+			return c_or_e
 
 class ProxLibs(object):
 	def __init__(self):

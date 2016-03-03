@@ -1,20 +1,20 @@
 ###v0.1 (targets)
 - TODO: OMP parallelization for C vector operations
 - TODO: documentation
-- TODO: automate testing with nose2
 
 
 ###v0.0.5 (next release)
 - TODO: error checking throughout GPU calls (and mirrored for CPU)
 - TODO: license
 - TODO: cite POGS
-- TODO: thorough documentation
 - TODO: sparse equilibration
 - TODO: sparse projection
 - TODO: sparse POGS
 
 ###v0.0.4 (alpha)
 - TODO: fix slow module loading
+- migrated tests to unittests
+- eliminated slow Python implementations (to be replaced with Cython implementations in future, potentially)
 
 ###v0.0.3 (current)
 - CPU Sparse Linear Algebra

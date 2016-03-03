@@ -1,29 +1,29 @@
 from numpy import log, exp, cos, arccos, sign, inf, nan,\
 					 zeros, copy as np_copy
 
-"""
-low-level utilities
-"""
-class UtilMakeCFunctionVector(object):
-	def __init__(self, lowtypes, proxlib):
-		self.proxlib = proxlib
-	def __call__(self, n=None):
-		if n is None:
-			return self.proxlib.function_vector(0, None)
-		elif isinstance(n, int):
-			f_ = self.proxlib.function_vector(0,None)
-			self.proxlib.function_vector_calloc(f_, n)
-			return f_
-		else:
-			return None
-			# TODO: error message (type, dims)
+# """
+# low-level utilities
+# """
+# class UtilMakeCFunctionVector(object):
+# 	def __init__(self, lowtypes, proxlib):
+# 		self.proxlib = proxlib
+# 	def __call__(self, n=None):
+# 		if n is None:
+# 			return self.proxlib.function_vector(0, None)
+# 		elif isinstance(n, int):
+# 			f_ = self.proxlib.function_vector(0,None)
+# 			self.proxlib.function_vector_calloc(f_, n)
+# 			return f_
+# 		else:
+# 			return None
+# 			# TODO: error message (type, dims)
 
-class UtilReleaseCFunctionVector(object):
-	def __init__(self, proxlib):
-		self.proxlib = proxlib
-	def __call__(self, f):
-		if isinstance(f, self.proxlib.function_vector):
-			self.proxlib.function_vector_free(f)
+# class UtilReleaseCFunctionVector(object):
+# 	def __init__(self, proxlib):
+# 		self.proxlib = proxlib
+# 	def __call__(self, f):
+# 		if isinstance(f, self.proxlib.function_vector):
+# 			self.proxlib.function_vector_free(f)
 
 
 """

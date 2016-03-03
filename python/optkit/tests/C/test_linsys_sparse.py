@@ -4,7 +4,8 @@ import numpy as np
 import scipy.sparse as sp
 from ctypes import c_int, c_uint, Structure, byref, c_void_p
 from optkit.libs import DenseLinsysLibs, SparseLinsysLibs
-from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string
+from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string, \
+							  DEFAULT_SHAPE
 
 class SparseLibsTestCase(unittest.TestCase):
 	@classmethod
@@ -102,21 +103,27 @@ class SparseMatrixTestCase(unittest.TestCase):
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
+	def setUp(self):
+		self.shape = DEFAULT_SHAPE
+
+
 	@staticmethod
-	def make_vec_triplet(lib, size_, pytype):
+	def make_vec_triplet(lib, size_):
 		a = lib.vector(0, 0, None)
 		lib.vector_calloc(a, size_)
-		a_py = np.zeros(size_).astype(pytype)
+		a_py = np.zeros(size_).astype(lib.pyfloat)
 		a_ptr = a_py.ctypes.data_as(lib.ok_float_p)
 		return a, a_py, a_ptr
 
 	@staticmethod
-	def make_spmat_quintet(lib, shape, pytype, rowmajor=True):
+	def make_spmat_quintet(lib, shape, rowmajor=True):
 		fmt = 'csr' if rowmajor else 'csc'
 		order = 101 if rowmajor else 102
+		sp_constructor = sp.csr_matrix if rowmajor else sp.csc_matrix
 
 		A_py = sp.rand(shape[0], shape[1], density=0.1, format=fmt,
-			dtype=pytype)
+					   dtype=lib.pyfloat)
+
 		A_ptr_p = A_py.indptr.ctypes.data_as(lib.ok_int_p)
 		A_ind_p = A_py.indices.ctypes.data_as(lib.ok_int_p)
 		A_val_p = A_py.data.ctypes.data_as(lib.ok_float_p)
@@ -125,7 +132,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 		return A, A_py, A_ptr_p, A_ind_p, A_val_p
 
 	def test_allocate(self):
-		shape = (m, n) = (150, 250)
+		shape = (m, n) = self.shape
 		nnz = int(0.05 * m * n)
 
 		for (gpu, single_precision) in CONDITIONS:
@@ -179,7 +186,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 
 
 	def test_io(self):
-		shape = (m, n) = (150, 250)
+		shape = (m, n) = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
 			dlib = self.dense_libs.get(single_precision=single_precision,
@@ -189,8 +196,6 @@ class SparseMatrixTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			pytype = np.float32 if single_precision else np.float64
-
 			# sparse handle
 			hdl = c_void_p()
 			self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
@@ -198,9 +203,9 @@ class SparseMatrixTestCase(unittest.TestCase):
 			for rowmajor in (True, False):
 
 				A, A_py, A_ptr_p, A_ind_p, A_val_p = self.make_spmat_quintet(
-						lib, shape, pytype, rowmajor=rowmajor)
+						lib, shape, rowmajor=rowmajor)
 				B, B_py, B_ptr_p, B_ind_p, B_val_p = self.make_spmat_quintet(
-						lib, shape, pytype, rowmajor=rowmajor)
+						lib, shape, rowmajor=rowmajor)
 
 				x_rand = np.random.rand(n)
 				A_copy = A_py.toarray()
@@ -260,7 +265,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 			self.assertEqual(dlib.ok_device_reset(), 0)
 
 	def test_multiply(self):
-		shape = (m, n) = (150, 250)
+		shape = (m, n) = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
 			dlib = self.dense_libs.get(single_precision=single_precision,
@@ -270,17 +275,15 @@ class SparseMatrixTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			pytype = np.float32 if single_precision else np.float64
-
 			# sparse handle
 			hdl = c_void_p()
 			self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
 
 			for rowmajor in (True, False):
 				A, A_py, A_ptr_p, A_ind_p, A_val_p = self.make_spmat_quintet(
-						lib, shape, pytype, rowmajor=rowmajor)
-				x, x_py, x_ptr = self.make_vec_triplet(dlib, n, pytype)
-				y, y_py, y_ptr = self.make_vec_triplet(dlib, m, pytype)
+						lib, shape, rowmajor=rowmajor)
+				x, x_py, x_ptr = self.make_vec_triplet(dlib, n)
+				y, y_py, y_ptr = self.make_vec_triplet(dlib, m)
 
 				x_rand = np.random.rand(n)
 				x_py[:] = x_rand[:]
@@ -313,7 +316,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 			self.assertEqual(dlib.ok_device_reset(), 0)
 
 	def test_elementwise_transformations(self):
-		shape = (m, n) = (150, 250)
+		shape = (m, n) = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
 			dlib = self.dense_libs.get(single_precision=single_precision,
@@ -323,8 +326,6 @@ class SparseMatrixTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			pytype = np.float32 if single_precision else np.float64
-
 			# sparse handle
 			hdl = c_void_p()
 			self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
@@ -332,9 +333,9 @@ class SparseMatrixTestCase(unittest.TestCase):
 			for rowmajor in (True, False):
 
 				A, A_py, A_ptr_p, A_ind_p, A_val_p = self.make_spmat_quintet(
-						lib, shape, pytype, rowmajor=rowmajor)
-				x, x_py, x_ptr = self.make_vec_triplet(dlib, n, pytype)
-				y, y_py, y_ptr = self.make_vec_triplet(dlib, m, pytype)
+						lib, shape, rowmajor=rowmajor)
+				x, x_py, x_ptr = self.make_vec_triplet(dlib, n)
+				y, y_py, y_ptr = self.make_vec_triplet(dlib, m)
 
 				amax = A_py.data.max()
 				x_rand = np.random.rand(n)
@@ -374,7 +375,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 			self.assertEqual(dlib.ok_device_reset(), 0)
 
 	def test_diagonal_scaling(self):
-		shape = (m, n) = (150, 250)
+		shape = (m, n) = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
 			dlib = self.dense_libs.get(single_precision=single_precision,
@@ -384,8 +385,6 @@ class SparseMatrixTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			pytype = np.float32 if single_precision else np.float64
-
 			# sparse handle
 			hdl = c_void_p()
 			self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
@@ -393,11 +392,11 @@ class SparseMatrixTestCase(unittest.TestCase):
 			for rowmajor in (True, False):
 
 				A, A_py, A_ptr_p, A_ind_p, A_val_p = self.make_spmat_quintet(
-						lib, shape, pytype, rowmajor=rowmajor)
-				x, x_py, x_ptr = self.make_vec_triplet(dlib, n, pytype)
-				y, y_py, y_ptr = self.make_vec_triplet(dlib, m, pytype)
-				d, d_py, d_ptr = self.make_vec_triplet(dlib, m, pytype)
-				e, e_py, e_ptr = self.make_vec_triplet(dlib, n, pytype)
+						lib, shape, rowmajor=rowmajor)
+				x, x_py, x_ptr = self.make_vec_triplet(dlib, n)
+				y, y_py, y_ptr = self.make_vec_triplet(dlib, m)
+				d, d_py, d_ptr = self.make_vec_triplet(dlib, m)
+				e, e_py, e_ptr = self.make_vec_triplet(dlib, n)
 
 				amax = A_py.data.max()
 				x_rand = np.random.rand(n)

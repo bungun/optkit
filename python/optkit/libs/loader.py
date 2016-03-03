@@ -6,7 +6,7 @@ def retrieve_libs(lib_prefix):
 	libs = {}
 	local_c_build = path.abspath(path.join(path.dirname(__file__),
 		'..', '..', '..', 'build'))
-	search_results = ''
+	search_results = '\n'
 	use_local = getenv('OPTKIT_USE_LOCALLIBS', 0)
 
 	# NB: no windows support
@@ -17,7 +17,7 @@ def retrieve_libs(lib_prefix):
 			lib_tag = '{}{}'.format(device, precision)
 			lib_name = '{}{}{}.{}'.format(lib_prefix, device, precision, ext)
 			lib_path = path.join(getsitepackages()[0], lib_name)
-			if not use_local or not path.exists(lib_path):
+			if use_local or not path.exists(lib_path):
 				lib_path = path.join(local_c_build, lib_name)
 
 			if path.exists(lib_path):
@@ -25,7 +25,7 @@ def retrieve_libs(lib_prefix):
 				libs[lib_tag].INITIALIZED = False
 			else:
 				msg = 'library {} not found at {}.\n'.format(lib_name, lib_path)
-				search_results.join(msg)
+				search_results += msg
 				libs[lib_tag] = None
 
 	return libs, search_results

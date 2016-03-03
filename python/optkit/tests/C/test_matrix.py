@@ -2,7 +2,7 @@ import unittest
 import os
 import numpy as np
 from optkit.libs import DenseLinsysLibs
-from optkit.tests.defs import CONDITIONS
+from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
 
 class MatrixTestCase(unittest.TestCase):
 	@classmethod
@@ -16,16 +16,24 @@ class MatrixTestCase(unittest.TestCase):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		self.shape = (150, 250)
-		self.A_test = np.random.rand(*self.shape)
+		self.shape = None
+		if DEFAULT_MATRIX_PATH is not None:
+			try:
+				self.A_test = np.load(DEFAULT_MATRIX_PATH)
+				self.shape = A.shape
+			except:
+				pass
+		if self.shape is None:
+			self.shape = DEFAULT_SHAPE
+			self.A_test = np.random.rand(*self.shape)
 
 	@staticmethod
-	def make_mat_triplet(lib, shape, pytype, rowmajor=True):
+	def make_mat_triplet(lib, shape, rowmajor=True):
 		order = 101 if rowmajor else 102
 		pyorder = 'C' if rowmajor else 'F'
 		A = lib.matrix(0, 0, 0, None, order)
 		lib.matrix_calloc(A, shape[0], shape[1], order)
-		A_py = np.zeros(shape, order=pyorder).astype(pytype)
+		A_py = np.zeros(shape, order=pyorder).astype(lib.pyfloat)
 		A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
 		return A, A_py, A_ptr
 
@@ -75,14 +83,11 @@ class MatrixTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			pytype = np.float32 if single_precision else np.float64
-
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
 						lib.enums.CblasColMajor
 
-				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n), pytype,
-													   rowmajor)
+				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n), rowmajor)
 
 				# memcpy_am
 				# set A_py to A_rand. overwrite A_py with zeros from A
@@ -100,8 +105,7 @@ class MatrixTestCase(unittest.TestCase):
 				self.assertTrue(np.allclose(A_py, A_rand))
 
 				# memcpy_mm
-				Z, Z_py, Z_ptr = self.make_mat_triplet(lib, (m, n), pytype,
-													   rowmajor)
+				Z, Z_py, Z_ptr = self.make_mat_triplet(lib, (m, n), rowmajor)
 				lib.matrix_memcpy_mm(Z, A, order)
 				lib.matrix_memcpy_am(Z_ptr, Z, order)
 				self.assertTrue(np.allclose(Z_py, A_py))
@@ -136,14 +140,12 @@ class MatrixTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			pytype = np.float32 if single_precision else np.float64
-
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
 						lib.enums.CblasColMajor
 				pyorder = 'C' if rowmajor else 'F'
 
-				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n), pytype,
+				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n),
 								   					   rowmajor)
 
 				# set A, A_py to A_rand
@@ -156,7 +158,8 @@ class MatrixTestCase(unittest.TestCase):
 				msub = m / 2
 				nsub = n / 2
 				Asub = lib.matrix(0, 0, 0, None, order)
-				Asub_py = np.zeros((msub, nsub), order=pyorder).astype(pytype)
+				Asub_py = np.zeros(
+						(msub, nsub), order=pyorder).astype(lib.pyfloat)
 				Asub_ptr = Asub_py.ctypes.data_as(lib.ok_float_p)
 
 				lib.matrix_submatrix(Asub, A, m0, n0, msub, nsub)
@@ -166,21 +169,21 @@ class MatrixTestCase(unittest.TestCase):
 
 				# row
 				v = lib.vector(0, 0, None)
-				v_py = np.zeros(n).astype(pytype)
+				v_py = np.zeros(n).astype(lib.pyfloat)
 				v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
 				lib.matrix_row(v, A, m0)
 				lib.vector_memcpy_av(v_ptr, v, 1)
 				self.assertTrue(np.allclose(A_py[m0, :], v_py))
 
 				# column
-				v_py = np.zeros(m).astype(pytype)
+				v_py = np.zeros(m).astype(lib.pyfloat)
 				v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
 				lib.matrix_column(v, A, n0)
 				lib.vector_memcpy_av(v_ptr, v, 1)
 				self.assertTrue(np.allclose(A_py[: , n0], v_py))
 
 				# diagonal
-				v_py = np.zeros(min(m, n)).astype(pytype)
+				v_py = np.zeros(min(m, n)).astype(lib.pyfloat)
 				v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
 				lib.matrix_diagonal(v, A)
 				lib.vector_memcpy_av(v_ptr, v, 1)
@@ -196,15 +199,12 @@ class MatrixTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			pytype = np.float32 if single_precision else np.float64
-
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
 						lib.enums.CblasColMajor
 				pyorder = 'C' if rowmajor else 'F'
 
-				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n), pytype,
-								   					   rowmajor)
+				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n), rowmajor)
 
 				# set A, A_py to A_rand
 				A_py += A_rand
@@ -220,7 +220,7 @@ class MatrixTestCase(unittest.TestCase):
 				# scale_left: A = diag(d) * A
 				d = lib.vector(0, 0, None)
 				lib.vector_calloc(d, m)
-				d_py = np.zeros(m).astype(pytype)
+				d_py = np.zeros(m).astype(lib.pyfloat)
 				d_ptr = d_py.ctypes.data_as(lib.ok_float_p)
 				d_py[:] = np.random.rand(m)
 				for i in xrange(m):
@@ -233,7 +233,7 @@ class MatrixTestCase(unittest.TestCase):
 				# scale_right: A = A * diag(e)
 				e = lib.vector(0, 0, None)
 				lib.vector_calloc(e, n)
-				e_py = np.zeros(n).astype(pytype)
+				e_py = np.zeros(n).astype(lib.pyfloat)
 				e_ptr = e_py.ctypes.data_as(lib.ok_float_p)
 				e_py[:] = np.random.rand(n)
 				for j in xrange(n):
