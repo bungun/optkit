@@ -114,6 +114,8 @@ class EquilLibsTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if single_precision else 7
+
 			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
 
 			for rowmajor in (True, False):
@@ -125,7 +127,7 @@ class EquilLibsTestCase(unittest.TestCase):
 											   order, pyorder, self.A_test,
 											   self.x_test)
 
-				self.assertTrue(np.allclose(A_eqx, DAEx))
+				self.assertTrue(np.allclose(A_eqx, DAEx, DIGITS))
 
 			self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(dlib.ok_device_reset(), 0)
@@ -141,6 +143,8 @@ class EquilLibsTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if single_precision else 7
+
 			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
 
 			for rowmajor in (True, False):
@@ -152,7 +156,7 @@ class EquilLibsTestCase(unittest.TestCase):
 											   order, pyorder, self.A_test,
 											   self.x_test)
 
-				self.assertTrue(np.allclose(A_eqx, DAEx))
+				self.assertTrue(np.allclose(A_eqx, DAEx, DIGITS))
 
 			self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(dlib.ok_device_reset(), 0)

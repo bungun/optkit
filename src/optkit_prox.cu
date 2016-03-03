@@ -168,7 +168,7 @@ void function_vector_print(FunctionVector * f)
 {
 	size_t i;
 	const char * fmt =
-		"h: %i, a: %0.2e, b: %0.2e, c: %0.2e, d: %0.2e, e: %0.2e\n"
+		"h: %i, a: %0.2e, b: %0.2e, c: %0.2e, d: %0.2e, e: %0.2e\n";
 	FunctionObj obj_host[f->size];
 	ok_memcpy_gpu(&obj_host, f->objectives, f->size * sizeof(FunctionObj));
 	for (i = 0; i < f->size; ++i)

@@ -163,6 +163,8 @@ class PogsTestCase(unittest.TestCase):
 
 
 	def pogs_equilibration(self, denselib, solver, A, localA, localvars):
+		DIGITS = 5 if denselib.FLOAT else 7
+
 		m, n = A.shape
 		d_local = np.zeros(m).astype(denselib.pyfloat)
 		e_local = np.zeros(n).astype(denselib.pyfloat)
@@ -172,9 +174,10 @@ class PogsTestCase(unittest.TestCase):
 		x_rand = np.random.rand(n)
 		A_eqx = localA.dot(x_rand)
 		DAEx = d_local * A.dot(e_local * x_rand)
-		self.assertTrue(np.allclose(A_eqx, DAEx))
+		self.assertTrue(np.allclose(A_eqx, DAEx, DIGITS))
 
 	def pogs_projector(self, denselib, pogslib, blas_handle, solver, localA):
+		DIGITS = 5 if pogslib.FLOAT else 7
 
 		m, n = localA.shape
 
@@ -213,7 +216,7 @@ class PogsTestCase(unittest.TestCase):
 		self.load_to_local(denselib, x_out_py, x_out)
 		self.load_to_local(denselib, y_out_py, y_out)
 
-		self.assertTrue(np.allclose(localA.dot(x_out_py), y_out_py))
+		self.assertTrue(np.allclose(localA.dot(x_out_py), y_out_py, DIGITS))
 
 		denselib.vector_free(x_in)
 		denselib.vector_free(y_in)
@@ -222,6 +225,8 @@ class PogsTestCase(unittest.TestCase):
 
 	def pogs_scaling(self, denselib, proxlib, pogslib, solver, f, f_py, g,
 					 g_py, localvars):
+
+		DIGITS = 5 if pogslib.FLOAT else 7
 
 		def fv_list2arrays(function_vector_list):
 			fv = function_vector_list
@@ -261,23 +266,25 @@ class PogsTestCase(unittest.TestCase):
 		self.load_all_local(denselib, localvars, solver)
 
 		# scaled vars
-		self.assertTrue(np.allclose(f_a0, localvars.d * f_a1))
-		self.assertTrue(np.allclose(f_d0, localvars.d * f_d1))
-		self.assertTrue(np.allclose(f_e0, localvars.d * f_e1))
-		self.assertTrue(np.allclose(g_a0 * localvars.e, g_a1))
-		self.assertTrue(np.allclose(g_d0 * localvars.e, g_d1))
-		self.assertTrue(np.allclose(g_e0 * localvars.e, g_e1))
+		self.assertTrue(np.allclose(f_a0, localvars.d * f_a1, DIGITS))
+		self.assertTrue(np.allclose(f_d0, localvars.d * f_d1, DIGITS))
+		self.assertTrue(np.allclose(f_e0, localvars.d * f_e1, DIGITS))
+		self.assertTrue(np.allclose(g_a0 * localvars.e, g_a1, DIGITS))
+		self.assertTrue(np.allclose(g_d0 * localvars.e, g_d1, DIGITS))
+		self.assertTrue(np.allclose(g_e0 * localvars.e, g_e1, DIGITS))
 
 		# unchanged vars
-		self.assertTrue(np.allclose(f_h0, f_h1))
-		self.assertTrue(np.allclose(f_b0, f_b1))
-		self.assertTrue(np.allclose(f_c0, f_c1))
-		self.assertTrue(np.allclose(g_h0, g_h1))
-		self.assertTrue(np.allclose(g_b0, g_b1))
-		self.assertTrue(np.allclose(g_c0, g_c1))
+		self.assertTrue(np.allclose(f_h0, f_h1, DIGITS))
+		self.assertTrue(np.allclose(f_b0, f_b1, DIGITS))
+		self.assertTrue(np.allclose(f_c0, f_c1, DIGITS))
+		self.assertTrue(np.allclose(g_h0, g_h1, DIGITS))
+		self.assertTrue(np.allclose(g_b0, g_b1, DIGITS))
+		self.assertTrue(np.allclose(g_c0, g_c1, DIGITS))
 
 	def pogs_warmstart(self, denselib, pogslib, solver, settings, localA,
 					   localvars):
+
+		DIGITS = 5 if pogslib.FLOAT else 7
 
 		m, n = localA.shape
 
@@ -300,12 +307,14 @@ class PogsTestCase(unittest.TestCase):
 		print localvars.x
 		print x_rand
 
-		self.assertTrue(np.allclose(x_rand, localvars.e * localvars.x))
+		self.assertTrue(np.allclose(x_rand, localvars.e * localvars.x, DIGITS))
 		self.assertTrue(np.allclose(nu_rand * localvars.d * -1/rho,
-									localvars.yt))
+									localvars.yt, DIGITS))
 
-		self.assertTrue(np.allclose(localA.dot(localvars.x), localvars.y))
-		self.assertTrue(np.allclose(localA.T.dot(localvars.yt), -localvars.xt))
+		self.assertTrue(np.allclose(localA.dot(localvars.x), localvars.y,
+									DIGITS))
+		self.assertTrue(np.allclose(localA.T.dot(localvars.yt), -localvars.xt
+									DIGITS))
 
 
 	def pogs_primal_update(self, denselib, pogslib, solver, localvars):
@@ -321,9 +330,10 @@ class PogsTestCase(unittest.TestCase):
 
 			holds elementwise
 		"""
+		DIGITS = 5 if pogslib.FLOAT else 7
 		pogslib.set_prev(solver.contents.z)
 		self.load_all_local(denselib, localvars, solver)
-		self.assertTrue(np.allclose(localvars.z, localvars.prev))
+		self.assertTrue(np.allclose(localvars.z, localvars.prev, DIGITS))
 
 
 	def pogs_prox(self, denselib, proxlib, pogslib, blas_handle, solver, f,
@@ -337,7 +347,7 @@ class PogsTestCase(unittest.TestCase):
 
 			in C and Python, check that results agree
 		"""
-
+		DIGITS = 5 if pogslib.FLOAT else 7
 
 		pogslib.prox(blas_handle, f, g, solver.contents.z,
 						 solver.contents.rho)
@@ -358,8 +368,8 @@ class PogsTestCase(unittest.TestCase):
 		y_arg = localvars.y - localvars.yt
 		x_out = prox_eval_python(g_list, solver.contents.rho, x_arg)
 		y_out = prox_eval_python(f_list, solver.contents.rho, y_arg)
-		self.assertTrue(np.allclose(localvars.x12, x_out))
-		self.assertTrue(np.allclose(localvars.y12, y_out))
+		self.assertTrue(np.allclose(localvars.x12, x_out, DIGITS))
+		self.assertTrue(np.allclose(localvars.y12, y_out, DIGITS))
 
 	def pogs_primal_project(self, denselib, pogslib, blas_handle, solver,
 							settings, localA, localvars):
@@ -376,11 +386,13 @@ class PogsTestCase(unittest.TestCase):
 
 			holds to numerical tolerance
 		"""
+		DIGITS = 5 if pogslib.FLOAT else 7
 
 		pogslib.project_primal(blas_handle, solver.contents.M.contents.P,
 							   solver.contents.z, settings.alpha)
 		self.load_all_local(denselib, localvars, solver)
-		self.assertTrue(np.allclose(localA.dot(localvars.x), localvars.y))
+		self.assertTrue(np.allclose(localA.dot(localvars.x), localvars.y,
+									DIGITS))
 
 	def pogs_dual_update(self, denselib, pogslib, blas_handle, solver,
 						 settings, localvars):
@@ -394,6 +406,8 @@ class PogsTestCase(unittest.TestCase):
 
 			in C and Python, check that results agree
 		"""
+		DIGITS = 5 if pogslib.FLOAT else 7
+
 		self.load_all_local(denselib, localvars, solver)
 		alpha = settings.alpha
 		zt12_py = localvars.z12 - localvars.prev + localvars.zt
@@ -402,8 +416,8 @@ class PogsTestCase(unittest.TestCase):
 
 		pogslib.update_dual(blas_handle, solver.contents.z, alpha)
 		self.load_all_local(denselib, localvars, solver)
-		self.assertTrue(np.allclose(localvars.zt12, zt12_py))
-		self.assertTrue(np.allclose(localvars.zt, zt_py))
+		self.assertTrue(np.allclose(localvars.zt12, zt12_py, DIGITS))
+		self.assertTrue(np.allclose(localvars.zt, zt_py, DIGITS))
 
 	def pogs_check_convergence(self, denselib, pogslib, blas_handle, solver,
 							   f_list, g_list, objectives, residuals,
@@ -431,7 +445,7 @@ class PogsTestCase(unittest.TestCase):
 
 				in C and Python, check that the results agree
 		"""
-
+		DIGITS = 5 if pogslib.FLOAT else 7
 
 		converged = pogslib.check_convergence(blas_handle, solver, objectives,
 											  residuals, tolerances,
@@ -448,9 +462,9 @@ class PogsTestCase(unittest.TestCase):
 		tol_dual = tolerances.atoln + (tolerances.reltol *
 									   np.linalg.norm(localvars.xt12))
 
-		self.assertAlmostEqual(objectives.gap, obj_gap_py)
-		self.assertAlmostEqual(tolerances.primal, tol_primal)
-		self.assertAlmostEqual(tolerances.dual, tol_dual)
+		self.assertAlmostEqual(objectives.gap, obj_gap_py, DIGITS)
+		self.assertAlmostEqual(tolerances.primal, tol_primal, DIGITS)
+		self.assertAlmostEqual(tolerances.dual, tol_dual, DIGITS)
 
 
 		res_primal = np.linalg.norm(localA.dot(localvars.x12) -
@@ -458,9 +472,9 @@ class PogsTestCase(unittest.TestCase):
 		res_dual = np.linalg.norm(localA.T.dot(localvars.yt12) +
 								  localvars.xt12)
 
-		self.assertAlmostEqual(residuals.primal, res_primal)
-		self.assertAlmostEqual(residuals.dual, res_dual)
-		self.assertAlmostEqual(residuals.gap, abs(obj_gap_py))
+		self.assertAlmostEqual(residuals.primal, res_primal, DIGITS)
+		self.assertAlmostEqual(residuals.dual, res_dual, DIGITS)
+		self.assertAlmostEqual(residuals.gap, abs(obj_gap_py), DIGITS)
 
 		converged_py = res_primal <= tolerances.primal and \
 					   res_dual <= tolerances.dual
@@ -480,6 +494,7 @@ class PogsTestCase(unittest.TestCase):
 
 			(here zt, or z tilde, is the dual variable)
 		"""
+		DIGITS = 5 if pogslib.FLOAT else 7
 
 		if settings.adaptiverho:
 			rho_params = pogslib.adapt_params(1.05, 0, 0, 1)
@@ -490,7 +505,7 @@ class PogsTestCase(unittest.TestCase):
 			zt_after = localvars.zt
 			rho_after = solver.contents.rho
 			self.assertTrue(np.allclose(rho_after * zt_after,
-										rho_before * zt_before))
+										rho_before * zt_before, DIGITS))
 
 	def pogs_unscaling(self, denselib, pogslib, solver, output, localvars):
 		"""pogs unscaling test
@@ -504,6 +519,7 @@ class PogsTestCase(unittest.TestCase):
 				-rho * xt^{k+1/2} / e - mu_out == 0
 				-rho * yt^{k+1/2} * d - nu_out == 0
 		"""
+		DIGITS = 2 if pogslib.FLOAT else 3
 
 		if not isinstance(solver, pogslib.pogs_solver_p):
 			raise TypeError('argument "solver" must be of type {}'.format(
@@ -521,12 +537,14 @@ class PogsTestCase(unittest.TestCase):
 		pogslib.copy_output(solver, output.ptr)
 		rho = solver.contents.rho
 
-		self.assertTrue(np.allclose(localvars.x12 * localvars.e, output.x, 3))
-		self.assertTrue(np.allclose(localvars.y12, localvars.d * output.y, 3))
+		self.assertTrue(np.allclose(localvars.x12 * localvars.e, output.x,
+									DIGITS))
+		self.assertTrue(np.allclose(localvars.y12, localvars.d * output.y,
+									DIGITS))
 		self.assertTrue(np.allclose(-rho * localvars.xt12,
-									localvars.e * output.mu, 3))
+									localvars.e * output.mu, DIGITS))
 		self.assertTrue(np.allclose(-rho * localvars.yt12 * localvars.d,
-									output.nu, 3))
+									output.nu, DIGITS))
 
 
 
@@ -847,6 +865,8 @@ class PogsTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if lib.FLOAT else 7
+
 			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
 
 			x_rand = np.random.rand(n).astype(dlib.pyfloat)
@@ -911,13 +931,15 @@ class PogsTestCase(unittest.TestCase):
 					localvars = PogsVariablesLocal(m, n, dlib.pyfloat)
 					self.load_all_local(dlib, localvars, solver)
 					self.assertTrue(np.allclose(x_rand,
-												localvars.e * localvars.x))
+												localvars.e * localvars.x,
+												DIGITS))
 					self.assertTrue(np.allclose(nu_rand * -1/rho,
-												localvars.d * localvars.yt))
+												localvars.d * localvars.yt,
+												DIGITS))
 					self.assertTrue(np.allclose(localA.dot(localvars.x),
-												localvars.y))
+												localvars.y, DIGITS))
 					self.assertTrue(np.allclose(localA.T.dot(localvars.yt),
-												-localvars.xt))
+												-localvars.xt, DIGITS))
 
 				# COLD START
 				print "\ncold"

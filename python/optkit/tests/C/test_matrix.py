@@ -83,6 +83,8 @@ class MatrixTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if single_precision else 7
+
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
 						lib.enums.CblasColMajor
@@ -102,13 +104,13 @@ class MatrixTestCase(unittest.TestCase):
 				lib.matrix_memcpy_ma(A, A_ptr, order)
 				A_py *= 0
 				lib.matrix_memcpy_am(A_ptr, A, order)
-				self.assertTrue(np.allclose(A_py, A_rand))
+				self.assertTrue(np.allclose(A_py, A_rand, DIGITS))
 
 				# memcpy_mm
 				Z, Z_py, Z_ptr = self.make_mat_triplet(lib, (m, n), rowmajor)
 				lib.matrix_memcpy_mm(Z, A, order)
 				lib.matrix_memcpy_am(Z_ptr, Z, order)
-				self.assertTrue(np.allclose(Z_py, A_py))
+				self.assertTrue(np.allclose(Z_py, A_py, DIGITS))
 
 				# view_array
 				if not gpu:
@@ -117,7 +119,7 @@ class MatrixTestCase(unittest.TestCase):
 					lib.matrix_view_array(B,
 						A_rand.ctypes.data_as(lib.ok_float_p), m, n, order)
 					lib.matrix_memcpy_am(A_ptr, A, order)
-					self.assertTrue(np.allclose(A_py, A_rand))
+					self.assertTrue(np.allclose(A_py, A_rand, DIGITS))
 
 				# set_all
 				val = 2
@@ -125,7 +127,7 @@ class MatrixTestCase(unittest.TestCase):
 				A_rand += val
 				lib.matrix_set_all(A, val)
 				lib.matrix_memcpy_am(A_ptr, A, order)
-				self.assertTrue(np.allclose(A_py, A_rand))
+				self.assertTrue(np.allclose(A_py, A_rand, DIGITS))
 
 			self.assertEqual(lib.ok_device_reset(), 0)
 
@@ -139,6 +141,8 @@ class MatrixTestCase(unittest.TestCase):
 									  gpu=gpu)
 			if lib is None:
 				continue
+
+			DIGITS = 5 if single_precision else 7
 
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
@@ -165,7 +169,7 @@ class MatrixTestCase(unittest.TestCase):
 				lib.matrix_submatrix(Asub, A, m0, n0, msub, nsub)
 				lib.matrix_memcpy_am(Asub_ptr, Asub, order)
 				self.assertTrue(np.allclose(A_py[m0 : m0+msub, n0 : n0+nsub],
-											Asub_py))
+											Asub_py, DIGITS))
 
 				# row
 				v = lib.vector(0, 0, None)
@@ -173,21 +177,21 @@ class MatrixTestCase(unittest.TestCase):
 				v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
 				lib.matrix_row(v, A, m0)
 				lib.vector_memcpy_av(v_ptr, v, 1)
-				self.assertTrue(np.allclose(A_py[m0, :], v_py))
+				self.assertTrue(np.allclose(A_py[m0, :], v_py, DIGITS))
 
 				# column
 				v_py = np.zeros(m).astype(lib.pyfloat)
 				v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
 				lib.matrix_column(v, A, n0)
 				lib.vector_memcpy_av(v_ptr, v, 1)
-				self.assertTrue(np.allclose(A_py[: , n0], v_py))
+				self.assertTrue(np.allclose(A_py[: , n0], v_py, DIGITS))
 
 				# diagonal
 				v_py = np.zeros(min(m, n)).astype(lib.pyfloat)
 				v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
 				lib.matrix_diagonal(v, A)
 				lib.vector_memcpy_av(v_ptr, v, 1)
-				self.assertTrue(np.allclose(np.diag(A_py), v_py))
+				self.assertTrue(np.allclose(np.diag(A_py), v_py, DIGITS))
 
 	def test_math(self):
 		(m, n) = self.shape
@@ -198,6 +202,8 @@ class MatrixTestCase(unittest.TestCase):
 									  gpu=gpu)
 			if lib is None:
 				continue
+
+			DIGITS = 5 if single_precision else 7
 
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
@@ -215,7 +221,7 @@ class MatrixTestCase(unittest.TestCase):
 				A_rand *= alpha
 				lib.matrix_scale(A, alpha)
 				lib.matrix_memcpy_am(A_ptr, A, order)
-				self.assertTrue(np.allclose(A_py, A_rand))
+				self.assertTrue(np.allclose(A_py, A_rand, DIGITS))
 
 				# scale_left: A = diag(d) * A
 				d = lib.vector(0, 0, None)
@@ -228,7 +234,7 @@ class MatrixTestCase(unittest.TestCase):
 				lib.vector_memcpy_va(d, d_ptr, 1)
 				lib.matrix_scale_left(A, d)
 				lib.matrix_memcpy_am(A_ptr, A, order)
-				self.assertTrue(np.allclose(A_py, A_rand))
+				self.assertTrue(np.allclose(A_py, A_rand, DIGITS))
 
 				# scale_right: A = A * diag(e)
 				e = lib.vector(0, 0, None)
@@ -241,7 +247,7 @@ class MatrixTestCase(unittest.TestCase):
 				lib.vector_memcpy_va(e, e_ptr, 1)
 				lib.matrix_scale_right(A, e)
 				lib.matrix_memcpy_am(A_ptr, A, order)
-				self.assertTrue(np.allclose(A_py, A_rand))
+				self.assertTrue(np.allclose(A_py, A_rand, DIGITS))
 
 				# abs: A_ij = abs(A_ij)
 				A_rand -= (A_rand.max() - A_rand.min()) / 2
@@ -251,11 +257,11 @@ class MatrixTestCase(unittest.TestCase):
 				lib.matrix_memcpy_ma(A, A_ptr, order)
 				lib.matrix_abs(A)
 				lib.matrix_memcpy_am(A_ptr, A, order)
-				self.assertTrue(np.allclose(A_py, A_rand))
+				self.assertTrue(np.allclose(A_py, A_rand, DIGITS))
 
 				# pow
 				p = 3 * np.random.rand()
 				A_rand **= p
 				lib.matrix_pow(A, p)
 				lib.matrix_memcpy_am(A_ptr, A, order)
-				self.assertTrue(np.allclose(A_py, A_rand))
+				self.assertTrue(np.allclose(A_py, A_rand, DIGITS))

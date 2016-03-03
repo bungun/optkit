@@ -196,6 +196,10 @@ class SparseMatrixTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if single_precision else 7
+			FEWER_DIGITS = 3 if single_precision else 5
+
+
 			# sparse handle
 			hdl = c_void_p()
 			self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
@@ -214,13 +218,13 @@ class SparseMatrixTestCase(unittest.TestCase):
 
 				# Acopy * x == A_py * x (initalized to rand)
 				self.assertTrue(np.allclose(A_copy.dot(x_rand), A_py * x_rand,
-											5))
+											FEWER_DIGITS))
 
 				# Test sparse copy optkit->python
 				# Acopy * x != A_c * x (calloc to zero)
 				lib.sp_matrix_memcpy_am(A_val_p, A_ind_p, A_ptr_p, A)
 				self.assertFalse(np.allclose(A_copy.dot(x_rand), A_py * x_rand,
-											 5))
+											 FEWER_DIGITS))
 				self.assertTrue(all(map(lambda x : x == 0, A_py * x_rand)))
 
 				# Test sparse copy python->optkit
@@ -228,14 +232,16 @@ class SparseMatrixTestCase(unittest.TestCase):
 				# B_py * x == B_copy * x
 				lib.sp_matrix_memcpy_ma(hdl, B, B_val_p, B_ind_p, B_ptr_p)
 				lib.sp_matrix_memcpy_am(B_val_p, B_ind_p, B_ptr_p, B)
-				self.assertTrue(np.allclose(B_copy.dot(x_rand), B_py * x_rand))
+				self.assertTrue(np.allclose(B_copy.dot(x_rand), B_py * x_rand,
+											DIGITS))
 
 				# Test sparse copy optkit->optkit
 				# B_c -> A_c -> A_py
 				# B_py * x == A_py * x
 				lib.sp_matrix_memcpy_mm(A, B)
 				lib.sp_matrix_memcpy_am(A_val_p, A_ind_p, A_ptr_p, A)
-				self.assertTrue(np.allclose(A_py * x_rand, B_py * x_rand))
+				self.assertTrue(np.allclose(A_py * x_rand, B_py * x_rand
+											DIGITS))
 
 				# Test sparse value copy optkit->python
 				# A_py *= 0
@@ -243,7 +249,8 @@ class SparseMatrixTestCase(unittest.TestCase):
 				# B_py * x == A_py * x (still)
 				A_py *= 0
 				lib.sp_matrix_memcpy_vals_am(A_val_p, A)
-				self.assertTrue(np.allclose(A_py * x_rand, B_py * x_rand))
+				self.assertTrue(np.allclose(A_py * x_rand, B_py * x_rand
+											DIGITS))
 
 				# Test sparse value copy python->optkit
 				# A_py *= 2; A_py -> A_c; A_py *= 0; A_c -> A_py
@@ -252,14 +259,16 @@ class SparseMatrixTestCase(unittest.TestCase):
 				lib.sp_matrix_memcpy_vals_ma(hdl, A, A_val_p)
 				A_py *= 0
 				lib.sp_matrix_memcpy_vals_am(A_val_p, A)
-				self.assertTrue(np.allclose(A_py * x_rand, 2 * B_py * x_rand))
+				self.assertTrue(np.allclose(A_py * x_rand, 2 * B_py * x_rand
+											DIGITS))
 
 				# Test sparse value copy optkit->optkit
 				# A_c -> B_c -> B_py
 				# B_py * x == A_py * x
 				lib.sp_matrix_memcpy_vals_mm(B, A)
 				lib.sp_matrix_memcpy_vals_am(B_val_p, B)
-				self.assertTrue(np.allclose(A_py * x_rand, B_py * x_rand))
+				self.assertTrue(np.allclose(A_py * x_rand, B_py * x_rand,
+											DIGITS))
 
 			self.assertEqual(lib.sp_destroy_handle(hdl), 0)
 			self.assertEqual(dlib.ok_device_reset(), 0)
@@ -274,6 +283,8 @@ class SparseMatrixTestCase(unittest.TestCase):
 									   gpu=gpu)
 			if lib is None:
 				continue
+
+			DIGITS = 5 if single_precision else 7
 
 			# sparse handle
 			hdl = c_void_p()
@@ -295,12 +306,13 @@ class SparseMatrixTestCase(unittest.TestCase):
 				dlib.vector_memcpy_va(x, x_ptr, 1)
 				lib.sp_blas_gemv(hdl, dlib.enums.CblasNoTrans, 1, A, x, 0, y)
 				dlib.vector_memcpy_av(y_ptr, y, 1)
-				self.assertTrue(np.allclose(A_py * x_rand, y_py))
+				self.assertTrue(np.allclose(A_py * x_rand, y_py, DIGITS))
 
 				# x = A'y, Py vs. C
 				lib.sp_blas_gemv(hdl, dlib.enums.CblasTrans, 1, A, y, 0, x)
 				dlib.vector_memcpy_av(x_ptr, x, 1)
-				self.assertTrue(np.allclose(A_py.T * A_py * x_rand, x_py))
+				self.assertTrue(np.allclose(A_py.T * A_py * x_rand, x_py,
+											DIGITS))
 
 				# y = alpha Ax + beta y, Py vs. C
 				alpha = np.random.rand()
@@ -310,7 +322,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 				lib.sp_blas_gemv(hdl, dlib.enums.CblasNoTrans, alpha, A, x,
 								 beta, y)
 				dlib.vector_memcpy_av(y_ptr, y, 1)
-				self.assertTrue(np.allclose(result, y_py))
+				self.assertTrue(np.allclose(result, y_py, DIGITS))
 
 			self.assertEqual(lib.sp_destroy_handle(hdl), 0)
 			self.assertEqual(dlib.ok_device_reset(), 0)
@@ -325,6 +337,8 @@ class SparseMatrixTestCase(unittest.TestCase):
 									   gpu=gpu)
 			if lib is None:
 				continue
+
+			DIGITS = 5 if single_precision else 7
 
 			# sparse handle
 			hdl = c_void_p()
@@ -351,7 +365,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 				lib.sp_matrix_abs(A)
 				lib.sp_blas_gemv(hdl, dlib.enums.CblasNoTrans, 1, A, x, 0, y)
 				dlib.vector_memcpy_av(y_ptr, y, 1)
-				self.assertTrue(np.allclose(y_py, A_copy.dot(x_rand)))
+				self.assertTrue(np.allclose(y_py, A_copy.dot(x_rand), DIGITS))
 
 				# pow
 				# A is nonnegative from previous step. set A_ij = A_ij ^ p
@@ -360,7 +374,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 				lib.sp_matrix_pow(A, p)
 				lib.sp_blas_gemv(hdl, dlib.enums.CblasNoTrans, 1, A, x, 0, y)
 				dlib.vector_memcpy_av(y_ptr, y, 1)
-				self.assertTrue(np.allclose(y_py, A_copy.dot(x_rand)))
+				self.assertTrue(np.allclose(y_py, A_copy.dot(x_rand), DIGITS))
 
 				# scale
 				# A = alpha * A
@@ -369,7 +383,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 				lib.sp_matrix_scale(A, alpha)
 				lib.sp_blas_gemv(hdl, dlib.enums.CblasNoTrans, 1, A, x, 0, y)
 				dlib.vector_memcpy_av(y_ptr, y, 1)
-				self.assertTrue(np.allclose(y_py, A_copy.dot(x_rand)))
+				self.assertTrue(np.allclose(y_py, A_copy.dot(x_rand), DIGITS))
 
 			self.assertEqual(lib.sp_destroy_handle(hdl), 0)
 			self.assertEqual(dlib.ok_device_reset(), 0)
@@ -416,7 +430,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 				lib.sp_blas_gemv(hdl, dlib.enums.CblasNoTrans, 1, A, x, 0, y)
 				dlib.vector_memcpy_av(y_ptr, y, 1)
 				result = (np.diag(d_py) * A_py).dot(x_py)
-				self.assertTrue(np.allclose(y_py, result))
+				self.assertTrue(np.allclose(y_py, result, DIGITS))
 
 				# scale_right: A = A * diag(e)
 				# (form diag (d) * A * diag(e) * x, compare Py vs. C)
@@ -424,7 +438,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 				lib.sp_blas_gemv(hdl, dlib.enums.CblasNoTrans, 1, A, x, 0, y)
 				dlib.vector_memcpy_av(y_ptr, y, 1)
 				result = (np.diag(d_py) * A_py).dot(e_py * x_py)
-				self.assertTrue(np.allclose(y_py,  result))
+				self.assertTrue(np.allclose(y_py,  result, DIGITS))
 
 			self.assertEqual(lib.sp_destroy_handle(hdl), 0)
 			self.assertEqual(dlib.ok_device_reset(), 0)

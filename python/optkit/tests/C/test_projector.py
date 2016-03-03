@@ -237,6 +237,8 @@ class DirectProjectorTestCase(unittest.TestCase):
 			if plib is None:
 				continue
 
+			DIGITS = 5 if plib.FLOAT else 7
+
 			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
 
 			for rowmajor in (True, False):
@@ -250,7 +252,7 @@ class DirectProjectorTestCase(unittest.TestCase):
 												  normalize=normalize)
 
 					self.assertTrue(np.allclose(self.A_test.dot(x_proj),
-												y_proj))
+												y_proj, DIGITS))
 
 			self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(dlib.ok_device_reset(), 0)
@@ -276,6 +278,8 @@ class DirectProjectorTestCase(unittest.TestCase):
 			if plib is None:
 				continue
 
+			DIGITS = 5 if plib.FLOAT else 7
+
 			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
 
 			for rowmajor in (True, False):
@@ -291,7 +295,7 @@ class DirectProjectorTestCase(unittest.TestCase):
 												  normalize=normalize)
 
 					self.assertTrue(np.allclose(self.A_test.dot(x_proj),
-												y_proj))
+												y_proj, DIGITS))
 
 			self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(dlib.ok_device_reset(), 0)

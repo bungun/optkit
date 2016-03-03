@@ -143,6 +143,8 @@ class ProxTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if lib.FLOAT else 7
+
 			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
 
 			# initialize to default values
@@ -162,23 +164,23 @@ class ProxTestCase(unittest.TestCase):
 
 				f_list = [lib.function(*f_) for f_ in f_py]
 				for i in xrange(m):
-					self.assertAlmostEqual(f_list[i].h, hval)
-					self.assertAlmostEqual(f_list[i].a, a)
-					self.assertAlmostEqual(f_list[i].b, b)
-					self.assertAlmostEqual(f_list[i].c, c)
-					self.assertAlmostEqual(f_list[i].d, d)
-					self.assertAlmostEqual(f_list[i].e, e)
+					self.assertAlmostEqual(f_list[i].h, hval, DIGITS)
+					self.assertAlmostEqual(f_list[i].a, a, DIGITS)
+					self.assertAlmostEqual(f_list[i].b, b, DIGITS)
+					self.assertAlmostEqual(f_list[i].c, c, DIGITS)
+					self.assertAlmostEqual(f_list[i].d, d, DIGITS)
+					self.assertAlmostEqual(f_list[i].e, e, DIGITS)
 
 				# memcpy af
 				lib.function_vector_memcpy_av(f_ptr, f)
 				f_list = [lib.function(*f_) for f_ in f_py]
 				for i in xrange(m):
-					self.assertAlmostEqual(f_list[i].h, hlast)
-					self.assertAlmostEqual(f_list[i].a, alast)
-					self.assertAlmostEqual(f_list[i].b, blast)
-					self.assertAlmostEqual(f_list[i].c, clast)
-					self.assertAlmostEqual(f_list[i].d, dlast)
-					self.assertAlmostEqual(f_list[i].e, elast)
+					self.assertAlmostEqual(f_list[i].h, hlast, DIGITS)
+					self.assertAlmostEqual(f_list[i].a, alast, DIGITS)
+					self.assertAlmostEqual(f_list[i].b, blast, DIGITS)
+					self.assertAlmostEqual(f_list[i].c, clast, DIGITS)
+					self.assertAlmostEqual(f_list[i].d, dlast, DIGITS)
+					self.assertAlmostEqual(f_list[i].e, elast, DIGITS)
 
 				# memcpy fa
 				for i in xrange(m):
@@ -190,11 +192,11 @@ class ProxTestCase(unittest.TestCase):
 				f_list = [lib.function(*f_) for f_ in f_py]
 				for i in xrange(m):
 					self.assertAlmostEqual(f_list[i].h, hval)
-					self.assertAlmostEqual(f_list[i].a, a)
-					self.assertAlmostEqual(f_list[i].b, b)
-					self.assertAlmostEqual(f_list[i].c, c)
-					self.assertAlmostEqual(f_list[i].d, d)
-					self.assertAlmostEqual(f_list[i].e, e)
+					self.assertAlmostEqual(f_list[i].a, a, DIGITS)
+					self.assertAlmostEqual(f_list[i].b, b, DIGITS)
+					self.assertAlmostEqual(f_list[i].c, c, DIGITS)
+					self.assertAlmostEqual(f_list[i].d, d, DIGITS)
+					self.assertAlmostEqual(f_list[i].e, e, DIGITS)
 
 				hlast = hval
 				alast = a
@@ -222,6 +224,8 @@ class ProxTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if lib.FLOAT else 7
+
 			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
 			v = dlib.vector(0, 0, None)
 			dlib.vector_calloc(v, m)
@@ -243,12 +247,12 @@ class ProxTestCase(unittest.TestCase):
 				e[i] *= v_py[i]
 			f_list = [lib.function(*f_) for f_ in f_py]
 			for i in xrange(m):
-				self.assertAlmostEqual(f_list[i].h, hval)
-				self.assertAlmostEqual(f_list[i].a, a[i])
-				self.assertAlmostEqual(f_list[i].b, b[i])
-				self.assertAlmostEqual(f_list[i].c, c[i])
-				self.assertAlmostEqual(f_list[i].d, d[i])
-				self.assertAlmostEqual(f_list[i].e, e[i])
+				self.assertAlmostEqual(f_list[i].h, hval, DIGITS)
+				self.assertAlmostEqual(f_list[i].a, a[i], DIGITS)
+				self.assertAlmostEqual(f_list[i].b, b[i], DIGITS)
+				self.assertAlmostEqual(f_list[i].c, c[i], DIGITS)
+				self.assertAlmostEqual(f_list[i].d, d[i], DIGITS)
+				self.assertAlmostEqual(f_list[i].e, e[i], DIGITS)
 
 			# div
 			lib.function_vector_div(f, v)
@@ -259,12 +263,12 @@ class ProxTestCase(unittest.TestCase):
 				e[i] /= v_py[i]
 			f_list = [lib.function(*f_) for f_ in f_py]
 			for i in xrange(m):
-				self.assertAlmostEqual(f_list[i].h, hval)
-				self.assertAlmostEqual(f_list[i].a, a[i])
-				self.assertAlmostEqual(f_list[i].b, b[i])
-				self.assertAlmostEqual(f_list[i].c, c[i])
-				self.assertAlmostEqual(f_list[i].d, d[i])
-				self.assertAlmostEqual(f_list[i].e, e[i])
+				self.assertAlmostEqual(f_list[i].h, hval, DIGITS)
+				self.assertAlmostEqual(f_list[i].a, a[i], DIGITS)
+				self.assertAlmostEqual(f_list[i].b, b[i], DIGITS)
+				self.assertAlmostEqual(f_list[i].c, c[i], DIGITS)
+				self.assertAlmostEqual(f_list[i].d, d[i], DIGITS)
+				self.assertAlmostEqual(f_list[i].e, e[i], DIGITS)
 
 			lib.function_vector_free(f)
 			dlib.vector_free(v)
@@ -286,6 +290,8 @@ class ProxTestCase(unittest.TestCase):
 									 gpu=gpu)
 			if lib is None:
 				continue
+
+			DIGITS = 5 if lib.FLOAT else 7
 
 			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
 			x = dlib.vector(0, 0, None)
@@ -321,7 +327,7 @@ class ProxTestCase(unittest.TestCase):
 				if funcval_c in (np.inf, np.nan):
 					self.assertTrue(1)
 				else:
-					self.assertAlmostEqual(funcval_c, funcval_py)
+					self.assertAlmostEqual(funcval_c, funcval_py, DIGITS)
 
 				# proximal operator evaluation, random rho
 				rho = 5 * np.random.rand()

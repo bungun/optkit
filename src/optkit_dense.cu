@@ -405,7 +405,7 @@ void matrix_diagonal(vector * diag, matrix *A)
         diag->size = (size_t) (A->size1 <= A->size2) ? A->size1 : A->size2;
 }
 
-void matrix_cast_vector(vector * v, matrix * A
+void matrix_cast_vector(vector * v, matrix * A)
 {
         v->size = A->size1 * A->size2;
         v->stride = 1;
@@ -441,7 +441,7 @@ void matrix_memcpy_mm(matrix * A, const matrix * B)
                 return;
         }
 
-        if (A->order == B->ovoid rder) {
+        if (A->order == B->order) {
                 ok_memcpy_gpu(A->data, B->data,
                               A->size1 * A->size2 * sizeof(ok_float));
         } else if (A->order == CblasRowMajor) {
@@ -542,7 +542,7 @@ void matrix_memcpy_am(ok_float * A, const matrix * B,
 void matrix_print(matrix * A)
 {
         ok_float A_row_host[A->size2];
-        size_gt stride = (A->order == CblasRowMajor) ? 1 : A->ld;
+        size_t stride = (A->order == CblasRowMajor) ? 1 : A->ld;
 
         for (uint i = 0; i < A->size1; ++i) {
                 matrix A_row  = matrix_submatrix_gen(A, i, 0, 1, A->size2);
@@ -637,26 +637,29 @@ int __matrix_order_compat(const matrix * A, const matrix * B, const char * nm_A,
  * BLAS routines
  * =============
  */
-void blas_make_handle(void ** handle)
+ok_status blas_make_handle(void ** handle)
 {
         cublasStatus_t status;
         cublasHandle_t * hdl;
-        hdl = malloc(sizeof(*hdl));
+        hdl = (cublasHandle_t *) malloc(sizeof(cublasHandle_t));
         status = cublasCreate(hdl);
         if (status != CUBLAS_STATUS_SUCCESS) {
                 printf("CUBLAS initialization failed\n");
                 ok_free(hdl);
                 *handle = OK_NULL;
+                return OPTKIT_ERROR_CUBLAS;
         } else {
                 *handle = (void *) hdl;
+                return OPTKIT_SUCCESS;
         }
 }
 
-void blas_destroy_handle(void * handle)
+ok_status blas_destroy_handle(void * handle)
 {
         cublasDestroy(*(cublasHandle_t *) handle);
         CUDA_CHECK_ERR;
         ok_free(handle);
+        return OPTKIT_SUCCESS;
 }
 
 
@@ -902,27 +905,27 @@ __global__ void __block_chol(ok_float * A, uint iter, uint ld,
         ok_float& (* get)(ok_float * A, uint i, uint j, uint stride) =
                 (ord == CblasRowMajor) ? __matrix_get_r : __matrix_get_c;
 
-        (L, row, col, kTileLD) = get(A, global_row, global_col, ld);
+        get(L, row, col, kTileLD) = get(A, global_row, global_col, ld);
         __syncthreads();
 
 
         for (i = 0; i < mat_dim; ++i) {
                 /* l11 = sqrt(a11) */
                 a11 = sqrt(get(L, i, i, kTileLD));
+	        __syncthreads();
+
+
+	        /* l21 = a21 / l11 */
+	        if (row >= i && col == 0)
+	                get(L, row, i, kTileLD) /= a11;
                 __syncthreads();
 
 
-        /* l21 = a21 / l11 */
-        if (row >= i && col == 0)
-                get(L, row, i, kTileLD) /= a11;
-                __syncthreads();
-
-
-        /* a22 -= l21 * l21' */
-        if (row >= col && col > i)
-                get(L, row, col, kTileLD) -=
-                     get(L, col, i, kTileLD) *
-                     get(L, row, i, kTileLD);
+	        /* a22 -= l21 * l21' */
+	        if (row >= col && col > i)
+	                get(L, row, col, kTileLD) -=
+	                     get(L, col, i, kTileLD) *
+	                     get(L, row, i, kTileLD);
                 __syncthreads();
         }
 
@@ -947,7 +950,7 @@ __global__ void __block_trsv(ok_float * A, uint iter, uint n,
         ok_float& (* get)(ok_float * A, uint i, uint j, uint stride) =
                 (ord == CblasRowMajor) ? __matrix_get_r : __matrix_get_c;
 
-         * Load A -> L column-wise.
+        /* Load A -> L columnwise. */
         for (i = 0; i < kTileSize; ++i)
                 get(L, row, i, kTileLD) = get(A, global_row, global_col + i,
                         ld);
@@ -959,8 +962,8 @@ __global__ void __block_trsv(ok_float * A, uint iter, uint n,
                 return;
 
         for (i = 0; i < kTileSize; ++i)
-                get(A12, row, i, kTileLD, rowmajor) = get(A, global_row,
-                        global_col + i, ld, rowmajor);
+                get(A12, row, i, kTileLD) = get(A, global_row, global_col + i,
+                	ld);
         __syncthreads();
 
         for (i = 0; i < kTileSize; ++i)
@@ -975,7 +978,6 @@ __global__ void __block_trsv(ok_float * A, uint iter, uint n,
                 get(A, global_row, global_col + i, ld) = get(A12, row, i,
                         kTileLD);
         __syncthreads();
-        }
 }
 
 /*
@@ -991,7 +993,6 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
         cublasStatus_t err;
         cudaStream_t stm;
         uint num_tiles, grid_dim, i;
-        uint row_flag = A->order == CblasRowMajor;
 
         err = cublasGetStream(*(cublasHandle_t *) linalg_handle, &stm);
         num_tiles = (A->size1 + kTileSize - 1u) / kTileSize;
@@ -1048,11 +1049,11 @@ void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x)
 }
 
 /* device reset */
-int ok_device_reset()
+ok_status ok_device_reset()
 {
         cudaDeviceReset();
         CUDA_CHECK_ERR;
-        return 0;
+        return OPTKIT_SUCCESS;
 }
 
 

@@ -146,6 +146,8 @@ class DenseBLASTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if single_precision else 7
+
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
@@ -156,7 +158,7 @@ class DenseBLASTestCase(unittest.TestCase):
 			lib.vector_memcpy_va(v, v_ptr, 1)
 			lib.vector_memcpy_va(w, w_ptr, 1)
 			answer = lib.blas_dot(hdl, v, w)
-			self.assertAlmostEqual(answer, v_py.dot(w_py))
+			self.assertAlmostEqual(answer, v_py.dot(w_py), DIGITS)
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -171,13 +173,15 @@ class DenseBLASTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if single_precision else 7
+
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
 			v_py += np.random.rand(m)
 			lib.vector_memcpy_va(v, v_ptr, 1)
 			answer = lib.blas_nrm2(hdl, v)
-			self.assertAlmostEqual(answer, np.linalg.norm(v_py))
+			self.assertAlmostEqual(answer, np.linalg.norm(v_py), DIGITS)
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -192,13 +196,15 @@ class DenseBLASTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if single_precision else 7
+
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
 			v_py += np.random.rand(m)
 			lib.vector_memcpy_va(v, v_ptr, 1)
 			answer = lib.blas_asum(hdl, v)
-			self.assertAlmostEqual(answer, np.linalg.norm(v_py, 1))
+			self.assertAlmostEqual(answer, np.linalg.norm(v_py, 1), DIGITS)
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -215,6 +221,8 @@ class DenseBLASTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if single_precision else 7
+
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
@@ -223,7 +231,7 @@ class DenseBLASTestCase(unittest.TestCase):
 			alpha = np.random.rand()
 			lib.blas_scal(hdl, alpha, v)
 			lib.vector_memcpy_av(v_ptr, v, 1)
-			self.assertTrue(np.allclose(v_py, alpha * v_rand))
+			self.assertTrue(np.allclose(v_py, alpha * v_rand, DIGITS))
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -239,6 +247,8 @@ class DenseBLASTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if single_precision else 7
+
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
@@ -252,7 +262,7 @@ class DenseBLASTestCase(unittest.TestCase):
 			lib.vector_memcpy_va(w, w_ptr, 1)
 			lib.blas_axpy(hdl, alpha, v, w)
 			lib.vector_memcpy_av(w_ptr, w, 1)
-			self.assertTrue(np.allclose(w_py, pyresult))
+			self.assertTrue(np.allclose(w_py, pyresult, DIGITS))
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -266,6 +276,8 @@ class DenseBLASTestCase(unittest.TestCase):
 									  gpu=gpu)
 			if lib is None:
 				continue
+
+			DIGITS = 5 if single_precision else 7
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -295,14 +307,14 @@ class DenseBLASTestCase(unittest.TestCase):
 				lib.blas_gemv(hdl, lib.enums.CblasNoTrans, alpha, A, x, beta,
 							  y)
 				lib.vector_memcpy_av(y_ptr, y, 1)
-				self.assertTrue(np.allclose(y_py, pyresult))
+				self.assertTrue(np.allclose(y_py, pyresult, DIGITS))
 
 				# perform x = alpha * A' * y + beta * x
 				y_py[:] = pyresult[:]
 				pyresult = alpha * A_py.T.dot(y_py) + beta * x_py
 				lib.blas_gemv(hdl, lib.enums.CblasTrans, alpha, A, y, beta, x)
 				lib.vector_memcpy_av(x_ptr, x, 1)
-				self.assertTrue(np.allclose(x_py, pyresult))
+				self.assertTrue(np.allclose(x_py, pyresult, DIGITS))
 
 				lib.matrix_free(A)
 				lib.vector_free(x)
@@ -338,6 +350,8 @@ class DenseBLASTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if single_precision else 7
+
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 			for rowmajor in (True, False):
@@ -362,7 +376,7 @@ class DenseBLASTestCase(unittest.TestCase):
 							  L, x)
 				lib.vector_memcpy_av(x_ptr, x, 1)
 
-				self.assertTrue(np.allclose(x_py, pyresult))
+				self.assertTrue(np.allclose(x_py, pyresult, DIGITS))
 
 				lib.matrix_free(L)
 				lib.vector_free(x)
@@ -386,6 +400,8 @@ class DenseBLASTestCase(unittest.TestCase):
 									  gpu=gpu)
 			if lib is None:
 				continue
+
+			DIGITS = 5 if single_precision else 7
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -420,7 +436,7 @@ class DenseBLASTestCase(unittest.TestCase):
 			lib.vector_memcpy_av(y_ptr, y, 1)
 
 
-			self.assertTrue(np.allclose(y_py, pyresult))
+			self.assertTrue(np.allclose(y_py, pyresult, DIGITS))
 
 			lib.vector_free(x)
 			lib.vector_free(y)
@@ -445,6 +461,8 @@ class DenseBLASTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if single_precision else 7
+
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 			# make diagonal "matrix" D stored as vector d,
@@ -468,7 +486,7 @@ class DenseBLASTestCase(unittest.TestCase):
 			lib.blas_diagmv(hdl, alpha, d, x, beta, y)
 			lib.vector_memcpy_av(y_ptr, y, 1)
 
-			self.assertTrue(np.allclose(y_py, pyresult))
+			self.assertTrue(np.allclose(y_py, pyresult, DIGITS))
 
 			lib.vector_free(x)
 			lib.vector_free(y)
@@ -490,6 +508,8 @@ class DenseBLASTestCase(unittest.TestCase):
 									  gpu=gpu)
 			if lib is None:
 				continue
+
+			DIGITS = 5 if single_precision else 7
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -520,7 +540,7 @@ class DenseBLASTestCase(unittest.TestCase):
 				lib.blas_gemm(hdl, lib.enums.CblasTrans,
 							  lib.enums.CblasNoTrans, alpha, B, A, beta, C)
 				lib.matrix_memcpy_am(C_ptr, C, order)
-				self.assertTrue(np.allclose(pyresult, C_py))
+				self.assertTrue(np.allclose(pyresult, C_py, DIGITS))
 
 				lib.matrix_free(A)
 				lib.matrix_free(B)
@@ -545,6 +565,7 @@ class DenseBLASTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if single_precision else 7
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -580,7 +601,7 @@ class DenseBLASTestCase(unittest.TestCase):
 						if j > i:
 							pyresult[i, j] *= 0
 							B_py[i, j] *= 0
-				self.assertTrue(np.allclose(pyresult, B_py))
+				self.assertTrue(np.allclose(pyresult, B_py, DIGITS))
 
 				lib.matrix_free(A)
 				lib.matrix_free(B)
@@ -611,6 +632,8 @@ class DenseBLASTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if single_precision else 7
+
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 			for rowmajor in (True, False):
@@ -636,7 +659,7 @@ class DenseBLASTestCase(unittest.TestCase):
 						      1., L, A)
 				lib.matrix_memcpy_am(A_ptr, A, order)
 
-				self.assertTrue(np.allclose(pyresult, A_py))
+				self.assertTrue(np.allclose(pyresult, A_py, DIGITS))
 
 				lib.matrix_free(A)
 				lib.matrix_free(L)
@@ -703,6 +726,8 @@ class DenseLinalgTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if single_precision else 7
+
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 			for rowmajor in (True, False):
@@ -727,12 +752,12 @@ class DenseLinalgTestCase(unittest.TestCase):
 					for j in xrange(mindim):
 						if j > i:
 							L_py[i, j] *= 0
-				self.assertTrue(np.allclose(L_py, pychol))
+				self.assertTrue(np.allclose(L_py, pychol, DIGITS))
 
 				# cholesky solve
 				lib.linalg_cholesky_svx(hdl, L, x)
 				lib.vector_memcpy_av(x_ptr, x, 1)
-				self.assertTrue(np.allclose(x_py, pysol))
+				self.assertTrue(np.allclose(x_py, pysol, DIGITS))
 
 				lib.matrix_free(L)
 				lib.vector_free(x)

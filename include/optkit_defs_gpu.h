@@ -91,7 +91,7 @@ calc_grid_dim(size_t size) {
  * status code to string conversion from POGS
  * https://github.com/foges/pogs/blob/master/src/gpu/include/cml/cml_utils.cuh
  */
-const char* cublas_err2string(cublasStatus_t error) {
+static const char* cublas_err2string(cublasStatus_t error) {
   switch (error) {
     case CUBLAS_STATUS_SUCCESS:
       return "CUBLAS_STATUS_SUCCESS";
@@ -139,37 +139,40 @@ static const char* cusparse_err2string(cusparseStatus_t error) {
   }
 }
 
-inline void ok_cuda_status(cudaError_t code, const char *file, int line,
+inline ok_status ok_cuda_status(cudaError_t code, const char *file, int line,
 	const char *function)
 {
-   if (code != cudaSuccess)
-        printf("%s:%d:%s\n ERROR_CUDA: %s\n", file, line, func,
+   if (code != cudaSuccess) {
+        printf("%s:%d:%s\n ERROR_CUDA: %s\n", file, line, function,
         	cudaGetErrorString(code));
-   	return OK_ERROR_CUDA;
-   else
-   	return OK_SUCCESS;
+   	return OPTKIT_ERROR_CUDA;
+   } else {
+   	return OPTKIT_SUCCESS;
+   }
 }
 
-inline void ok_cublas_status(cublasStatus_t code, const char *file, int line,
+inline ok_status ok_cublas_status(cublasStatus_t code, const char *file, int line,
 	const char *function)
 {
-   if (code != CUBLAS_STATUS_SUCCESS)
-        printf("%s:%d:%s\n ERROR_CUDA: %s\n", file, line, func,
+   if (code != CUBLAS_STATUS_SUCCESS) {
+        printf("%s:%d:%s\n ERROR_CUDA: %s\n", file, line, function,
         	cublas_err2string(code));
-   	return OK_ERROR_CUBLAS;
-   else
-   	return OK_SUCCESS;
+   	return OPTKIT_ERROR_CUBLAS;
+   } else {
+   	return OPTKIT_SUCCESS;
+   }
 }
 
-inline void ok_cusparse_status(cudaError_t code, const char *file, int line,
-	const char *function)
+inline ok_status ok_cusparse_status(cusparseStatus_t code, const char *file,
+	int line, const char *function)
 {
-   if (code != CUSPARSE_STATUS_SUCCESS)
-        printf("%s:%d:%s\n ERROR_CUDA: %s\n", file, line, func,
+   if (code != CUSPARSE_STATUS_SUCCESS) {
+        printf("%s:%d:%s\n ERROR_CUDA: %s\n", file, line, function,
         	cusparse_err2string(code));
-   	return OK_ERROR_CUSPARSE;
-   else
-   	return OK_SUCCESS;
+   	return OPTKIT_ERROR_CUSPARSE;
+   } else {
+   	return OPTKIT_SUCCESS;
+   }
 }
 
 #ifdef __cplusplus

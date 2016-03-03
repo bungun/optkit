@@ -95,7 +95,8 @@ class VectorTestCase(unittest.TestCase):
 				u = lib.vector(0, 0, None)
 				lib.vector_view_array(u, u_ptr, u_rand.size)
 				for i in xrange(len_v):
-					self.assertAlmostEqual(u_rand[i], u.data[i], places=3)
+					self.assertAlmostEqual(u_rand[i], u.data[i],
+										   places=3)
 				# DON'T FREE u, DATA OWNED BY PYTHON
 
 			lib.vector_free(v)
@@ -134,6 +135,8 @@ class VectorTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
+			DIGITS = 5 if lib.FLOAT else 7
+
 			len_v = 10 + int(1000 * np.random.rand())
 
 			val1 = 12 * np.random.rand()
@@ -149,8 +152,8 @@ class VectorTestCase(unittest.TestCase):
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(v.size):
-				self.assertAlmostEqual(v_py[i], val1)
-				self.assertAlmostEqual(w_py[i], val2)
+				self.assertAlmostEqual(v_py[i], val1, DIGITS)
+				self.assertAlmostEqual(w_py[i], val2, DIGITS)
 
 			# add two vectors
 			lib.vector_add(v, w)
@@ -158,8 +161,8 @@ class VectorTestCase(unittest.TestCase):
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(v.size):
-				self.assertAlmostEqual(v_py[i], val1)
-				self.assertAlmostEqual(w_py[i], val2)
+				self.assertAlmostEqual(v_py[i], val1, DIGITS)
+				self.assertAlmostEqual(w_py[i], val2, DIGITS)
 
 			# subtract two vectors
 			lib.vector_sub(w, v)
@@ -167,8 +170,8 @@ class VectorTestCase(unittest.TestCase):
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(v.size):
-				self.assertAlmostEqual(v_py[i], val1)
-				self.assertAlmostEqual(w_py[i], val2)
+				self.assertAlmostEqual(v_py[i], val1, DIGITS)
+				self.assertAlmostEqual(w_py[i], val2, DIGITS)
 
 			# multiply two vectors
 			lib.vector_mul(v, w)
@@ -176,8 +179,8 @@ class VectorTestCase(unittest.TestCase):
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(v.size):
-				self.assertAlmostEqual(v_py[i], val1)
-				self.assertAlmostEqual(w_py[i], val2)
+				self.assertAlmostEqual(v_py[i], val1, DIGITS)
+				self.assertAlmostEqual(w_py[i], val2, DIGITS)
 
 
 			# vector scale
@@ -186,7 +189,7 @@ class VectorTestCase(unittest.TestCase):
 			lib.vector_scale(v, scal)
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			for i in xrange(v.size):
-				self.assertAlmostEqual(v_py[i], val1)
+				self.assertAlmostEqual(v_py[i], val1, DIGITS)
 
 			# make sure v is strictly positive
 			val1 = 0.7 + np.random.rand()
