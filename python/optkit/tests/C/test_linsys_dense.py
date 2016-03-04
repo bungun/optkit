@@ -4,7 +4,8 @@ import numpy as np
 from ctypes import c_float, c_int, c_void_p, Structure, byref
 from optkit.libs import DenseLinsysLibs, SparseLinsysLibs
 from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string, \
-							  DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
+							  DEFAULT_SHAPE, DEFAULT_MATRIX_PATH, \
+							  significant_digits
 
 class DenseLibsTestCase(unittest.TestCase):
 	@classmethod
@@ -158,7 +159,9 @@ class DenseBLASTestCase(unittest.TestCase):
 			lib.vector_memcpy_va(v, v_ptr, 1)
 			lib.vector_memcpy_va(w, w_ptr, 1)
 			answer = lib.blas_dot(hdl, v, w)
-			self.assertAlmostEqual(answer, v_py.dot(w_py), DIGITS)
+
+			self.assertAlmostEqual(significant_digits(answer),
+								   significant_digits(v_py.dot(w_py)), DIGITS)
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -181,7 +184,9 @@ class DenseBLASTestCase(unittest.TestCase):
 			v_py += np.random.rand(m)
 			lib.vector_memcpy_va(v, v_ptr, 1)
 			answer = lib.blas_nrm2(hdl, v)
-			self.assertAlmostEqual(answer, np.linalg.norm(v_py), DIGITS)
+			self.assertAlmostEqual(significant_digits(answer),
+								   significant_digits(np.linalg.norm(v_py)),
+								   DIGITS)
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -204,7 +209,9 @@ class DenseBLASTestCase(unittest.TestCase):
 			v_py += np.random.rand(m)
 			lib.vector_memcpy_va(v, v_ptr, 1)
 			answer = lib.blas_asum(hdl, v)
-			self.assertAlmostEqual(answer, np.linalg.norm(v_py, 1), DIGITS)
+			self.assertAlmostEqual(significant_digits(answer),
+								   significant_digits(np.linalg.norm(v_py, 1)),
+								   DIGITS)
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -752,12 +759,20 @@ class DenseLinalgTestCase(unittest.TestCase):
 					for j in xrange(mindim):
 						if j > i:
 							L_py[i, j] *= 0
-				self.assertTrue(np.allclose(L_py, pychol, DIGITS))
+				self.assertTrue(np.allclose(L_py.dot(x_rand),
+											pychol.dot(x_rand), DIGITS))
 
 				# cholesky solve
 				lib.linalg_cholesky_svx(hdl, L, x)
 				lib.vector_memcpy_av(x_ptr, x, 1)
-				self.assertTrue(np.allclose(x_py, pysol, DIGITS))
+
+				print x_py
+				print pysol
+				compare = lambda x1, x2 : abs(
+						significant_digits(x1)-significant_digits(x2)) < 1e-3
+
+				self.assertTrue(all(map(lambda x1, x2: abs(significant_digitsx1-x2) < 1e-3, x_py,
+										pysol)))
 
 				lib.matrix_free(L)
 				lib.vector_free(x)

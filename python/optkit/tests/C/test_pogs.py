@@ -3,8 +3,9 @@ import os
 import numpy as np
 from ctypes import c_void_p, byref, cast, addressof
 from optkit.libs import DenseLinsysLibs, ProxLibs, PogsLibs
-from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
+from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH, \
+							  significant_digits
 
 ALPHA_DEFAULT = 1.7
 RHO_DEFAULT = 1
@@ -462,9 +463,12 @@ class PogsTestCase(unittest.TestCase):
 		tol_dual = tolerances.atoln + (tolerances.reltol *
 									   np.linalg.norm(localvars.xt12))
 
-		self.assertAlmostEqual(objectives.gap, obj_gap_py, DIGITS)
-		self.assertAlmostEqual(tolerances.primal, tol_primal, DIGITS)
-		self.assertAlmostEqual(tolerances.dual, tol_dual, DIGITS)
+		self.assertAlmostEqual(significant_digits(objectives.gap),
+							   significant_digits(obj_gap_py), DIGITS)
+		self.assertAlmostEqual(significant_digits(tolerances.primal),
+							   significant_digitis(tol_primal), DIGITS)
+		self.assertAlmostEqual(significant_digits(tolerances.dual),
+							   significant_digits(tol_dual), DIGITS)
 
 
 		res_primal = np.linalg.norm(localA.dot(localvars.x12) -
@@ -472,9 +476,12 @@ class PogsTestCase(unittest.TestCase):
 		res_dual = np.linalg.norm(localA.T.dot(localvars.yt12) +
 								  localvars.xt12)
 
-		self.assertAlmostEqual(residuals.primal, res_primal, DIGITS)
-		self.assertAlmostEqual(residuals.dual, res_dual, DIGITS)
-		self.assertAlmostEqual(residuals.gap, abs(obj_gap_py), DIGITS)
+		self.assertAlmostEqual(significant_digits(residuals.primal),
+							   significant_digits(res_primal), DIGITS)
+		self.assertAlmostEqual(significant_digits(residuals.dual),
+							   significant_digits(res_dual), DIGITS)
+		self.assertAlmostEqual(significant_digits(residuals.gap),
+							   significant_digits(abs(obj_gap_py)), DIGITS)
 
 		converged_py = res_primal <= tolerances.primal and \
 					   res_dual <= tolerances.dual

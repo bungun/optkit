@@ -2,7 +2,7 @@ import unittest
 import os
 import numpy as np
 from optkit.libs import DenseLinsysLibs
-from optkit.tests.defs import CONDITIONS
+from optkit.tests.defs import CONDITIONS, significant_digits
 
 class VectorTestCase(unittest.TestCase):
 	@classmethod
@@ -80,13 +80,15 @@ class VectorTestCase(unittest.TestCase):
 			w_py *= 0
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(len_v):
-				self.assertAlmostEqual(w_py[i], w_rand[i], places=3)
+				self.assertAlmostEqual(significant_digits(w_py[i]),
+									   significant_digits(w_rand[i]), places=3)
 
 			# memcpy_vv
 			lib.vector_memcpy_vv(v, w)
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			for i in xrange(len_v):
-				self.assertAlmostEqual(v_py[i], w_rand[i], places=3)
+				self.assertAlmostEqual(significant_digits(v_py[i]),
+									   significant_digits(w_rand[i]), places=3)
 
 			# view_array
 			if not gpu:
@@ -95,7 +97,8 @@ class VectorTestCase(unittest.TestCase):
 				u = lib.vector(0, 0, None)
 				lib.vector_view_array(u, u_ptr, u_rand.size)
 				for i in xrange(len_v):
-					self.assertAlmostEqual(u_rand[i], u.data[i],
+					self.assertAlmostEqual(significant_digits(u_rand[i]),
+										   significant_digits(u.data[i]),
 										   places=3)
 				# DON'T FREE u, DATA OWNED BY PYTHON
 
@@ -152,8 +155,10 @@ class VectorTestCase(unittest.TestCase):
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(v.size):
-				self.assertAlmostEqual(v_py[i], val1, DIGITS)
-				self.assertAlmostEqual(w_py[i], val2, DIGITS)
+				self.assertAlmostEqual(significant_digits(v_py[i]),
+									   significant_digits(val1), DIGITS)
+				self.assertAlmostEqual(significant_digits(w_py[i]),
+									   significant_digits(val2), DIGITS)
 
 			# add two vectors
 			lib.vector_add(v, w)
@@ -161,8 +166,10 @@ class VectorTestCase(unittest.TestCase):
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(v.size):
-				self.assertAlmostEqual(v_py[i], val1, DIGITS)
-				self.assertAlmostEqual(w_py[i], val2, DIGITS)
+				self.assertAlmostEqual(significant_digits(v_py[i]),
+									   significant_digits(val1), DIGITS)
+				self.assertAlmostEqual(significant_digits(w_py[i]),
+									   significant_digits(val2), DIGITS)
 
 			# subtract two vectors
 			lib.vector_sub(w, v)
@@ -170,8 +177,10 @@ class VectorTestCase(unittest.TestCase):
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(v.size):
-				self.assertAlmostEqual(v_py[i], val1, DIGITS)
-				self.assertAlmostEqual(w_py[i], val2, DIGITS)
+				self.assertAlmostEqual(significant_digits(v_py[i]),
+									   significant_digits(val1), DIGITS)
+				self.assertAlmostEqual(significant_digits(w_py[i]),
+									   significant_digits(val2), DIGITS)
 
 			# multiply two vectors
 			lib.vector_mul(v, w)
@@ -179,8 +188,10 @@ class VectorTestCase(unittest.TestCase):
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(v.size):
-				self.assertAlmostEqual(v_py[i], val1, DIGITS)
-				self.assertAlmostEqual(w_py[i], val2, DIGITS)
+				self.assertAlmostEqual(significant_digits(v_py[i]),
+									   significant_digits(val1), DIGITS)
+				self.assertAlmostEqual(significant_digits(w_py[i]),
+									   significant_digits(val2), DIGITS)
 
 
 			# vector scale
@@ -189,7 +200,8 @@ class VectorTestCase(unittest.TestCase):
 			lib.vector_scale(v, scal)
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			for i in xrange(v.size):
-				self.assertAlmostEqual(v_py[i], val1, DIGITS)
+				self.assertAlmostEqual(significant_digits(v_py[i]),
+									   significant_digits(val1), DIGITS)
 
 			# make sure v is strictly positive
 			val1 = 0.7 + np.random.rand()
@@ -202,8 +214,10 @@ class VectorTestCase(unittest.TestCase):
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(v.size):
-				self.assertAlmostEqual(v_py[i], val1, 3)
-				self.assertAlmostEqual(w_py[i], val2, 3)
+				self.assertAlmostEqual(significant_digits(v_py[i]),
+									   significant_digits(val1), 3)
+				self.assertAlmostEqual(significant_digits(w_py[i]),
+									   significant_digits(val2), 3)
 
 			# make w strictly negative
 			w_max = w_py.max()
@@ -215,21 +229,24 @@ class VectorTestCase(unittest.TestCase):
 			val2 = abs(val2)
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(v.size):
-				self.assertAlmostEqual(w_py[i], val2, 3)
+				self.assertAlmostEqual(significant_digits(w_py[i]),
+									   significant_digits(val2), 3)
 
 			# vector recip
 			lib.vector_recip(w)
 			val2 = 1. / val2
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(v.size):
-				self.assertAlmostEqual(w_py[i], val2, 3)
+				self.assertAlmostEqual(significant_digits(w_py[i]),
+									   significant_digits(val2), 3)
 
 			# vector sqrt
 			lib.vector_sqrt(w)
 			val2 **= 0.5
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(v.size):
-				self.assertAlmostEqual(w_py[i], val2, 3)
+				self.assertAlmostEqual(significant_digits(w_py[i]),
+									   significant_digits(val2), 3)
 
 			# vector pow
 			pow_val = -2 + 4 * np.random.rand()
@@ -237,7 +254,8 @@ class VectorTestCase(unittest.TestCase):
 			val2 **= pow_val
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(v.size):
-				self.assertAlmostEqual(w_py[i], val2, 3)
+				self.assertAlmostEqual(significant_digits(w_py[i]),
+									   significant_digits(val2), 3)
 
 			lib.vector_free(v)
 			lib.vector_free(w)

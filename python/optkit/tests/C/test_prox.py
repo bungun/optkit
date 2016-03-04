@@ -4,7 +4,7 @@ import numpy as np
 from ctypes import c_int, byref, c_void_p
 from optkit.libs import DenseLinsysLibs, ProxLibs
 from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string, \
-							  DEFAULT_SHAPE
+							  DEFAULT_SHAPE, significant_digits
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
 
 class ProxLibsTestCase(unittest.TestCase):
@@ -248,11 +248,16 @@ class ProxTestCase(unittest.TestCase):
 			f_list = [lib.function(*f_) for f_ in f_py]
 			for i in xrange(m):
 				self.assertAlmostEqual(f_list[i].h, hval, DIGITS)
-				self.assertAlmostEqual(f_list[i].a, a[i], DIGITS)
-				self.assertAlmostEqual(f_list[i].b, b[i], DIGITS)
-				self.assertAlmostEqual(f_list[i].c, c[i], DIGITS)
-				self.assertAlmostEqual(f_list[i].d, d[i], DIGITS)
-				self.assertAlmostEqual(f_list[i].e, e[i], DIGITS)
+				self.assertAlmostEqual(significant_digits(f_list[i].a),
+									   significant_digits(a[i]), DIGITS)
+				self.assertAlmostEqual(significant_digits(f_list[i].b),
+									   significant_digits(b[i]), DIGITS)
+				self.assertAlmostEqual(significant_digits(f_list[i].c),
+									   significant_digits(c[i]), DIGITS)
+				self.assertAlmostEqual(significant_digits(f_list[i].d),
+									   significant_digits(d[i]), DIGITS)
+				self.assertAlmostEqual(significant_digits(f_list[i].e),
+									   significant_digits(e[i]), DIGITS)
 
 			# div
 			lib.function_vector_div(f, v)
@@ -264,11 +269,16 @@ class ProxTestCase(unittest.TestCase):
 			f_list = [lib.function(*f_) for f_ in f_py]
 			for i in xrange(m):
 				self.assertAlmostEqual(f_list[i].h, hval, DIGITS)
-				self.assertAlmostEqual(f_list[i].a, a[i], DIGITS)
-				self.assertAlmostEqual(f_list[i].b, b[i], DIGITS)
-				self.assertAlmostEqual(f_list[i].c, c[i], DIGITS)
-				self.assertAlmostEqual(f_list[i].d, d[i], DIGITS)
-				self.assertAlmostEqual(f_list[i].e, e[i], DIGITS)
+				self.assertAlmostEqual(significant_digits(f_list[i].a),
+									   significant_digits(a[i]), DIGITS)
+				self.assertAlmostEqual(significant_digits(f_list[i].b),
+									   significant_digits(b[i]), DIGITS)
+				self.assertAlmostEqual(significant_digits(f_list[i].c),
+									   significant_digits(c[i]), DIGITS)
+				self.assertAlmostEqual(significant_digits(f_list[i].d),
+									   significant_digits(d[i]), DIGITS)
+				self.assertAlmostEqual(significant_digits(f_list[i].e),
+									   significant_digits(e[i]), DIGITS)
 
 			lib.function_vector_free(f)
 			dlib.vector_free(v)
@@ -327,7 +337,9 @@ class ProxTestCase(unittest.TestCase):
 				if funcval_c in (np.inf, np.nan):
 					self.assertTrue(1)
 				else:
-					self.assertAlmostEqual(funcval_c, funcval_py, DIGITS)
+					self.assertAlmostEqual(significant_digits(funcval_c),
+										   significant_digits(funcval_py),
+										   DIGITS)
 
 				# proximal operator evaluation, random rho
 				rho = 5 * np.random.rand()
