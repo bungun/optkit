@@ -766,13 +766,9 @@ class DenseLinalgTestCase(unittest.TestCase):
 				lib.linalg_cholesky_svx(hdl, L, x)
 				lib.vector_memcpy_av(x_ptr, x, 1)
 
-				print x_py
-				print pysol
 				compare = lambda x1, x2 : abs(
 						significant_digits(x1)-significant_digits(x2)) < 1e-3
-
-				self.assertTrue(all(map(lambda x1, x2: abs(significant_digitsx1-x2) < 1e-3, x_py,
-										pysol)))
+				self.assertTrue(all(map(compare, x_py, pysol)))
 
 				lib.matrix_free(L)
 				lib.vector_free(x)
