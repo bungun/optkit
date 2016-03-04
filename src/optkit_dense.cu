@@ -934,8 +934,55 @@ __global__ void __block_chol(ok_float * A, uint iter, uint ld,
                 get(L, row, col, kTileLD);
 }
 
-__global__ void __block_trsv(ok_float * A, uint iter, uint n,
-                             uint ld, enum CBLAS_ORDER ord)
+
+// __block_trsv(ok_float * A, uint iter, uint n,
+//                              uint ld, uint rowmajor) {
+
+//   uint tile_idx, row, global_row, global_col, i, j;
+//   const uint kSmTda = kTileSize + 1u;
+//   __shared__ ok_float L[kSmTda * kTileSize];
+//   __shared__ ok_float A12[kSmTda * kTileSize];
+
+//   tile_idx = blockIdx.x;
+//   row = threadIdx.x;
+//   global_col = iter * kTileSize;
+//   global_row = iter * kTileSize + row;
+
+//   // Load A -> L column-wise.
+//   for (i = 0; i < kTileSize; ++i)
+//     __matrix_get(L, row, i, kSmTda, rowmajor) =
+//         __matrix_get(A, global_row, global_col + i, ld, rowmajor);
+
+//   global_row = row + (iter + tile_idx + 1u) * kTileSize;
+
+//   if (global_row < n) {
+//     for (i = 0; i < kTileSize; ++i)
+//       __matrix_get(A12, row, i, kSmTda, rowmajor) =
+//           __matrix_get(A, global_row, global_col + i, ld, rowmajor);
+//   }
+//   __syncthreads();
+
+//   if (global_row < n) {
+//     for (i = 0; i < kTileSize; ++i) {
+//       for (j = 0; j < i; ++j)
+//         __matrix_get(A12, row, i, kSmTda, rowmajor) -=
+//             __matrix_get(A12, row, j, kSmTda, rowmajor) *
+//             __matrix_get(L, i, j, kSmTda, rowmajor);
+//       __matrix_get(A12, row, i, kSmTda, rowmajor) /=
+//         __matrix_get(L, i, i, kSmTda, rowmajor);
+//     }
+//   }
+//   __syncthreads();
+
+//   if (global_row < n) {
+//     for (uint i = 0; i < kTileSize; ++i)
+//       __matrix_get(A, global_row, global_col + i, ld, rowmajor) =
+//           __matrix_get(A12, row, i, kSmTda, rowmajor);
+//   }
+// }
+
+__global__ void __block_trsv(ok_float * A, uint iter, uint n, uint ld,
+	enum CBLAS_ORDER ord)
 {
         uint tile_idx, row, global_row, global_col, i, j;
         const uint kTileLD = kTileSize + 1u;
@@ -966,12 +1013,12 @@ __global__ void __block_trsv(ok_float * A, uint iter, uint n,
                 	ld);
         __syncthreads();
 
-        for (i = 0; i < kTileSize; ++i)
-                for (j = 0; j < i; ++j) {
+        for (i = 0; i < kTileSize; ++i) {
+                for (j = 0; j < i; ++j)
                         get(A12, row, i, kTileLD) -= get(A12, row, j, kTileLD) *
                                 get(L, i, j, kTileLD);
-                        get(A12, row, i, kTileLD) /= get(L, i, i, kTileLD);
-                }
+	        get(A12, row, i, kTileLD) /= get(L, i, i, kTileLD);
+        }
         __syncthreads();
 
         for (uint i = 0; i < kTileSize; ++i)
@@ -1004,12 +1051,11 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
                 /* L11 = chol(A11) */
                 uint block_dim_1d = kTileSize < A->size1 - i * kTileSize ? \
                                 kTileSize : A->size1 - i * kTileSize;
-                dim3 block_dim(block_dim_1d, block_dim_1d);
+	                dim3 block_dim(block_dim_1d, block_dim_1d);
 
 
-                matrix L11 = matrix_submatrix_gen(A,
-                        i * kTileSize, i * kTileSize,
-                        block_dim_1d, block_dim_1d);
+                matrix L11 = matrix_submatrix_gen(A, i * kTileSize,
+                	i * kTileSize, block_dim_1d, block_dim_1d);
                 __block_chol<<<1, block_dim, 0, stm>>>(A->data, i, (uint) A->ld,
                         A->order);
 
@@ -1020,9 +1066,9 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 
                 /* L21 = A21 * L21^-T */
                 grid_dim = num_tiles - i - 1u;
-                matrix L21 = matrix_submatrix_gen(A,
-                        (i + 1) * kTileSize, i * kTileSize,
-                        A->size1 - (i + 1) * kTileSize, kTileSize);
+                matrix L21 = matrix_submatrix_gen(A, (i + 1) * kTileSize,
+                	i * kTileSize, A->size1 - (i + 1) * kTileSize,
+                	kTileSize);
 
                 __block_trsv<<<grid_dim, kTileSize, 0, stm>>>(A->data, i,
                         (uint) A->size1, (uint) A->ld, A->order);
@@ -1030,9 +1076,8 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
                 CUDA_CHECK_ERR;
 
                 /* A22 -= L21 * L21^T */
-                matrix A22 = matrix_submatrix_gen(A,
-                        (i + 1) * kTileSize, (i + 1) * kTileSize,
-                        A->size1 - (i + 1) * kTileSize,
+                matrix A22 = matrix_submatrix_gen(A, (i + 1) * kTileSize,
+                	(i + 1) * kTileSize, A->size1 - (i + 1) * kTileSize,
                         A->size1 - (i + 1) * kTileSize);
 
                 blas_syrk(linalg_handle, CblasLower, CblasNoTrans, -kOne, &L21,
