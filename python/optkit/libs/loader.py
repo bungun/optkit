@@ -16,7 +16,8 @@ def retrieve_libs(lib_prefix):
 		for precision in ['32', '64']:
 			lib_tag = '{}{}'.format(device, precision)
 			lib_name = '{}{}{}.{}'.format(lib_prefix, device, precision, ext)
-			lib_path = path.join(getsitepackages()[0], lib_name)
+			lib_path = path.join(getsitepackages()[0], '_optkit_libs',
+								 lib_name)
 			if use_local or not path.exists(lib_path):
 				lib_path = path.join(local_c_build, lib_name)
 

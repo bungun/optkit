@@ -86,8 +86,10 @@ class OptkitBuild(build):
 
     # copy resulting tool to library build folder
     self.mkpath(self.build_lib)
+    libtarg = path.join(self.build_lib, '_optkit_libs')
+    self.mkpath(libtarg)
     for target in target_files:
-          self.copy_file(path.join(LIBPATH,target), self.build_lib)
+          self.copy_file(path.join(LIBPATH,target), libtarg)
 
 
 class OptkitInstall(install):
