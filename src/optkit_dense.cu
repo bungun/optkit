@@ -308,6 +308,7 @@ __device__ inline ok_float& __matrix_get_c(ok_float * A, uint i, uint j,
         return A[i + j * stride];
 }
 
+
 /*
  * MATRIX methods
  * ==============
@@ -474,9 +475,17 @@ void matrix_memcpy_ma(matrix * A, const ok_float * B,
         uint i, j, grid_dim;
         ok_float * row, * col;
 
-        if (ord == A->order) {
-                ok_memcpy_gpu(A->data, B,
-                              A->size1 * A->size2 * sizeof(ok_float));
+        if (A->order == ord) {
+        	if (ord == CblasRowMajor)
+	        	for (i = 0; i < A->size1; ++i)
+		                ok_memcpy_gpu(A->data + i * A->ld,
+		                	B + i * A->size2,
+		                	A->size2 * sizeof(ok_float));
+		else
+	        	for (j = 0; j < A->size2; ++j)
+		                ok_memcpy_gpu(A->data + j * A->ld,
+		                	B + j * A->size1,
+		                	A->size1 * sizeof(ok_float));
         } else if (ord == CblasColMajor) {
                 ok_alloc_gpu(col, A->size1 * sizeof(ok_float));
                 grid_dim = calc_grid_dim(A->size1);
@@ -513,8 +522,16 @@ void matrix_memcpy_am(ok_float * A, const matrix * B,
         uint i, j, grid_dim;
         ok_float * row, * col;
         if (ord == B->order) {
-                ok_memcpy_gpu(A, B->data, B->size1 * B->size2 *
-                        sizeof(ok_float));
+        	if (ord == CblasRowMajor)
+	        	for (i = 0; i < B->size1; ++i)
+		                ok_memcpy_gpu(A + i * B->size2,
+		                	B->data + i * B->ld,
+		                	B->size2 * sizeof(ok_float));
+		else
+	        	for (j = 0; j < B->size2; ++j)
+		                ok_memcpy_gpu(A + j * B->size1,
+		                	B->data + j * B->ld,
+		                	B->size1 * sizeof(ok_float));
         } else if (ord == CblasRowMajor) {
                 ok_alloc_gpu(row, B->size2 * sizeof(ok_float));
                 grid_dim = calc_grid_dim(B->size2);
@@ -541,14 +558,14 @@ void matrix_memcpy_am(ok_float * A, const matrix * B,
 
 void matrix_print(matrix * A)
 {
-        ok_float A_row_host[A->size2];
-        size_t stride = (A->order == CblasRowMajor) ? 1 : A->ld;
+        ok_float row_host[A->size2];
+        vector row = (vector){0, 0, OK_NULL};
 
         for (uint i = 0; i < A->size1; ++i) {
-                matrix A_row  = matrix_submatrix_gen(A, i, 0, 1, A->size2);
-                matrix_memcpy_am(A_row_host, &A_row, A->order);
+        	matrix_row(&row, A, i);
+        	vector_memcpy_av(row_host, &row, 1);
                 for (uint j = 0; j < A->size2; ++j)
-                        printf("%0.2e ", A_row_host[j * stride]);
+                        printf("%0.2e ", row_host[j]);
                 printf("\n");
         }
         printf("\n");
@@ -889,7 +906,6 @@ void blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side, enum CBLAS_UPLO uplo,
 __global__ void __block_chol(ok_float * A, uint iter, uint ld,
 	enum CBLAS_ORDER ord)
 {
-
         uint col, row, mat_dim, global_col, global_row, i;
         const uint kTileLD = kTileSize + 1u;
         __shared__ ok_float L[kTileLD * kTileSize];
@@ -934,53 +950,6 @@ __global__ void __block_chol(ok_float * A, uint iter, uint ld,
                 get(L, row, col, kTileLD);
 }
 
-
-// __block_trsv(ok_float * A, uint iter, uint n,
-//                              uint ld, uint rowmajor) {
-
-//   uint tile_idx, row, global_row, global_col, i, j;
-//   const uint kSmTda = kTileSize + 1u;
-//   __shared__ ok_float L[kSmTda * kTileSize];
-//   __shared__ ok_float A12[kSmTda * kTileSize];
-
-//   tile_idx = blockIdx.x;
-//   row = threadIdx.x;
-//   global_col = iter * kTileSize;
-//   global_row = iter * kTileSize + row;
-
-//   // Load A -> L column-wise.
-//   for (i = 0; i < kTileSize; ++i)
-//     __matrix_get(L, row, i, kSmTda, rowmajor) =
-//         __matrix_get(A, global_row, global_col + i, ld, rowmajor);
-
-//   global_row = row + (iter + tile_idx + 1u) * kTileSize;
-
-//   if (global_row < n) {
-//     for (i = 0; i < kTileSize; ++i)
-//       __matrix_get(A12, row, i, kSmTda, rowmajor) =
-//           __matrix_get(A, global_row, global_col + i, ld, rowmajor);
-//   }
-//   __syncthreads();
-
-//   if (global_row < n) {
-//     for (i = 0; i < kTileSize; ++i) {
-//       for (j = 0; j < i; ++j)
-//         __matrix_get(A12, row, i, kSmTda, rowmajor) -=
-//             __matrix_get(A12, row, j, kSmTda, rowmajor) *
-//             __matrix_get(L, i, j, kSmTda, rowmajor);
-//       __matrix_get(A12, row, i, kSmTda, rowmajor) /=
-//         __matrix_get(L, i, i, kSmTda, rowmajor);
-//     }
-//   }
-//   __syncthreads();
-
-//   if (global_row < n) {
-//     for (uint i = 0; i < kTileSize; ++i)
-//       __matrix_get(A, global_row, global_col + i, ld, rowmajor) =
-//           __matrix_get(A12, row, i, kSmTda, rowmajor);
-//   }
-// }
-
 __global__ void __block_trsv(ok_float * A, uint iter, uint n, uint ld,
 	enum CBLAS_ORDER ord)
 {
@@ -997,33 +966,38 @@ __global__ void __block_trsv(ok_float * A, uint iter, uint n, uint ld,
         ok_float& (* get)(ok_float * A, uint i, uint j, uint stride) =
                 (ord == CblasRowMajor) ? __matrix_get_r : __matrix_get_c;
 
+
+
+
         /* Load A -> L columnwise. */
         for (i = 0; i < kTileSize; ++i)
                 get(L, row, i, kTileLD) = get(A, global_row, global_col + i,
-                        ld);
+                	ld);
         __syncthreads();
 
         global_row = row + (iter + tile_idx + 1u) * kTileSize;
 
-        if (global_row == n)
-                return;
 
-        for (i = 0; i < kTileSize; ++i)
-                get(A12, row, i, kTileLD) = get(A, global_row, global_col + i,
-                	ld);
+        if (global_row < n)
+	        for (i = 0; i < kTileSize; ++i)
+	                get(A12, row, i, kTileLD) =
+	        		get(A, global_row, global_col + i, ld);
         __syncthreads();
 
-        for (i = 0; i < kTileSize; ++i) {
-                for (j = 0; j < i; ++j)
-                        get(A12, row, i, kTileLD) -= get(A12, row, j, kTileLD) *
-                                get(L, i, j, kTileLD);
-	        get(A12, row, i, kTileLD) /= get(L, i, i, kTileLD);
-        }
+        if (global_row < n)
+	        for (i = 0; i < kTileSize; ++i) {
+	                for (j = 0; j < i; ++j)
+	                        get(A12, row, i, kTileLD) -=
+	                		get(A12, row, j, kTileLD) *
+	                                get(L, i, j, kTileLD);
+		        get(A12, row, i, kTileLD) /= get(L, i, i, kTileLD);
+	        }
         __syncthreads();
 
-        for (uint i = 0; i < kTileSize; ++i)
-                get(A, global_row, global_col + i, ld) = get(A12, row, i,
-                        kTileLD);
+        if (global_row < n)
+	        for (uint i = 0; i < kTileSize; ++i)
+	                get(A, global_row, global_col + i, ld) =
+	        		get(A12, row, i, kTileLD);
         __syncthreads();
 }
 
@@ -1050,15 +1024,11 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 
                 /* L11 = chol(A11) */
                 uint block_dim_1d = kTileSize < A->size1 - i * kTileSize ? \
-                                kTileSize : A->size1 - i * kTileSize;
-	                dim3 block_dim(block_dim_1d, block_dim_1d);
+                                    kTileSize : A->size1 - i * kTileSize;
+	        dim3 block_dim(block_dim_1d, block_dim_1d);
 
-
-                matrix L11 = matrix_submatrix_gen(A, i * kTileSize,
-                	i * kTileSize, block_dim_1d, block_dim_1d);
-                __block_chol<<<1, block_dim, 0, stm>>>(A->data, i, (uint) A->ld,
-                        A->order);
-
+                __block_chol<<<1, block_dim, 0, stm>>>(A->data, i,
+                	(uint) A->ld, A->order);
                 CUDA_CHECK_ERR;
 
                 if (i == num_tiles - 1u)
@@ -1072,7 +1042,6 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 
                 __block_trsv<<<grid_dim, kTileSize, 0, stm>>>(A->data, i,
                         (uint) A->size1, (uint) A->ld, A->order);
-
                 CUDA_CHECK_ERR;
 
                 /* A22 -= L21 * L21^T */

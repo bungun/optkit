@@ -697,24 +697,6 @@ class DenseLinalgTestCase(unittest.TestCase):
 			self.shape = DEFAULT_SHAPE
 			self.A_test = np.random.rand(*self.shape)
 
-	@staticmethod
-	def make_vec_triplet(lib, size_):
-			a = lib.vector(0, 0, None)
-			lib.vector_calloc(a, size_)
-			a_py = np.zeros(size_).astype(lib.pyfloat)
-			a_ptr = a_py.ctypes.data_as(lib.ok_float_p)
-			return a, a_py, a_ptr
-
-	@staticmethod
-	def make_mat_triplet(lib, shape, rowmajor=True):
-		order = 101 if rowmajor else 102
-		pyorder = 'C' if rowmajor else 'F'
-		A = lib.matrix(0, 0, 0, None, order)
-		lib.matrix_calloc(A, shape[0], shape[1], order)
-		A_py = np.zeros(shape, order=pyorder).astype(lib.pyfloat)
-		A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
-		return A, A_py, A_ptr
-
 	def test_cholesky(self):
 		(m, n) = self.shape
 		hdl = c_void_p()
@@ -740,17 +722,26 @@ class DenseLinalgTestCase(unittest.TestCase):
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
 						lib.enums.CblasColMajor
+				pyorder = 'C' if rowmajor else 'F'
 
 				# allocate L, x
-				L, L_py, L_ptr = self.make_mat_triplet(lib, (mindim, mindim),
-													   rowmajor=rowmajor)
+				L = lib.matrix(0, 0, 0, None, order)
+				lib.matrix_calloc(L, mindim, mindim, order)
+				L_py = np.zeros((mindim, mindim), order=pyorder).astype(
+							lib.pyfloat)
+				L_ptr = L_py.data_as(lib.ok_float_p)
+
+				x = lib.vector(0, 0, None)
+				lib.vector_calloc(x, mindim, order)
+				x_py = np.zeros(mindim).astype(lib.pyfloat)
+				x_ptr = x_py.ctypes.data_as(lib.ok_float_p)
+
 				x, x_py, x_ptr = self.make_vec_triplet(lib, mindim)
 
-				# populate matrices/vector
+				# populate L
+				L_py *= 0
 				L_py += AA_test
-				x_py += x_rand
 				lib.matrix_memcpy_ma(L, L_ptr, order)
-				lib.vector_memcpy_va(x, x_ptr, 1)
 
 				# cholesky factorization
 				lib.linalg_cholesky_decomp(hdl, L)
@@ -759,16 +750,26 @@ class DenseLinalgTestCase(unittest.TestCase):
 					for j in xrange(mindim):
 						if j > i:
 							L_py[i, j] *= 0
-				self.assertTrue(np.allclose(L_py.dot(x_rand),
-											pychol.dot(x_rand), DIGITS))
+
+
+				atol = 1e-2
+				rtol = 1e-2
+				self.assertTrue(np.linalg.norm(L_py - pychol) <=
+								atol * mindim +
+								rtol * np.linalg.norm(pychol))
+
+				# populate x
+				x_py *= 0
+				x_py += x_rand
+				lib.vector_memcpy_va(x, x_ptr, 1)
 
 				# cholesky solve
 				lib.linalg_cholesky_svx(hdl, L, x)
 				lib.vector_memcpy_av(x_ptr, x, 1)
 
-				compare = lambda x1, x2 : abs(
-						significant_digits(x1)-significant_digits(x2)) < 1e-3
-				self.assertTrue(all(map(compare, x_py, pysol)))
+				self.assertTrue(np.linalg.norm(x_py - pysol) <=
+								atol * mindim**0.5 +
+								rtol * np.linalg.norm(pysol))
 
 				lib.matrix_free(L)
 				lib.vector_free(x)
