@@ -516,7 +516,7 @@ class DenseBLASTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * single_precision - 1 * gpu
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -705,13 +705,13 @@ class DenseLinalgTestCase(unittest.TestCase):
 
 		# build decently conditioned symmetric matrix
 		AA_test = self.A_test.T.dot(self.A_test)[:mindim, :mindim]
-		AA_test /= np.linalg.norm(AA_test)
-		for i in xrange(n):
+		AA_test /= np.linalg.norm(AA_test) * mindim**0.5
+		for i in xrange(mindim):
 			# diagonal entries ~ 1 to keep condition number reasonable
-			AA_test[i, i] /= 10**np.log(n)
+			AA_test[i, i] /= 10**np.log(mindim)
 			AA_test[i, i] += 1
 			# upper triangle = 0
-			for j in xrange(n):
+			for j in xrange(mindim):
 				if j > i:
 					AA_test[i, j] *= 0
 		AA_test += AA_test.T
@@ -725,8 +725,6 @@ class DenseLinalgTestCase(unittest.TestCase):
 									  gpu=gpu)
 			if lib is None:
 				continue
-
-			DIGITS = 5 if single_precision else 7
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -761,8 +759,9 @@ class DenseLinalgTestCase(unittest.TestCase):
 							L_py[i, j] *= 0
 
 
-				atol = 1e-2
-				rtol = 1e-2
+				imprecision_factor = 5**(int(gpu) + int(single_precision))
+				atol = 1e-2 * imprecision_factor
+				rtol = 1e-2 * imprecision_factor
 				norm_diff = np.linalg.norm(
 						L_py.dot(x_rand) - pychol.dot(x_rand))
 				norm = np.linalg.norm(pychol)
