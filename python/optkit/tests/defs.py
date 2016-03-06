@@ -43,6 +43,6 @@ def version_string(major, minor, change, status):
 	return v
 
 def significant_digits(number):
-	while number > 1:
+	while number >= 1:
 		number /= 10.
 	return number

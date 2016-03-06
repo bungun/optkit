@@ -240,7 +240,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 				# B_py * x == A_py * x
 				lib.sp_matrix_memcpy_mm(A, B)
 				lib.sp_matrix_memcpy_am(A_val_p, A_ind_p, A_ptr_p, A)
-				self.assertTrue(np.allclose(A_py * x_rand, B_py * x_rand
+				self.assertTrue(np.allclose(A_py * x_rand, B_py * x_rand,
 											DIGITS))
 
 				# Test sparse value copy optkit->python
@@ -249,7 +249,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 				# B_py * x == A_py * x (still)
 				A_py *= 0
 				lib.sp_matrix_memcpy_vals_am(A_val_p, A)
-				self.assertTrue(np.allclose(A_py * x_rand, B_py * x_rand
+				self.assertTrue(np.allclose(A_py * x_rand, B_py * x_rand,
 											DIGITS))
 
 				# Test sparse value copy python->optkit
@@ -259,7 +259,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 				lib.sp_matrix_memcpy_vals_ma(hdl, A, A_val_p)
 				A_py *= 0
 				lib.sp_matrix_memcpy_vals_am(A_val_p, A)
-				self.assertTrue(np.allclose(A_py * x_rand, 2 * B_py * x_rand
+				self.assertTrue(np.allclose(A_py * x_rand, 2 * B_py * x_rand,
 											DIGITS))
 
 				# Test sparse value copy optkit->optkit

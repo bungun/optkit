@@ -62,8 +62,14 @@ void dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out,
 	size_t k, m = A_out->size1, n = A_out->size2;
 	vector a = (vector){0, 0, OK_NULL};
 
-	if (A_in != A_out->data)
-		matrix_memcpy_ma(A_out, A_in, ord);
+
+	if (A_in == A_out->data) {
+		printf("Error: Dense l2 equilibration requires \
+			distinct arrays A_in and A_out.");
+		return;
+	}
+
+	matrix_memcpy_ma(A_out, A_in, ord);
 
 	if (n > m) {
 		/* fat matrix routine */

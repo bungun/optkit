@@ -387,6 +387,8 @@ void matrix_row(vector * row, matrix * A, size_t i)
                     A->data + (i * A->ld) : A->data + i;
 }
 
+
+
 void matrix_column(vector * col, matrix *A, size_t j)
 {
         if (!__vector_exists(col))

@@ -765,8 +765,6 @@ class DenseLinalgTestCase(unittest.TestCase):
 				norm_diff = np.linalg.norm(
 						L_py.dot(x_rand) - pychol.dot(x_rand))
 				norm = np.linalg.norm(pychol)
-				print norm_diff
-				print norm
 				self.assertTrue(norm_diff <= atol * mindim + rtol * norm)
 
 				# populate x
@@ -780,8 +778,6 @@ class DenseLinalgTestCase(unittest.TestCase):
 
 				norm_diff = np.linalg.norm(x_py - pysol)
 				norm = np.linalg.norm(pysol)
-				print norm_diff
-				print norm
 				self.assertTrue(norm_diff <= atol * mindim**0.5 + rtol * norm)
 
 
