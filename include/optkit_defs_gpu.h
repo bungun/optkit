@@ -10,6 +10,7 @@ extern "C" {
 
 const unsigned int kTileSize = 32u;
 const unsigned int kBlockSize = 256u;
+const unsigned int kBlockSize2D = 16u;
 const unsigned int kMaxGridSize = 65535u;
 
 #ifndef CUDA_CHECK_ERR
@@ -81,8 +82,8 @@ const unsigned int kMaxGridSize = 65535u;
 #endif
 
 
-inline uint
-calc_grid_dim(size_t size) {
+inline uint calc_grid_dim(size_t size)
+{
 	return (uint) min( ((uint) size + kBlockSize - 1u) / kBlockSize,
                 kMaxGridSize);
 }

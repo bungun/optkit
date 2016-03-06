@@ -274,7 +274,7 @@ void __matrix_set_all(matrix * A, ok_float x)
         uint grid_dimx = calc_grid_dim(A->size1);
         uint grid_dimy = calc_grid_dim(A->size2);
         dim3 grid_dim(grid_dimx, grid_dimy, 1u);
-        dim3 block_dim(kBlockSize, kBlockSize - 1, 1u);
+        dim3 block_dim(kBlockSize2D, kBlockSize2D, 1u);
 
         if (A->order == CblasRowMajor)
                 __matrix_set_r<<<grid_dim, block_dim>>>(A->data, x, A->ld,
