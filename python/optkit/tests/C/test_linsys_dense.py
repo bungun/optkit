@@ -703,7 +703,18 @@ class DenseLinalgTestCase(unittest.TestCase):
 
 		mindim = min(m, n)
 
+		# build decently conditioned symmetric matrix
 		AA_test = self.A_test.T.dot(self.A_test)[:mindim, :mindim]
+		AA_test /= np.linalg.norm(AA_test)
+		for i in xrange(n):
+			# diagonal entries ~ 1 to keep condition number reasonable
+			AA_test[i, i] /= 10**np.log(n)
+			AA_test[i, i] += 1
+			# upper triangle = 0
+			for j in xrange(n):
+				if j > i:
+					AA_test[i, j] *= 0
+		AA_test += AA_test.T
 
 		x_rand = np.random.rand(mindim)
 		pysol = np.linalg.solve(AA_test, x_rand)
@@ -729,14 +740,12 @@ class DenseLinalgTestCase(unittest.TestCase):
 				lib.matrix_calloc(L, mindim, mindim, order)
 				L_py = np.zeros((mindim, mindim), order=pyorder).astype(
 							lib.pyfloat)
-				L_ptr = L_py.data_as(lib.ok_float_p)
+				L_ptr = L_py.ctypes.data_as(lib.ok_float_p)
 
 				x = lib.vector(0, 0, None)
 				lib.vector_calloc(x, mindim, order)
 				x_py = np.zeros(mindim).astype(lib.pyfloat)
 				x_ptr = x_py.ctypes.data_as(lib.ok_float_p)
-
-				x, x_py, x_ptr = self.make_vec_triplet(lib, mindim)
 
 				# populate L
 				L_py *= 0
@@ -754,9 +763,12 @@ class DenseLinalgTestCase(unittest.TestCase):
 
 				atol = 1e-2
 				rtol = 1e-2
-				self.assertTrue(np.linalg.norm(L_py - pychol) <=
-								atol * mindim +
-								rtol * np.linalg.norm(pychol))
+				norm_diff = np.linalg.norm(
+						L_py.dot(x_rand) - pychol.dot(x_rand))
+				norm = np.linalg.norm(pychol)
+				print norm_diff
+				print norm
+				self.assertTrue(norm_diff <= atol * mindim + rtol * norm)
 
 				# populate x
 				x_py *= 0
@@ -767,9 +779,12 @@ class DenseLinalgTestCase(unittest.TestCase):
 				lib.linalg_cholesky_svx(hdl, L, x)
 				lib.vector_memcpy_av(x_ptr, x, 1)
 
-				self.assertTrue(np.linalg.norm(x_py - pysol) <=
-								atol * mindim**0.5 +
-								rtol * np.linalg.norm(pysol))
+				norm_diff = np.linalg.norm(x_py - pysol)
+				norm = np.linalg.norm(pysol)
+				print norm_diff
+				print norm
+				self.assertTrue(norm_diff <= atol * mindim**0.5 + rtol * norm)
+
 
 				lib.matrix_free(L)
 				lib.vector_free(x)
