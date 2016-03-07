@@ -659,12 +659,12 @@ void pogs_finish(pogs_solver * solver, int reset)
 
 void pogs(ok_float * A, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output,
-	enum CBLAS_ORDER ord, EQUILIBRATOR equil)
+	enum CBLAS_ORDER ord, EQUILIBRATOR equil, int reset)
 {
 	pogs_solver * solver = OK_NULL;
 	solver = pogs_init(A, f->size, g->size, ord, equil);
 	pogs_solve(solver, f, g, settings, info, output);
-	pogs_finish(solver, 1);
+	pogs_finish(solver, reset);
 }
 
 

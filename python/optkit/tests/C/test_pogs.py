@@ -300,13 +300,9 @@ class PogsTestCase(unittest.TestCase):
 		settings.x0 = x_ptr
 		settings.nu0 = nu_ptr
 		pogslib.update_settings(solver.contents.settings, settings)
-		print "wheres the"
 
 		pogslib.initialize_variables(solver)
 		self.load_all_local(denselib, localvars, solver)
-
-		print localvars.x
-		print x_rand
 
 		self.assertTrue(np.allclose(x_rand, localvars.e * localvars.x, DIGITS))
 		self.assertTrue(np.allclose(nu_rand * localvars.d * -1/rho,
@@ -314,7 +310,7 @@ class PogsTestCase(unittest.TestCase):
 
 		self.assertTrue(np.allclose(localA.dot(localvars.x), localvars.y,
 									DIGITS))
-		self.assertTrue(np.allclose(localA.T.dot(localvars.yt), -localvars.xt
+		self.assertTrue(np.allclose(localA.T.dot(localvars.yt), -localvars.xt,
 									DIGITS))
 
 
@@ -573,17 +569,17 @@ class PogsTestCase(unittest.TestCase):
 
 			lib.set_default_settings(settings)
 
-			self.assertEqual(settings.alpha, ALPHA_DEFAULT)
-			self.assertEqual(settings.rho, RHO_DEFAULT)
-			self.assertEqual(settings.abstol, ABSTOL_DEFAULT)
-			self.assertEqual(settings.reltol, RELTOL_DEFAULT)
-			self.assertEqual(settings.maxiter, MAXITER_DEFAULT)
-			self.assertEqual(settings.verbose, VERBOSE_DEFAULT)
-			self.assertEqual(settings.suppress, SUPPRESS_DEFAULT)
-			self.assertEqual(settings.adaptiverho, ADAPTIVE_DEFAULT)
-			self.assertEqual(settings.gapstop, GAPSTOP_DEFAULT)
-			self.assertEqual(settings.warmstart, WARMSTART_DEFAULT)
-			self.assertEqual(settings.resume, RESUME_DEFAULT)
+			self.assertAlmostEqual(settings.alpha, ALPHA_DEFAULT, 3)
+			self.assertAlmostEqual(settings.rho, RHO_DEFAULT, 3)
+			self.assertAlmostEqual(settings.abstol, ABSTOL_DEFAULT, 3)
+			self.assertAlmostEqual(settings.reltol, RELTOL_DEFAULT, 3)
+			self.assertAlmostEqual(settings.maxiter, MAXITER_DEFAULT, 3)
+			self.assertAlmostEqual(settings.verbose, VERBOSE_DEFAULT, 3)
+			self.assertAlmostEqual(settings.suppress, SUPPRESS_DEFAULT, 3)
+			self.assertAlmostEqual(settings.adaptiverho, ADAPTIVE_DEFAULT, 3)
+			self.assertAlmostEqual(settings.gapstop, GAPSTOP_DEFAULT, 3)
+			self.assertAlmostEqual(settings.warmstart, WARMSTART_DEFAULT, 3)
+			self.assertAlmostEqual(settings.resume, RESUME_DEFAULT, 3)
 
 	def test_pogs_init_finish(self):
 		for (gpu, single_precision) in CONDITIONS:
@@ -835,7 +831,7 @@ class PogsTestCase(unittest.TestCase):
 
 				lib.set_default_settings(settings)
 				lib.pogs(A_ptr, f, g, settings, info, output.ptr, order,
-					lib.enums.EquilSinkhorn)
+					lib.enums.EquilSinkhorn, 0)
 
 				if info.converged:
 					rtol = settings.reltol
@@ -846,14 +842,12 @@ class PogsTestCase(unittest.TestCase):
 
 					primal_feas = np.linalg.norm(A.dot(output.x) - output.y)
 					dual_feas = np.linalg.norm(A.T.dot(output.nu) + output.mu)
-
 					self.assertTrue(primal_feas <= 10 * (atolm + rtol * y_norm))
 					self.assertTrue(dual_feas <= 10 * (atolm + rtol * y_norm))
 
-
 			pxlib.function_vector_free(f)
 			pxlib.function_vector_free(g)
-			self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
+
 			self.assertEqual(dlib.ok_device_reset(), 0)
 
 	def test_pogs_warmstart(self):
