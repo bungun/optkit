@@ -118,6 +118,7 @@ void function_vector_calloc(FunctionVector * f, size_t n)
 void function_vector_free(FunctionVector * f)
 {
 	if (f->objectives != OK_NULL) ok_free_gpu(f->objectives);
+	f->size = 0;
 }
 
 
