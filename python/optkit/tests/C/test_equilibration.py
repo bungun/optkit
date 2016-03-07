@@ -64,6 +64,8 @@ class EquilLibsTestCase(unittest.TestCase):
 	def equilibrate(dlib, equilibration_method, hdl, order, pyorder, A_test,
 					x_test):
 		m, n = shape = A_test.shape
+		hdl = c_void_p()
+		dlib.blas_make_handle(byref(hdl))
 
 		# declare C matrix, vectors
 		A = dlib.matrix(0, 0, 0, None, order)
@@ -98,18 +100,20 @@ class EquilLibsTestCase(unittest.TestCase):
 		dlib.vector_free(d)
 		dlib.vector_free(e)
 
+		dlib.blas_destroy_handle(hdl)
+		dlib.ok_device_reset()
+
 		A_eqx = A_py.dot(x_test)
 		DAEx = d_py * A_test.dot(e_py * x_test)
 
 		return A_eqx, DAEx
 
 	def test_densel2(self):
-		hdl = c_void_p()
 
 		for (gpu, single_precision) in CONDITIONS:
 			# TODO: figure out why dense_l2 segfaults on GPU
-			if gpu:
-				continue
+			# if gpu:
+				# continue
 
 			dlib = self.dense_libs.get(single_precision=single_precision,
 									   gpu=gpu)
@@ -120,8 +124,6 @@ class EquilLibsTestCase(unittest.TestCase):
 				continue
 
 			DIGITS = 5 if single_precision else 7
-
-			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
 
 			for rowmajor in (True, False):
 				order = dlib.enums.CblasRowMajor if rowmajor else \
@@ -134,12 +136,8 @@ class EquilLibsTestCase(unittest.TestCase):
 
 				self.assertTrue(np.allclose(A_eqx, DAEx, DIGITS))
 
-			self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
-			self.assertEqual(dlib.ok_device_reset(), 0)
 
 	def test_sinkhorn_knopp(self):
-		hdl = c_void_p()
-
 		for (gpu, single_precision) in CONDITIONS:
 			dlib = self.dense_libs.get(single_precision=single_precision,
 									   gpu=gpu)
@@ -149,10 +147,7 @@ class EquilLibsTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-
 			DIGITS = 5 if single_precision else 7
-
-			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
 
 			for rowmajor in (True, False):
 				order = dlib.enums.CblasRowMajor if rowmajor else \
@@ -164,9 +159,6 @@ class EquilLibsTestCase(unittest.TestCase):
 											   self.x_test)
 
 				self.assertTrue(np.allclose(A_eqx, DAEx, DIGITS))
-
-			self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
-			self.assertEqual(dlib.ok_device_reset(), 0)
 
 	# TODO:
 	# test regularized sinkhorn-knopp (once it exists)

@@ -68,7 +68,7 @@ class DirectProjectorTestCase(unittest.TestCase):
 
 
 	@staticmethod
-	def project(projectorlib, denselib, blas_handle, order, A, x, y,
+	def project(projectorlib, denselib, order, A, x, y,
 				normalize=False):
 		"""Direct projection
 
@@ -95,25 +95,14 @@ class DirectProjectorTestCase(unittest.TestCase):
 
 			should hold elementwise to float/double precision
 		"""
+		hdl = c_void_p()
+		denselib.blas_make_handle(byref(hdl))
 
 		pytype = denselib.pyfloat
 
 		m, n = A.shape
 		skinny = 1 if m >= n else 0
 		normalize_flag = 1 if normalize else 0
-
-		# allocate matrices/vectors
-		x_in_c = denselib.vector(0, 0, None)
-		x_out_c = denselib.vector(0, 0, None)
-		y_in_c = denselib.vector(0, 0, None)
-		y_out_c = denselib.vector(0, 0, None)
-		A_c = denselib.matrix(0, 0, 0, None, order)
-
-		denselib.vector_calloc(x_in_c, n)
-		denselib.vector_calloc(x_out_c, n)
-		denselib.vector_calloc(y_in_c, m)
-		denselib.vector_calloc(y_out_c, m)
-		denselib.matrix_calloc(A_c, m, n, order)
 
 		x_in_ptr = x.astype(pytype).ctypes.data_as(denselib.ok_float_p)
 		x_out = np.zeros(n).astype(pytype)
@@ -123,27 +112,44 @@ class DirectProjectorTestCase(unittest.TestCase):
 		y_out = np.zeros(m).astype(pytype)
 		y_out_ptr = y_out.ctypes.data_as(denselib.ok_float_p)
 
-		A_ptr = A.astype(pytype).ctypes.data_as(denselib.ok_float_p)
+		A = A.astype(pytype)
+		A_ptr = A.ctypes.data_as(denselib.ok_float_p)
 		order_in = denselib.enums.CblasRowMajor if A.flags.c_contiguous else \
 				   denselib.enums.CblasColMajor
 
-		# copy inputs
+
+		# build C inputs
+		x_in_c = denselib.vector(0, 0, None)
+		denselib.vector_calloc(x_in_c, n)
 		denselib.vector_memcpy_va(x_in_c, x_in_ptr, 1)
+
+		y_in_c = denselib.vector(0, 0, None)
+		denselib.vector_calloc(y_in_c, m)
 		denselib.vector_memcpy_va(y_in_c, y_in_ptr, 1)
+
+		A_c = denselib.matrix(0, 0, 0, None, order)
+		denselib.matrix_calloc(A_c, m, n, order)
 		denselib.matrix_memcpy_ma(A_c, A_ptr, order_in)
+
+		x_out_c = denselib.vector(0, 0, None)
+		denselib.vector_calloc(x_out_c, n)
+
+		y_out_c = denselib.vector(0, 0, None)
+		denselib.vector_calloc(y_out_c, m)
 
 		# make projector, project
 		P = projectorlib.direct_projector(None, None, 0, skinny,
 										  normalize_flag)
+
 		projectorlib.direct_projector_alloc(P, A_c)
-		projectorlib.direct_projector_initialize(blas_handle, P, 0)
-		projectorlib.direct_projector_project(blas_handle, P, x_in_c,
-											  y_in_c, x_out_c, y_out_c)
+		projectorlib.direct_projector_initialize(hdl, P, 0)
+		projectorlib.direct_projector_project(hdl, P, x_in_c, y_in_c, x_out_c,
+											  y_out_c)
+
 
 		# copy results
 		denselib.vector_memcpy_av(x_out_ptr, x_out_c, 1)
 		denselib.vector_memcpy_av(y_out_ptr, y_out_c, 1)
-
 
 		# free memory
 		projectorlib.direct_projector_free(P)
@@ -153,11 +159,14 @@ class DirectProjectorTestCase(unittest.TestCase):
 		denselib.vector_free(y_in_c)
 		denselib.vector_free(y_out_c)
 
+		denselib.blas_destroy_handle(hdl)
+		denselib.ok_device_reset()
+
 		return x_out, y_out
 
 	@staticmethod
 	def equil_project(projectorlib, denselib, equilibration_method, proj_test,
-					  blas_handle, order, A, x, y, normalize=False):
+					  order, A, x, y, normalize=False):
 		"""Equilibrated direct projection
 
 			Given matrix A \in R^{m x n}, and input vectors y \in R^m
@@ -175,6 +184,8 @@ class DirectProjectorTestCase(unittest.TestCase):
 
 			should hold elementwise to float/double precision
 		"""
+		hdl = c_void_p()
+		denselib.blas_make_handle(byref(hdl))
 
 		pytype = denselib.pyfloat
 
@@ -205,18 +216,20 @@ class DirectProjectorTestCase(unittest.TestCase):
 		denselib.vector_calloc(e, n)
 
 		# equilibrate in C, copy equilibration output back to Python
-		equilibration_method(blas_handle, A_in_ptr, A_equil, d, e, order_in)
+		equilibration_method(hdl, A_in_ptr, A_equil, d, e, order_in)
 		denselib.matrix_memcpy_am(A_equil_ptr, A_equil, order)
 		denselib.vector_memcpy_av(d_ptr, d, 1)
 		denselib.vector_memcpy_av(e_ptr, e, 1)
 
-
-		x_p, y_p = proj_test(projectorlib, denselib, blas_handle, order,
-							 A_equil_py, x, y, normalize=normalize)
-
 		denselib.matrix_free(A_equil)
 		denselib.vector_free(d)
 		denselib.vector_free(e)
+
+		denselib.blas_destroy_handle(hdl)
+		denselib.ok_device_reset()
+
+		x_p, y_p = proj_test(projectorlib, denselib, order, A_equil_py, x, y,
+							 normalize=normalize)
 
 		return x_p * e_py, y_p / d_py
 
@@ -227,8 +240,6 @@ class DirectProjectorTestCase(unittest.TestCase):
 			(1b) optionally, normalize A:
 			(2) project (x, y) onto graph y = Ax
 		"""
-		hdl = c_void_p()
-
 		for (gpu, single_precision) in CONDITIONS:
 			dlib = self.dense_libs.get(single_precision=single_precision,
 									   gpu=gpu)
@@ -237,16 +248,15 @@ class DirectProjectorTestCase(unittest.TestCase):
 			if plib is None:
 				continue
 
-			DIGITS = 5 if plib.FLOAT else 7
+			DIGITS = 3 if plib.FLOAT else 5
 
-			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
 
 			for rowmajor in (True, False):
 				order = dlib.enums.CblasRowMajor if rowmajor else \
 						dlib.enums.CblasColMajor
 
 				for normalize in (False, True):
-					x_proj, y_proj = self.project(plib, dlib, hdl, order,
+					x_proj, y_proj = self.project(plib, dlib, order,
 												  self.A_test, self.x_test,
 												  self.y_test,
 												  normalize=normalize)
@@ -254,8 +264,6 @@ class DirectProjectorTestCase(unittest.TestCase):
 					self.assertTrue(np.allclose(self.A_test.dot(x_proj),
 												y_proj, DIGITS))
 
-			self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
-			self.assertEqual(dlib.ok_device_reset(), 0)
 
 
 	def test_equilibrated_projection(self):
@@ -266,8 +274,6 @@ class DirectProjectorTestCase(unittest.TestCase):
 			(2b) optionally, normalize equilibrated A:
 			(3) project (x, y) onto graph y = Ax
 		"""
-		hdl = c_void_p()
-
 		for (gpu, single_precision) in CONDITIONS:
 			dlib = self.dense_libs.get(single_precision=single_precision,
 									   gpu=gpu)
@@ -278,9 +284,8 @@ class DirectProjectorTestCase(unittest.TestCase):
 			if plib is None:
 				continue
 
-			DIGITS = 5 if plib.FLOAT else 7
+			DIGITS = 4 if plib.FLOAT else 6
 
-			self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
 
 			for rowmajor in (True, False):
 				order = dlib.enums.CblasRowMajor if rowmajor else \
@@ -289,13 +294,10 @@ class DirectProjectorTestCase(unittest.TestCase):
 				for normalize in (False, True):
 					x_proj, y_proj = self.equil_project(plib, dlib,
 												  elib.sinkhorn_knopp,
-												  self.project, hdl, order,
+												  self.project, order,
 												  self.A_test, self.x_test,
 												  self.y_test,
 												  normalize=normalize)
 
 					self.assertTrue(np.allclose(self.A_test.dot(x_proj),
 												y_proj, DIGITS))
-
-			self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
-			self.assertEqual(dlib.ok_device_reset(), 0)
