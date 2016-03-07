@@ -104,11 +104,13 @@ class DirectProjectorTestCase(unittest.TestCase):
 		skinny = 1 if m >= n else 0
 		normalize_flag = 1 if normalize else 0
 
-		x_in_ptr = x.astype(pytype).ctypes.data_as(denselib.ok_float_p)
+		x = x.astype(pytype)
+		x_in_ptr = x.ctypes.data_as(denselib.ok_float_p)
 		x_out = np.zeros(n).astype(pytype)
 		x_out_ptr = x_out.ctypes.data_as(denselib.ok_float_p)
 
-		y_in_ptr = y.astype(pytype).ctypes.data_as(denselib.ok_float_p)
+		y = y.astype(pytype)
+		y_in_ptr = y.ctypes.data_as(denselib.ok_float_p)
 		y_out = np.zeros(m).astype(pytype)
 		y_out_ptr = y_out.ctypes.data_as(denselib.ok_float_p)
 

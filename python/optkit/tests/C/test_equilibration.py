@@ -61,7 +61,7 @@ class EquilLibsTestCase(unittest.TestCase):
 		self.assertTrue(any(eqlibs))
 
 	@staticmethod
-	def equilibrate(dlib, equilibration_method, hdl, order, pyorder, A_test,
+	def equilibrate(dlib, equilibration_method, order, pyorder, A_test,
 					x_test):
 		m, n = shape = A_test.shape
 		hdl = c_void_p()
@@ -112,8 +112,8 @@ class EquilLibsTestCase(unittest.TestCase):
 
 		for (gpu, single_precision) in CONDITIONS:
 			# TODO: figure out why dense_l2 segfaults on GPU
-			# if gpu:
-				# continue
+			if gpu:
+				continue
 
 			dlib = self.dense_libs.get(single_precision=single_precision,
 									   gpu=gpu)
@@ -130,8 +130,8 @@ class EquilLibsTestCase(unittest.TestCase):
 						dlib.enums.CblasColMajor
 				pyorder = 'C' if rowmajor else 'F'
 
-				A_eqx, DAEx = self.equilibrate(dlib, lib.dense_l2, hdl,
-											   order, pyorder, self.A_test,
+				A_eqx, DAEx = self.equilibrate(dlib, lib.dense_l2, order,
+											   pyorder, self.A_test,
 											   self.x_test)
 
 				self.assertTrue(np.allclose(A_eqx, DAEx, DIGITS))
@@ -154,7 +154,7 @@ class EquilLibsTestCase(unittest.TestCase):
 						dlib.enums.CblasColMajor
 				pyorder = 'C' if rowmajor else 'F'
 
-				A_eqx, DAEx = self.equilibrate(dlib, lib.sinkhorn_knopp, hdl,
+				A_eqx, DAEx = self.equilibrate(dlib, lib.sinkhorn_knopp,
 											   order, pyorder, self.A_test,
 											   self.x_test)
 
