@@ -46,3 +46,8 @@ def significant_digits(number):
 	while number >= 1:
 		number /= 10.
 	return number
+
+def approx_compare(number1, number2, digits):
+	return significant_digits(number1) -
+		   significant_digits(number2) <=
+		   10**(-digits)

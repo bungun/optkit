@@ -84,6 +84,7 @@ class PogsBindingsTestCase(unittest.TestCase):
 		s.solve(f, g)
 		self.assertEqual(s.info.err, 0)
 		self.assertTrue(s.info.converged or s.info.k == s.settings.maxiter)
+		del s
 
 	def test_solver_io(self):
 		f = PogsObjective(self.shape[0], h='Abs', b=1)
@@ -120,3 +121,7 @@ class PogsBindingsTestCase(unittest.TestCase):
 		self.assertTrue(diff_13 <= tolerance or
 						not s3.info.converged or
 						not s.info.converged)
+
+		del s
+		del s2
+		del s3

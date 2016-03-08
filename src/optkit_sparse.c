@@ -262,6 +262,41 @@ void sp_matrix_print(const sp_matrix * A)
         printf("\n");
 }
 
+void sp_matrix_print_transpose(const sp_matrix * A)
+{
+        size_t i, ptrlen = A->size1 + A->size2 + 2 - A->ptrlen;
+        ok_int j, ptr1, ptr2;
+        ok_int * ptr_base = A->ptr + A->ptrlen;
+        ok_float * ind_base = A->ind + A->nnz;
+        ok_float * val_base = A->val + A->nnz;
+
+        if (A->order == CblasRowMajor)
+                printf("sparse CSC matrix:\n");
+        else
+                printf("sparse CSR matrix:\n");
+
+        printf("dims: %u, %u\n", (uint) A->size1, (uint) A->size2);
+        printf("# nonzeros: %u\n", (uint) A->nnz);
+
+        if (A->order == CblasRowMajor)
+                for(i = 0; i < ptrlen - 1; ++ i) {
+                        ptr1 = ptr_base[ + i];
+                        ptr2 = ptr_base[i + 1];
+                        for(j = ptr1; j < ptr2; ++j)
+                                printf("(%i, %i)\t%e\n", ind_base[j], (int) i,
+                                        val_base[j]);
+                }
+        else
+                for(i = 0; i < ptrlen - 1; ++ i) {
+                        ptr1 = ptr_base[i];
+                        ptr2 = ptr_base[i + 1];
+                        for(j = ptr1; j < ptr2; ++j)
+                                printf("(%i, %i)\t%e\n", (int) i,  ind_base[j],
+                                        val_base[j]);
+                }
+        printf("\n");
+}
+
 
 
 

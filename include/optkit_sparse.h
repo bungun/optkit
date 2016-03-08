@@ -57,6 +57,7 @@ void sp_matrix_scale_right(void * sparse_handle, sp_matrix * A,
 
 /* print */
 void sp_matrix_print(const sp_matrix * A);
+void sp_matrix_print_transpose(const sp_matrix * A);
 
 /* matrix multiplication */
 void sp_blas_gemv(void * sparse_handle, enum CBLAS_TRANSPOSE transA,

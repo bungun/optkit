@@ -56,7 +56,7 @@ class SparseLibsTestCase(unittest.TestCase):
 
 			hdl = c_void_p()
 			self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
-			self.assertEqual(lib.sp_destroy_handle(byref(hdl)), 0)
+			self.assertEqual(lib.sp_destroy_handle(hdl), 0)
 
 	def test_version(self):
 		for (gpu, single_precision) in CONDITIONS:
@@ -200,11 +200,10 @@ class SparseMatrixTestCase(unittest.TestCase):
 			FEWER_DIGITS = 3 if single_precision else 5
 
 
-			# sparse handle
-			hdl = c_void_p()
-			self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
-
 			for rowmajor in (True, False):
+				# sparse handle
+				hdl = c_void_p()
+				self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
 
 				A, A_py, A_ptr_p, A_ind_p, A_val_p = self.make_spmat_quintet(
 						lib, shape, rowmajor=rowmajor)
@@ -224,7 +223,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 				# Acopy * x != A_c * x (calloc to zero)
 				lib.sp_matrix_memcpy_am(A_val_p, A_ind_p, A_ptr_p, A)
 				self.assertFalse(np.allclose(A_copy.dot(x_rand), A_py * x_rand,
-											 FEWER_DIGITS))
+				 							 FEWER_DIGITS))
 				self.assertTrue(all(map(lambda x : x == 0, A_py * x_rand)))
 
 				# Test sparse copy python->optkit
@@ -270,8 +269,8 @@ class SparseMatrixTestCase(unittest.TestCase):
 				self.assertTrue(np.allclose(A_py * x_rand, B_py * x_rand,
 											DIGITS))
 
-			self.assertEqual(lib.sp_destroy_handle(hdl), 0)
-			self.assertEqual(dlib.ok_device_reset(), 0)
+				self.assertEqual(lib.sp_destroy_handle(hdl), 0)
+				self.assertEqual(dlib.ok_device_reset(), 0)
 
 	def test_multiply(self):
 		shape = (m, n) = self.shape
@@ -286,11 +285,11 @@ class SparseMatrixTestCase(unittest.TestCase):
 
 			DIGITS = 5 if single_precision else 7
 
-			# sparse handle
-			hdl = c_void_p()
-			self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
-
 			for rowmajor in (True, False):
+				# sparse handle
+				hdl = c_void_p()
+				self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
+
 				A, A_py, A_ptr_p, A_ind_p, A_val_p = self.make_spmat_quintet(
 						lib, shape, rowmajor=rowmajor)
 				x, x_py, x_ptr = self.make_vec_triplet(dlib, n)
@@ -324,8 +323,8 @@ class SparseMatrixTestCase(unittest.TestCase):
 				dlib.vector_memcpy_av(y_ptr, y, 1)
 				self.assertTrue(np.allclose(result, y_py, DIGITS))
 
-			self.assertEqual(lib.sp_destroy_handle(hdl), 0)
-			self.assertEqual(dlib.ok_device_reset(), 0)
+				self.assertEqual(lib.sp_destroy_handle(hdl), 0)
+				self.assertEqual(dlib.ok_device_reset(), 0)
 
 	def test_elementwise_transformations(self):
 		shape = (m, n) = self.shape
@@ -340,11 +339,10 @@ class SparseMatrixTestCase(unittest.TestCase):
 
 			DIGITS = 5 if single_precision else 7
 
-			# sparse handle
-			hdl = c_void_p()
-			self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
-
 			for rowmajor in (True, False):
+				# sparse handle
+				hdl = c_void_p()
+				self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
 
 				A, A_py, A_ptr_p, A_ind_p, A_val_p = self.make_spmat_quintet(
 						lib, shape, rowmajor=rowmajor)
@@ -385,8 +383,8 @@ class SparseMatrixTestCase(unittest.TestCase):
 				dlib.vector_memcpy_av(y_ptr, y, 1)
 				self.assertTrue(np.allclose(y_py, A_copy.dot(x_rand), DIGITS))
 
-			self.assertEqual(lib.sp_destroy_handle(hdl), 0)
-			self.assertEqual(dlib.ok_device_reset(), 0)
+				self.assertEqual(lib.sp_destroy_handle(hdl), 0)
+				self.assertEqual(dlib.ok_device_reset(), 0)
 
 	def test_diagonal_scaling(self):
 		shape = (m, n) = self.shape
@@ -399,11 +397,12 @@ class SparseMatrixTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			# sparse handle
-			hdl = c_void_p()
-			self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
+			DIGITS = 5 if single_precision else 7
 
 			for rowmajor in (True, False):
+				# sparse handle
+				hdl = c_void_p()
+				self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
 
 				A, A_py, A_ptr_p, A_ind_p, A_val_p = self.make_spmat_quintet(
 						lib, shape, rowmajor=rowmajor)
@@ -440,5 +439,5 @@ class SparseMatrixTestCase(unittest.TestCase):
 				result = (np.diag(d_py) * A_py).dot(e_py * x_py)
 				self.assertTrue(np.allclose(y_py,  result, DIGITS))
 
-			self.assertEqual(lib.sp_destroy_handle(hdl), 0)
-			self.assertEqual(dlib.ok_device_reset(), 0)
+				self.assertEqual(lib.sp_destroy_handle(hdl), 0)
+				self.assertEqual(dlib.ok_device_reset(), 0)

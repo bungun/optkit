@@ -47,7 +47,6 @@ void __int_set_all(ok_int * data, ok_int val, size_t stride, size_t size)
         uint grid_dim = calc_grid_dim(size);
         __int_set<<<grid_dim, kBlockSize>>>(data, val, stride, size);
 }
-
 void __transpose_inplace(void * sparse_handle, sp_matrix * A,
         SPARSE_TRANSPOSE_DIRECTION dir)
 {
@@ -56,9 +55,9 @@ void __transpose_inplace(void * sparse_handle, sp_matrix * A,
         ok_int * ptr, * ind, * ptr_T, * ind_T;
         ok_float * val, * val_T;
 
-        if ((dir == Forward2Adjoint) == (A->order == CblasRowMajor)) {
-                size1 = (int) A->size1;
-                size2 = (int) A->size2;
+	if (dir == Forward2Adjoint) {
+		size1 = (A->order == CblasRowMajor) ? A->size1 : A->size2;
+		size2 = (A->order == CblasRowMajor) ? A->size2 : A->size1;
                 ptr = A->ptr;
                 ind = A->ind;
                 val = A->val;
@@ -66,8 +65,8 @@ void __transpose_inplace(void * sparse_handle, sp_matrix * A,
                 ind_T = A->ind + A->nnz;
                 val_T = A->val + A->nnz;
         } else {
-                size1 = (int) A->size2;
-                size2 = (int) A->size1;
+  		size1 = (A->order == CblasRowMajor) ? A->size2 : A->size1;
+		size2 = (A->order == CblasRowMajor) ? A->size1 : A->size2;
                 ptr = A->ptr + A->ptrlen;
                 ind = A->ind + A->nnz;
                 val = A->val + A->nnz;
@@ -212,7 +211,6 @@ void sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A,
         ok_memcpy_gpu(A->val, val, A->nnz * sizeof(ok_float));
         ok_memcpy_gpu(A->ind, ind, A->nnz * sizeof(ok_int));
         ok_memcpy_gpu(A->ptr, ptr, A->ptrlen * sizeof(ok_int));
-        CUDA_CHECK_ERR;
         __transpose_inplace(sparse_handle, A, Forward2Adjoint);
 }
 
@@ -221,7 +219,7 @@ void sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
 {
         ok_memcpy_gpu(val, A->val, A->nnz * sizeof(ok_float));
         ok_memcpy_gpu(ind, A->ind, A->nnz * sizeof(ok_int));
-        ok_memcpy_gpu(ptr, A-> ptr, A->ptrlen * sizeof(ok_int));
+        ok_memcpy_gpu(ptr, A->ptr, A->ptrlen * sizeof(ok_int));
         CUDA_CHECK_ERR;
 
 }
@@ -388,6 +386,48 @@ void sp_matrix_print(const sp_matrix * A)
         printf("\n");
 }
 
+
+void sp_matrix_print_transpose(const sp_matrix * A)
+{
+        size_t i;
+        size_t ptrlen = A->size1 + A->size2 + 2 - A->ptrlen;
+        ok_int j, ptr1, ptr2;
+        ok_float val_host[A->nnz];
+        ok_int ind_host[A->nnz];
+        ok_int ptr_host[ptrlen];
+
+        ok_memcpy_gpu(val_host, A->val + A->nnz, A->nnz * sizeof(ok_float));
+        ok_memcpy_gpu(ind_host, A->ind + A->nnz, A->nnz * sizeof(ok_int));
+        ok_memcpy_gpu(ptr_host, A->ptr + A->ptrlen, ptrlen * sizeof(ok_int));
+        CUDA_CHECK_ERR;
+
+        if (A->order == CblasRowMajor)
+                printf("sparse CSC matrix:\n");
+        else
+                printf("sparse CSR matrix:\n");
+
+        printf("dims: %u, %u\n", (uint) A->size1, (uint) A->size2);
+        printf("# nonzeros: %u\n", (uint) A->nnz);
+
+        if (A->order == CblasRowMajor)
+                for(i = 0; i < ptrlen - 1; ++ i) {
+                        ptr1 = ptr_host[i];
+                        ptr2 = ptr_host[i + 1];
+                        for(j = ptr1; j < ptr2; ++j)
+                                printf("(%i, %i)\t%e\n", ind_host[j], (int) i,
+                                        val_host[j]);
+                }
+        else
+                for(i = 0; i < ptrlen - 1; ++ i) {
+                        ptr1 = ptr_host[i];
+                        ptr2 = ptr_host[i + 1];
+                        for(j = ptr1; j < ptr2; ++j)
+                                printf("(%i, %i)\t%e\n", (int) i,  ind_host[j],
+                                        val_host[j]);
+                }
+        printf("\n");
+}
+
 /*
  * Always perform forward (non-transpose) operations
  * cusparse library uses csr layout, so for given (layout, op):
@@ -399,22 +439,17 @@ void sp_matrix_print(const sp_matrix * A)
 void sp_blas_gemv(void * sparse_handle, enum CBLAS_TRANSPOSE transA,
         ok_float alpha, sp_matrix * A, vector * x, ok_float beta, vector * y)
 {
-        ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
+	ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
+	int forward = ((A->order == CblasRowMajor) == (transA == CblasNoTrans));
+	int size1 = (transA == CblasNoTrans) ? (int) A->size1 : (int) A->size2;
+	int size2 = (transA == CblasNoTrans) ? (int) A->size2 : (int) A->size1;
+	size_t offset = forward ? 0 : A->nnz;
+	size_t offset_ptr = forward ? 0 : A->ptrlen;
 
-        if ((A->order == CblasRowMajor) != (transA == CblasTrans)) {
-                /* Use forward operator stored in A */
-                CUSPARSE(csrmv)( *(sp_hdl->hdl),
-                        CUSPARSE_OPERATION_NON_TRANSPOSE, (int) A->size1,
-                        (int) A->size2, (int) A->nnz, &alpha, *(sp_hdl->descr),
-                        A->val, A->ptr, A->ind, x->data, &beta, y->data);
-        } else {
-                /* Use adjoint operator stored in A */
-                CUSPARSE(csrmv)(*(sp_hdl->hdl),
-                        CUSPARSE_OPERATION_NON_TRANSPOSE, (int) A->size2,
-                        (int) A->size1, (int) A->nnz, &alpha, *(sp_hdl->descr),
-                        A->val + A->nnz, A->ptr + A->ptrlen, A->ind + A->nnz,
-                        x->data, &beta, y->data);
-        }
+        CUSPARSE(csrmv)( *(sp_hdl->hdl), CUSPARSE_OPERATION_NON_TRANSPOSE,
+        	size1, size2, (int) A->nnz, &alpha, *(sp_hdl->descr),
+        	A->val + offset, A->ptr + offset_ptr, A->ind + offset, x->data,
+        	&beta, y->data);
 }
 
 #ifdef __cplusplus
