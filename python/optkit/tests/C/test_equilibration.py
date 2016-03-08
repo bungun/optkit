@@ -123,7 +123,7 @@ class EquilLibsTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * single_precision - 2 * gpu
 
 			for rowmajor in (True, False):
 				order = dlib.enums.CblasRowMajor if rowmajor else \
@@ -134,8 +134,8 @@ class EquilLibsTestCase(unittest.TestCase):
 											   pyorder, self.A_test,
 											   self.x_test)
 
-				self.assertTrue(np.allclose(A_eqx, DAEx, DIGITS))
-
+				print np.max(A_eqx - DAEx)
+				self.assertTrue(np.max(A_eqx - DAEx) <= 10**(-DIGITS))
 
 	def test_sinkhorn_knopp(self):
 		for (gpu, single_precision) in CONDITIONS:
@@ -147,7 +147,7 @@ class EquilLibsTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * single_precision - 2 * gpu
 
 			for rowmajor in (True, False):
 				order = dlib.enums.CblasRowMajor if rowmajor else \
@@ -157,8 +157,7 @@ class EquilLibsTestCase(unittest.TestCase):
 				A_eqx, DAEx = self.equilibrate(dlib, lib.sinkhorn_knopp,
 											   order, pyorder, self.A_test,
 											   self.x_test)
-
-				self.assertTrue(np.allclose(A_eqx, DAEx, DIGITS))
-
+				print np.max(A_eqx - DAEx)
+				self.assertTrue(np.max(A_eqx - DAEx) <= 10**(-DIGITS))
 	# TODO:
 	# test regularized sinkhorn-knopp (once it exists)

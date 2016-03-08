@@ -110,7 +110,7 @@ class OptkitInstall(install):
 
 setup(
     name='optkit',
-    version='0.0.4a',
+    version='0.0.4b',
     author='Baris Ungun',
     author_email='ungun@stanford.edu',
     url='http://github.com/bungun/optkit/',

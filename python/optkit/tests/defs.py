@@ -48,6 +48,6 @@ def significant_digits(number):
 	return number
 
 def approx_compare(number1, number2, digits):
-	return significant_digits(number1) -
-		   significant_digits(number2) <=
-		   10**(-digits)
+	return bool(abs(significant_digits(number1) -
+					significant_digits(number2))
+				<= 10**(-digits))

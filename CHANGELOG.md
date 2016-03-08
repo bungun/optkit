@@ -10,9 +10,9 @@
 - TODO: sparse equilibration
 - TODO: sparse projection
 - TODO: sparse POGS
+- TODO: append version numbers to .so, check version numbers when loading libs in pyton
 
-###v0.0.4 (alpha)
-- TODO: fix slow module loading
+###v0.0.4 (beta)
 - migrated tests to unittests
 - eliminated slow Python implementations (to be replaced with Cython implementations in future, potentially)
 

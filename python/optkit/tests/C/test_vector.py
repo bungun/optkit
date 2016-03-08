@@ -134,7 +134,7 @@ class VectorTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			DIGITS = 5 if lib.FLOAT else 7
+			DIGITS = 7 - 2 * lib.FLOAT - 2 * lib.GPU
 
 			len_v = 10 + int(1000 * np.random.rand())
 
@@ -160,6 +160,8 @@ class VectorTestCase(unittest.TestCase):
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(v.size):
+				self.assertTrue(approx_compare(v_py[i], val1, DIGITS))
+				self.assertTrue(approx_compare(w_py[i], val2, DIGITS))
 
 			# subtract two vectors
 			lib.vector_sub(w, v)
