@@ -491,7 +491,7 @@ class PogsTypes(object):
 
 				self.shape = (self.m, self.n) = (m, n) = A.shape
 				self.A = A.astype(denselib.pyfloat)
-				self.__f = zeros(n).astype(proxlib.function)
+				self.__f = zeros(m).astype(proxlib.function)
 				self.__f_ptr = self.__f.ctypes.data_as(proxlib.function_p)
 				self.__f_c = proxlib.function_vector(self.m, self.__f_ptr)
 				self.__g = zeros(n).astype(proxlib.function)
