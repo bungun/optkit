@@ -101,7 +101,7 @@ class PogsTypes(object):
 								ValueError('keyword argument {} of type {} '
 										   'is incomptably sized with the '
 										   'requested {} slice [{}:{}]'.format(
-										   	item, type(params(item)),
+										   	item, type(params[item]),
 										   	Objective, start, end))
 
 
@@ -453,7 +453,7 @@ class PogsTypes(object):
 				return str(
 						'error: {}\n'.format(self.err).join(
 						'converged: {}\n'.format(self.converged)).join(
-						'iterations: {}\n'.format(self.k)).join(
+						'iterations: {}\n'.format(self.iters)).join(
 						'objective: {}\n'.format(self.objval)).join(
 						'rho: {}\n'.format(self.rho)).join(
 						'setup time: {}\n'.format(self.setup_time)).join(
