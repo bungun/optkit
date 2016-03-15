@@ -7,7 +7,7 @@ extern "C" {
 void * sparse_operator_data_alloc(sp_matrix * A)
 {
 	sparse_operator_data * op_data;
-	op_data = malloc(sizeof(&op_data));
+	op_data = malloc(sizeof(*op_data));
 	blas_make_handle(&(op_data->dense_handle));
 	sp_make_handle(&(op_data->sparse_handle));
 	op_data->A = A;
@@ -56,17 +56,15 @@ void sparse_operator_mul_t_fused(void * data, ok_float alpha, vector * input,
 
 operator * sparse_operator_alloc(sp_matrix * A)
 {
-	OPTKIT_OPERATOR sparseop_kind = (A->order = CblasColMajor) ?
+	OPTKIT_OPERATOR sparseop_kind = (A->order == CblasColMajor) ?
 					SparseCSC_Operator :
 					SparseCSR_Operator;
-	return operator_alloc(
-		sparseop_kind,
-		A->size1, A->size2,
-		sparse_operator_alloc(A),
-		sparse_operator_mul,
-		sparse_operator_mul_t,
-		sparse_operator_mul_fused,
-		sparse_operator_mul_t_fused,
+
+	void * data = sparse_operator_data_alloc(A);
+	return operator_alloc(sparseop_kind, A->size1, A->size2,
+		data,
+		sparse_operator_mul, sparse_operator_mul_t,
+		sparse_operator_mul_fused, sparse_operator_mul_t_fused,
 		sparse_operator_data_free
 	);
 }

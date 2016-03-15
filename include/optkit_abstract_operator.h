@@ -2,8 +2,9 @@
 #define OPTKIT_ABSTRACT_OPERATOR_H_
 
 #include "optkit_defs.h"
+#include "optkit_dense.h"
 
- __cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -50,28 +51,31 @@ typedef struct abstract_linear_operator{
 } operator;
 
 
-operator * operator_alloc(OPTKIT_OPERATOR kind, size_t size1, size_t size2,
+static operator * operator_alloc(OPTKIT_OPERATOR kind, size_t size1, size_t size2,
 	void * data, void (* apply), void (* adjoint), void (* fused_apply),
-	void (* fused_adjoint), void (* free))
+	void (* fused_adjoint), void (* free_))
 {
 	operator * op;
 	op = malloc(sizeof(*op));
 	op->size1 = size1;
 	op->size2 = size2;
+	op->data = data;
 	op->apply = apply;
 	op->adjoint = adjoint;
-	op->fused_apply = op->fused_apply;
-	op->fused_adjoint = op->fused_adjoint;
-	op->free = op->free;
+	op->fused_apply = fused_apply;
+	op->fused_adjoint = fused_adjoint;
+	op->free = free_;
 	op->kind = kind;
 	return op;
 }
 
+#ifdef COMPILE_ABSTRACT_OPERATOR
 /* GENERIC OPERATOR FREE */
 void operator_free(operator * op){
 	if (op->free && op->data) op->free(op->data);
 	ok_free(op);
 }
+#endif
 
 #ifdef __cplusplus
 }

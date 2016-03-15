@@ -15,7 +15,6 @@ void denselib_version(int * maj, int * min, int * change, int * status)
         * status = (int) OPTKIT_VERSION_STATUS;
 }
 
-
 __global__ void _get_cuda_nan(ok_float * val)
 {
         *val = OK_CUDA_NAN;
@@ -26,8 +25,8 @@ inline ok_float get_cuda_nan()
         ok_float res;
         ok_float * res_dev;
 
-        ok_alloc_gpu(res_dev, 1 * sizeof(ok_float));
-        cudaMemcpy(&res, res_dev, 1 * sizeof(ok_float), cudaMemcpyDeviceToHost);
+        ok_alloc_gpu(res_dev, sizeof(ok_float));
+        cudaMemcpy(&res, res_dev, sizeof(ok_float), cudaMemcpyDeviceToHost);
         ok_free_gpu(res_dev);
 
         return res;

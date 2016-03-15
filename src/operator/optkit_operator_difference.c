@@ -7,7 +7,7 @@ extern "C" {
 void * difference_operator_data_alloc(size_t offset)
 {
 	difference_operator_data * op_data;
-	op_data = malloc(sizeof(&op_data));
+	op_data = malloc(sizeof(*op_data));
 	blas_make_handle(&(op_data->dense_handle));
 	op_data->offset = offset;
 	op_data->subvec_in.size = 0;

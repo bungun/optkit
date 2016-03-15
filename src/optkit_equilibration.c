@@ -56,6 +56,81 @@ void sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out,
 	}
 }
 
+
+// void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
+// 	matrix * A_out, vector * d, vector * e, enum CBLAS_ORDER ord)
+// {
+// 	const ok_float kSinkhornConst = 1e-4;
+// 	const ok_float kEps = 1e-2;
+// 	const size_t kMaxIter = 300;
+// 	ok_float norm_d, norm_e;
+// 	size_t i;
+
+// 	vector d_diff = vector(0, 0, OK_NULL);
+// 	vector e_diff = vector(0, 0, OK_NULL);
+// 	vector_calloc(&d_diff, A->size1);
+// 	vector_calloc(&e_diff, A->size1);
+
+// 	norm_d = norm_e = 1;
+
+// 	matrix_memcpy_ma(A_out, A_in, ord);
+// 	matrix_abs(A_out);
+// 	vector_set_all(d, kOne);
+// 	vector_scale(e, kZero);
+
+// 	/* optional argument ok_float pnorm? */
+// 	/*
+// 	if (pnorm != 1) {
+// 		matrix_pow(A, pnorm)
+// 	}
+// 	*/
+
+// 	for (i = 0; i < kMaxIter, ++i){
+// 		blas_gemv(linalg_handle, CblasTrans, kOne, A_out, d, kZero, e)
+// 		vector_add_constant(e, kSinkhornConst / A->size2);
+// 		vector_recip(e);
+// 		vector_scale(e, m);
+
+// 		blas_gemv(linalg_handle, CblasNoTrans, kOne, A_out, e, kZero, d)
+// 		vector_add_constant(d, kSinkhornConst / A->size1);
+// 		vector_recip(d);
+// 		vector_scale(d, n);
+
+// 		blas_axpy(-kOne, d, d_diff);
+// 		blas_axpy(-kOne, e, e_diff);
+
+// 		norm_d = MATH(sqrt)(blas_dot(&d_diff, &d_diff));
+// 		norm_e = MATH(sqrt)(blas_dot(&e_diff, &e_diff));
+
+// 		if ((norm_d < kEps) && (norm_e < kEps))
+// 			break;
+
+// 		vector_memcpy_vv(d_diff, d);
+// 		vector_memcpy_vv(e_diff, e);
+// 	}
+
+// 	/* optional argument ok_float pnorm? */
+// 	/*
+// 	if (pnorm != 1) {
+// 		vector_pow(d, kOne / pnorm)
+// 		vector_pow(e, kOne / pnorm)
+// 	}
+// 	*/
+
+// 	matrix_memcpy_ma(A_out, A_in, ord);
+// 	for (k = 0; k < m; ++k) {
+// 		matrix_row(&a, A_out, k);
+// 		vector_mul(&a, e);
+// 	}
+// 	for (k = 0; k < n; ++k) {
+// 		matrix_column(&a, A_out, k);
+// 		vector_mul(&a, d);
+// 	}
+
+// 	vector_free(d_diff);
+// 	vector_free(e_diff);
+// }
+
 void dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out,
 	vector * d, vector * e, enum CBLAS_ORDER ord)
 {

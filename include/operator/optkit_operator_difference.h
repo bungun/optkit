@@ -2,7 +2,6 @@
 #define OPTKIT_OPERATOR_H_
 
 #include "optkit_abstract_operator.h"
-#include "optkit_dense.h"
 
 #ifdef __cplusplus
 extern "C" {

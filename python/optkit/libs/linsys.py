@@ -315,7 +315,7 @@ class SparseLinsysLibs(object):
 			lib.sp_matrix_scale_right.argtypes = [c_void_p, sparse_matrix_p,
 												  vector_p]
 			lib.sp_matrix_print.argtypes = [sparse_matrix_p]
-			lib.sp_matrix_print_transpose.argtypes = [sparse_matrix_p]
+			# lib.sp_matrix_print_transpose.argtypes = [sparse_matrix_p]
 
 			## return values
 			lib.sp_matrix_alloc.restype = None
@@ -333,7 +333,7 @@ class SparseLinsysLibs(object):
 			lib.sp_matrix_scale_left.restype = None
 			lib.sp_matrix_scale_right.restype = None
 			lib.sp_matrix_print.restype = None
-			lib.sp_matrix_print_transpose.restype = None
+			# lib.sp_matrix_print_transpose.restype = None
 
 			# Sparse BLAS
 			# -----------

@@ -2,7 +2,6 @@
 #define OPTKIT_OPERATOR_H_
 
 #include "optkit_abstract_operator.h"
-#include "optkit_dense.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,7 +12,7 @@ typedef struct dense_operator_data{
 	matrix * A;
 } dense_operator_data;
 
-void dense_operator_data_alloc(void ** data);
+void * dense_operator_data_alloc(matrix * A);
 void dense_operator_data_free(void * data);
 void dense_operator_mul(void * data, vector * input, vector * output);
 void dense_operator_mul_t(void * data, vector * input, vector * output);

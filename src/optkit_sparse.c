@@ -267,7 +267,7 @@ void sp_matrix_print_transpose(const sp_matrix * A)
         size_t i, ptrlen = A->size1 + A->size2 + 2 - A->ptrlen;
         ok_int j, ptr1, ptr2;
         ok_int * ptr_base = A->ptr + A->ptrlen;
-        ok_float * ind_base = A->ind + A->nnz;
+        ok_int * ind_base = A->ind + A->nnz;
         ok_float * val_base = A->val + A->nnz;
 
         if (A->order == CblasRowMajor)
