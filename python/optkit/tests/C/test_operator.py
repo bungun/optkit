@@ -129,6 +129,7 @@ class OperatorLibsTestCase(unittest.TestCase):
 						  		dlibs[-1], slibs[-1],
 						  		single_precision=single_precision, gpu=gpu))
 		self.assertTrue(any(dlibs))
+		self.assertTrue(any(slibs))
 		self.assertTrue(any(oplibs))
 
 	def test_dense_alloc_free(self):
@@ -273,4 +274,63 @@ class OperatorLibsTestCase(unittest.TestCase):
 				slib.sp_matrix_free(A)
 
 				self.assertEqual(slib.sp_destroy_handle(hdl), 0)
+				self.assertEqual(dlib.ok_device_reset(), 0)
+
+	def test_diagonal_alloc_free(self):
+		m, n = self.shape
+
+		for (gpu, single_precision) in CONDITIONS:
+			dlib = self.dense_libs.get(single_precision=single_precision,
+									   gpu=gpu)
+			slib = self.sparse_libs.get(dlib,
+										single_precision=single_precision,
+										gpu=gpu)
+			lib = self.op_libs.get(dlib, slib,
+								   single_precision=single_precision, gpu=gpu)
+
+			if lib is None:
+				continue
+
+			for rowmajor in (True, False):
+				d = dlib.vector(0, 0, None)
+				dlib.vector_calloc(d, n)
+
+				o = lib.diagonal_operator_alloc(d)
+				self.validate_operator(o.contents, n, n, lib.enums.DIAGONAL)
+				lib.operator_free(o)
+
+				dlib.vector_free(d)
+				self.assertEqual(dlib.ok_device_reset(), 0)
+
+	def test_diagonal_operator(self):
+		m, n = self.shape
+
+		for (gpu, single_precision) in CONDITIONS:
+			dlib = self.dense_libs.get(single_precision=single_precision,
+									   gpu=gpu)
+			slib = self.sparse_libs.get(dlib,
+										single_precision=single_precision,
+										gpu=gpu)
+			lib = self.op_libs.get(dlib, slib,
+								   single_precision=single_precision, gpu=gpu)
+
+			if lib is None:
+				continue
+
+			DIGITS = 7 - 2 * single_precision - 1 * gpu
+			TOL = 10**(-DIGITS)
+
+			for rowmajor in (True, False):
+				d_ = np.zeros(n).astype(dlib.pyfloat)
+				d_ += self.A_test[0, :]
+				d_ptr = d_.ctypes.data_as(dlib.ok_float_p)
+				d = dlib.vector(0, 0, None)
+				dlib.vector_calloc(d, n)
+				dlib.vector_memcpy_va(d, d_ptr, 1)
+
+				o = lib.diagonal_operator_alloc(d)
+				self.exercise_operator(dlib, o.contents, np.diag(d_), TOL)
+				lib.operator_free(o)
+
+				dlib.vector_free(d)
 				self.assertEqual(dlib.ok_device_reset(), 0)

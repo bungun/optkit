@@ -99,7 +99,7 @@ void blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
 	const vector * vecA, const vector * x, const ok_float beta, vector * y);
 
 void blas_diagmv(void * linalg_handle, const ok_float alpha,
-  const vector * vecA, const vector * x, const ok_float beta, vector * y);
+	const vector * vecA, const vector * x, const ok_float beta, vector * y);
 
 /* BLAS LEVEL 3 */
 void blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,

@@ -1,5 +1,5 @@
-#ifndef OPTKIT_OPERATOR_H_
-#define OPTKIT_OPERATOR_H_
+#ifndef OPTKIT_OPERATOR_DIFFERENCE_H_
+#define OPTKIT_OPERATOR_DIFFERENCE_H_
 
 #include "optkit_abstract_operator.h"
 
@@ -17,8 +17,8 @@ void difference_operator_data_alloc(void ** data);
 void difference_operator_data_free(void * data);
 void difference_operator_mul(void * data, vector * input, vector * output);
 void difference_operator_mul_t(void * data, vector * input, vector * output);
-void difference_operator_mul_fused(void * data, ok_float alpha,
-	vector * input, ok_float beta, vector * output);
+void difference_operator_mul_fused(void * data, ok_float alpha, vector * input,
+	ok_float beta, vector * output);
 void difference_operator_mul_t_fused(void * data, ok_float alpha,
 	vector * input, ok_float beta, vector * output);
 
@@ -32,8 +32,10 @@ typedef struct block_difference_operator_data{
 
 void block_difference_operator_data_alloc(void ** data);
 void block_difference_operator_data_free(void * data);
-void block_difference_operator_mul(void * data, vector * input, vector * output);
-void block_difference_operator_mul_t(void * data, vector * input, vector * output);
+void block_difference_operator_mul(void * data, vector * input,
+	vector * output);
+void block_difference_operator_mul_t(void * data, vector * input,
+	vector * output);
 void block_difference_operator_mul_fused(void * data, ok_float alpha,
 	vector * input, ok_float beta, vector * output);
 void block_difference_operator_mul_t_fused(void * data, ok_float alpha,
@@ -45,4 +47,4 @@ operator * block_difference_operator_alloc(sp_matrix * A);
 }
 #endif
 
-#endif /* OPTKIT_OPERATOR_H_ */
+#endif /* OPTKIT_OPERATOR_DIFFERENCE_H_ */

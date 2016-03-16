@@ -72,32 +72,99 @@
 extern "C" {
 #endif
 
-cgls_helper * cgls_helper_alloc(size_t m, size_t n, void * blas_handle)
+#ifndef FLOAT
+const ok_float kEps = (ok_float) 1e-8;
+#else
+const ok_float kEps = (ok_float) 1e-16;
+#endif
+
+/*TODO: compile and test preconditioner*/
+/*
+operator * diagonal_preconditioner(operator * op, vector * p, rho)
+{
+	vector ej = vector(0, 0, None)
+	vector ej_sub = vector(0, 0, None)
+	vector a = vector(0, 0, None)
+	vector iaa = vector(0, 0, None)
+	vector p_sub = vector(0, 0, None)
+
+	vector_calloc(&ej, op->size2)
+	vector_calloc(&a, op->size2)
+	vector_calloc(&iaa, op->size2)
+
+	ok_float col_norm_sq;
+	size_t i;
+
+	void * blas_handle;
+	dense_blas_handle_allocate(&blas_handle);
+
+	vector_scale(p, 0);q
+
+	for (i = 0; i < op->size2; ++i) {
+		vector_scale(&ej, kZero);
+		vector_subvector(&ej_sub, &ej, i, 1);
+		vector_add_constant(&ej_sub, 1);
+		op->apply(op->data, &ej, &a);
+		op->adjoint(op->data, &a, &iaa);
+		vector_scale(&ej, rho);
+		vector_add(&iaa, &ej);
+
+		col_norm_sq = blas_dot(blas_handle, &iaa, &iaa);
+		vector_subvector(&p_sub, p, i, 1);
+		vector_add_constant(&p_sub, col_norm_sq)
+	}
+	vector_recip(p);
+
+	vector_free(&ej);
+	vector_free(&a);
+	vector_free(&iaa);
+
+	dense_blas_handle_free(blas_handle)
+
+
+	/*
+	 * need column norms-squared of
+	 * 	(rho I + A'A)
+	 *
+	 * to obtain this:
+	 *
+	 *
+	 *
+	 * Ae_i = a_i
+	 * A'Ae_i = A'a_i = (aa)_i
+	 * (aa)_i + rho * e_i : column
+}
+
+
+
+*/
+
+
+cgls_helper * cgls_helper_alloc(size_t m, size_t n)
 {
 	cgls_helper * h;
 	h = malloc(sizeof(*h));
-
+	h->norm_s = (ok_float) 0;
+	h->norm_s0 = (ok_float) 0;
+	h->norm_x = (ok_float) 0;
+	h->xmax = (ok_float) 0;
+	h->alpha = (ok_float) 0;
+	h->beta = (ok_float) 0;
+	h->delta = (ok_float) 0;
+	h->gamma = (ok_float) 0;
+	h->gamma_prev = (ok_float) 0;
+	h->shrink = (ok_float) 0;
 	vector_calloc(&(h->p), n);
 	vector_calloc(&(h->q), m);
 	vector_calloc(&(h->r), m);
 	vector_calloc(&(h->s), n);
-
-	h->kEps = (ok_float) 1e-16;
-	if (blas_hdl != OK_NULL) {
-		h->blas_handle = blas_handle;
-		h->blas_handle_provided = 1;
-	} else {
-		blas_make_handle(&(h->blas_handle));
-		h->blas_handle_provided = 0;
-	}
-
+	blas_make_handle(&(h->blas_handle));
 	return h;
 }
 
 void cgls_helper_free(cgls_helper * helper)
 {
-	if (!helper->blas_handle_provided)
-		blas_destroy_handle(h->blas_handle);
+	blas_destroy_handle(helper->blas_handle);
 	vector_free(&(helper->p));
 	vector_free(&(helper->q));
 	vector_free(&(helper->r));
@@ -106,33 +173,27 @@ void cgls_helper_free(cgls_helper * helper)
 }
 
 
-pcg_helper * pcg_helper_alloc(size_t m, size_t n, void * blas_handle)
+pcg_helper * pcg_helper_alloc(size_t m, size_t n)
 {
-	cgls_helper * h;
+	pcg_helper * h;
 	h = malloc(sizeof(*h));
-
+	h->norm_r = (ok_float) 0;
+	h->alpha = (ok_float) 0;
+	h->gamma = (ok_float) 0;
+	h->gamma_prev = (ok_float) 0;
 	vector_calloc(&(h->p), n);
 	vector_calloc(&(h->q), n);
 	vector_calloc(&(h->r), n);
 	vector_calloc(&(h->z), n);
 	vector_calloc(&(h->temp), m);
-
-	if (blas_hdl != OK_NULL) {
-		h->blas_handle = blas_handle;
-		h->blas_handle_provided = 1;
-	} else {
-		blas_make_handle(&(h->blas_handle));
-		h->blas_handle_provided = 0;
-	}
-
+	blas_make_handle(&(h->blas_handle));
 	h->never_solved = 1;
 	return h;
 }
 
 void pcg_helper_free(pcg_helper * helper)
 {
-	if (!helper->blas_handle_provided)
-		blas_destroy_handle(h->blas_handle);
+	blas_destroy_handle(helper->blas_handle);
 	vector_free(&(helper->p));
 	vector_free(&(helper->q));
 	vector_free(&(helper->r));
@@ -175,13 +236,12 @@ uint cgls_nonallocating(cgls_helper * helper,
 	const ok_float kNegRho = -rho;
 
 	/* initialization */
-	norm_x = blas_nrm2(blas_hdl, x);
+	h->norm_x = blas_nrm2(blas_hdl, x);
 
 	/* r = b - Ax */
 	vector_memcpy_vv(r, b);
-	if (normx > 0) {
+	if (h->norm_x > 0) {
 		op->fused_apply(op->data, -kOne, x, kOne, r);
-		__DEVICE_SYNCHRONIZE__();
 	}
 
 	/* s = A'*r - rho * x */
@@ -197,7 +257,7 @@ uint cgls_nonallocating(cgls_helper * helper,
 	h->gamma = h->norm_s0 * h->norm_s0;
 	h->xmax = h->norm_x;
 
-	if (h->norm_s < h->kEps)
+	if (h->norm_s < kEps)
 		flag = 1;
 
 	if (!quiet && !flag)
@@ -237,8 +297,8 @@ uint cgls_nonallocating(cgls_helper * helper,
 		/* compute beta */
 		h->norm_s = blas_nrm2(blas_hdl, s);
 		h->gamma_prev = h->gamma;
-		gamma = h->norm_s * h->norm_s;
-		beta = h->gamma / h->gamma_prev;
+		h->gamma = h->norm_s * h->norm_s;
+		h->beta = h->gamma / h->gamma_prev;
 
 		/* p = s + beta * p */
 		blas_axpy(blas_hdl, h->beta, p, s);
@@ -258,30 +318,25 @@ uint cgls_nonallocating(cgls_helper * helper,
 
 	/* determine exit status */
 	h->shrink = h->norm_x / h->xmax;
-	if (k == maxit)
+	if (k == maxiter)
 		flag = 2;
 	else if (indefinite)
 		flag = 3;
 	else if (h->shrink * h->shrink <= tol)
 		flag = 4;
 
-	h->never_solved = 0;
 	return flag;
 }
 
-uint cgls(void * blas_handle, operator * op,
-		vector * input, vector * output,
-		const ok_float rho, const ok_float tol,
-		const size_t maxiter, const int quiet)
+uint cgls(operator * op, vector * b, vector * x, const ok_float rho,
+	const ok_float tol, const size_t maxiter, const int quiet)
 {
-	int flag;
+	uint flag;
 
-	cgls_helper * helper = cgls_helper_alloc(
-		op->size1, op->size2, blas_handle);
+	cgls_helper * helper = cgls_helper_alloc(op->size1, op->size2);
 
 	/* CGLS call */
-	flag = cgls_nonallocating(helper, op, input, output,
-		rho, tol, maxiter, quiet);
+	flag = cgls_nonallocating(helper, op, b, x, rho, tol, maxiter, quiet);
 
 	cgls_helper_free(helper);
 
@@ -290,16 +345,14 @@ uint cgls(void * blas_handle, operator * op,
 
 void * cgls_easy_init(size_t m, size_t n)
 {
-	return (void *) cgls_helper_alloc(m, n, OK_NULL);
+	return (void *) cgls_helper_alloc(m, n);
 }
 
-uint cgls_easy_solve(void * cgls_work,
-	operator * op, vector * b, vector * x,
-	const ok_float rho, const ok_float tol,
-	const size_t maxiter, int quiet)
+uint cgls_easy_solve(void * cgls_work, operator * op, vector * b, vector * x,
+	const ok_float rho, const ok_float tol, const size_t maxiter, int quiet)
 {
-	return cgls_nonallocating( (cgls_helper *) helper, op, input, output,
-		rho, tol, maxiter, quiet);
+	return cgls_nonallocating( (cgls_helper *) cgls_work, op, b, x, rho,
+		tol, maxiter, quiet);
 }
 
 void cgls_easy_finish(void * cgls_work)
@@ -322,10 +375,9 @@ void cgls_easy_finish(void * cgls_work)
  * ref: Brendan O'Donoghue, SCS
  * https://github.com/cvxgrp/scs/blob/master/linsys/indirect/private.c
  */
-uint pcg_nonallocating(pcg_helper * helper,
-		operator * op, operator * pre_cond,
-		vector * b, vector * x, const ok_float rho,
-		const ok_float tol, const size_t maxiter, const int quiet)
+uint pcg_nonallocating(pcg_helper * helper, operator * op, operator * pre_cond,
+	vector * b, vector * x, const ok_float rho, const ok_float tol,
+	const size_t maxiter, const int quiet)
 {
 	/* convenience abbreviations
 	 * p, q: iterate vectors
@@ -364,49 +416,51 @@ uint pcg_nonallocating(pcg_helper * helper,
 		blas_axpy(blas_hdl, -rho, x0, r);
 	}
 
-    /* check to see if we need to run CG at all */
-    if (blas_nrm2(blas_handle, r) < kNormTol)
-        return 0;
+	/* check to see if we need to run CG at all */
+	h->norm_r = MATH(sqrt)(blas_dot(blas_hdl, r, r));
+	if (blas_nrm2(blas_hdl, r) < kNormTol)
+	        return 0;
 
 	/* p = Mr (apply preconditioner) */
 	pre_cond->apply(pre_cond->data, r, p);
 	/* gamma = r'Mr */
 	h->gamma = blas_dot(blas_hdl, r, p);
 
-    for (k = 0; k < maxiter; ++j) {
+	for (k = 0; k < maxiter; ++k) {
 
-    	/* q = (rho * I + A'A)p */
-    	op->apply(op->data, p, temp);
-    	op->fused_apply(op->data, kOne, temp, kZero, Tp);
-    	blas_axpy(blas_hdl, rho, p, q);
+		/* q = (rho * I + A'A)p */
+		op->apply(op->data, p, temp);
+		op->fused_apply(op->data, kOne, temp, kZero, q);
+		blas_axpy(blas_hdl, rho, p, q);
 
-    	/* alpha = <p, r> / <p, Tp> */
-        h->alpha = h->gamma / blas_dot(blas_hdl, p, Tp);
+		/* alpha = <p, r> / <p, q> */
+		h->alpha = h->gamma / blas_dot(blas_hdl, p, q);
 
-        /* x = x + alpha * p */
-        /* r = r - alpha * Tp */
-        blas_axpy(blas_hdl, alpha, p, x);
-        blas_axpy(blas_hdl, -alpha, Tp, r);
+		/* x = x + alpha * p */
+		/* r = r - alpha * q */
+		blas_axpy(blas_hdl, h->alpha, p, x);
+		blas_axpy(blas_hdl, -h->alpha, q, r);
 
-        /* check convergence */
-	if (calcNorm(r, n) < tol) {
-		if (!quiet)
-			printf(fmt, tol, calcNorm(r, n), k + 1);
-		k += 1;
-		break;
-	}
+		/* check convergence */
+		h->norm_r = MATH(sqrt)(blas_dot(blas_hdl, r, r));
+		if (h->norm_r < tol) {
+			if (!quiet)
+				printf(fmt, tol, h->norm_r, k + 1);
+			k += 1;
+			break;
+		}
 
-	h->gamma_prev = h->gamma;
+		h->gamma_prev = h->gamma;
 
-	/* z = Mr */
-	pre_cond->apply(pre_cond->data, r, z);
+		/* z = Mr */
+		pre_cond->apply(pre_cond->data, r, z);
 
-	/* gamma = r'Mr */
-	h->gamma = blas_dot(blas_hdl, r, z);
+		/* gamma = r'Mr */
+		h->gamma = blas_dot(blas_hdl, r, z);
 
-	/* p = p * gamma / gamma_prev + Mr */
-	vector_scale(p, h->gamma / h->gamma_prev);
-	blas_axpy(blas_hdl, kOne, z, p);
+		/* p = p * gamma / gamma_prev + Mr */
+		vector_scale(p, h->gamma / h->gamma_prev);
+		blas_axpy(blas_hdl, kOne, z, p);
 	}
 
 	/* store solution for warm start in x0 (alias of z) */
@@ -416,16 +470,15 @@ uint pcg_nonallocating(pcg_helper * helper,
 	return k;
 }
 
-uint pcg(void * blas_handle, operator * op, operator * pre_cond,
-		vector * input, vector * output, const ok_float rho,
-		const ok_float tol, const size_t maxiter, const int quiet)
+uint pcg(operator * op, operator * pre_cond, vector * b, vector * x,
+	const ok_float rho, const ok_float tol, const size_t maxiter,
+	const int quiet)
 {
-	int flag;
-	pcg_helper * helper = pcg_helper_alloc(
-		op->size1, op->size2, blas_handle);
+	uint flag;
+	pcg_helper * helper = pcg_helper_alloc(op->size1, op->size2);
 
-	flag = pcg_nonallocating(helper, op, pre_cond,
-		input, output, rho, tol, maxiter, quiet);
+	flag = pcg_nonallocating(helper, op, pre_cond, b, x, rho, tol,
+		maxiter, quiet);
 
 	pcg_helper_free(helper);
 	return flag;
@@ -433,15 +486,15 @@ uint pcg(void * blas_handle, operator * op, operator * pre_cond,
 
 void * pcg_easy_init(size_t m, size_t n)
 {
-	return (void *) pcg_helper_alloc(m, n, OK_NULL);
+	return (void *) pcg_helper_alloc(m, n);
 }
 
 uint pcg_easy_solve(void * pcg_work, operator * op, operator * pre_cond,
-		vector * b, vector * x, const ok_float rho, const ok_float tol,
-		const size_t maxiter, int quiet)
+	vector * b, vector * x, const ok_float rho, const ok_float tol,
+	const size_t maxiter, int quiet)
 {
-	return pcg_nonallocating( (pcg_helper *) pcg_work, op, pre_cond,
-		input, output, rho, tol, maxiter, quiet);
+	return pcg_nonallocating( (pcg_helper *) pcg_work, op, pre_cond, b, x,
+		rho, tol, maxiter, quiet);
 }
 
 void pcg_easy_finish(void * pcg_work)

@@ -37,6 +37,7 @@ class OperatorLibs(object):
 				SPARSE_CSR = 301
 				SPARSE_CSC = 302
 				SPARSE_COO = 303
+				DIAGONAL = 401
 
 			lib.enums = OperatorEnums()
 
@@ -65,11 +66,13 @@ class OperatorLibs(object):
 			lib.operator_free.argtypes = [operator_p]
 			lib.dense_operator_alloc.argtypes = [matrix_p]
 			lib.sparse_operator_alloc.argtypes = [sparse_matrix_p]
+			lib.diagonal_operator_alloc.argtypes = [vector_p]
 
 			# return types
 			lib.operator_free.restype = None
 			lib.dense_operator_alloc.restype = operator_p
 			lib.sparse_operator_alloc.restype = operator_p
+			lib.diagonal_operator_alloc.restype = operator_p
 
 			lib.FLOAT = single_precision
 			lib.GPU = gpu

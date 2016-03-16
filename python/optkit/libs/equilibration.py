@@ -32,11 +32,15 @@ class EquilibrationLibs(object):
 			# argument types
 			lib.sinkhorn_knopp.argtypes = [c_void_p, ok_float_p, matrix_p,
 												vector_p, vector_p, c_uint]
+			lib.regularized_sinkhorn_knopp.argtypes = [c_void_p, ok_float_p,
+													   matrix_p, vector_p,
+													   vector_p, c_uint]
 			lib.dense_l2.argtypes = [c_void_p, ok_float_p, matrix_p,
 												vector_p, vector_p, c_uint]
 
 			# return types
 			lib.sinkhorn_knopp.restype = None
+			lib.regularized_sinkhorn_knopp.restype = None
 			lib.dense_l2.restype = None
 
 			lib.FLOAT = single_precision

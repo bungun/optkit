@@ -159,5 +159,50 @@ class EquilLibsTestCase(unittest.TestCase):
 											   self.x_test)
 				print np.max(A_eqx - DAEx)
 				self.assertTrue(np.max(A_eqx - DAEx) <= 10**(-DIGITS))
-	# TODO:
-	# test regularized sinkhorn-knopp (once it exists)
+
+	def test_regularized_sinkhorn_knopp(self):
+		for (gpu, single_precision) in CONDITIONS:
+			dlib = self.dense_libs.get(single_precision=single_precision,
+									   gpu=gpu)
+			lib = self.equil_libs.get(dlib, single_precision=single_precision,
+									  gpu=gpu)
+
+			if lib is None:
+				continue
+
+			DIGITS = 7 - 2 * single_precision - 2 * gpu
+			for rowmajor in (True, False):
+				order = dlib.enums.CblasRowMajor if rowmajor else \
+						dlib.enums.CblasColMajor
+				pyorder = 'C' if rowmajor else 'F'
+
+				A_eqx, DAEx = self.equilibrate(dlib,
+											   lib.regularized_sinkhorn_knopp,
+											   order, pyorder, self.A_test,
+											   self.x_test)
+				print np.max(A_eqx - DAEx)
+				self.assertTrue(np.max(A_eqx - DAEx) <= 10**(-DIGITS))
+
+				A_rowmissing = np.zeros_like(self.A_test)
+				A_rowmissing += self.A_test
+				A_rowmissing[self.shape[0]/2, :] *= 0
+
+				A_eqx, DAEx = self.equilibrate(dlib,
+											   lib.regularized_sinkhorn_knopp,
+											   order, pyorder, A_rowmissing,
+											   self.x_test)
+
+				print np.max(A_eqx - DAEx)
+				self.assertTrue(np.max(A_eqx - DAEx) <= 10**(-DIGITS))
+
+				A_colmissing = np.zeros_like(self.A_test)
+				A_colmissing += self.A_test
+				A_colmissing[:, self.shape[1]/2] *= 0
+
+				A_eqx, DAEx = self.equilibrate(dlib,
+											   lib.regularized_sinkhorn_knopp,
+											   order, pyorder, A_colmissing,
+											   self.x_test)
+
+				print np.max(A_eqx - DAEx)
+				self.assertTrue(np.max(A_eqx - DAEx) <= 10**(-DIGITS))

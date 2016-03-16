@@ -103,6 +103,7 @@ EQUILSTATIC=$(PREFIX_OUT)equil_$(DEVICETAG)$(PRECISION).o
 POGSSTATIC=$(PREFIX_OUT)pogs_$(DEVICETAG)$(PRECISION).o
 # OPSTATIC=$(PREFIX_OUT)operator_$(DEVICETAG)$(PRECISION).o
 OPSTATIC=
+CGSTATIC=$(PREFIX_OUT)cg_$(DEVICETAG)$(PRECISION).o
 
 SPARSE_STATIC_DEPS=$(DENSESTATIC)
 EQUIL_STATIC_DEPS=$(DENSESTATIC) $(EQUILSTATIC)
@@ -110,6 +111,7 @@ PROJ_STATIC_DEPS=$(DENSESTATIC) $(PROJSTATIC)
 POGS_STATIC_DEPS=$(POGSSTATIC) $(EQUILSTATIC) $(PROJSTATIC)
 POGS_STATIC_DEPS += $(DENSESTATIC) $(PROXSTATIC)
 OPERATOR_STATIC_DEPS=$(DENSESTATIC) $(SPARSESTATIC) $(OPSTATIC)
+CG_STATIC_DEPS=$(DENSESTATIC) $(CGSTATIC)
 ifneq ($(SPARSE), 0)
 PROJ_STATIC_DEPS += $(SPARSESTATIC)
 EQUIL_STATIC_DEPS += $(SPARSESTATIC)
@@ -117,6 +119,7 @@ POGS_STATIC_DEPS += $(SPARSESTATIC)
 endif
 
 OPERATOR_SRC = $(SRC)$(OPERATOR)dense.c $(SRC)$(OPERATOR)sparse.c
+OPERATOR_SRC += $(SRC)$(OPERATOR)diagonal.c
 OPERATOR_OBJ = $(patsubst $(SRC)%.c,$(OUT)%.o,$(OPERATOR_SRC))
 
 .PHONY: default, all, libs, libok, libok_dense, libok_sparse, libprox
@@ -147,6 +150,12 @@ libpogs_sparse:
 	# $(OUT)$libok_sparse_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
 	# $(OUT)$libprox_$(DEVICETAG)$(PRECISION).$(SHARED) 
 
+libcg: cg $(DENSETARG)
+	mkdir -p $(OUT)
+	$(CXX) $(CXXFLAGS) -shared -o\
+	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED)  \
+	$(CG_STATIC_DEPS) $(LDFLAGS) 
+
 liboperator: operator $(DENSETARG) $(SPARSETARG)
 	mkdir -p $(OUT)
 	$(CXX) $(CXXFLAGS) -shared -o \
@@ -158,7 +167,6 @@ libprojector: projector $(DENSETARG) $(SPARSETARG)
 	$(CXX) $(CXXFLAGS) -shared -o \
 	$(OUT)$@_$(DEVICETAG)$(PRECISION).$(SHARED) \
 	$(PROJ_STATIC_DEPS) $(LDFLAGS)
-
 
 libequil: equil $(DENSETARG) $(SPARSETARG)
 	mkdir -p $(OUT)	
@@ -227,6 +235,12 @@ operator: $(OPERATOR_SRC)
 	$(OUT)$(OPERATOR)dense.o -DCOMPILE_ABSTRACT_OPERATOR
 	$(CXX) $(CXXFLAGS) -I$(INCLUDE)operator/ $(SRC)$(OPERATOR)sparse.c  -c -o \
 	$(OUT)$(OPERATOR)sparse.o
+	$(CXX) $(CXXFLAGS) -I$(INCLUDE)operator/ $(SRC)$(OPERATOR)diagonal.c -c -o \
+	$(OUT)$(OPERATOR)diagonal.o
+
+cg: $(SRC)optkit_cg.c $(INCLUDE)optkit_projector.h
+	mkdir -p $(OUT)
+	$(CXX) $(CXXFLAGS) $< -c -o $(CGSTATIC)
 
 .PHONY: clean
 clean:
