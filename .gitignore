@@ -14,7 +14,6 @@ test
 *.pyc
 
 *cython*
-python/*operator*
 include/*graph*
 include/*cluster*
 src/*graph*
