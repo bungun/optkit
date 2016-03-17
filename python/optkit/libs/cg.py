@@ -71,19 +71,22 @@ class ConjugateGradientLibs(object):
 			lib.cgls_helper_free.argtypes = [cgls_helper_p]
 
 			lib.cgls_nonallocating.argtypes = [cgls_helper_p, operator_p,
-											   operator_p, vector_p, vector_p,
-											   ok_float, ok_float, c_size_t,
-											   c_int]
+											   vector_p, vector_p, ok_float,
+											   ok_float, c_size_t, c_int]
 			lib.cgls.argtypes = [operator_p, vector_p, vector_p, ok_float,
 								 ok_float, c_size_t, c_int]
 			lib.cgls_easy_init.argtypes = [c_size_t, c_size_t]
-			lib.cgls_easy_solve.argtypes = [c_void_p, operator_p, operator_p,
-											ok_float, ok_float, c_size_t,
-											c_int]
+			lib.cgls_easy_solve.argtypes = [c_void_p, operator_p, vector_p,
+											vector_p, ok_float, ok_float,
+											c_size_t, c_int]
 			lib.cgls_easy_finish.argtypes = [c_void_p]
+
 
 			lib.pcg_helper_alloc.argtypes = [c_size_t, c_size_t]
 			lib.pcg_helper_free.argtypes = [pcg_helper_p]
+
+			lib.diagonal_preconditioner.argtypes = [operator_p, vector_p,
+													ok_float]
 
 			lib.pcg_nonallocating.argtypes = [pcg_helper_p, operator_p,
 											  operator_p, vector_p, vector_p,
@@ -109,6 +112,8 @@ class ConjugateGradientLibs(object):
 
 			lib.pcg_helper_alloc.restype = pcg_helper_p
 			lib.pcg_helper_free.retype = None
+
+			lib.diagonal_preconditioner.restype = None
 
 			lib.pcg_nonallocating.restype = c_uint
 			lib.pcg.restype = c_uint

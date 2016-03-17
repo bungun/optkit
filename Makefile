@@ -8,12 +8,12 @@ OPERATOR=operator/optkit_operator_
 
 # C++ Flags
 CXX=gcc
-CXXFLAGS= -g -O3 -fPIC -I. -I$(INCLUDE) -I$(INCLUDE)/external -Wall -Wconversion
+CXXFLAGS= -g -O3 -fPIC -I. -I$(INCLUDE) -I$(INCLUDE)external -Wall -Wconversion
 LDFLAGS_=-lstdc++ -lm
 
 # CUDA Flags
 CUXX=nvcc
-CUXXFLAGS=-arch=sm_50 -Xcompiler -fPIC -I. -I$(INCLUDE) -I$(INCLUDE)/external
+CUXXFLAGS=-arch=sm_50 -Xcompiler -fPIC -I. -I$(INCLUDE) -I$(INCLUDE)external
 CULDFLAGS_=-lstdc++ -lm
 
 # Check system args
@@ -240,7 +240,7 @@ operator: $(OPERATOR_SRC)
 
 cg: $(SRC)optkit_cg.c $(INCLUDE)optkit_projector.h
 	mkdir -p $(OUT)
-	$(CXX) $(CXXFLAGS) $< -c -o $(CGSTATIC)
+	$(CXX) $(CXXFLAGS) $< -c -o $(CGSTATIC) -DABSTRACT_OPERATOR_BARE
 
 .PHONY: clean
 clean:

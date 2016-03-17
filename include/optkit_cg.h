@@ -16,7 +16,6 @@ typedef struct cgls_helper{
 	void * blas_handle;
 } cgls_helper;
 
-
 cgls_helper * cgls_helper_alloc(size_t m, size_t n);
 void cgls_helper_free(cgls_helper * helper);
 
@@ -29,10 +28,8 @@ typedef struct pcg_helper{
 	int never_solved;
 } pcg_helper;
 
-
 pcg_helper * pcg_helper_alloc(size_t m, size_t n);
 void pcg_helper_free(pcg_helper * helper);
-
 
 /* CGLS calls */
 /* core method */
@@ -51,6 +48,8 @@ uint cgls_easy_solve(void * cgls_work, operator * op, vector * b, vector * x,
 void cgls_easy_finish(void * cgls_work);
 
 /* Preconditioned CG calls */
+void diagonal_preconditioner(operator * op, vector * p, ok_float rho);
+
 /* core method */
 uint pcg_nonallocating(pcg_helper * helper, operator * op, operator * pre_cond,
 	vector * b, vector * x, const ok_float rho, const ok_float tol,
@@ -65,7 +64,6 @@ uint pcg_easy_solve(void * pcg_work, operator * op, operator * pre_cond,
 	vector * b, vector * x, const ok_float rho, const ok_float tol,
 	const size_t maxiter, int quiet);
 void pcg_easy_finish(void * pcg_work);
-
 
 #ifdef __cplusplus
 }

@@ -51,6 +51,7 @@ typedef struct abstract_linear_operator{
 } operator;
 
 
+#ifndef ABSTRACT_OPERATOR_BARE
 static operator * operator_alloc(OPTKIT_OPERATOR kind, size_t size1, size_t size2,
 	void * data, void (* apply), void (* adjoint), void (* fused_apply),
 	void (* fused_adjoint), void (* free_))
@@ -68,6 +69,7 @@ static operator * operator_alloc(OPTKIT_OPERATOR kind, size_t size1, size_t size
 	op->kind = kind;
 	return op;
 }
+#endif
 
 #ifdef COMPILE_ABSTRACT_OPERATOR
 /* GENERIC OPERATOR FREE */
