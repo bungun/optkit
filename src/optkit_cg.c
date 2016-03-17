@@ -78,7 +78,6 @@ const ok_float kEps = (ok_float) 1e-8;
 const ok_float kEps = (ok_float) 1e-16;
 #endif
 
-
 cgls_helper * cgls_helper_alloc(size_t m, size_t n)
 {
 	cgls_helper * h;

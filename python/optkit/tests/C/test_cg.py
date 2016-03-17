@@ -8,7 +8,7 @@ from optkit.libs import DenseLinsysLibs, SparseLinsysLibs, OperatorLibs, \
 from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
 import pdb
 
-CG_QUIET = 1
+CG_QUIET = 0
 
 class ConjugateGradientLibsTestCase(unittest.TestCase):
 	"""TODO: docstring"""
@@ -24,7 +24,7 @@ class ConjugateGradientLibsTestCase(unittest.TestCase):
 
 		self.tol_cg = 1e-12
 		self.rho_cg = 1e-4
-		self.maxiter_cg = 50
+		self.maxiter_cg = 1000
 
 	@classmethod
 	def tearDownClass(self):
@@ -259,7 +259,7 @@ class ConjugateGradientLibsTestCase(unittest.TestCase):
 				# 2. KKT condition A'(Ax - b) + rho (x) == 0 (within tol)
 				self.assertEqual(flag, 0)
 				KKT = A_.T.dot(A_.dot(x_) - b_) + rho * x_
-				self.assertTrue(np.linalg.norm(KKT) <= tol * n**0.5)
+				self.assertTrue(np.linalg.norm(KKT) <= (tol * n)**0.5)
 
 				release_args += [A, o]
 				release_operator(*release_args)
@@ -328,7 +328,7 @@ class ConjugateGradientLibsTestCase(unittest.TestCase):
 				# 2. KKT condition A'(Ax - b) + rho (x) == 0 (within tol)
 				self.assertEqual(flag, 0)
 				KKT = A_.T.dot(A_.dot(x_) - b_) + rho * x_
-				self.assertTrue(np.linalg.norm(KKT) <= tol * n**0.5)
+				self.assertTrue(np.linalg.norm(KKT) <= (tol * n)**0.5)
 
 				release_args += [A, o]
 				release_operator(*release_args)
@@ -396,7 +396,7 @@ class ConjugateGradientLibsTestCase(unittest.TestCase):
 				# 2. KKT condition A'(Ax - b) + rho (x) == 0 (within tol)
 				self.assertEqual(flag, 0)
 				KKT = A_.T.dot(A_.dot(x_) - b_) + rho * x_
-				self.assertTrue(np.linalg.norm(KKT) <= tol * n**0.5)
+				self.assertTrue(np.linalg.norm(KKT) <= (tol * n)**0.5)
 
 				release_args += [A, o]
 				release_operator(*release_args)
