@@ -1,20 +1,23 @@
 ###v0.1 (targets)
 - TODO: OMP parallelization for C vector operations
 - TODO: documentation
-
+- TODO: Cython bindings
 
 ###v0.0.5 (next release)
 - TODO: error checking throughout GPU calls (and mirrored for CPU)
 - TODO: license
 - TODO: cite POGS
-- TODO: sparse equilibration
-- TODO: sparse projection
-- TODO: sparse POGS
 - TODO: append version numbers to .so, check version numbers when loading libs in pyton
 
 ###v0.0.4 (beta)
 - migrated tests to unittests
 - eliminated slow Python implementations (to be replaced with Cython implementations in future, potentially)
+- abstract linear operators
+- operator implementations: dense, sparse, diagonal
+- CGLS, preconditioned CG methods for abstract operators
+- operator equilibration for: dense, sparse
+- approximate projection (with CGLS) for abstract linear operators
+- operator POGS for: dense, sparse
 
 ###v0.0.3 (current)
 - CPU Sparse Linear Algebra
@@ -51,7 +54,6 @@
 - CPU block prox
 - Python cone prox bindings
 - Python block prox bindings
-
 
 ###v0.3.1
 - GPU cone prox

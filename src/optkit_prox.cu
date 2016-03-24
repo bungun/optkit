@@ -27,7 +27,6 @@ __global__ void __set_fn_vector(FunctionObj * objs, const ok_float a,
 		};
 }
 
-
 /*
  * CUDA C++ implementation with thrust::
  * =====================================
@@ -42,14 +41,12 @@ struct ProxEvalF : thrust::binary_function<FunctionObj, ok_float, ok_float>
 		{ return ProxEval(&f_obj, x, rho); }
 };
 
-
 /* thrust::binary function defining elementwise function evaluation*/
 struct FuncEvalF : thrust::binary_function<FunctionObj, ok_float, ok_float>
 {
 	__device__ ok_float operator()(const FunctionObj & f_obj, ok_float x)
 		{ return FuncEval(&f_obj, x); }
 };
-
 
 /* vectorwise prox evaluation leveraging thrust::binary function */
 void ProxEval_GPU(const FunctionObj * f, ok_float rho, const ok_float * x_in,

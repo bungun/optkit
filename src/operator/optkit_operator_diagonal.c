@@ -53,7 +53,7 @@ void diagonal_operator_mul_t_fused(void * data, ok_float alpha, vector * input,
 
 operator * diagonal_operator_alloc(vector * d)
 {
-	return operator_alloc(Diagonal_Operator, d->size, d->size,
+	return operator_alloc(OkOperatorDiagonal, d->size, d->size,
 		diagonal_operator_data_alloc(d),
 		diagonal_operator_mul, diagonal_operator_mul_t,
 		diagonal_operator_mul_fused, diagonal_operator_mul_t_fused,

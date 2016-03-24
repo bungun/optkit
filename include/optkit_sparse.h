@@ -11,28 +11,26 @@ void sparselib_version(int * maj, int * min, int * change, int * status);
 
 /* transpose data from forward->adjoint or adjoint->forward */
 typedef enum SparseTransposeDirection {
-  Forward2Adjoint,
-  Adjoint2Forward
+	Forward2Adjoint,
+	Adjoint2Forward
 } SPARSE_TRANSPOSE_DIRECTION;
-
 
 /* MATRIX defition and methods */
 typedef struct sp_matrix {
-        size_t size1, size2, nnz, ptrlen;
-        ok_float * val;
-        ok_int * ind, * ptr;
-        enum CBLAS_ORDER order;
+	size_t size1, size2, nnz, ptrlen;
+	ok_float * val;
+	ok_int * ind, * ptr;
+	enum CBLAS_ORDER order;
 } sp_matrix;
-
 
 /* memory management */
 ok_status sp_make_handle(void ** sparse_handle);
 ok_status sp_destroy_handle(void * sparse_handle);
 
-void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n,
-        size_t nnz, enum CBLAS_ORDER order);
-void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n,
-        size_t nnz, enum CBLAS_ORDER order);
+void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
+	enum CBLAS_ORDER order);
+void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
+	enum CBLAS_ORDER order);
 void sp_matrix_free(sp_matrix * A);
 
 /* copy, I/O */
@@ -51,9 +49,9 @@ void sp_matrix_abs(sp_matrix * A);
 void sp_matrix_pow(sp_matrix * A, const ok_float x);
 void sp_matrix_scale(sp_matrix * A, const ok_float alpha);
 void sp_matrix_scale_left(void * sparse_handle, sp_matrix * A,
-        const vector * v);
+	const vector * v);
 void sp_matrix_scale_right(void * sparse_handle, sp_matrix * A,
-        const vector * v);
+	const vector * v);
 
 /* print */
 void sp_matrix_print(const sp_matrix * A);

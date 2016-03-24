@@ -8,33 +8,33 @@
 extern "C" {
 #endif
 
-typedef enum OPERATOR{
-	Null_Operator = 0,
-	Id_Operator = 101,
-	Neg_Operator = 102,
-	Add_Operator = 103,
-	Cat_Operator = 104,
-	Split_Operator = 105,
-	Dense_Operator = 201,
-	SparseCSR_Operator = 301,
-	SparseCSC_Operator = 302,
-	SparseCOO_Operator = 303,
-	Diagonal_Operator = 401,
-	Banded_Operator = 402,
-	Triangular_Operator = 403,
-	Kronecker_Operator = 404,
-	Toeplitz_Operator = 405,
-	Circulant_Operator = 406,
-	Convolution_Operator = 501,
-	CircularConvolution_Operator = 502,
-	Fourier_Operator = 503,
-	Difference_Operator = 504,
-	Upsampling_Operator = 505,
-	Downsampling_Operator = 506,
-	BlockDifference_Operator = 507,
-	DirectProjection_Operator = 901,
-	IndirectProjection_Operator = 902,
-	Other_Operator = 1000
+typedef enum OPTKIT_OPERATOR{
+	OkOperatorNull = 0,
+	OkOperatorIdentity = 101,
+	OkOperatorNeg = 102,
+	OkOperatorAdd = 103,
+	OkOperatorCat = 104,
+	OkOperatorSplit = 105,
+	OkOperatorDense = 201,
+	OkOperatorSparseCSR = 301,
+	OkOperatorSparseCSC = 302,
+	OkOperatorSparseCOO = 303,
+	OkOperatorDiagonal = 401,
+	OkOperatorBanded = 402,
+	OkOperatorTriangular = 403,
+	OkOperatorKronecker = 404,
+	OkOperatorToeplitz = 405,
+	OkOperatorCirculant = 406,
+	OkOperatorConvolution = 501,
+	OkOperatorCircularConvolution = 502,
+	OkOperatorFourier = 503,
+	OkOperatorDifference = 504,
+	OkOperatorUpsampling = 505,
+	OkOperatorDownsampling = 506,
+	OkOperatorBlockDifference = 507,
+	OkOperatorDirectProjection = 901,
+	OkOperatorIndirectProjection = 902,
+	OkOperatorOther = 1000
 } OPTKIT_OPERATOR;
 
 typedef struct abstract_linear_operator{
@@ -78,6 +78,36 @@ void operator_free(operator * op){
 	ok_free(op);
 }
 #endif
+
+static const char * optkit_op2str(OPTKIT_OPERATOR) optype
+{
+	switch(optype) {
+	case OkOperatorNull:
+		return "null operator"
+	case OkOperatorIdentity:
+		return "identity operator"
+	case OkOperatorNeg:
+		return "negation operator"
+	case OkOperatorAdd:
+		return "addition operator"
+	case OkOperatorCat:
+		return "concatenation operator"
+	case OkOperatorCat:
+		return "splitting operator"
+	case OkOperatorDense:
+		return "dense operator"
+	case OkOperatorSparseCSC:
+		return "sparse CSC operator"
+	case OkOperatorSparseCSR:
+		return "sparse CSR operator"
+	case OkOperatorSparseCOO:
+		return "sparse COO operator"
+	case OkOperatorDiagonal:
+		return "diagonal operator"
+	default:
+		return "unknown operator"
+	}
+}
 
 #ifdef __cplusplus
 }

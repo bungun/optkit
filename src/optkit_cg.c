@@ -277,19 +277,19 @@ uint cgls(operator * op, vector * b, vector * x, const ok_float rho,
 	return flag;
 }
 
-void * cgls_easy_init(size_t m, size_t n)
+void * cgls_init(size_t m, size_t n)
 {
 	return (void *) cgls_helper_alloc(m, n);
 }
 
-uint cgls_easy_solve(void * cgls_work, operator * op, vector * b, vector * x,
+uint cgls_solve(void * cgls_work, operator * op, vector * b, vector * x,
 	const ok_float rho, const ok_float tol, const size_t maxiter, int quiet)
 {
 	return cgls_nonallocating( (cgls_helper *) cgls_work, op, b, x, rho,
 		tol, maxiter, quiet);
 }
 
-void cgls_easy_finish(void * cgls_work)
+void cgls_finish(void * cgls_work)
 {
 	cgls_helper_free((cgls_helper *) cgls_work);
 }
@@ -482,12 +482,12 @@ uint pcg(operator * op, operator * pre_cond, vector * b, vector * x,
 	return flag;
 }
 
-void * pcg_easy_init(size_t m, size_t n)
+void * pcg_init(size_t m, size_t n)
 {
 	return (void *) pcg_helper_alloc(m, n);
 }
 
-uint pcg_easy_solve(void * pcg_work, operator * op, operator * pre_cond,
+uint pcg_solve(void * pcg_work, operator * op, operator * pre_cond,
 	vector * b, vector * x, const ok_float rho, const ok_float tol,
 	const size_t maxiter, int quiet)
 {
@@ -495,7 +495,7 @@ uint pcg_easy_solve(void * pcg_work, operator * op, operator * pre_cond,
 		rho, tol, maxiter, quiet);
 }
 
-void pcg_easy_finish(void * pcg_work)
+void pcg_finish(void * pcg_work)
 {
 	pcg_helper_free((pcg_helper *) pcg_work);
 }

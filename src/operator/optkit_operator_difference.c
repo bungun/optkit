@@ -82,8 +82,7 @@ void difference_operator_mul_t_fused(void * data, ok_float alpha,
 
 operator * difference_operator_alloc(size_t n, size_t offset)
 {
-	return operator_alloc(Difference_Operator,
-		A->size1, A->size2,
+	return operator_alloc(OkOperatorDifference, n, n,
 		difference_operator_data_alloc(n, offset),
 		difference_operator_mul,
 		difference_operator_mul_t,
@@ -213,10 +212,9 @@ void block_difference_operator_mul_t_fused(void * data, ok_float alpha,
 operator * block_difference_operator_alloc(size_t n, size_t n_blocks,
 	size_t * block_sizes, size_t * offsets)
 {
-	return operator_alloc(BlockDifference_Operator,
-		n, n,
-		block_difference_operator_data_alloc(n_blocks,
-			block_sizes, offsets),
+	return operator_alloc(OkOperatorBlockDifference, n, n,
+		block_difference_operator_data_alloc(n_blocks, block_sizes,
+			offsets),
 		block_difference_operator_mul,
 		block_difference_operator_mul_t,
 		block_difference_operator_mul_fused,

@@ -39,22 +39,22 @@ void vector_pow(vector * v, const ok_float x);
 /* MATRIX defition and methods */
 
 typedef struct matrix {
-  size_t size1, size2, ld;
-  ok_float *data;
-  enum CBLAS_ORDER order;
+	size_t size1, size2, ld;
+	ok_float *data;
+	enum CBLAS_ORDER order;
 } matrix;
 
 void matrix_alloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord);
 void matrix_calloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord);
 void matrix_free(matrix * A);
 void matrix_submatrix(matrix * A_sub, matrix * A, size_t i, size_t j,
-        size_t n1, size_t n2);
+	size_t n1, size_t n2);
 void matrix_row(vector * row, matrix * A, size_t i);
 void matrix_column(vector * col, matrix * A, size_t j);
 void matrix_diagonal(vector * diag, matrix * A);
 void matrix_cast_vector(vector * v, matrix * A);
 void matrix_view_array(matrix * A, const ok_float * base, size_t n1, size_t n2,
-        enum CBLAS_ORDER ord);
+	enum CBLAS_ORDER ord);
 void matrix_set_all(matrix * A, ok_float x);
 void matrix_memcpy_mm(matrix * A, const matrix *B);
 void matrix_memcpy_ma(matrix * A, const ok_float *B,
@@ -77,13 +77,13 @@ ok_status blas_destroy_handle(void * linalg_handle);
 
 /* BLAS LEVEL 1 */
 void blas_axpy(void * linalg_handle, ok_float alpha, const vector * x,
-        vector * y);
+	vector * y);
 ok_float blas_nrm2(void * linalg_handle, const vector *x);
 void blas_scal(void * linalg_handle, const ok_float alpha, vector * x);
 ok_float blas_asum(void * linalg_handle, const vector * x);
 ok_float blas_dot(void * linalg_handle, const vector * x, const vector * y);
 void blas_dot_inplace(void * linalg_handle, const vector * x, const vector * y,
-        ok_float * deviceptr_result);
+	ok_float * deviceptr_result);
 
 /* BLAS LEVEL 2 */
 void blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
@@ -107,12 +107,12 @@ void blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
 	ok_float beta, matrix *C);
 
 void blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
-        enum CBLAS_TRANSPOSE transB, ok_float alpha, const matrix *A,
-        const matrix *B, ok_float beta, matrix *C);
+	enum CBLAS_TRANSPOSE transB, ok_float alpha, const matrix *A,
+	const matrix *B, ok_float beta, matrix *C);
 
 void blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side, enum CBLAS_UPLO uplo,
-        enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, ok_float alpha,
-        const matrix *A, matrix *B);
+	enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, ok_float alpha,
+	const matrix *A, matrix *B);
 
 /* LINEAR ALGEBRA routines */
 void linalg_cholesky_decomp(void * linalg_handle, matrix * A);

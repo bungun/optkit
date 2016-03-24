@@ -75,11 +75,11 @@ class ConjugateGradientLibs(object):
 											   ok_float, c_size_t, c_int]
 			lib.cgls.argtypes = [operator_p, vector_p, vector_p, ok_float,
 								 ok_float, c_size_t, c_int]
-			lib.cgls_easy_init.argtypes = [c_size_t, c_size_t]
-			lib.cgls_easy_solve.argtypes = [c_void_p, operator_p, vector_p,
+			lib.cgls_init.argtypes = [c_size_t, c_size_t]
+			lib.cgls_solve.argtypes = [c_void_p, operator_p, vector_p,
 											vector_p, ok_float, ok_float,
 											c_size_t, c_int]
-			lib.cgls_easy_finish.argtypes = [c_void_p]
+			lib.cgls_finish.argtypes = [c_void_p]
 
 
 			lib.pcg_helper_alloc.argtypes = [c_size_t, c_size_t]
@@ -94,11 +94,11 @@ class ConjugateGradientLibs(object):
 											  c_int]
 			lib.pcg.argtypes = [operator_p, operator_p, vector_p, vector_p,
 								ok_float, ok_float, c_size_t, c_int]
-			lib.pcg_easy_init.argtypes = [c_size_t, c_size_t]
-			lib.pcg_easy_solve.argtypes = [c_void_p, operator_p, operator_p,
+			lib.pcg_init.argtypes = [c_size_t, c_size_t]
+			lib.pcg_solve.argtypes = [c_void_p, operator_p, operator_p,
 										   vector_p, vector_p, ok_float,
 										   ok_float, c_size_t, c_int]
-			lib.pcg_easy_finish.argtypes = [c_void_p]
+			lib.pcg_finish.argtypes = [c_void_p]
 
 			# return types
 			lib.cgls_helper_alloc.restype = cgls_helper_p
@@ -106,9 +106,9 @@ class ConjugateGradientLibs(object):
 
 			lib.cgls_nonallocating.restype = c_uint
 			lib.cgls.restype = c_uint
-			lib.cgls_easy_init.restype = c_void_p
-			lib.cgls_easy_solve.restype = c_uint
-			lib.cgls_easy_finish.restype = None
+			lib.cgls_init.restype = c_void_p
+			lib.cgls_solve.restype = c_uint
+			lib.cgls_finish.restype = None
 
 			lib.pcg_helper_alloc.restype = pcg_helper_p
 			lib.pcg_helper_free.retype = None
@@ -117,9 +117,9 @@ class ConjugateGradientLibs(object):
 
 			lib.pcg_nonallocating.restype = c_uint
 			lib.pcg.restype = c_uint
-			lib.pcg_easy_init.restype = c_void_p
-			lib.pcg_easy_solve.restype = c_uint
-			lib.pcg_easy_finish.restype = None
+			lib.pcg_init.restype = c_void_p
+			lib.pcg_solve.restype = c_uint
+			lib.pcg_finish.restype = None
 
 
 			lib.FLOAT = single_precision

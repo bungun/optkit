@@ -60,7 +60,6 @@ class OperatorLibs(object):
 
 			lib.operator = operator
 			lib.operator_p = operator_p = POINTER(operator)
-			lib.operator_pp = operator_pp = POINTER(operator_p)
 
 			# argument types
 			lib.operator_free.argtypes = [operator_p]

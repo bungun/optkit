@@ -41,11 +41,11 @@ uint cgls_nonallocating(cgls_helper * helper, operator * op, vector * b,
 uint cgls(operator * op, vector * b, vector * x, const ok_float rho,
 	const ok_float tol, const size_t maxiter, int quiet);
 
-void * cgls_easy_init(size_t m, size_t n);
-uint cgls_easy_solve(void * cgls_work, operator * op, vector * b, vector * x,
+void * cgls_init(size_t m, size_t n);
+uint cgls_solve(void * cgls_work, operator * op, vector * b, vector * x,
 	const ok_float rho, const ok_float tol, const size_t maxiter,
 	int quiet);
-void cgls_easy_finish(void * cgls_work);
+void cgls_finish(void * cgls_work);
 
 /* Preconditioned CG calls */
 void diagonal_preconditioner(operator * op, vector * p, ok_float rho);
@@ -59,11 +59,11 @@ uint pcg_nonallocating(pcg_helper * helper, operator * op, operator * pre_cond,
 uint pcg(operator * op, operator * pre_cond, vector * b, vector * x,
 	const ok_float rho, const ok_float tol, const size_t maxiter, int quiet);
 
-void * pcg_easy_init(size_t m, size_t n);
-uint pcg_easy_solve(void * pcg_work, operator * op, operator * pre_cond,
+void * pcg_init(size_t m, size_t n);
+uint pcg_solve(void * pcg_work, operator * op, operator * pre_cond,
 	vector * b, vector * x, const ok_float rho, const ok_float tol,
 	const size_t maxiter, int quiet);
-void pcg_easy_finish(void * pcg_work);
+void pcg_finish(void * pcg_work);
 
 #ifdef __cplusplus
 }

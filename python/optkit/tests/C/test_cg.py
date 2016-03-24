@@ -3,10 +3,10 @@ import os
 import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix
 from ctypes import c_void_p, byref, CFUNCTYPE
-from optkit.libs import DenseLinsysLibs, SparseLinsysLibs, OperatorLibs, \
-						ConjugateGradientLibs
+from optkit.libs import DenseLinsysLibs, SparseLinsysLibs, OperatorLibs
+from optkit.libs.cg import ConjugateGradientLibs
 from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
-import pdb
+import optkit.tests.C.operator_helper as op_helper
 
 CG_QUIET = 0
 
@@ -73,51 +73,6 @@ class ConjugateGradientLibsTestCase(unittest.TestCase):
 		olib.operator_free(p)
 		dlib.vector_free(p_vec)
 
- 	@staticmethod
- 	def gen_dense_operator(dlib, olib, A_py, rowmajor=True):
- 		m, n = A_py.shape
- 		order = dlib.enums.CblasRowMajor if rowmajor else \
- 				dlib.enums.CblasColMajor
-		pyorder = 'C' if rowmajor else 'F'
-		A_ = np.zeros(A_py.shape, order=pyorder).astype(dlib.pyfloat)
-		A_ += A_py
-		A_ptr = A_.ctypes.data_as(dlib.ok_float_p)
-		A = dlib.matrix(0, 0, 0, None, order)
-		dlib.matrix_calloc(A, m, n, order)
-		dlib.matrix_memcpy_ma(A, A_ptr, order)
-		o = olib.dense_operator_alloc(A)
-		return A, o
-
-	@staticmethod
-	def release_dense_operator(dlib, olib, A, o):
-		olib.operator_free(o)
-		dlib.matrix_free(A)
-
-	@staticmethod
-	def gen_sparse_operator(dlib, slib, olib, A_py, rowmajor=True):
-		m, n = A_py.shape
-		order = dlib.enums.CblasRowMajor if rowmajor else \
-				dlib.enums.CblasColMajor
-		sparsemat = csr_matrix if rowmajor else csc_matrix
-		sparse_hdl = c_void_p()
-		slib.sp_make_handle(byref(sparse_hdl))
-		A_ = A_py.astype(dlib.pyfloat)
-		A_sp = csr_matrix(A_)
-		A_ptr = A_sp.indptr.ctypes.data_as(slib.ok_int_p)
-		A_ind = A_sp.indices.ctypes.data_as(slib.ok_int_p)
-		A_val = A_sp.data.ctypes.data_as(dlib.ok_float_p)
-		A = slib.sparse_matrix(0, 0, 0, 0, None, None, None, order)
-		slib.sp_matrix_calloc(A, m, n, A_sp.nnz, order)
-		slib.sp_matrix_memcpy_ma(sparse_hdl, A, A_val, A_ind, A_ptr)
-		slib.sp_destroy_handle(sparse_hdl)
-		o = olib.sparse_operator_alloc(A)
-		return A, o
-
-	@staticmethod
-	def release_sparse_operator(slib, olib, A, o):
-		olib.operator_free(o)
-		slib.sp_matrix_free(A)
-
 	@property
 	def op_keys(self):
 		return ['dense', 'sparse']
@@ -125,15 +80,15 @@ class ConjugateGradientLibsTestCase(unittest.TestCase):
 	def get_opmethods(self, opkey, denselib, sparselib, operatorlib):
 		if opkey == 'dense':
 			A = self.A_test
-			gen = self.gen_dense_operator
+			gen = op_helper.gen_dense_operator
 			arg_gen = [denselib, operatorlib, A]
-			release = self.release_dense_operator
+			release = op_helper.release_dense_operator
 			arg_release = [denselib, operatorlib]
 		elif opkey == 'sparse':
 			A = self.A_test_sparse
-			gen = self.gen_sparse_operator
+			gen = op_helper.gen_sparse_operator
 			arg_gen = [denselib, sparselib, operatorlib, A]
-			release = self.release_sparse_operator
+			release = op_helper.release_sparse_operator
 			arg_release = [sparselib, operatorlib]
 		else:
 			raise ValueError('invalid operator type')
@@ -385,10 +340,10 @@ class ConjugateGradientLibsTestCase(unittest.TestCase):
 
 				A, o = gen_operator(*gen_args)
 
-				cgls_work = lib.cgls_easy_init(m, n)
-				flag = lib.cgls_easy_solve(cgls_work, o, b, x, rho, tol,
+				cgls_work = lib.cgls_init(m, n)
+				flag = lib.cgls_solve(cgls_work, o, b, x, rho, tol,
 										   maxiter, CG_QUIET)
-				lib.cgls_easy_finish(cgls_work)
+				lib.cgls_finish(cgls_work)
 				dlib.vector_memcpy_av(x_ptr, x, 1)
 
 				# checks:
@@ -787,14 +742,14 @@ class ConjugateGradientLibsTestCase(unittest.TestCase):
 				p_py, p_vec, p = self.gen_preconditioning_operator(dlib, olib,
 																   T, rho)
 
-				pcg_work = lib.pcg_easy_init(m, n)
-				iters1 = lib.pcg_easy_solve(pcg_work, o, p, b, x, rho, tol,
+				pcg_work = lib.pcg_init(m, n)
+				iters1 = lib.pcg_solve(pcg_work, o, p, b, x, rho, tol,
 											maxiter, CG_QUIET)
 				dlib.vector_memcpy_av(x_ptr, x, 1)
 				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
 								ATOLN + RTOL * np.linalg.norm(b_))
 
-				iters2 = lib.pcg_easy_solve(pcg_work, o, p, b, x, rho, tol,
+				iters2 = lib.pcg_solve(pcg_work, o, p, b, x, rho, tol,
 											maxiter, CG_QUIET)
 				dlib.vector_memcpy_av(x_ptr, x, 1)
 				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
@@ -804,7 +759,7 @@ class ConjugateGradientLibsTestCase(unittest.TestCase):
 				print 'warm start iters:', iters2
 				self.assertTrue(iters2 <= iters1)
 
-				lib.pcg_easy_finish(pcg_work)
+				lib.pcg_finish(pcg_work)
 				self.release_preconditioning_operator(dlib, olib, p_vec, p)
 				release_args += [A, o]
 				release_operator(*release_args)

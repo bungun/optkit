@@ -2,6 +2,7 @@
 #define OPTKIT_EQUILIBRATION_H_
 
 #include "optkit_dense.h"
+#include "optkit_operator_transforms.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,6 +16,10 @@ void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 	matrix * A_out, vector * d, vector *e, enum CBLAS_ORDER ord);
 void dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out,
 	vector * d, vector * e, enum CBLAS_ORDER ord);
+
+ok_status operator_regularized_sinkhorn(void * linalg_handle, void * input_data,
+	operator * A, vector * d, vector * e, ok_float pnorm);
+ok_float operator_estimate_norm(void * linalg_handle, void * operator * A);
 
 #ifdef __cplusplus
 }
