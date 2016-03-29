@@ -79,33 +79,33 @@ void operator_free(operator * op){
 }
 #endif
 
-static const char * optkit_op2str(OPTKIT_OPERATOR) optype
+static const char * optkit_op2str(OPTKIT_OPERATOR optype)
 {
 	switch(optype) {
 	case OkOperatorNull:
-		return "null operator"
+		return "null operator";
 	case OkOperatorIdentity:
-		return "identity operator"
+		return "identity operator";
 	case OkOperatorNeg:
-		return "negation operator"
+		return "negation operator";
 	case OkOperatorAdd:
-		return "addition operator"
+		return "addition operator";
 	case OkOperatorCat:
-		return "concatenation operator"
-	case OkOperatorCat:
-		return "splitting operator"
+		return "concatenation operator";
+	case OkOperatorSplit:
+		return "splitting operator";
 	case OkOperatorDense:
-		return "dense operator"
+		return "dense operator";
 	case OkOperatorSparseCSC:
-		return "sparse CSC operator"
+		return "sparse CSC operator";
 	case OkOperatorSparseCSR:
-		return "sparse CSR operator"
+		return "sparse CSR operator";
 	case OkOperatorSparseCOO:
-		return "sparse COO operator"
+		return "sparse COO operator";
 	case OkOperatorDiagonal:
-		return "diagonal operator"
+		return "diagonal operator";
 	default:
-		return "unknown operator"
+		return "unknown operator";
 	}
 }
 

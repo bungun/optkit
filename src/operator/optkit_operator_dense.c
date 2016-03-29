@@ -63,12 +63,12 @@ operator * dense_operator_alloc(matrix * A)
 
 static ok_status dense_operator_typecheck(operator * A, const char * caller)
 {
-	if (operator->kind != OkOperatorDense) {
+	if (A->kind != OkOperatorDense) {
 		printf("dense_operator_%s() %s %s\n", caller, "undefined for",
 			optkit_op2str(A->kind));
 		return OPTKIT_ERROR;
 	} else {
-		return OPTKIT_SUCCESS
+		return OPTKIT_SUCCESS;
 	}
 }
 
@@ -86,46 +86,34 @@ matrix * dense_operator_get_matrix_pointer(operator * A)
 }
 
 
-ok_status dense_operator_copy(operator * A, void * data,
-	OPTKIT_COPY_DIRECTION dir)
+void * dense_operator_export(operator * A)
 {
+	ok_status err = dense_operator_typecheck(A, "export");
 	dense_operator_data * op_data = OK_NULL;
-	dense_operator_data * input_data = OK_NULL;
-	dense_operator_caller_data * caller_data = OK_NULL;
-	ok_status err = dense_operator_typecheck(A, "copy");
-
-	if (!data) {
-		printf("%s\n", "argument 'data' is null");
-		err = OPTKIT_ERROR;
-	}
+	ok_float * export = OK_NULL;
 
 	if (!err) {
 		op_data = (dense_operator_data *) A->data;
-
-	 	if (dir == OptkitToOptkit) {
-			input_data = (dense_operator_data * data);
-			sp_matrix_memcpy_mm(op_data->A, input_data->A);
-		} else {
-			caller_data = (dense_operator_caller_data *) data;
-			if (!caller_data->val) {
-				printf("%s%s%s\n", "argument 'data' ",
-					"must contain valid pointer",
-					"<ok_float *> 'val");
-				err = OPTKIT_ERROR;
-			} else if (caller_data->val != CblasRowMajor ||
-				   caller_data->order != CblasColMajor) {
-				printf("%s%s\n", "argument 'data' ",
-					"must contain valid CblasOrder enum.");
-				err = OPTKIT_ERROR;
-			} else if (dir == OptkitToCaller) {
-				matrix_memcpy_am(caller_data->val, op_data->A,
-					caller_data->order);
-			} else {
-				matrix_memcpy_ma(op_data->A, caller_data->val,
-					caller_data->order);
-			}
-		}
+		export = malloc(op_data->A->size1 * op_data->A->size2 *
+			sizeof(*export));
+		matrix_memcpy_am(export, op_data->A, op_data->A->order);
 	}
+	return (void *) export;
+}
+
+ok_status dense_operator_import(operator * A, void * data)
+{
+	ok_status err = dense_operator_typecheck(A, "import");
+	dense_operator_data * op_data = OK_NULL;
+	ok_float * import = OK_NULL;
+
+	if (!err && data) {
+		op_data = (dense_operator_data *) A->data;
+		import = (ok_float *) data;
+		matrix_memcpy_ma(op_data->A, import, op_data->A->order);
+		ok_free(import);
+	}
+
 	return err;
 }
 

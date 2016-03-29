@@ -107,11 +107,6 @@ typedef struct POGSSolver {
 /* DIRECT / INDIRECT IS A SETTING, DEFAULTS TO INDIRECT */
 int private_api_accessible(void);
 void set_default_settings(pogs_settings * settings);
-operator * pogs_dense_operator_gen(ok_float * A, size_t m, size_t n,
-	CBLAS_ORDER order);
-operator * pogs_sparse_operator_gen(ok_float * val, ok_int * ind, ok_int * ptr,
-	size_t m, size_t n, size_t nnz, CBLAS_ORDER order);
-void pogs_operator_free(operator * A);
 pogs_solver * pogs_init(operator * A, int direct);
 void pogs_solve(pogs_solver * solver, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output);
@@ -119,6 +114,13 @@ void pogs_finish(pogs_solver * solver, int reset);
 void pogs(operator * A, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output,
 	int direct, int reset);
+
+operator * pogs_dense_operator_gen(const ok_float * A, size_t m, size_t n,
+	CBLAS_ORDER order);
+operator * pogs_sparse_operator_gen(const ok_float * val, const ok_int * ind,
+	const ok_int * ptr, size_t m, size_t n, size_t nnz, CBLAS_ORDER order);
+void pogs_dense_operator_free(operator * A);
+void pogs_sparse_operator_free(operator * A);
 pogs_solver * pogs_load_solver(operator * op_equil,
 	operator * LLT_factorization, ok_float * d, ok_float * e, ok_float * z,
 	ok_float * z12, ok_float * z_dual, ok_float * z_dual12,

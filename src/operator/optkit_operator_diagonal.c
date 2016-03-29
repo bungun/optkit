@@ -61,6 +61,53 @@ operator * diagonal_operator_alloc(vector * d)
 	);
 }
 
+static ok_status diagonal_operator_typecheck(operator * A, const char * caller)
+{
+	if (A->kind != OkOperatorDiagonal) {
+		printf("diagonal_operator_%s() %s %s\n", caller, "undefined for",
+			optkit_op2str(A->kind));
+		return OPTKIT_ERROR;
+	} else {
+		return OPTKIT_SUCCESS;
+	}
+}
+
+ok_status diagonal_operator_abs(operator * A)
+{
+	ok_status err = diagonal_operator_typecheck(A, "abs");
+	diagonal_operator_data * op_data = OK_NULL;
+
+	if (!err) {
+		op_data = (diagonal_operator_data *) A->data;
+		vector_abs(op_data->d);
+	}
+	return err;
+}
+
+ok_status diagonal_operator_pow(operator * A, const ok_float power)
+{
+	ok_status err = diagonal_operator_typecheck(A, "pow");
+	diagonal_operator_data * op_data = OK_NULL;
+
+	if (!err) {
+		op_data = (diagonal_operator_data *) A->data;
+		vector_pow(op_data->d, power);
+	}
+	return err;
+}
+
+ok_status diagonal_operator_scale(operator * A, const ok_float scaling)
+{
+	ok_status err = diagonal_operator_typecheck(A, "scale");
+	diagonal_operator_data * op_data = OK_NULL;
+
+	if (!err) {
+		op_data = (diagonal_operator_data *) A->data;
+		vector_scale(op_data->d, scaling);
+	}
+	return err;
+}
+
 #ifdef __cplusplus
 }
 #endif

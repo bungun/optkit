@@ -24,13 +24,8 @@ void dense_operator_mul_t_fused(void * data, ok_float alpha, vector * input,
 operator * dense_operator_alloc(matrix * A);
 matrix * dense_operator_get_matrix_pointer(operator * A);
 
-typedef struct dense_operator_caller_data {
-	ok_float * val;
-	enum CBLAS_ORDER order;
-} dense_operator_caller_data;
-
-ok_status dense_operator_copy(operator * A, void * data,
-	OPTKIT_COPY_DIRECTION dir);
+void * dense_operator_export(operator * A);
+ok_status dense_operator_import(operator * A, void * data);
 ok_status dense_operator_abs(operator * A);
 ok_status dense_operator_pow(operator * A, const ok_float power);
 ok_status dense_operator_scale(operator * A, const ok_float scaling);

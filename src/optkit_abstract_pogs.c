@@ -1,4 +1,4 @@
-#include "optkit_pogs.h"
+#include "optkit_abstract_pogs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -674,7 +674,6 @@ operator * pogs_sparse_operator_gen(const ok_float * val, const ok_int * ind,
 	void * handle;
 	sp_matrix * A = OK_NULL;
 	sp_matrix_calloc(A_mat, m, n, nnz, order);
-
 	sp_make_handle(&handle);
 	sp_matrix_memcpy_ma(handle, A, val, ind, ptr);
 	sp_destroy_handle(handle);
@@ -687,6 +686,7 @@ void pogs_dense_operator_free(operator * A)
 	operator_free(A);
 	matrix_free(A_mat);
 }
+
 void pogs_sparse_operator_free(operator * A)
 {
 	sp_matrix * A_mat = sparse_operator_get_matrix_pointer(A);

@@ -26,14 +26,8 @@ void sparse_operator_mul_t_fused(void * data, ok_float alpha, vector * input,
 operator * sparse_operator_alloc(sp_matrix * A);
 sp_matrix * sparse_operator_get_matrix_pointer(operator * A);
 
-typedef struct sparse_operator_caller_data {
-	ok_float * val;
-	ok_int * ind;
-	ok_int * ptr;
-} sparse_operator_caller_data;
-
-ok_status sparse_operator_copy(operator * A, void * data,
-	enum OPTKIT_COPY_DIRECTION dir);
+void * sparse_operator_export(operator * A);
+ok_status sparse_operator_import(operator * A, void * data);
 ok_status sparse_operator_abs(operator * A);
 ok_status sparse_operator_pow(operator * A, const ok_float power);
 ok_status sparse_operator_scale(operator * A, const ok_float scaling);

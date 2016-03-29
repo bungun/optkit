@@ -4,6 +4,11 @@
 extern "C" {
 #endif
 
+struct sparse_operator_export {
+	ok_float * val;
+	ok_int * ind, * ptr;
+};
+
 void * sparse_operator_data_alloc(sp_matrix * A)
 {
 	sparse_operator_data * op_data;
@@ -69,13 +74,12 @@ operator * sparse_operator_alloc(sp_matrix * A)
 static ok_status sparse_operator_typecheck(operator * A,
 	const char * caller)
 {
-	if (operator->kind != OkOperatorSparseCSR &&
-	    operator->kind != OkOperatorSparseCSC) {
+	if (A->kind != OkOperatorSparseCSR && A->kind != OkOperatorSparseCSC) {
 		printf("sparse_operator_%s() %s %s\n", caller, "undefined for",
 			optkit_op2str(A->kind));
 		return OPTKIT_ERROR;
 	} else {
-		return OPTKIT_SUCCESS
+		return OPTKIT_SUCCESS;
 	}
 }
 
@@ -93,46 +97,43 @@ sp_matrix * sparse_operator_get_matrix_pointer(operator * A)
 	}
 }
 
-ok_status sparse_operator_copy(operator * A, void * data,
-	enum OPTKIT_COPY_DIRECTION dir)
+void * sparse_operator_export(operator * A)
 {
+	ok_status err = sparse_operator_typecheck(A, "export");
 	sparse_operator_data * op_data = OK_NULL;
-	sparse_operator_data * input_data = OK_NULL;
-	sparse_operator_caller_data * caller_data = OK_NULL;
-	ok_status err = sparse_operator_typecheck(A, "copy");
-
-	if (!data) {
-		printf("%s\n", "argument 'data' is null");
-		err = OPTKIT_ERROR;
-	}
+	struct sparse_operator_export * export = OK_NULL;
 
 	if (!err) {
 		op_data = (sparse_operator_data *) A->data;
+		export = malloc(sizeof(*export));
+		export->val = malloc(op_data->A->nnz * sizeof(ok_float));
+		export->ind = malloc(op_data->A->nnz * sizeof(ok_int));
+		export->ptr = malloc(op_data->A->ptrlen * sizeof(ok_int));
 
-	 	if (dir == OptkitToOptkit) {
-			input_data = (sparse_operator_data * data);
-			sp_matrix_memcpy_mm(op_data->A, input_data->A);
-		} else {
-			caller_data = (sparse_operator_caller_data *) data;
-			if (!caller_data->val ||
-			    !caller_data->ind ||
-			    !caller_data->ptr) {
-				printf("%s%s%s%s\n", "argument 'data' ",
-					"must contain valid pointers",
-					"<ok_float *> 'val', <ok_int *> 'ind',",
-					" and <ok_int *> 'ptr'");
-			err = OPTKIT_ERROR;
-			} else if (dir == OptkitToCaller) {
-				sp_matrix_memcpy_am(caller_data->val,
-					caller_data->ind, caller_data->ptr,
-					op_data->A);
-			} else {
-				sp_matrix_memcpy_ma(op_data->sparse_handle,
-					op_data->A, caller_data->val,
-					caller_data->ind, caller_data->ptr);
-			}
-		}
+		sp_matrix_memcpy_am(export->val, export->ind, export->ptr,
+			op_data->A);
 	}
+	return (void *) export;
+}
+
+ok_status sparse_operator_import(operator * A, void * data)
+{
+	ok_status err = sparse_operator_typecheck(A, "import");
+	sparse_operator_data * op_data = OK_NULL;
+	struct sparse_operator_export * import = OK_NULL;
+
+	if (!err && data) {
+		op_data = (sparse_operator_data *) A->data;
+		import = (struct sparse_operator_export *) data;
+		sp_matrix_memcpy_ma(op_data->sparse_handle, op_data->A,
+			import->val, import->ind, import->ptr);
+
+		ok_free(import->val);
+		ok_free(import->val);
+		ok_free(import->val);
+		ok_free(import);
+	}
+
 	return err;
 }
 
@@ -179,7 +180,7 @@ ok_status sparse_operator_scale_left(operator * A, const vector * v)
 
 	if (!err) {
 		op_data = (sparse_operator_data *) A->data;
-		sp_matrix_scale_left(op_data->A, v);
+		sp_matrix_scale_left(op_data->sparse_handle, op_data->A, v);
 	}
 	return err;
 }
@@ -191,7 +192,7 @@ ok_status sparse_operator_scale_right(operator * A, const vector * v)
 
 	if (!err) {
 		op_data = (sparse_operator_data *) A->data;
-		sp_matrix_scale_right(op_data->A, v);
+		sp_matrix_scale_right(op_data->sparse_handle, op_data->A, v);
 	}
 	return err;
 }

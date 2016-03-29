@@ -23,6 +23,10 @@ void diagonal_operator_mul_t_fused(void * data, ok_float alpha, vector * input,
 
 operator * diagonal_operator_alloc(vector * d);
 
+ok_status diagonal_operator_abs(operator * A);
+ok_status diagonal_operator_pow(operator * A, const ok_float power);
+ok_status diagonal_operator_scale(operator * A, const ok_float scaling);
+
 #ifdef __cplusplus
 }
 #endif

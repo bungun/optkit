@@ -44,13 +44,6 @@ typedef enum optkit_status {
 	OPTKIT_ERROR_CUSPARSE = 4
 } ok_status;
 
-
-enum OPTKIT_COPY_DIRECTION {
-	OptkitToOptkit;
-	OptkitToCaller;
-	CallerToOptkit;
-};
-
 #ifndef FLOAT
 	#define CBLAS(x) cblas_d ## x
 	#define MATH(x) x

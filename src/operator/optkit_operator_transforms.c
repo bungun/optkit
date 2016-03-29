@@ -4,99 +4,113 @@
 extern "C" {
 #endif
 
-optkit_status operator_copy(operator * A, void * data,
-	enum OPTKIT_COPY_DIRECTION dir)
+void * operator_export(operator * A)
 {
-	if (operator->kind == OkOperatorDense) {
-		return dense_operator_copy(A, data, dir);
-	} else if (operator->kind == OkOperatorSparseCSR ||
-		   operator->kind == OkOperatorSparseCSC) {
-		return sparse_operator_copy(A, data, dir);
+	if (A->kind == OkOperatorDense) {
+		return dense_operator_export(A);
+	} else if (A->kind == OkOperatorSparseCSR ||
+		   A->kind == OkOperatorSparseCSC) {
+		return sparse_operator_export(A);
 	} else {
-		printf("%s\n", "operator_copy() undefined for %s",
+		printf("operator_export() undefined for %s\n",
+			optkit_op2str(A->kind));
+		return OK_NULL;
+	}
+}
+
+ok_status operator_import(operator * A, void * opdata)
+{
+	if (A->kind == OkOperatorDense) {
+		return dense_operator_import(A, opdata);
+	} else if (A->kind == OkOperatorSparseCSR ||
+		   A->kind == OkOperatorSparseCSC) {
+		return sparse_operator_import(A, opdata);
+	} else {
+		printf("operator_import() undefined for %s\n",
 			optkit_op2str(A->kind));
 		return OPTKIT_ERROR;
 	}
 }
 
-optkit_status operator_abs(operator * A)
+
+ok_status operator_abs(operator * A)
 {
-	if (operator->kind == OkOperatorDense) {
+	if (A->kind == OkOperatorDense) {
 		return dense_operator_abs(A);
-	} else if (operator->kind == OkOperatorSparseCSR ||
-		   operator->kind == OkOperatorSparseCSC) {
+	} else if (A->kind == OkOperatorSparseCSR ||
+		   A->kind == OkOperatorSparseCSC) {
 		return sparse_operator_abs(A);
 	} else {
-		printf("%s\n", "operator_abs() undefined for %s",
+		printf("operator_abs() undefined for %s\n",
 			optkit_op2str(A->kind));
 		return OPTKIT_ERROR;
 	}
 }
 
-optkit_status operator_pow(operator * A, ok_float power)
+ok_status operator_pow(operator * A, ok_float power)
 {
-	if (operator->kind == OkOperatorDense) {
+	if (A->kind == OkOperatorDense) {
 		return dense_operator_pow(A, power);
-	} else if (operator->kind == OkOperatorSparseCSR ||
-		   operator->kind == OkOperatorSparseCSC) {
+	} else if (A->kind == OkOperatorSparseCSR ||
+		   A->kind == OkOperatorSparseCSC) {
 		return sparse_operator_pow(A, power);
 	} else {
-		printf("%s\n", "operator_pow() undefined for %s",
+		printf("operator_pow() undefined for %s\n",
 			optkit_op2str(A->kind));
 		return OPTKIT_ERROR;
 	}
 }
 
-optkit_status operator_scale(operator * A, ok_float scaling)
+ok_status operator_scale(operator * A, ok_float scaling)
 {
-	if (operator->kind == OkOperatorDense) {
+	if (A->kind == OkOperatorDense) {
 		return dense_operator_scale(A, scaling);
-	} else if (operator->kind == OkOperatorSparseCSR ||
-		   operator->kind == OkOperatorSparseCSC) {
+	} else if (A->kind == OkOperatorSparseCSR ||
+		   A->kind == OkOperatorSparseCSC) {
 		return sparse_operator_scale(A, scaling);
 	} else {
-		printf("%s\n", "operator_scale() undefined for %s",
+		printf("operator_scale() undefined for %s\n",
 			optkit_op2str(A->kind));
 		return OPTKIT_ERROR;
 	}
 }
 
-optkit_status operator_scale_left(operator * A, vector * v)
+ok_status operator_scale_left(operator * A, const vector * v)
 {
 	if (v->size != A->size1) {
 		printf("%s\n", "dimensions of 'v' incompatible with 'A'");
 		printf("rows A %u\n", (uint) A->size1);
-		printf("size v %s\n", (uint) v->size);
+		printf("size v %u\n", (uint) v->size);
 		return OPTKIT_ERROR;
 	}
-	if (operator->kind == OkOperatorDense) {
-		return dense_operator_scale_left(A, scaling);
-	} else if (operator->kind == OkOperatorSparseCSR ||
-		   operator->kind == OkOperatorSparseCSC) {
-		return sparse_operator_scale_left(A, scaling);
+	if (A->kind == OkOperatorDense) {
+		return dense_operator_scale_left(A, v);
+	} else if (A->kind == OkOperatorSparseCSR ||
+		   A->kind == OkOperatorSparseCSC) {
+		return sparse_operator_scale_left(A, v);
 	} else {
-		printf("%s\n", "operator_scale_left() undefined for %s",
+		printf("operator_scale_left() undefined for %s\n",
 			optkit_op2str(A->kind));
 		return OPTKIT_ERROR;
 	}
 }
 
-optkit_status operator_scale_right(operator * A, vector * v)
+ok_status operator_scale_right(operator * A, const vector * v)
 {
 	if (v->size != A->size2) {
 		printf("%s\n", "dimensions of 'v' incompatible with 'A'");
 		printf("cols A %u\n", (uint) A->size2);
-		printf("size v %s\n", (uint) v->size);
+		printf("size v %u\n", (uint) v->size);
 		return OPTKIT_ERROR;
 	}
 
-	if (operator->kind == OkOperatorDense) {
-		return dense_operator_scale_left(A, scaling);
-	} else if (operator->kind == OkOperatorSparseCSR ||
-		   operator->kind == OkOperatorSparseCSC) {
+	if (A->kind == OkOperatorDense) {
+		return dense_operator_scale_left(A, v);
+	} else if (A->kind == OkOperatorSparseCSR ||
+		   A->kind == OkOperatorSparseCSC) {
 		return sparse_operator_scale_right(A, v);
 	} else {
-		printf("%s\n", "operator_scale_right() undefined for %s",
+		printf("operator_scale_right() undefined for %s\n",
 			optkit_op2str(A->kind));
 		return OPTKIT_ERROR;
 	}
