@@ -1,6 +1,5 @@
 #include "optkit_sparse.h"
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -202,8 +201,6 @@ void __sp_matrix_scale_diag(sp_matrix * A, const vector * v,
   __transpose_inplace(A, dir);
 }
 
-
-
 void sp_matrix_scale_left(void * sparse_handle, sp_matrix * A, const vector * v)
 {
 	if (A->size1 != v->size) {
@@ -228,7 +225,6 @@ void sp_matrix_scale_right(void * sparse_handle, sp_matrix * A,
 	}
 	__sp_matrix_scale_diag(A, v, CblasRight);
 }
-
 
 void sp_matrix_print(const sp_matrix * A)
 {
@@ -297,9 +293,6 @@ void sp_matrix_print_transpose(const sp_matrix * A)
 	printf("\n");
 }
 
-
-
-
 /*
  * Always perform forward (non-transpose) operations.
  * cusparse library uses csr, so for (input, op) combination:
@@ -338,7 +331,6 @@ void sp_blas_gemv(void * sparse_handle, enum CBLAS_TRANSPOSE transA,
 		y->data[i] = alpha * tmp + beta * y->data[i];
 	}
 }
-
 
 #ifdef __cplusplus
 }

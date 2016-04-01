@@ -56,7 +56,6 @@ public:
 typedef thrust::constant_iterator<ok_float> constant_iterator_t;
 typedef strided_range< thrust::device_ptr<ok_float> > strided_range_t;
 
-
 /*
  * thrust:: helper methods
  * =======================
@@ -98,7 +97,6 @@ struct PowF : thrust::unary_function<ok_float, const ok_float>
 	__device__ inline ok_float operator()(ok_float x)
 		{ return MATH(pow)(x, p); }
 };
-
 
 /*
  *optkit.vector -> strided range

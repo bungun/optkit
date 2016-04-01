@@ -13,7 +13,7 @@ void * sparse_operator_data_alloc(sp_matrix * A)
 {
 	sparse_operator_data * op_data;
 	op_data = malloc(sizeof(*op_data));
-	blas_make_handle(&(op_data->dense_handle));
+	blas_make_handle(&(op_data->sparse_handle));
 	sp_make_handle(&(op_data->sparse_handle));
 	op_data->A = A;
 	return (void *) op_data;
@@ -23,7 +23,7 @@ void sparse_operator_data_free(void * data)
 {
 	sparse_operator_data * op_data = (sparse_operator_data *) data;
 	sp_destroy_handle(op_data->sparse_handle);
-	blas_destroy_handle(op_data->dense_handle);
+	blas_destroy_handle(op_data->sparse_handle);
 	ok_free(op_data);
 }
 
@@ -59,16 +59,19 @@ void sparse_operator_mul_t_fused(void * data, ok_float alpha, vector * input,
 
 operator * sparse_operator_alloc(sp_matrix * A)
 {
-	OPTKIT_OPERATOR sparseop_kind = (A->order == CblasColMajor) ?
-					OkOperatorSparseCSC :
-					OkOperatorSparseCSR;
-
-	return operator_alloc(sparseop_kind, A->size1, A->size2,
-		sparse_operator_data_alloc(A),
-		sparse_operator_mul, sparse_operator_mul_t,
-		sparse_operator_mul_fused, sparse_operator_mul_t_fused,
-		sparse_operator_data_free
-	);
+	operator * o = OK_NULL;
+	o = malloc(sizeof(*o));
+	o->kind = (A->order == CblasColMajor) ? OkOperatorSparseCSC :
+			OkOperatorSparseCSR;
+	o->size1 = A->size1;
+	o->size2 = A->size2;
+	o->data = sparse_operator_data_alloc(A);
+	o->apply = sparse_operator_mul;
+	o->adjoint = sparse_operator_mul_t;
+	o->fused_apply = sparse_operator_mul_fused;
+	o->fused_adjoint = sparse_operator_mul_t_fused;
+	o->free = sparse_operator_data_free;
+	return o;
 }
 
 static ok_status sparse_operator_typecheck(operator * A,
@@ -116,7 +119,7 @@ void * sparse_operator_export(operator * A)
 	return (void *) export;
 }
 
-ok_status sparse_operator_import(operator * A, void * data)
+void * sparse_operator_import(operator * A, void * data)
 {
 	ok_status err = sparse_operator_typecheck(A, "import");
 	sparse_operator_data * op_data = OK_NULL;
@@ -132,9 +135,10 @@ ok_status sparse_operator_import(operator * A, void * data)
 		ok_free(import->val);
 		ok_free(import->val);
 		ok_free(import);
+		data = OK_NULL;
 	}
 
-	return err;
+	return data;
 }
 
 ok_status sparse_operator_abs(operator * A)
@@ -195,6 +199,26 @@ ok_status sparse_operator_scale_right(operator * A, const vector * v)
 		sp_matrix_scale_right(op_data->sparse_handle, op_data->A, v);
 	}
 	return err;
+}
+
+transformable_operator * sparse_operator_to_transformable(operator * A)
+{
+	ok_status err = sparse_operator_typecheck(A, "to_transformable");
+	transformable_operator * t = OK_NULL;
+
+	if (!err) {
+		t = malloc(sizeof(*t));
+		t->o = A;
+		t->export = sparse_operator_export;
+		t->import = sparse_operator_import;
+		t->abs = sparse_operator_abs;
+		t->pow = sparse_operator_pow;
+		t->scale = sparse_operator_scale;
+		t->scale_left = sparse_operator_scale_left;
+		t->scale_right = sparse_operator_scale_right;
+	}
+
+	return t;
 }
 
 #ifdef __cplusplus

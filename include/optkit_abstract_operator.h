@@ -37,7 +37,7 @@ typedef enum OPTKIT_OPERATOR{
 	OkOperatorOther = 1000
 } OPTKIT_OPERATOR;
 
-typedef struct abstract_linear_operator{
+typedef struct abstract_linear_operator {
 	size_t size1, size2;
 	void * data;
 	void (* apply)(void * data, vector * input, vector * output);
@@ -50,32 +50,13 @@ typedef struct abstract_linear_operator{
 	OPTKIT_OPERATOR kind;
 } operator;
 
-
-#ifndef ABSTRACT_OPERATOR_BARE
-static operator * operator_alloc(OPTKIT_OPERATOR kind, size_t size1, size_t size2,
-	void * data, void (* apply), void (* adjoint), void (* fused_apply),
-	void (* fused_adjoint), void (* free_))
-{
-	operator * op;
-	op = malloc(sizeof(*op));
-	op->size1 = size1;
-	op->size2 = size2;
-	op->data = data;
-	op->apply = apply;
-	op->adjoint = adjoint;
-	op->fused_apply = fused_apply;
-	op->fused_adjoint = fused_adjoint;
-	op->free = free_;
-	op->kind = kind;
-	return op;
-}
-#endif
-
 #ifdef COMPILE_ABSTRACT_OPERATOR
-/* GENERIC OPERATOR FREE */
-void operator_free(operator * op){
-	if (op->free && op->data) op->free(op->data);
-	ok_free(op);
+void operator_free(operator * o)
+{
+	if (o) {
+		o->free(o->data);
+		ok_free(o);
+	}
 }
 #endif
 

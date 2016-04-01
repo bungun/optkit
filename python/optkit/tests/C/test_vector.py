@@ -25,8 +25,8 @@ class VectorTestCase(unittest.TestCase):
 
 	def test_alloc(self):
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -52,8 +52,8 @@ class VectorTestCase(unittest.TestCase):
 
 	def test_io(self):
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
 				continue
@@ -103,8 +103,8 @@ class VectorTestCase(unittest.TestCase):
 
 	def test_subvector(self):
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -129,8 +129,8 @@ class VectorTestCase(unittest.TestCase):
 
 	def test_math(self):
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 

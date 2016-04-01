@@ -29,7 +29,7 @@ typedef enum ScalarFunction {
 	FnNegEntr, /* f(x) = x log(x) */
 	FnNegLog, /* f(x) = -log(x) */
 	FnRecipr, /* f(x) = 1/x */
-	FnSquare, /* f(x) = (1/2) x^2 */
+	FnSquare /* f(x) = (1/2) x^2 */
 } OPTKIT_SCALAR_FUNCTION;
 
 /* f(x) = c * h(ax-b) + dx + ex^2 */
@@ -124,8 +124,10 @@ __DEVICE__ inline ok_float LambertW(ok_float x)
 	}
 }
 
-/* Find the root of a cubic x^3 + px^2 + qx + r = 0 with a single positive root.
-   ref: http: *math.stackexchange.com/questions/60376 */
+/*
+ * Find the root of a cubic x^3 + px^2 + qx + r = 0 with a single positive root.
+ * ref: http: *math.stackexchange.com/questions/60376
+ */
 __DEVICE__ inline ok_float CubicSolve(ok_float p, ok_float q, ok_float r)
 {
 	ok_float s = p / 3, s2 = s * s, s3 = s2 * s;
@@ -347,8 +349,6 @@ __DEVICE__ inline ok_float ProxEval(const FunctionObj * f_obj, ok_float v,
 	return (v + b) / a;
 }
 
-
-
 /*
  * Function definitions.
  *
@@ -525,6 +525,5 @@ ok_float FuncEvalVector(const FunctionVector * f, const vector * x);
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif /* OPTKIT_PROXLIB_H_ */

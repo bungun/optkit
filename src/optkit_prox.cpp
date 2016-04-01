@@ -1,4 +1,4 @@
- #include "optkit_prox.hpp"
+#include "optkit_prox.hpp"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,8 +28,14 @@ void function_vector_calloc(FunctionVector * f, size_t n)
 	#ifdef _OPENMP
 	#pragma omp parallel for
 	#endif
-	for (i = 0; i < n; ++i)
-		f->objectives[i] = (FunctionObj){FnZero, 1, 0, 1, 0, 0};
+	for (i = 0; i < n; ++i) {
+		f->objectives[i].h = FnZero;
+		f->objectives[i].a = kOne;
+		f->objectives[i].b = kZero;
+		f->objectives[i].c = kOne;
+		f->objectives[i].d = kZero;
+		f->objectives[i].e = kZero;
+	}
 }
 
 void function_vector_free(FunctionVector * f)
@@ -54,44 +60,52 @@ void function_vector_memcpy_av(FunctionObj * h, FunctionVector * f)
 	memcpy(h, f->objectives, f->size * sizeof(FunctionObj));
 }
 
-
 void function_vector_mul(FunctionVector * f, const vector * v)
 {
 	size_t i;
-	vector el = (vector){f->size,
-		sizeof(FunctionObj) / sizeof(ok_float), OK_NULL};
+	vector * el = OK_NULL;
 
+	el = (vector *) malloc(sizeof(*el));
+	el->size = f->size;
+	el->stride = sizeof(FunctionObj) / sizeof(ok_float);
 
-	el.data = &(f->objectives->a);
+	el->data = &(f->objectives->a);
 	for (i = 0; i < f->size; ++i)
-		el.data[i * el.stride] *= v->data[i * v->stride];
+		el->data[i * el->stride] *= v->data[i * v->stride];
 
-	el.data = &(f->objectives->d);
+	el->data = &(f->objectives->d);
 	for (i = 0; i < f->size; ++i)
-		el.data[i * el.stride] *= v->data[i * v->stride];
+		el->data[i * el->stride] *= v->data[i * v->stride];
 
-	el.data = &(f->objectives->e);
+	el->data = &(f->objectives->e);
 	for (i = 0; i < f->size; ++i)
-		el.data[i * el.stride] *= v->data[i * v->stride];
+		el->data[i * el->stride] *= v->data[i * v->stride];
+
+	ok_free(el);
 }
 
 void function_vector_div(FunctionVector * f, const vector * v)
 {
 	size_t i;
-	vector el = (vector){f->size,
-		sizeof(FunctionObj) / sizeof(ok_float), OK_NULL};
+	vector * el = OK_NULL;
 
-	el.data = &(f->objectives->a);
-	for (i = 0; i < f->size; ++i)
-		el.data[i * el.stride] /= v->data[i * v->stride];
+	el = (vector *) malloc(sizeof(*el));
+	el->size = f->size;
+	el->stride = sizeof(FunctionObj) / sizeof(ok_float);
 
-	el.data = &(f->objectives->d);
+	el->data = &(f->objectives->a);
 	for (i = 0; i < f->size; ++i)
-		el.data[i * el.stride] /= v->data[i * v->stride];
+		el->data[i * el->stride] /= v->data[i * v->stride];
 
-	el.data = &(f->objectives->e);
+	el->data = &(f->objectives->d);
 	for (i = 0; i < f->size; ++i)
-		el.data[i * el.stride] /= v->data[i * v->stride];
+		el->data[i * el->stride] /= v->data[i * v->stride];
+
+	el->data = &(f->objectives->e);
+	for (i = 0; i < f->size; ++i)
+		el->data[i * el->stride] /= v->data[i * v->stride];
+
+	ok_free(el);
 }
 
 void function_vector_print(FunctionVector * f)
@@ -116,7 +130,6 @@ void ProxEvalVector(const FunctionVector * f, ok_float rho,
 		x_out->data[i * x_out->stride] = ProxEval(&f->objectives[i],
 			x_in->data[i * x_in->stride], rho);
 }
-
 
 ok_float FuncEvalVector(const FunctionVector * f, const vector * x)
 {

@@ -2,6 +2,7 @@
 #define OPTKIT_OPERATOR_SPARSE_H_
 
 #include "optkit_abstract_operator.h"
+#include "optkit_operator_transforms.h"
 #include "optkit_sparse.h"
 
 #ifdef __cplusplus
@@ -27,12 +28,14 @@ operator * sparse_operator_alloc(sp_matrix * A);
 sp_matrix * sparse_operator_get_matrix_pointer(operator * A);
 
 void * sparse_operator_export(operator * A);
-ok_status sparse_operator_import(operator * A, void * data);
+void * sparse_operator_import(operator * A, void * data);
 ok_status sparse_operator_abs(operator * A);
 ok_status sparse_operator_pow(operator * A, const ok_float power);
 ok_status sparse_operator_scale(operator * A, const ok_float scaling);
 ok_status sparse_operator_scale_left(operator * A, const vector * v);
 ok_status sparse_operator_scale_right(operator * A, const vector * v);
+
+transformable_operator * sparse_operator_to_transformable(operator * A);
 
 #ifdef __cplusplus
 }

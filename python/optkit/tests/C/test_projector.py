@@ -27,11 +27,10 @@ class ProjectorLibsTestCase(unittest.TestCase):
 		dlibs = []
 		plibs = []
 		for (gpu, single_precision) in CONDITIONS:
-			dlibs.append(self.dense_libs.get(single_precision=single_precision,
-											 gpu=gpu))
+			dlibs.append(self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu))
 			plibs.append(self.equil_libs.get(
-						 		dlibs[-1], single_precision=single_precision,
-						 		gpu=gpu))
+					dlibs[-1], single_precision=single_precision, gpu=gpu))
 		self.assertTrue(any(dlibs))
 		self.assertTrue(any(plibs))
 
@@ -240,10 +239,10 @@ class DirectProjectorTestCase(unittest.TestCase):
 			(2) project (x, y) onto graph y = Ax
 		"""
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			plib = self.proj_libs.get(dlib, single_precision=single_precision,
-									  gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			plib = self.proj_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
 			if plib is None:
 				continue
 
@@ -274,12 +273,12 @@ class DirectProjectorTestCase(unittest.TestCase):
 			(3) project (x, y) onto graph y = Ax
 		"""
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			elib = self.equil_libs.get(dlib, single_precision=single_precision,
-									   gpu=gpu)
-			plib = self.proj_libs.get(dlib, single_precision=single_precision,
-									  gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			elib = self.equil_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
+			plib = self.proj_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
 			if plib is None:
 				continue
 

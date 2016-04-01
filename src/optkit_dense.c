@@ -84,7 +84,6 @@ void vector_view_array(vector * v, ok_float * base, size_t n)
 	v->data = base;
 }
 
-
 void vector_memcpy_vv(vector * v1, const vector * v2)
 {
 	uint i;
@@ -191,7 +190,6 @@ void vector_pow(vector * v, const ok_float x)
 		v->data[i * v->stride] = MATH(pow)(v->data[i * v->stride], x);
 }
 
-
 /*
  * MATRIX methods
  * ==============
@@ -205,7 +203,6 @@ inline int __matrix_exists(matrix * A)
 		return 1;
 	}
 }
-
 
 void matrix_alloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord)
 {
@@ -249,7 +246,6 @@ void matrix_submatrix(matrix * A_sub, matrix * A,
 		      A->data + i + (j * A->ld);
 	A_sub->order = A->order;
 }
-
 
 void matrix_row(vector * row, matrix * A, size_t i)
 {
@@ -330,7 +326,6 @@ void __matrix_set_colmajor(matrix * A, size_t i, size_t j, ok_float x)
 {
 	A->data[i + j * A->ld] = x;
 }
-
 
 void matrix_set_all(matrix * A, ok_float x)
 {
@@ -427,7 +422,6 @@ void matrix_print(matrix * A)
 	printf("\n");
 }
 
-
 void matrix_scale(matrix *A, ok_float x)
 {
 	size_t i;
@@ -496,7 +490,6 @@ void matrix_pow(matrix * A, const ok_float x)
 	}
 }
 
-
 int __matrix_order_compat(const matrix * A, const matrix * B, const char * nm_A,
         const char * nm_B, const char * nm_routine)
 {
@@ -507,7 +500,6 @@ int __matrix_order_compat(const matrix * A, const matrix * B, const char * nm_A,
 		nm_routine, nm_A, nm_B);
 	return 0;
 }
-
 
 /*
  * BLAS routines
@@ -597,7 +589,6 @@ void blas_diagmv(void * linalg_handle, const ok_float alpha,
 		beta, y);
 }
 
-
 /* BLAS LEVEL 3 */
 
 void blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
@@ -638,7 +629,6 @@ void blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side,
 		(int) B->size2, alpha, A->data,(int) A->ld, B->data,
 		(int) B->ld);
 }
-
 
 /*
  * LINEAR ALGEBRA routines
@@ -726,7 +716,6 @@ void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
 	}
 }
 
-
 /* Cholesky solve */
 void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x)
 {
@@ -739,7 +728,6 @@ ok_status ok_device_reset()
 {
 	return OPTKIT_SUCCESS;
 }
-
 
 #ifdef __cplusplus
 }

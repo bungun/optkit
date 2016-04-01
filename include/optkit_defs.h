@@ -12,7 +12,6 @@
 #include <cusparse.h>
 #endif
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,17 +21,14 @@ extern "C" {
 #define OPTKIT_VERSION_CHANGE 4
 #define OPTKIT_VERSION_STATUS 'b' /* 'a' = alpha, 'b' = beta, 0 = release */
 
-
 #ifdef OK_DEBUG
 #define PRINT_DEBUG printf
 #else
 #define PRINT_DEBUG
 #endif
 
-
 #define OK_NULL 0
 #define ok_free(x) free(x); x = OK_NULL
-
 
 typedef unsigned int uint;
 typedef int ok_int;
@@ -63,11 +59,9 @@ typedef enum optkit_status {
 #define kZero (ok_float) 0
 #define kOne (ok_float) 1
 
-
 #ifndef OK_INFINITY
 #define OK_INFINITY OK_NAN
 #endif
-
 
 #ifdef __CUDACC__
 #define __DEVICE__ __device__

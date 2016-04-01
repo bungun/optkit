@@ -47,6 +47,7 @@ void __int_set_all(ok_int * data, ok_int val, size_t stride, size_t size)
 	uint grid_dim = calc_grid_dim(size);
 	__int_set<<<grid_dim, kBlockSize>>>(data, val, stride, size);
 }
+
 void __transpose_inplace(void * sparse_handle, sp_matrix * A,
 	SPARSE_TRANSPOSE_DIRECTION dir)
 {
@@ -81,7 +82,6 @@ void __transpose_inplace(void * sparse_handle, sp_matrix * A,
 
 	CUDA_CHECK_ERR;
 }
-
 
 ok_status sp_make_handle(void ** sparse_handle)
 {
@@ -385,7 +385,6 @@ void sp_matrix_print(const sp_matrix * A)
 		}
 	printf("\n");
 }
-
 
 void sp_matrix_print_transpose(const sp_matrix * A)
 {

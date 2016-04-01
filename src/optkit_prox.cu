@@ -89,7 +89,6 @@ ok_float FuncEval_GPU(const FunctionObj * f, const ok_float * x, size_t stride,
 extern "C" {
 #endif
 
-
 void function_vector_alloc(FunctionVector * f, size_t n)
 {
 	function_vector_free(f);
@@ -118,7 +117,6 @@ void function_vector_free(FunctionVector * f)
 	f->size = 0;
 }
 
-
 void function_vector_view_array(FunctionVector * f, FunctionObj * h, size_t n)
 {
 	f->size = n;
@@ -134,7 +132,6 @@ void function_vector_memcpy_av(FunctionObj * h, FunctionVector * f)
 {
 	ok_memcpy_gpu(h, f->objectives, f->size * sizeof(FunctionObj));
 }
-
 
 void function_vector_mul(FunctionVector * f, const vector * v)
 {
@@ -185,7 +182,6 @@ ok_float FuncEvalVector(const FunctionVector * f, const vector * x)
 {
 	return FuncEval_GPU(f->objectives, x->data, x->stride, f->size);
 }
-
 
 #ifdef __cplusplus
 }

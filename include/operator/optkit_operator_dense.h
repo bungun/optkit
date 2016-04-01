@@ -2,6 +2,7 @@
 #define OPTKIT_OPERATOR_DENSE_H_
 
 #include "optkit_abstract_operator.h"
+#include "optkit_operator_transforms.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,12 +26,15 @@ operator * dense_operator_alloc(matrix * A);
 matrix * dense_operator_get_matrix_pointer(operator * A);
 
 void * dense_operator_export(operator * A);
-ok_status dense_operator_import(operator * A, void * data);
+void * dense_operator_import(operator * A, void * data);
 ok_status dense_operator_abs(operator * A);
 ok_status dense_operator_pow(operator * A, const ok_float power);
 ok_status dense_operator_scale(operator * A, const ok_float scaling);
 ok_status dense_operator_scale_left(operator * A, const vector * v);
 ok_status dense_operator_scale_right(operator * A, const vector * v);
+
+transformable_operator * dense_operator_to_transformable(operator * A);
+
 
 #ifdef __cplusplus
 }

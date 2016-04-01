@@ -23,20 +23,19 @@ class ProxLibsTestCase(unittest.TestCase):
 		dlibs = []
 		pxlibs = []
 		for (gpu, single_precision) in CONDITIONS:
-			dlibs.append(self.dense_libs.get(single_precision=single_precision,
-											 gpu=gpu))
+			dlibs.append(self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu))
 			pxlibs.append(self.prox_libs.get(
-						  		dlibs[-1], single_precision=single_precision,
-						  		gpu=gpu))
+					dlibs[-1], single_precision=single_precision, gpu=gpu))
 		self.assertTrue(any(dlibs))
 		self.assertTrue(any(pxlibs))
 
 	def test_lib_types(self):
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			lib = self.prox_libs.get(dlib, single_precision=single_precision,
-									 gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			lib = self.prox_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -47,10 +46,10 @@ class ProxLibsTestCase(unittest.TestCase):
 
 	def test_version(self):
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			lib = self.prox_libs.get(dlib, single_precision=single_precision,
-									 gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			lib = self.prox_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -106,10 +105,10 @@ class ProxTestCase(unittest.TestCase):
 		m, n = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			lib = self.prox_libs.get(dlib, single_precision=single_precision,
-									 gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			lib = self.prox_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -136,10 +135,10 @@ class ProxTestCase(unittest.TestCase):
 		e = np.random.rand()
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			lib = self.prox_libs.get(dlib, single_precision=single_precision,
-									 gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			lib = self.prox_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -217,10 +216,10 @@ class ProxTestCase(unittest.TestCase):
 		hval = 0
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			lib = self.prox_libs.get(dlib, single_precision=single_precision,
-									 gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			lib = self.prox_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -294,10 +293,10 @@ class ProxTestCase(unittest.TestCase):
 		x_rand = np.random.rand(m)
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			lib = self.prox_libs.get(dlib, single_precision=single_precision,
-									 gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			lib = self.prox_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 

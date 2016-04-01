@@ -53,12 +53,18 @@ void dense_operator_mul_t_fused(void * data, ok_float alpha, vector * input,
 
 operator * dense_operator_alloc(matrix * A)
 {
-	return operator_alloc(OkOperatorDense, A->size1, A->size2,
-		dense_operator_data_alloc(A),
-		dense_operator_mul, dense_operator_mul_t,
-		dense_operator_mul_fused, dense_operator_mul_t_fused,
-		dense_operator_data_free
-	);
+	operator * o = OK_NULL;
+	o = malloc(sizeof(*o));
+	o->kind = OkOperatorDense;
+	o->size1 = A->size1;
+	o->size2 = A->size2;
+	o->data = dense_operator_data_alloc(A);
+	o->apply = dense_operator_mul;
+	o->adjoint = dense_operator_mul_t;
+	o->fused_apply = dense_operator_mul_fused;
+	o->fused_adjoint = dense_operator_mul_t_fused;
+	o->free = dense_operator_data_free;
+	return o;
 }
 
 static ok_status dense_operator_typecheck(operator * A, const char * caller)
@@ -101,7 +107,7 @@ void * dense_operator_export(operator * A)
 	return (void *) export;
 }
 
-ok_status dense_operator_import(operator * A, void * data)
+void * dense_operator_import(operator * A, void * data)
 {
 	ok_status err = dense_operator_typecheck(A, "import");
 	dense_operator_data * op_data = OK_NULL;
@@ -112,9 +118,10 @@ ok_status dense_operator_import(operator * A, void * data)
 		import = (ok_float *) data;
 		matrix_memcpy_ma(op_data->A, import, op_data->A->order);
 		ok_free(import);
+		data = OK_NULL;
 	}
 
-	return err;
+	return data;
 }
 
 ok_status dense_operator_abs(operator * A)
@@ -175,6 +182,26 @@ ok_status dense_operator_scale_right(operator * A, const vector * v)
 		matrix_scale_right(op_data->A, v);
 	}
 	return err;
+}
+
+transformable_operator * dense_operator_to_transformable(operator * A)
+{
+	ok_status err = dense_operator_typecheck(A, "to_transformable");
+	transformable_operator * t = OK_NULL;
+
+	if (!err) {
+		t = malloc(sizeof(*t));
+		t->o = A;
+		t->export = dense_operator_export;
+		t->import = dense_operator_import;
+		t->abs = dense_operator_abs;
+		t->pow = dense_operator_pow;
+		t->scale = dense_operator_scale;
+		t->scale_left = dense_operator_scale_left;
+		t->scale_right = dense_operator_scale_right;
+	}
+
+	return t;
 }
 
 #ifdef __cplusplus

@@ -18,11 +18,6 @@ class OperatorLibsTestCase(unittest.TestCase):
 		self.sparse_libs = SparseLinsysLibs()
 		self.op_libs = OperatorLibs()
 
-	@classmethod
-	def tearDownClass(self):
-		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
-
-	def setUp(self):
 		self.shape = None
 		if DEFAULT_MATRIX_PATH is not None:
 			try:
@@ -43,8 +38,16 @@ class OperatorLibsTestCase(unittest.TestCase):
 				if np.random.rand() > 0.4:
 					self.A_test_sparse[:, j] *= 0
 
-		self.x_test = np.random.rand(self.shape[1])
 		self.nnz = sum(sum(self.A_test_sparse > 0))
+
+		self.x_test = np.random.rand(self.shape[1])
+
+	@classmethod
+	def tearDownClass(self):
+		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
+
+	def setUp(self):
+		pass
 
 	def validate_operator(self, operator_, m, n, OPERATOR_KIND):
 		o = operator_
@@ -120,14 +123,13 @@ class OperatorLibsTestCase(unittest.TestCase):
 		slibs = []
 		oplibs = []
 		for (gpu, single_precision) in CONDITIONS:
-			dlibs.append(self.dense_libs.get(gpu=gpu,
-						 single_precision=single_precision))
+			dlibs.append(self.dense_libs.get(
+					gpu=gpu, single_precision=single_precision))
 			slibs.append(self.sparse_libs.get(
-								dlibs[-1], single_precision=single_precision,
-								gpu=gpu))
+					dlibs[-1], single_precision=single_precision, gpu=gpu))
 			oplibs.append(self.op_libs.get(
-						  		dlibs[-1], slibs[-1],
-						  		single_precision=single_precision, gpu=gpu))
+					dlibs[-1], slibs[-1], single_precision=single_precision,
+					gpu=gpu))
 		self.assertTrue(any(dlibs))
 		self.assertTrue(any(slibs))
 		self.assertTrue(any(oplibs))
@@ -136,13 +138,12 @@ class OperatorLibsTestCase(unittest.TestCase):
 		m, n = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			slib = self.sparse_libs.get(dlib,
-										single_precision=single_precision,
-										gpu=gpu)
-			lib = self.op_libs.get(dlib, slib,
-								   single_precision=single_precision, gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			slib = self.sparse_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.op_libs.get(
+					dlib, slib, single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
 				continue
@@ -165,13 +166,12 @@ class OperatorLibsTestCase(unittest.TestCase):
 		m, n = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			slib = self.sparse_libs.get(dlib,
-										single_precision=single_precision,
-										gpu=gpu)
-			lib = self.op_libs.get(dlib, slib,
-								   single_precision=single_precision, gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			slib = self.sparse_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.op_libs.get(
+					dlib, slib, single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
 				continue
@@ -202,13 +202,12 @@ class OperatorLibsTestCase(unittest.TestCase):
 		m, n = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			slib = self.sparse_libs.get(dlib,
-										single_precision=single_precision,
-										gpu=gpu)
-			lib = self.op_libs.get(dlib, slib,
-								   single_precision=single_precision, gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			slib = self.sparse_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.op_libs.get(
+					dlib, slib, single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
 				continue
@@ -234,13 +233,12 @@ class OperatorLibsTestCase(unittest.TestCase):
 		m, n = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			slib = self.sparse_libs.get(dlib,
-										single_precision=single_precision,
-										gpu=gpu)
-			lib = self.op_libs.get(dlib, slib,
-								   single_precision=single_precision, gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			slib = self.sparse_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.op_libs.get(
+					dlib, slib, single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
 				continue
@@ -280,13 +278,12 @@ class OperatorLibsTestCase(unittest.TestCase):
 		m, n = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			slib = self.sparse_libs.get(dlib,
-										single_precision=single_precision,
-										gpu=gpu)
-			lib = self.op_libs.get(dlib, slib,
-								   single_precision=single_precision, gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			slib = self.sparse_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.op_libs.get(
+					dlib, slib, single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
 				continue
@@ -306,13 +303,12 @@ class OperatorLibsTestCase(unittest.TestCase):
 		m, n = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			slib = self.sparse_libs.get(dlib,
-										single_precision=single_precision,
-										gpu=gpu)
-			lib = self.op_libs.get(dlib, slib,
-								   single_precision=single_precision, gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			slib = self.sparse_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.op_libs.get(
+					dlib, slib, single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
 				continue

@@ -182,6 +182,7 @@ void dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out,
 ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 	vector * d, vector * e, const ok_float pnorm)
 {
+	transformable_operator * transform = OK_NULL;
 	void * A_temp = OK_NULL;
 	const ok_float kSinkhornConst = 1e-4;
 	const ok_float kEps = 1e-2;
@@ -189,24 +190,41 @@ ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 	ok_float norm_d, norm_e;
 	ok_status err = OPTKIT_SUCCESS;
 	size_t k;
+	int blas_handle_provided = 1;
 	vector d_diff = (vector) {0, 0, OK_NULL};
 	vector e_diff = (vector) {0, 0, OK_NULL};
+
+	if (!linalg_handle) {
+		blas_make_handle(&linalg_handle);
+		blas_handle_provided = 0;
+	}
+
+	if (A->kind == OkOperatorDense) {
+		transform = dense_operator_to_transformable(A);
+	} else if (A->kind == OkOperatorSparseCSC ||
+		   A->kind == OkOperatorSparseCSR) {
+		transform = sparse_operator_to_transformable(A);
+	} else {
+		printf("\n%s", "ERROR: operator_regularized_sinkhorn only ");
+		printf("%s\n", "defined for dense and sparse operators");
+		return OPTKIT_ERROR;
+	}
 
 	vector_calloc(&d_diff, A->size1);
 	vector_calloc(&e_diff, A->size2);
 
 	norm_d = norm_e = 1;
 
-	A_temp = operator_export(A);
+	A_temp = transform->export(A);
 	err = (A_temp == OK_NULL);
 
 	if (!err)
-		err = operator_abs(A);
+		err = transform->abs(A);
 
 	vector_set_all(d, kOne);
 
 	if (pnorm != 1 && !err)
-		err = operator_pow(A, pnorm);
+		err = transform->pow(A, pnorm);
 
 	for (k = 0; k < kMaxIter && !err; ++k) {
 		A->adjoint(A->data, d, e);
@@ -233,21 +251,35 @@ ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 		vector_pow(e, kOne / pnorm);
 	}
 
-	if (!err)
-		err = operator_import(A, A_temp);
+	if (!err) {
+		A_temp = transform->import(A, A_temp);
+	}
 
 	if (!err) {
-		err = operator_scale_left(A, d);
-		err = operator_scale_right(A, e);
+		err = transform->scale_left(A, d);
+		err = transform->scale_right(A, e);
 	}
 
 	if (A_temp)
 		ok_free(A_temp);
 
+	if (transform)
+		ok_free(transform);
+
 	vector_free(&d_diff);
 	vector_free(&e_diff);
 
+	if (!blas_handle_provided)
+		blas_destroy_handle(linalg_handle);
+
 	return err;
+}
+
+/* STUB */
+ok_status operator_equilibrate(void * linalg_handle, operator * A,
+	vector * d, vector * e, const ok_float pnorm)
+{
+	return OPTKIT_ERROR;
 }
 
 /*
@@ -260,10 +292,10 @@ ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
  */
 ok_float operator_estimate_norm(void * linalg_handle, operator * A)
 {
-	const ok_float kNormTol = 1e-3;
+	const ok_float kNormTol = 1e-5;
 	const uint kNormIter = 50u;
 
-	ok_float norm_est = 9, norm_est_prev, norm_x, norm_Ax;
+	ok_float norm_est = kZero, norm_est_prev, norm_x, norm_Ax;
 	vector x, Ax;
 	uint i;
 

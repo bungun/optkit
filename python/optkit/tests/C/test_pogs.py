@@ -39,17 +39,13 @@ class PogsLibsTestCase(unittest.TestCase):
 		pxlibs = []
 		libs = []
 		for (gpu, single_precision) in CONDITIONS:
-			dlibs.append(
-					self.dense_libs.get(single_precision=single_precision,
-										gpu=gpu))
-			pxlibs.append(
-					self.prox_libs.get(dlibs[-1],
-									   single_precision=single_precision,
-									   gpu=gpu))
-			libs.append(
-					self.pogs_libs.get(dlibs[-1], pxlibs[-1],
-									   single_precision=single_precision,
-									   gpu=gpu))
+			dlibs.append(self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu))
+			pxlibs.append(self.prox_libs.get(
+					dlibs[-1], single_precision=single_precision, gpu=gpu))
+			libs.append(self.pogs_libs.get(
+					dlibs[-1], pxlibs[-1], single_precision=single_precision,
+					gpu=gpu))
 		self.assertTrue(any(dlibs))
 		self.assertTrue(any(pxlibs))
 		self.assertTrue(any(libs))
@@ -553,13 +549,12 @@ class PogsTestCase(unittest.TestCase):
 
 	def test_default_settings(self):
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			pxlib = self.prox_libs.get(dlib, single_precision=single_precision,
-									   gpu=gpu)
-			lib = self.pogs_libs.get(dlib, pxlib,
-									 single_precision=single_precision,
-									 gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			pxlib = self.prox_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.pogs_libs.get(
+					dlib, pxlib, single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
 				continue
@@ -583,13 +578,12 @@ class PogsTestCase(unittest.TestCase):
 
 	def test_pogs_init_finish(self):
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			pxlib = self.prox_libs.get(dlib, single_precision=single_precision,
-									   gpu=gpu)
-			lib = self.pogs_libs.get(dlib, pxlib,
-									 single_precision=single_precision,
-									 gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			pxlib = self.prox_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.pogs_libs.get(
+					dlib, pxlib, single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
 				continue
@@ -611,13 +605,12 @@ class PogsTestCase(unittest.TestCase):
 		m, n = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			pxlib = self.prox_libs.get(dlib, single_precision=single_precision,
-									   gpu=gpu)
-			lib = self.pogs_libs.get(dlib, pxlib,
-									 single_precision=single_precision,
-									 gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			pxlib = self.prox_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.pogs_libs.get(
+					dlib, pxlib, single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
 				continue
@@ -703,13 +696,12 @@ class PogsTestCase(unittest.TestCase):
 		m, n = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			pxlib = self.prox_libs.get(dlib, single_precision=single_precision,
-									   gpu=gpu)
-			lib = self.pogs_libs.get(dlib, pxlib,
-									 single_precision=single_precision,
-									 gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			pxlib = self.prox_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.pogs_libs.get(
+					dlib, pxlib, single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
 				continue
@@ -781,13 +773,12 @@ class PogsTestCase(unittest.TestCase):
 		m, n = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			pxlib = self.prox_libs.get(dlib, single_precision=single_precision,
-									   gpu=gpu)
-			lib = self.pogs_libs.get(dlib, pxlib,
-									 single_precision=single_precision,
-									 gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			pxlib = self.prox_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.pogs_libs.get(
+					dlib, pxlib, single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
 				continue
@@ -855,13 +846,12 @@ class PogsTestCase(unittest.TestCase):
 		m, n = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			pxlib = self.prox_libs.get(dlib, single_precision=single_precision,
-									   gpu=gpu)
-			lib = self.pogs_libs.get(dlib, pxlib,
-									 single_precision=single_precision,
-									 gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			pxlib = self.prox_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.pogs_libs.get(
+					dlib, pxlib, single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
 				continue
@@ -1019,13 +1009,12 @@ class PogsTestCase(unittest.TestCase):
 		m, n = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(single_precision=single_precision,
-									   gpu=gpu)
-			pxlib = self.prox_libs.get(dlib, single_precision=single_precision,
-									   gpu=gpu)
-			lib = self.pogs_libs.get(dlib, pxlib,
-									 single_precision=single_precision,
-									 gpu=gpu)
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			pxlib = self.prox_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.pogs_libs.get(
+					dlib, pxlib, single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
 				continue

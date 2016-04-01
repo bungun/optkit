@@ -53,12 +53,18 @@ void diagonal_operator_mul_t_fused(void * data, ok_float alpha, vector * input,
 
 operator * diagonal_operator_alloc(vector * d)
 {
-	return operator_alloc(OkOperatorDiagonal, d->size, d->size,
-		diagonal_operator_data_alloc(d),
-		diagonal_operator_mul, diagonal_operator_mul_t,
-		diagonal_operator_mul_fused, diagonal_operator_mul_t_fused,
-		diagonal_operator_data_free
-	);
+	operator * o = OK_NULL;
+	o = malloc(sizeof(*o));
+	o->kind = OkOperatorDiagonal;
+	o->size1 = d->size;
+	o->size2 = d->size;
+	o->data = diagonal_operator_data_alloc(d);
+	o->apply = diagonal_operator_mul;
+	o->adjoint = diagonal_operator_mul_t;
+	o->fused_apply = diagonal_operator_mul_fused;
+	o->fused_adjoint = diagonal_operator_mul_t_fused;
+	o->free = diagonal_operator_data_free;
+	return o;
 }
 
 static ok_status diagonal_operator_typecheck(operator * A, const char * caller)

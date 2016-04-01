@@ -21,14 +21,14 @@ class DenseLibsTestCase(unittest.TestCase):
 	def test_libs_exist(self):
 		libs = []
 		for (gpu, single_precision) in CONDITIONS:
-			libs.append(self.dense_libs.get(single_precision=single_precision,
-											gpu=gpu))
+			libs.append(self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu))
 		self.assertTrue(any(libs))
 
 	def test_lib_types(self):
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -46,8 +46,8 @@ class DenseLibsTestCase(unittest.TestCase):
 
 	def test_blas_handle(self):
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -59,8 +59,8 @@ class DenseLibsTestCase(unittest.TestCase):
 
 	def test_device_reset(self):
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -76,8 +76,8 @@ class DenseLibsTestCase(unittest.TestCase):
 
 	def test_version(self):
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -142,8 +142,8 @@ class DenseBLASTestCase(unittest.TestCase):
 		hdl = c_void_p()
 
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -171,8 +171,8 @@ class DenseBLASTestCase(unittest.TestCase):
 		hdl = c_void_p()
 
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -196,8 +196,8 @@ class DenseBLASTestCase(unittest.TestCase):
 		hdl = c_void_p()
 
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -223,8 +223,8 @@ class DenseBLASTestCase(unittest.TestCase):
 		v_rand= np.random.rand(m)
 
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -249,8 +249,8 @@ class DenseBLASTestCase(unittest.TestCase):
 		hdl = c_void_p()
 
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -279,8 +279,8 @@ class DenseBLASTestCase(unittest.TestCase):
 		hdl = c_void_p()
 
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -352,8 +352,8 @@ class DenseBLASTestCase(unittest.TestCase):
 		x_rand = np.random.rand(n)
 
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -403,8 +403,8 @@ class DenseBLASTestCase(unittest.TestCase):
 		hdl = c_void_p()
 
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -463,8 +463,8 @@ class DenseBLASTestCase(unittest.TestCase):
 		hdl = c_void_p()
 
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -511,8 +511,8 @@ class DenseBLASTestCase(unittest.TestCase):
 		C_test = np.random.rand(n, n)
 
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -567,8 +567,8 @@ class DenseBLASTestCase(unittest.TestCase):
 		B_test = B_test.T.dot(B_test)
 
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -634,8 +634,8 @@ class DenseBLASTestCase(unittest.TestCase):
 			if gpu:
 				continue
 
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -721,8 +721,8 @@ class DenseLinalgTestCase(unittest.TestCase):
 		pychol = np.linalg.cholesky(AA_test)
 
 		for (gpu, single_precision) in CONDITIONS:
-			lib = self.dense_libs.get(single_precision=single_precision,
-									  gpu=gpu)
+			lib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 

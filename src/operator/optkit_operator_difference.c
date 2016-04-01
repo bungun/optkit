@@ -82,14 +82,18 @@ void difference_operator_mul_t_fused(void * data, ok_float alpha,
 
 operator * difference_operator_alloc(size_t n, size_t offset)
 {
-	return operator_alloc(OkOperatorDifference, n, n,
-		difference_operator_data_alloc(n, offset),
-		difference_operator_mul,
-		difference_operator_mul_t,
-		difference_operator_mul_fused,
-		difference_operator_mul_t_fused,
-		difference_operator_data_free
-	);
+	operator * o = OK_NULL;
+	o = malloc(sizeof(*o));
+	o->kind = OkOperatorDifference;
+	o->size1 = n;
+	o->size2 = n;
+	o->data = difference_operator_data_alloc(n, offset);
+	o->apply = difference_operator_mul;
+	o->adjoint = difference_operator_mul_t;
+	o->fused_apply = difference_operator_mul_fused;
+	o->fused_adjoint = difference_operator_mul_t_fused;
+	o->free = difference_operator_data_free;
+	return o;
 }
 
 void * block_difference_operator_data_alloc(size_t n_blocks,
@@ -212,17 +216,20 @@ void block_difference_operator_mul_t_fused(void * data, ok_float alpha,
 operator * block_difference_operator_alloc(size_t n, size_t n_blocks,
 	size_t * block_sizes, size_t * offsets)
 {
-	return operator_alloc(OkOperatorBlockDifference, n, n,
-		block_difference_operator_data_alloc(n_blocks, block_sizes,
-			offsets),
-		block_difference_operator_mul,
-		block_difference_operator_mul_t,
-		block_difference_operator_mul_fused,
-		block_difference_operator_mul_t_fused,
-		block_difference_operator_data_free
-	);
+	operator * o = OK_NULL;
+	o = malloc(sizeof(*o));
+	o->kind = OkOperatorBlockDifference;
+	o->size1 = n;
+	o->size2 = n;
+	o->data = block_difference_operator_data_alloc(n_blocks, block_sizes,
+			offsets);
+	o->apply = block_difference_operator_mul;
+	o->adjoint = block_difference_operator_mul_t;
+	o->fused_apply = block_difference_operator_mul_fused;
+	o->fused_adjoint = block_difference_operator_mul_t_fused;
+	o->free = block_difference_operator_data_free;
+	return o;
 }
-
 
 #ifdef __cplusplus
 }

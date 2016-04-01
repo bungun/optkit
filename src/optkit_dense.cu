@@ -2,7 +2,6 @@
 #include "optkit_defs_gpu.h"
 #include "optkit_thrust.hpp"
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -57,7 +56,6 @@ __global__ void __strided_memcpy(ok_float * x, size_t stride_x,
 	for (i = tid; i < size; i += gridDim.x * blockDim.x)
 	x[i * stride_x] = y[i * stride_y];
 }
-
 
 /*
  * VECTOR methods
@@ -207,7 +205,7 @@ void vector_add_constant(vector * v, const ok_float x)
 {
 	__thrust_vector_add_constant(v, x);
 	CUDA_CHECK_ERR;
-	}
+}
 
 void vector_abs(vector * v)
 {
@@ -232,7 +230,6 @@ void vector_pow(vector * v, const ok_float x)
 	__thrust_vector_pow(v, x);
 	CUDA_CHECK_ERR;
 }
-
 
 /*
  * MATRIX CUDA helper methods
@@ -267,7 +264,6 @@ __global__ void __matrix_set_c(ok_float * data, ok_float x, size_t stride,
 			data[i + j * stride] = x;
 }
 
-
 void __matrix_set_all(matrix * A, ok_float x)
 {
 	uint grid_dimx = calc_grid_dim(A->size1);
@@ -291,7 +287,6 @@ __global__ void __matrix_add_constant_diag(ok_float * data, ok_float x,
 	data[i * stride + i] += x;
 }
 
-
 /* row major data retrieval */
 __device__ inline ok_float& __matrix_get_r(ok_float * A, uint i, uint j,
 	uint stride)
@@ -306,7 +301,6 @@ __device__ inline ok_float& __matrix_get_c(ok_float * A, uint i, uint j,
 {
 	return A[i + j * stride];
 }
-
 
 /*
  * MATRIX methods
@@ -386,8 +380,6 @@ void matrix_row(vector * row, matrix * A, size_t i)
 		    A->data + (i * A->ld) : A->data + i;
 }
 
-
-
 void matrix_column(vector * col, matrix *A, size_t j)
 {
 	if (!__vector_exists(col))
@@ -430,7 +422,6 @@ void matrix_set_all(matrix * A, ok_float x)
 {
 	__matrix_set_all(A, x);
 }
-
 
 void matrix_memcpy_mm(matrix * A, const matrix * B)
 {
@@ -680,7 +671,6 @@ ok_status blas_destroy_handle(void * handle)
 	return OPTKIT_SUCCESS;
 }
 
-
 /* BLAS LEVEL 1 */
 void blas_axpy(void * linalg_handle, ok_float alpha, const vector *x, vector *y)
 {
@@ -795,7 +785,6 @@ void blas_trsv(void * linalg_handle, enum CBLAS_UPLO uplo,
 	CUDA_CHECK_ERR;
 }
 
-
 void blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
 	enum CBLAS_UPLO uplo, const size_t num_superdiag, const ok_float alpha,
 	const vector * vecA, const vector * x, const ok_float beta, vector * y)
@@ -889,7 +878,6 @@ void blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 
 	CUDA_CHECK_ERR;
 }
-
 
 void blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side, enum CBLAS_UPLO uplo,
 	enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, ok_float alpha,
@@ -1055,7 +1043,6 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 	}
 }
 
-
 /* Cholesky solve */
 void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x)
 {
@@ -1070,7 +1057,6 @@ ok_status ok_device_reset()
 	CUDA_CHECK_ERR;
 	return OPTKIT_SUCCESS;
 }
-
 
 #ifdef __cplusplus
 }

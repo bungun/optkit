@@ -15,6 +15,42 @@ void projectorlib_version(int * maj, int * min, int * change, int * status)
 	* status = (int) OPTKIT_VERSION_STATUS;
 }
 
+int projector_normalization(projector * P)
+{
+	dense_direct_projector * Pdd = OK_NULL;
+	indirect_projector_generic * Pi = OK_NULL;
+
+	if (P->kind == OkProjectorDenseDirect) {
+		Pdd = (dense_direct_projector *) P->data;
+		return Pdd->normalized;
+	} else if (P->kind == OkProjectorIndirect) {
+		Pi = (indirect_projector_generic *) P->data;
+		return Pi->normalized;
+	} else {
+		printf("%s", "projector normalizetion status unretrievable");
+		printf("%s\n", "returning 1");
+		return 0;
+	}
+}
+
+ok_float projector_get_norm(projector * P)
+{
+	dense_direct_projector * Pdd = OK_NULL;
+	indirect_projector_generic * Pi = OK_NULL;
+
+	if (P->kind == OkProjectorDenseDirect) {
+		Pdd = (dense_direct_projector *) P->data;
+		return Pdd->normA;
+	} else if (P->kind == OkProjectorIndirect) {
+		Pi = (indirect_projector_generic *) P->data;
+		return Pi->normA;
+	} else {
+		printf("%s\n", "projector norm unretrievable, returning 1");
+		return kOne;
+	}
+}
+
+
 /* Direct Projector methods */
 void direct_projector_alloc(direct_projector * P, matrix * A)
 {
@@ -207,11 +243,16 @@ void dense_direct_projector_project(void * data, vector * x_in, vector * y_in,
 
 projector * dense_direct_projector_alloc(matrix * A)
 {
-	return projector_alloc(OkProjectorDenseDirect, A->size1, A->size2,
-		dense_direct_projector_data_alloc(A),
-		dense_direct_projector_initialize,
-		dense_direct_projector_project,
-		dense_direct_projector_data_free);
+	projector * P = OK_NULL;
+	P = malloc(sizeof(*P));
+	P->kind = OkProjectorDenseDirect;
+	P->size1 = A->size1;
+	P->size2 = A->size2;
+	P->data = dense_direct_projector_data_alloc(A);
+	P->initialize = dense_direct_projector_initialize;
+	P->project = dense_direct_projector_project;
+	P->free = dense_direct_projector_data_free;
+	return P;
 }
 
 void * indirect_projector_data_alloc(operator * A)
@@ -263,12 +304,18 @@ void indirect_projector_g_project(void * data, vector * x_in, vector * y_in,
 
 projector * indirect_projector_generic_alloc(operator * A)
 {
-	return projector_alloc(OkProjectorIndirect, A->size1, A->size2,
-		indirect_projector_data_alloc(A),
-		indirect_projector_g_initialize,
-		indirect_projector_g_project,
-		indirect_projector_data_free);
+	projector * P = OK_NULL;
+	P = malloc(sizeof(*P));
+	P->kind = OkProjectorIndirect;
+	P->size1 = A->size1;
+	P->size2 = A->size2;
+	P->data = indirect_projector_data_alloc(A);
+	P->initialize = indirect_projector_g_initialize;
+	P->project = indirect_projector_g_project;
+	P->free = indirect_projector_data_free;
+	return P;
 }
+
 
 #ifdef __cplusplus
 }

@@ -25,7 +25,6 @@ const unsigned int kMaxGridSize = 65535u;
 	} while (0)
 #endif
 
-
 /*
  * http://stackoverflow.com/questions/14038589/what-is-the-canonical-way-to-
  * check-for-errors-using-the-cuda-runtime-api
