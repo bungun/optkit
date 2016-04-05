@@ -6,6 +6,7 @@ from optkit.libs import DenseLinsysLibs, ProxLibs, PogsLibs
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
 from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH, \
 							  significant_digits
+from optkit.tests.C.pogs_helper import PogsVariablesLocal, PogsOutputLocal
 
 ALPHA_DEFAULT = 1.7
 RHO_DEFAULT = 1
@@ -50,65 +51,8 @@ class PogsLibsTestCase(unittest.TestCase):
 		self.assertTrue(any(pxlibs))
 		self.assertTrue(any(libs))
 
-class PogsVariablesLocal():
-	def __init__(self, m, n, pytype):
-		self.m = m
-		self.n = n
-		self.z = np.zeros(m + n).astype(pytype)
-		self.z12 = np.zeros(m + n).astype(pytype)
-		self.zt = np.zeros(m + n).astype(pytype)
-		self.zt12 = np.zeros(m + n).astype(pytype)
-		self.prev = np.zeros(m + n).astype(pytype)
-		self.d = np.zeros(m).astype(pytype)
-		self.e = np.zeros(n).astype(pytype)
-
-	@property
-	def x(self):
-		return self.z[self.m:]
-
-	@property
-	def y(self):
-		return self.z[:self.m]
-
-	@property
-	def x12(self):
-		return self.z12[self.m:]
-
-	@property
-	def y12(self):
-		return self.z12[:self.m]
-
-	@property
-	def xt(self):
-		return self.zt[self.m:]
-
-	@property
-	def yt(self):
-		return self.zt[:self.m]
-
-	@property
-	def xt12(self):
-		return self.zt12[self.m:]
-
-	@property
-	def yt12(self):
-		return self.zt12[:self.m]
-
-class PogsOutputLocal():
-	def __init__(self, denselib, pogslib, m, n):
-		self.x = np.zeros(n).astype(denselib.pyfloat)
-		self.y = np.zeros(m).astype(denselib.pyfloat)
-		self.mu = np.zeros(n).astype(denselib.pyfloat)
-		self.nu = np.zeros(m).astype(denselib.pyfloat)
-		self.ptr = pogslib.pogs_output(
-				cast(self.x.ctypes.get_data(), denselib.ok_float_p),
-				cast(self.y.ctypes.get_data(), denselib.ok_float_p),
-				cast(self.mu.ctypes.get_data(), denselib.ok_float_p),
-				cast(self.nu.ctypes.get_data(), denselib.ok_float_p))
-
 class PogsTestCase(unittest.TestCase):
 	"""TODO: docstring"""
-
 
 	@classmethod
 	def setUpClass(self):
@@ -118,11 +62,6 @@ class PogsTestCase(unittest.TestCase):
 		self.prox_libs = ProxLibs()
 		self.pogs_libs = PogsLibs()
 
-	@classmethod
-	def tearDownClass(self):
-		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
-
-	def setUp(self):
 		self.shape = None
 		if DEFAULT_MATRIX_PATH is not None:
 			try:
@@ -136,11 +75,20 @@ class PogsTestCase(unittest.TestCase):
 
 		self.x_test = np.random.rand(self.shape[1])
 
-	def load_to_local(self, denselib, py_vector, c_vector):
+	@classmethod
+	def tearDownClass(self):
+		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
+
+	def setUp(self):
+		pass
+
+	@staticmethod
+	def load_to_local(denselib, py_vector, c_vector):
 		denselib.vector_memcpy_av(
 				py_vector.ctypes.data_as(denselib.ok_float_p), c_vector, 1)
 
-	def load_all_local(self, denselib, py_vars, solver):
+	@staticmethod
+	def load_all_local(denselib, py_vars, solver):
 		if not isinstance(py_vars, PogsVariablesLocal):
 			raise TypeError('argument "py_vars" must be of type {}'.format(
 							PogsVariablesLocal))
@@ -761,7 +709,7 @@ class PogsTestCase(unittest.TestCase):
 					dual_feas = np.linalg.norm(A.T.dot(output.nu) + output.mu)
 
 					self.assertTrue(primal_feas <= 10 * (atolm + rtol * y_norm))
-					self.assertTrue(dual_feas <= 10 * (atolm + rtol * y_norm))
+					self.assertTrue(dual_feas <= 20 * (atoln + rtol * mu_norm))
 
 			pxlib.function_vector_free(f)
 			pxlib.function_vector_free(g)
@@ -834,7 +782,7 @@ class PogsTestCase(unittest.TestCase):
 					primal_feas = np.linalg.norm(A.dot(output.x) - output.y)
 					dual_feas = np.linalg.norm(A.T.dot(output.nu) + output.mu)
 					self.assertTrue(primal_feas <= 10 * (atolm + rtol * y_norm))
-					self.assertTrue(dual_feas <= 10 * (atolm + rtol * y_norm))
+					self.assertTrue(dual_feas <= 20 * (atoln + rtol * mu_norm))
 
 			pxlib.function_vector_free(f)
 			pxlib.function_vector_free(g)

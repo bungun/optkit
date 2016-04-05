@@ -349,4 +349,5 @@ class SparseLinsysLibs(object):
 			lib.FLOAT = single_precision
 			lib.GPU = gpu
 			lib.INITIALIZED = True
+
 			return lib

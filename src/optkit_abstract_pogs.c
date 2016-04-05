@@ -14,38 +14,34 @@ void pogslib_version(int * maj, int * min, int * change, int * status)
 	* status = (int) OPTKIT_VERSION_STATUS;
 }
 
-int private_api_accessible()
+POGS_PRIVATE ok_status pogs_work_alloc(pogs_work ** W, operator * A, int direct)
 {
-#ifdef OK_DEBUG_PYTHON
-	return 1;
-#else
-	return 0;
-#endif
-}
-
-POGS_PRIVATE void pogs_work_alloc(pogs_work ** W, operator * A, int direct)
-{
+	int dense_or_sparse = (A->kind == OkOperatorDense ||
+		A->kind == OkOperatorSparseCSC ||
+		A->kind == OkOperatorSparseCSR);
 	pogs_work * W_ = OK_NULL;
 	W_ = malloc(sizeof(*W_));
 	W_->A = A;
-	if (direct && A->kind == OkOperatorDense) {
+
+	/* set projector */
+	if (direct && A->kind == OkOperatorDense)
 		W_->P = dense_direct_projector_alloc(
 				dense_operator_get_matrix_pointer(W_->A));
-		W_->operator_scale = dense_operator_scale;
-		W_->operator_equilibrate = operator_regularized_sinkhorn;
-	} else {
+	else
 		W_->P = indirect_projector_generic_alloc(W_->A);
-		if (A->kind == OkOperatorSparseCSR ||
-		    A->kind == OkOperatorSparseCSC) {
-			W_->operator_scale = sparse_operator_scale;
-			W_->operator_equilibrate =
-				operator_regularized_sinkhorn;
-		} else {
-			W_->operator_scale = typesafe_operator_scale;
-			W_->operator_equilibrate = operator_equilibrate;
-		}
 
+	/* set equilibration */
+	if  (!dense_or_sparse) {
+		W_->operator_equilibrate = operator_equilibrate;
+		W_->operator_scale = typesafe_operator_scale;
+	} else {
+		W_->operator_equilibrate = operator_regularized_sinkhorn;
+		if (A->kind == OkOperatorDense)
+			W_->operator_scale = dense_operator_scale;
+		else
+			W_->operator_scale = sparse_operator_scale;
 	}
+
 	W_->d = malloc(sizeof(*(W_->d)));
 	W_->e = malloc(sizeof(*(W_->e)));
 	vector_calloc(W_->d, A->size1);
@@ -54,19 +50,22 @@ POGS_PRIVATE void pogs_work_alloc(pogs_work ** W, operator * A, int direct)
 	W_->normalized = 0;
 	W_->equilibrated = 0;
 	* W = W_;
+
+	return OPTKIT_SUCCESS;
 }
 
-POGS_PRIVATE void pogs_work_free(pogs_work * W)
+POGS_PRIVATE ok_status pogs_work_free(pogs_work * W)
 {
 	W->P->free(W->P->data);
 	ok_free(W->P);
 	vector_free(W->d);
 	vector_free(W->e);
 	ok_free(W);
+	return OPTKIT_SUCCESS;
 }
 
 
-POGS_PRIVATE void block_vector_alloc(block_vector ** z, size_t m, size_t n)
+POGS_PRIVATE ok_status block_vector_alloc(block_vector ** z, size_t m, size_t n)
 {
 	block_vector * z_ = OK_NULL;
 	z_ = malloc(sizeof(*z_));
@@ -80,18 +79,21 @@ POGS_PRIVATE void block_vector_alloc(block_vector ** z, size_t m, size_t n)
 	vector_subvector(z_->y, z_->vec, 0, m);
 	vector_subvector(z_->x, z_->vec, m, n);
 	* z = z_;
+	return OPTKIT_SUCCESS;
 }
 
-POGS_PRIVATE void block_vector_free(block_vector * z)
+POGS_PRIVATE ok_status block_vector_free(block_vector * z)
 {
 	vector_free(z->vec);
 	ok_free(z->x);
 	ok_free(z->y);
 	ok_free(z->vec);
 	ok_free(z);
+	return OPTKIT_SUCCESS;
 }
 
-POGS_PRIVATE void pogs_variables_alloc(pogs_variables ** z, size_t m, size_t n)
+POGS_PRIVATE ok_status pogs_variables_alloc(pogs_variables ** z, size_t m,
+	size_t n)
 {
 	pogs_variables * z_ = OK_NULL;
 	z_ = malloc(sizeof(*z_));
@@ -104,9 +106,10 @@ POGS_PRIVATE void pogs_variables_alloc(pogs_variables ** z, size_t m, size_t n)
 	block_vector_alloc(&(z_->prev), m ,n);
 	block_vector_alloc(&(z_->temp), m, n);
 	*z = z_;
+	return OPTKIT_SUCCESS;
 }
 
-POGS_PRIVATE void pogs_variables_free(pogs_variables * z)
+POGS_PRIVATE ok_status pogs_variables_free(pogs_variables * z)
 {
 	block_vector_free(z->primal);
 	block_vector_free(z->primal12);
@@ -115,9 +118,10 @@ POGS_PRIVATE void pogs_variables_free(pogs_variables * z)
 	block_vector_free(z->prev);
 	block_vector_free(z->temp);
 	ok_free(z);
+	return OPTKIT_SUCCESS;
 }
 
-POGS_PRIVATE void pogs_solver_alloc(pogs_solver ** solver, operator * A,
+POGS_PRIVATE ok_status pogs_solver_alloc(pogs_solver ** solver, operator * A,
 	int direct)
 {
 	pogs_solver * s = OK_NULL;
@@ -134,35 +138,42 @@ POGS_PRIVATE void pogs_solver_alloc(pogs_solver ** solver, operator * A,
 	pogs_work_alloc(&(s->W), A, direct);
 	blas_make_handle(&(s->linalg_handle));
 	s->rho = kOne;
-	* solver = s;
+	*solver = s;
+	return OPTKIT_SUCCESS;
 }
 
-POGS_PRIVATE void pogs_solver_free(pogs_solver * solver)
+POGS_PRIVATE ok_status pogs_solver_free(pogs_solver * solver)
 {
-	blas_destroy_handle(solver->linalg_handle);
-	pogs_work_free(solver->W);
-	pogs_variables_free(solver->z);
-	ok_free(solver->settings);
-	function_vector_free(solver->f);
-	function_vector_free(solver->g);
-	ok_free(solver->f);
-	ok_free(solver->g);
-	ok_free(solver);
+	if (solver) {
+		blas_destroy_handle(solver->linalg_handle);
+		pogs_work_free(solver->W);
+		pogs_variables_free(solver->z);
+		ok_free(solver->settings);
+		function_vector_free(solver->f);
+		function_vector_free(solver->g);
+		ok_free(solver->f);
+		ok_free(solver->g);
+		ok_free(solver);
+	}
+	return OPTKIT_SUCCESS;
 }
 
 
-POGS_PRIVATE void update_settings(pogs_settings * settings,
+POGS_PRIVATE ok_status update_settings(pogs_settings * settings,
 	const pogs_settings * input)
 {
 	memcpy((void *) settings, (void *) input, sizeof(*settings));
+	return OPTKIT_SUCCESS;
 }
 
 
 POGS_PRIVATE ok_status equilibrate(void * linalg_handle, pogs_work * W,
 	const ok_float pnorm)
 {
-	W->equilibrated = 1;
-	return W->operator_equilibrate(linalg_handle, W->A, W->d, W->e, pnorm);
+	ok_status res = OPTKIT_SUCCESS;
+	res = W->operator_equilibrate(linalg_handle, W->A, W->d, W->e, pnorm);
+	W->equilibrated = (res == OPTKIT_SUCCESS);
+	return res;
 }
 
 POGS_PRIVATE ok_float estimate_norm(void * linalg_handle, pogs_work * W)
@@ -194,16 +205,17 @@ POGS_PRIVATE ok_status normalize_DAE(void * linalg_handle, pogs_work * W)
 	return err;
 }
 
-POGS_PRIVATE void update_problem(pogs_solver * solver, FunctionVector * f,
+POGS_PRIVATE ok_status update_problem(pogs_solver * solver, FunctionVector * f,
 	FunctionVector * g)
 {
 	function_vector_memcpy_va(solver->f, f->objectives);
 	function_vector_memcpy_va(solver->g, g->objectives);
 	function_vector_div(solver->f, solver->W->d);
 	function_vector_mul(solver->g, solver->W->e);
+	return OPTKIT_SUCCESS;
 }
 
-POGS_PRIVATE void initialize_variables(pogs_solver * solver)
+POGS_PRIVATE ok_status initialize_variables(pogs_solver * solver)
 {
 	pogs_variables * z = solver->z;
 	operator * A = solver->W->A;
@@ -220,6 +232,7 @@ POGS_PRIVATE void initialize_variables(pogs_solver * solver)
 		A->fused_adjoint(A->data, -kOne, z->dual->y, kZero, z->dual->x);
 		vector_scale(z->dual->vec, -kOne / solver->rho);
 	}
+	return OPTKIT_SUCCESS;
 }
 
 
@@ -238,7 +251,7 @@ POGS_PRIVATE pogs_tolerances make_tolerances(const pogs_settings * settings,
 	};
 }
 
-POGS_PRIVATE void update_objective(void * linalg_handle, FunctionVector * f,
+POGS_PRIVATE ok_status update_objective(void * linalg_handle, FunctionVector * f,
 	FunctionVector * g, ok_float rho, pogs_variables * z,
 	pogs_objectives * obj)
 {
@@ -247,6 +260,7 @@ POGS_PRIVATE void update_objective(void * linalg_handle, FunctionVector * f,
 	obj->primal = FuncEvalVector(f, z->primal12->y) +
 			FuncEvalVector(g, z->primal12->x);
 	obj->dual = obj->primal - obj->gap;
+	return OPTKIT_SUCCESS;
 }
 
 /*
@@ -254,7 +268,7 @@ POGS_PRIVATE void update_objective(void * linalg_handle, FunctionVector * f,
  * eps_dual = eps_abs + eps_rel * sqrt(n) * ||xt^k+1/2||
  * eps_gap = eps_abs + eps_rel * sqrt(mn) * ||z^k|| * ||z^k+1/2||
  */
-POGS_PRIVATE void update_tolerances(void * linalg_handle, pogs_variables * z,
+POGS_PRIVATE ok_status update_tolerances(void * linalg_handle, pogs_variables * z,
 	pogs_objectives * obj, pogs_tolerances * eps)
 {
 	eps->primal = eps->atolm + eps->reltol * MATH(sqrt)(blas_dot(
@@ -265,6 +279,7 @@ POGS_PRIVATE void update_tolerances(void * linalg_handle, pogs_variables * z,
 		linalg_handle, z->primal->vec,
 		z->primal->vec)) * MATH(sqrt)(blas_dot(linalg_handle,
 		z->primal12->vec, z->primal12->vec));
+	return OPTKIT_SUCCESS;
 }
 
 
@@ -273,10 +288,11 @@ POGS_PRIVATE void update_tolerances(void * linalg_handle, pogs_variables * z,
  *	||Ax^(k+1/2) - y^(k+1/2)||
  *
  * residual for dual feasibility
- * 	||A'yt^(k+1/2) - xt^(k+1/2)||
+ * 	||A'yt^(k+1/2) + xt^(k+1/2)||
  */
-POGS_PRIVATE void update_residuals(void * linalg_handle, pogs_solver * solver,
-	pogs_objectives * obj, pogs_residuals * res, pogs_tolerances * eps)
+POGS_PRIVATE ok_status update_residuals(void * linalg_handle,
+	pogs_solver * solver, pogs_objectives * obj, pogs_residuals * res,
+	pogs_tolerances * eps)
 {
 
 	pogs_variables * z = solver->z;
@@ -292,6 +308,8 @@ POGS_PRIVATE void update_residuals(void * linalg_handle, pogs_solver * solver,
 	vector_memcpy_vv(z->temp->x, z->dual12->x);
 	A->fused_adjoint(A->data, kOne, z->dual12->y, kOne, z->temp->x);
 	res->dual = MATH(sqrt)(blas_dot(linalg_handle, z->temp->x, z->temp->x));
+
+	return OPTKIT_SUCCESS;
 }
 
 POGS_PRIVATE int check_convergence(void * linalg_handle, pogs_solver * solver,
@@ -309,9 +327,10 @@ POGS_PRIVATE int check_convergence(void * linalg_handle, pogs_solver * solver,
 
 
 /* z^k <- z^{k+1} */
-POGS_PRIVATE void set_prev(pogs_variables * z)
+POGS_PRIVATE ok_status set_prev(pogs_variables * z)
 {
 	vector_memcpy_vv(z->prev->vec, z->primal->vec);
+	return OPTKIT_SUCCESS;
 }
 
 /*
@@ -320,13 +339,14 @@ POGS_PRIVATE void set_prev(pogs_variables * z)
  *	y^{k+1/2} = Prox_{rho, f} (y^k - yt^k)
  *	x^{k+1/2} = Prox_{rho, g} (x^k - xt^k)
  */
-POGS_PRIVATE void prox(void * linalg_handle, FunctionVector * f,
+POGS_PRIVATE ok_status prox(void * linalg_handle, FunctionVector * f,
 	FunctionVector * g, pogs_variables * z, ok_float rho)
 {
 	vector_memcpy_vv(z->temp->vec, z->primal->vec);
 	blas_axpy(linalg_handle, -kOne, z->dual->vec, z->temp->vec);
 	ProxEvalVector(f, rho, z->temp->y, z->primal12->y);
 	ProxEvalVector(g, rho, z->temp->x, z->primal12->x);
+	return OPTKIT_SUCCESS;
 }
 
 /*
@@ -334,7 +354,7 @@ POGS_PRIVATE void prox(void * linalg_handle, FunctionVector * f,
  *	( x^{k+1}, y^{k+1} ) =
  *		Proj_{y=Ax} (x^{k+1/2 + xt^k, y^{k+1/2} + yt^k)
  */
-POGS_PRIVATE void project_primal(void * linalg_handle, projector * proj,
+POGS_PRIVATE ok_status project_primal(void * linalg_handle, projector * proj,
 	pogs_variables * z, ok_float alpha, ok_float tol)
 {
 	vector_set_all(z->temp->vec, kZero);
@@ -343,6 +363,8 @@ POGS_PRIVATE void project_primal(void * linalg_handle, projector * proj,
 	blas_axpy(linalg_handle, kOne, z->dual->vec, z->temp->vec);
 	proj->project(proj->data, z->temp->x, z->temp->y, z->primal->x,
 		z->primal->y, tol);
+
+	return OPTKIT_SUCCESS;
 }
 
 /*
@@ -351,7 +373,7 @@ POGS_PRIVATE void project_primal(void * linalg_handle, projector * proj,
  * 	zt^{k+1/2} = z^{k+1/2} - z^k + zt^k
  * 	zt^{k+1}   = zt^k + z^{k+1/2} - z^k+1
  */
-POGS_PRIVATE void update_dual(void * linalg_handle, pogs_variables * z,
+POGS_PRIVATE ok_status update_dual(void * linalg_handle, pogs_variables * z,
 	ok_float alpha)
 {
 	vector_memcpy_vv(z->dual12->vec, z->primal12->vec);
@@ -361,6 +383,8 @@ POGS_PRIVATE void update_dual(void * linalg_handle, pogs_variables * z,
 	blas_axpy(linalg_handle, alpha, z->primal12->vec, z->dual->vec);
 	blas_axpy(linalg_handle, kOne - alpha, z->prev->vec, z->dual->vec);
 	blas_axpy(linalg_handle, -kOne, z->primal->vec, z->dual->vec);
+
+	return OPTKIT_SUCCESS;
 }
 
 
@@ -368,10 +392,10 @@ POGS_PRIVATE void update_dual(void * linalg_handle, pogs_variables * z,
  * change solver->rho to balance primal and dual convergence
  * (and rescale z->dual accordingly)
  */
-POGS_PRIVATE void adaptrho(pogs_solver * solver, adapt_params * params,
+POGS_PRIVATE ok_status adaptrho(pogs_solver * solver, adapt_params * params,
 	pogs_residuals * res, pogs_tolerances * eps, uint k)
 {
-	if (!(solver->settings->adaptiverho)) return;
+	if (!(solver->settings->adaptiverho)) return OPTKIT_SUCCESS;
 
 	if (res->dual < params->xi * eps->dual &&
 		res->primal > params->xi * eps->primal &&
@@ -406,6 +430,8 @@ POGS_PRIVATE void adaptrho(pogs_solver * solver, adapt_params * params,
 		params->delta = (params->delta / kGAMMA > kDELTAMIN) ?
 				params->delta / kGAMMA : kDELTAMIN;
 	}
+
+	return OPTKIT_SUCCESS;
 }
 
 /*
@@ -424,7 +450,7 @@ POGS_PRIVATE void adaptrho(pogs_solver * solver, adapt_params * params,
  *	2: copy (x, nu), suppress (y, mu)
  *	3: copy (x), suppress (y, mu, nu)
  */
-POGS_PRIVATE void copy_output(pogs_solver * solver, pogs_output * output)
+POGS_PRIVATE ok_status copy_output(pogs_solver * solver, pogs_output * output)
 {
 	vector * d = solver->W->d;
 	vector * e = solver->W->e;
@@ -452,6 +478,8 @@ POGS_PRIVATE void copy_output(pogs_solver * solver, pogs_output * output)
 			vector_memcpy_av(output->mu, z->temp->x, 1);
 		}
 	}
+
+	return OPTKIT_SUCCESS;
 }
 
 POGS_PRIVATE void print_header_string()
@@ -472,7 +500,7 @@ POGS_PRIVATE void print_iter_string(pogs_residuals * res, pogs_tolerances * eps,
 		res->gap, eps->gap, obj->primal);
 }
 
-POGS_PRIVATE void pogs_solver_loop(pogs_solver * solver, pogs_info * info)
+POGS_PRIVATE ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 {
 	/* declare / get handles to all auxiliary types */
 	int err = 0, converged = 0;
@@ -532,6 +560,8 @@ POGS_PRIVATE void pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 	info->converged = converged;
 	info->err = err;
 	info->k = k;
+
+	return OPTKIT_SUCCESS;
 }
 
 void set_default_settings(pogs_settings * s)
@@ -566,30 +596,43 @@ pogs_solver * pogs_init(operator * A, const int direct,
 	/* equilibrate A as (D * A_equil * E) = A */
 	err = equilibrate(solver->linalg_handle, solver->W, equil_norm);
 
-	/* make projector; normalize A; adjust d, e accordingly */
-	normalize = (int) (solver->W->P->kind == OkProjectorDenseDirect);
-	solver->W->P->initialize(solver->W->P->data, normalize);
-	err = normalize_DAE(solver->linalg_handle, solver->W);
+	if (!err) {
+		/* make projector; normalize A; adjust d, e accordingly */
+		normalize = (int) (solver->W->P->kind == OkProjectorDenseDirect);
+		solver->W->P->initialize(solver->W->P->data, normalize);
+		err = normalize_DAE(solver->linalg_handle, solver->W);
+		solver->init_time = toc(t);
+	}
 
-	solver->init_time = toc(t);
+	if (err) {
+		pogs_solver_free(solver);
+		solver = OK_NULL;
+	}
+
 	return solver;
 }
 
 
-void pogs_solve(pogs_solver * solver, FunctionVector * f, FunctionVector * g,
-	const pogs_settings * settings, pogs_info * info, pogs_output * output)
+ok_status pogs_solve(pogs_solver * solver, FunctionVector * f,
+	FunctionVector * g, const pogs_settings * settings, pogs_info * info,
+	pogs_output * output)
 {
+	ok_status err = OPTKIT_SUCCESS;
+	if (!solver)
+		return OPTKIT_ERROR;
+
 	OK_TIMER t = tic();
 
 	/* copy settings */
-	update_settings(solver->settings, settings);
+	err = update_settings(solver->settings, settings);
 
 	/* copy and scale function vectors */
-	update_problem(solver, f, g);
+	if (!err)
+		err = update_problem(solver, f, g);
 
 	/* get warm start variables */
-	if (settings->warmstart)
-		initialize_variables(solver);
+	if (settings->warmstart && !err)
+		err = initialize_variables(solver);
 	if ( !(settings->resume) )
 		solver->rho = settings->rho;
 
@@ -598,29 +641,40 @@ void pogs_solve(pogs_solver * solver, FunctionVector * f, FunctionVector * g,
 		info->setup_time += solver->init_time;
 
 	/* run solver */
-	t = tic();
-	pogs_solver_loop(solver, info);
-	info->solve_time = toc(t);
+	if (!err) {
+		t = tic();
+		err = pogs_solver_loop(solver, info);
+		info->solve_time = toc(t);
+	}
 
 	/* unscale output */
-	copy_output(solver, output);
+	if (!err)
+		err = copy_output(solver, output);
+
+	return err;
 }
 
-void pogs_finish(pogs_solver * solver, const int reset)
+ok_status pogs_finish(pogs_solver * solver, const int reset)
 {
-	pogs_solver_free(solver);
-	if (reset)
-		ok_device_reset();
+	ok_status err = OPTKIT_SUCCESS;
+	if (solver)
+		err = pogs_solver_free(solver);
+	if (reset && !err)
+		err = ok_device_reset();
+	return err;
 }
 
-void pogs(operator * A, FunctionVector * f, FunctionVector * g,
+ok_status pogs(operator * A, FunctionVector * f, FunctionVector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output,
 	const int direct, const ok_float equil_norm, const int reset)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	pogs_solver * solver = OK_NULL;
 	solver = pogs_init(A, direct, equil_norm);
-	pogs_solve(solver, f, g, settings, info, output);
-	pogs_finish(solver, reset);
+	err = pogs_solve(solver, f, g, settings, info, output);
+	if (!err)
+		err = pogs_finish(solver, reset);
+	return err;
 }
 
 
@@ -628,6 +682,7 @@ operator * pogs_dense_operator_gen(const ok_float * A, size_t m, size_t n,
 	enum CBLAS_ORDER order)
 {
 	matrix * A_mat = OK_NULL;
+	A_mat = malloc(sizeof(*A_mat));
 	matrix_calloc(A_mat, m, n, order);
 	matrix_memcpy_ma(A_mat, A, order);
 	return dense_operator_alloc(A_mat);
@@ -637,8 +692,9 @@ operator * pogs_sparse_operator_gen(const ok_float * val, const ok_int * ind,
 	const ok_int * ptr, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
 {
-	void * handle;
+	void * handle = OK_NULL;
 	sp_matrix * A = OK_NULL;
+	A = malloc(sizeof(*A));
 	sp_matrix_calloc(A, m, n, nnz, order);
 	sp_make_handle(&handle);
 	sp_matrix_memcpy_ma(handle, A, val, ind, ptr);
@@ -651,6 +707,7 @@ void pogs_dense_operator_free(operator * A)
 	matrix * A_mat = dense_operator_get_matrix_pointer(A);
 	A->free(A->data);
 	matrix_free(A_mat);
+	ok_free(A_mat);
 }
 
 void pogs_sparse_operator_free(operator * A)
@@ -658,6 +715,7 @@ void pogs_sparse_operator_free(operator * A)
 	sp_matrix * A_mat = sparse_operator_get_matrix_pointer(A);
 	A->free(A->data);
 	sp_matrix_free(A_mat);
+	ok_free(A_mat);
 }
 
 /*
