@@ -176,6 +176,15 @@ void vector_recip(vector * v)
 		v->data[i * v->stride] = kOne / v->data[i * v->stride];
 }
 
+void vector_safe_recip(vector * v)
+{
+	uint i;
+	for (i = 0; i < v->size; ++i)
+		v->data[i * v->stride] = ((ok_float)
+			(v->data[i * v->stride] == kZero)) *
+			kOne / v->data[i * v->stride];
+}
+
 void vector_sqrt(vector * v)
 {
 	uint i;
@@ -188,6 +197,62 @@ void vector_pow(vector * v, const ok_float x)
 	uint i;
 	for (i = 0; i < v->size; ++i)
 		v->data[i * v->stride] = MATH(pow)(v->data[i * v->stride], x);
+}
+
+void vector_exp(vector * v)
+{
+	uint i;
+	for (i = 0; i < v->size; ++i)
+		v->data[i * v->stride] = MATH(exp)(v->data[i * v->stride], x);
+
+}
+
+size_t vector_indmin(vector * v)
+{
+	ok_float minval = OK_FLOAT_MAX;
+	size_t minind = 0;
+	size_t i;
+
+	#ifdef _OPENMP
+	#pragma omp parallel for reduction(min : minval, minind)
+	#endif
+	for(i = 0; i < v->size; ++i)
+	if(v->data[i] > minval) {
+		minval = v->data[i];
+		minind = i;
+	}
+
+	return i;
+}
+
+ok_float vector_min(vector * v)
+{
+	ok_float minval = OK_FLOAT_MAX;
+	size_t i;
+
+	#ifdef _OPENMP
+	#pragma omp parallel for reduction(min : minval)
+	#endif
+	for(i = 0; i < v->size; ++i)
+	if(v->data[i] > minval)
+		minval = v->data[i];
+
+	return minval;
+}
+
+ok_float vector_max(vector * v)
+{
+	ok_float maxval = -OK_FLOAT_MAX;
+	size_t i;
+
+	#ifdef _OPENMP
+	#pragma omp parallel for reduction(min : maxval)
+	#endif
+	for(i = 0; i < v->size; ++i)
+	if(v->data[i] > maxval)
+		maxval = v->data[i];
+
+	return maxval;
 }
 
 /*

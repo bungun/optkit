@@ -219,6 +219,12 @@ void vector_recip(vector * v)
 	CUDA_CHECK_ERR;
 }
 
+void vector_safe_recip(vector * v)
+{
+	__thrust_vector_safe_recip(v);
+	CUDA_CHECK_ERR;
+}
+
 void vector_sqrt(vector * v)
 {
 	__thrust_vector_sqrt(v);
@@ -229,6 +235,34 @@ void vector_pow(vector * v, const ok_float x)
 {
 	__thrust_vector_pow(v, x);
 	CUDA_CHECK_ERR;
+}
+
+
+void vector_exp(vector * v)
+{
+	__thrust_vector_exp(v, x);
+	CUDA_CHECK_ERR;
+}
+
+size_t vector_indmin(vector * v)
+{
+	size_t minind = __thrust_vector_exp(v, x);
+	CUDA_CHECK_ERR;
+	return minind;
+}
+
+ok_float vector_min(vector * v)
+{
+	ok_float minval = __thrust_vector_exp(v, x);
+	CUDA_CHECK_ERR;
+	return minval;
+}
+
+ok_float vector_max(vector * v)
+{
+	ok_float maxval = __thrust_vector_exp(v, x);
+	CUDA_CHECK_ERR;
+	return maxval;
 }
 
 /*
@@ -301,6 +335,56 @@ __device__ inline ok_float& __matrix_get_c(ok_float * A, uint i, uint j,
 {
 	return A[i + j * stride];
 }
+
+
+__global__ void __matrix_scale_left(ok_float * A, const ok_float * v,
+	uint i, uint j, size_t ld, size_t stride_v,
+	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride))
+{
+	uint global_col, global_row;
+
+	global_row = i * kTileSize + threadIdx.x;
+	global_col = j * kTileSize + threadIdx.y;
+
+	get(A, global_row, global_col, ld) *= v[global_row * stride_v];
+}
+
+__global__ void __matrix_scale_right(ok_float * A, const ok_float * v,
+	uint i, uint j, size_t ld, size_t stride_v,
+	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride))
+{
+	uint global_col, global_row;
+
+	global_row = i * kTileSize + threadIdx.x;
+	global_col = j * kTileSize + threadIdx.y;
+
+	get(A, global_row, global_col, ld) *= v[global_col * stride_v];
+}
+
+__global__ void __matrix_add_left(ok_float * A, const ok_float * v,
+	uint i, uint j, size_t ld, size_t stride_v,
+	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride))
+{
+	uint global_col, global_row;
+
+	global_row = i * kTileSize + threadIdx.x;
+	global_col = j * kTileSize + threadIdx.y;
+
+	get(A, global_row, global_col, ld) += v[global_row * stride_v];
+}
+
+__global__ void __matrix_add_right(ok_float * A, const ok_float * v,
+	uint i, uint j, size_t ld, size_t stride_v,
+	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride))
+{
+	uint global_col, global_row;
+
+	global_row = i * kTileSize + threadIdx.x;
+	global_col = j * kTileSize + threadIdx.y;
+
+	get(A, global_row, global_col, ld) += v[global_col * stride_v];
+}
+
 
 /*
  * MATRIX methods
@@ -893,7 +977,7 @@ void blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side, enum CBLAS_UPLO uplo,
 
 /* cholesky decomposition of a single block */
 __global__ void __block_chol(ok_float * A, uint iter, uint ld,
-	enum CBLAS_ORDER ord)
+	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride))
 {
 	uint col, row, mat_dim, global_col, global_row, i;
 	const uint kTileLD = kTileSize + 1u;
@@ -907,12 +991,8 @@ __global__ void __block_chol(ok_float * A, uint iter, uint ld,
 	global_col = iter * kTileSize + col;
 	global_row = iter * kTileSize + row;
 
-	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride) =
-		(ord == CblasRowMajor) ? __matrix_get_r : __matrix_get_c;
-
 	get(L, row, col, kTileLD) = get(A, global_row, global_col, ld);
 	__syncthreads();
-
 
 	for (i = 0; i < mat_dim; ++i) {
 		/* l11 = sqrt(a11) */
@@ -925,7 +1005,6 @@ __global__ void __block_chol(ok_float * A, uint iter, uint ld,
 			get(L, row, i, kTileLD) /= a11;
 		__syncthreads();
 
-
 		/* a22 -= l21 * l21' */
 		if (row >= col && col > i)
 			get(L, row, col, kTileLD) -=
@@ -935,12 +1014,11 @@ __global__ void __block_chol(ok_float * A, uint iter, uint ld,
 	}
 
 	if (row >= col)
-		get(A, global_row, global_col, ld) =
-		get(L, row, col, kTileLD);
+		get(A, global_row, global_col, ld) = get(L, row, col, kTileLD);
 }
 
 __global__ void __block_trsv(ok_float * A, uint iter, uint n, uint ld,
-	enum CBLAS_ORDER ord)
+	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride))
 {
 	uint tile_idx, row, global_row, global_col, i, j;
 	const uint kTileLD = kTileSize + 1u;
@@ -952,12 +1030,6 @@ __global__ void __block_trsv(ok_float * A, uint iter, uint n, uint ld,
 	global_col = iter * kTileSize;
 	global_row = iter * kTileSize + row;
 
-	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride) =
-		(ord == CblasRowMajor) ? __matrix_get_r : __matrix_get_c;
-
-
-
-
 	/* Load A -> L columnwise. */
 	for (i = 0; i < kTileSize; ++i)
 		get(L, row, i, kTileLD) = get(A, global_row, global_col + i,
@@ -965,7 +1037,6 @@ __global__ void __block_trsv(ok_float * A, uint iter, uint n, uint ld,
 	__syncthreads();
 
 	global_row = row + (iter + tile_idx + 1u) * kTileSize;
-
 
 	if (global_row < n)
 		for (i = 0; i < kTileSize; ++i)
@@ -1003,6 +1074,8 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 	cublasStatus_t err;
 	cudaStream_t stm;
 	uint num_tiles, grid_dim, i;
+	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride) =
+		(A->order == CblasRowMajor) ? __matrix_get_r : __matrix_get_c;
 
 	err = cublasGetStream(*(cublasHandle_t *) linalg_handle, &stm);
 	num_tiles = (A->size1 + kTileSize - 1u) / kTileSize;
@@ -1017,7 +1090,7 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 		dim3 block_dim(block_dim_1d, block_dim_1d);
 
 		__block_chol<<<1, block_dim, 0, stm>>>(A->data, i, (uint) A->ld,
-			A->order);
+			A->order, get);
 		CUDA_CHECK_ERR;
 
 		if (i == num_tiles - 1u)
@@ -1030,7 +1103,7 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 			kTileSize);
 
 		__block_trsv<<<grid_dim, kTileSize, 0, stm>>>(A->data, i,
-			(uint) A->size1, (uint) A->ld, A->order);
+			(uint) A->size1, (uint) A->ld, A->order, get);
 		CUDA_CHECK_ERR;
 
 		/* A22 -= L21 * L21^T */
@@ -1049,6 +1122,115 @@ void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x)
 	blas_trsv(linalg_handle, CblasLower, CblasNoTrans, CblasNonUnit, L, x);
 	blas_trsv(linalg_handle, CblasLower, CblasTrans, CblasNonUnit, L, x);
 }
+
+__global__ void __block_diag_gramian(ok_float * A, ok_float * v, uint i, uint j,
+	uint ld, uint stride_v,
+	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride))
+{
+	uint global_col, global_row;
+
+	global_row = i * kTileSize + threadIdx.x;
+	global_col = j * kTileSize + threadIdx.y;
+
+	v[global_row * stride_v] += get(A, global_row, global_col, ld) *
+		get(A, global_row, global_col, ld);
+}
+
+void linalg_diag_gramian(void * linalg_handle, matrix * A, vector * v)
+{
+	cublasStatus_t err;
+	cudaStream_t stm;
+	uint num_row_tiles, num_col_tiles, grid_dim, i, j, size1, size2;
+	uint ld = (uint) A->ld, stride = (uint) v->stride;
+	int skinny = A->size1 == v->size;
+	enum CBLAS_ORDER order;
+	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride);
+
+
+	if (!(v && A)) {
+		printf("%s\n", "A and v must both be initialized");
+		return;
+	}
+
+	if (v->size != A->size1 && v->size != A->size2) {
+		printf("%s\n", "dimensions of A and v are incompatible");
+		return;
+	}
+
+	err = cublasGetStream(*(cublasHandle_t *) linalg_handle, &stm);
+
+	size1 = (skinny) ? A->size1 : A->size2;
+	size2 = (skinny) ? A->size2 : A->size1;
+	order = (skinny) ? A->order : CblasColMajor + CblasRowMajor - A->order;
+	get = (order == CblasRowMajor) ? __matrix_get_r : __matrix_get_c;
+
+	num_row_tiles = (size1 + kTileSize - 1u) / kTileSize;
+	num_col_tiles = (size2 + kTileSize - 1u) / kTileSize;
+
+	for (i = 0; i < num_row_tiles; ++i) {
+		uint block_dim_v = kTileSize < size1 - i * kTileSize ? \
+				   kTileSize : size1 - i * kTileSize;
+
+		for (j = 0; j < num_col_tiles; ++j) {
+
+			if (err != CUBLAS_STATUS_SUCCESS)
+				break;
+			uint block_dim_h = kTileSize < size2 - j * kTileSize ? \
+					   kTileSize : size2 - j * kTileSize;
+
+			dim3 block_dim(block_dim_v, block_dim_h);
+			__block_diag_gramian<<<1, block_dim, 0, stm>>>(
+				A->data, v->data, i, j, ld, stride, order, get);
+			CUDA_CHECK_ERR;
+		}
+	}
+}
+
+void linalg_matrix_broadcast_vector(void * linalg_handle, matrix * A,
+	const vector * v, enum OPTKIT_TRANSFORM operation, enum CBLAS_SIDE side)
+{
+	cublasStatus_t err;
+	cudaStream_t stm;
+	uint num_row_tiles, num_col_tiles, grid_dim, i, j, size1, size2;
+	uint ld = (uint) A->ld, stride = (uint) v->stride;
+	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride) =
+		(A->order == CblasRowMajor) ? __matrix_get_r : __matrix_get_c;
+	void (*transform)(ok_float * A, const ok_float * v, uint i, uint j,
+		size_t ld, size_t stride_v, ok_float& (* get)(ok_float * A,
+		uint i, uint j, uint stride));
+
+	if (operation == OkTransformScale)
+		transform = (side == CblasLeft) ? __matrix_scale_left :
+			__matrix_scale_right;
+	else
+		transform = (side == CblasLeft) ? __matrix_add_left :
+			__matrix_add_right;
+
+
+	err = cublasGetStream(*(cublasHandle_t *) linalg_handle, &stm);
+	num_row_tiles = (A->size1 + kTileSize - 1u) / kTileSize;
+	num_col_tiles = (A->size2 + kTileSize - 1u) / kTileSize;
+
+	for (i = 0; i < num_row_tiles; ++i) {
+		uint block_dim_v = kTileSize < A->size1 - i * kTileSize ? \
+				   kTileSize : A->size1 - i * kTileSize;
+
+		for (j = 0; j < num_col_tiles; ++j) {
+			if (err != CUBLAS_STATUS_SUCCESS)
+				break;
+
+			uint block_dim_h =
+				kTileSize < A->size2 - j * kTileSize ? \
+				kTileSize : A->size2 - j * kTileSize;
+
+			dim3 block_dim(block_dim_v, block_dim_h);
+			transform<<<1, block_dim, 0, stm>>>(A->data, v->data, i,
+				j, ld, stride, order, get);
+			CUDA_CHECK_ERR;
+		}
+	}
+}
+
 
 /* device reset */
 ok_status ok_device_reset()

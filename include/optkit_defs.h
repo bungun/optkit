@@ -40,6 +40,11 @@ typedef enum optkit_status {
 	OPTKIT_ERROR_CUSPARSE = 4
 } ok_status;
 
+enum OPTKIT_TRANSFORM {
+	OkTransformScale = 0;
+	OkTransformAdd = 1;
+}
+
 #ifndef FLOAT
 	#define CBLAS(x) cblas_d ## x
 	#define MATH(x) x

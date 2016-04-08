@@ -8,6 +8,10 @@
 - TODO: license
 - TODO: cite POGS
 - TODO: append version numbers to .so, check version numbers when loading libs in pyton
+- TODO: debug/test vector_min, _max, _indmin, _exp
+- TODO: operator equilibration
+- TODO: operator l-BFGS preconditioner
+- TODO: operator IO
 
 ###v0.0.4 (beta)
 - migrated tests to unittests
@@ -18,6 +22,7 @@
 - operator equilibration for: dense, sparse
 - approximate projection (with CGLS) for abstract linear operators
 - operator POGS for: dense, sparse
+
 
 ###v0.0.3 (current)
 - CPU Sparse Linear Algebra

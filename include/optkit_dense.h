@@ -33,8 +33,14 @@ void vector_div(vector * v1, const vector * v2);
 void vector_add_constant(vector *v, const ok_float x);
 void vector_abs(vector * v);
 void vector_recip(vector * v);
+void vector_safe_recip(vector * v);
 void vector_sqrt(vector * v);
 void vector_pow(vector * v, const ok_float x);
+void vector_exp(vector * v);
+size_t vector_indmin(vector * v);
+ok_float vector_min(vector * v);
+ok_float vector_max(vector * v);
+
 
 /* MATRIX defition and methods */
 

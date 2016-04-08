@@ -25,8 +25,13 @@ static __global__ void generate(curandState * globalState, ok_float * data,
 	size_t size)
 {
 	int tid = blockIdx.x * blockDim.x + threadIdx.x, i;
+#ifndef FLOAT
 	for (i = tid; i < size; i += gridDim.x * blockDim.x)
 		data[i] = curand_uniform_double(&globalState[tid]);
+#else
+	for (i = tid; i < size; i += gridDim.x * blockDim.x)
+		data[i] = curand_uniform(&globalState[tid]);
+#endif
 }
 
 
@@ -53,9 +58,11 @@ static void ok_rand(ok_float * x, size_t size)
 	#pragma omp parallel for
 	#endif
 	for (i = 0; i < size; ++i)
-		x[i] = (ok_float) rand();
+		x[i] = (ok_float) rand() ;
 }
 #endif
+
+/* TODO: +1/-1 rand*/
 
 #ifdef __cpluscplus
 }
