@@ -1206,7 +1206,6 @@ void linalg_matrix_broadcast_vector(void * linalg_handle, matrix * A,
 		transform = (side == CblasLeft) ? __matrix_add_left :
 			__matrix_add_right;
 
-
 	err = cublasGetStream(*(cublasHandle_t *) linalg_handle, &stm);
 	num_row_tiles = (A->size1 + kTileSize - 1u) / kTileSize;
 	num_col_tiles = (A->size2 + kTileSize - 1u) / kTileSize;

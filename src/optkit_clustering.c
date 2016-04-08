@@ -92,6 +92,8 @@ void cluster(matrix * A, matrix * C, upsamplingvec * a2c, cluster_aid ** helper,
 	for (i = 0; i < A->size1, ++i) {
 		h->idx_tentative = vector_indmin(h->d) + a2c->shift;
 
+		/* matrix_indmin(a2c, D, ); */
+
 		/*
 		 * reassign vector i to cluster k if
 		 *
