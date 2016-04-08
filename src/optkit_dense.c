@@ -16,32 +16,37 @@ void denselib_version(int * maj, int * min, int * change, int * status)
  * VECTOR methods
  * ==============
  */
-inline int __vector_exists(vector * v)
+
+template<typename T>
+inline int __vector_exists(vector<T> * v)
 {
 	if (v == OK_NULL) {
-		printf("Error: cannot write to uninitialized vector pointer\n");
+		printf("Error: cannot write to uninitialized vector<T> pointer\n");
 		return 0;
 	} else {
 		return 1;
 	}
 }
 
-void vector_alloc(vector * v, size_t n)
+template<typename T>
+void vector_alloc(vector<T> * v, size_t n)
 {
 	if (!__vector_exists(v))
 		return;
 	v->size = n;
 	v->stride = 1;
-	v->data = (ok_float *) malloc(n * sizeof(ok_float));
+	v->data = (ok_float *) malloc(n * sizeof(T));
 }
 
-void vector_calloc(vector * v, size_t n)
+template<typename T>
+void vector_calloc(vector<T> * v, size_t n)
 {
 	vector_alloc(v, n);
-	memset(v->data, 0, n * sizeof(ok_float));
+	memset(v->data, 0, n * sizeof(T));
 }
 
-void vector_free(vector * v)
+template<typename T>
+void vector_free(vector<T> * v)
 {
 	if (v->data != OK_NULL)
 		ok_free(v->data);
@@ -49,24 +54,28 @@ void vector_free(vector * v)
 	v->stride = (size_t) 0;
 }
 
-inline void __vector_set(vector * v, size_t i, ok_float x)
+template<typename T>
+inline void __vector_set(vector<T> * v, size_t i, T x)
 {
         v->data[i * v->stride] = x;
 }
 
-ok_float __vector_get(const vector *v, size_t i)
+template<typename T>
+ok_float __vector_get(const vector<T> *v, size_t i)
 {
 	return v->data[i * v->stride];
 }
 
-void vector_set_all(vector * v, ok_float x)
+template<typename T>
+void vector_set_all(vector<T> * v, ok_float x)
 {
 	uint i;
 	for (i = 0; i < v->size; ++i)
 		__vector_set(v, i, x);
 }
 
-void vector_subvector(vector * v_out, vector * v_in, size_t offset, size_t n)
+template<typename T>
+void vector_subvector(vector<T> * v_out, vector<T> * v_in, size_t offset, size_t n)
 {
 	if (!__vector_exists(v_out))
 		return;
@@ -75,7 +84,8 @@ void vector_subvector(vector * v_out, vector * v_in, size_t offset, size_t n)
 	v_out->data = v_in->data + offset * v_in->stride;
 }
 
-void vector_view_array(vector * v, ok_float * base, size_t n)
+template<typename T>
+void vector_view_array(vector<T> * v, T * base, size_t n)
 {
 	if (!__vector_exists(v))
 		return;
@@ -84,37 +94,41 @@ void vector_view_array(vector * v, ok_float * base, size_t n)
 	v->data = base;
 }
 
-void vector_memcpy_vv(vector * v1, const vector * v2)
+template<typename T>
+void vector_memcpy_vv(vector<T> * v1, const vector<T> * v2)
 {
 	uint i;
 	if ( v1->stride == 1 && v2->stride == 1)
-		memcpy(v1->data, v2->data, v1->size * sizeof(ok_float));
+		memcpy(v1->data, v2->data, v1->size * sizeof(T));
 	else
 		for (i = 0; i < v1->size; ++i)
 			__vector_set(v1, i, __vector_get(v2,i));
 }
 
-void vector_memcpy_va(vector * v, const ok_float *y, size_t stride_y)
+template<typename T>
+void vector_memcpy_va(vector<T> * v, const T *y, size_t stride_y)
 {
 	uint i;
 	if (v->stride == 1 && stride_y == 1)
-		memcpy(v->data, y, v->size * sizeof(ok_float));
+		memcpy(v->data, y, v->size * sizeof(T));
 	else
 		for (i = 0; i < v->size; ++i)
 			__vector_set(v, i, y[i * stride_y]);
 }
 
-void vector_memcpy_av(ok_float *x, const vector *v, size_t stride_x)
+template<typename T>
+void vector_memcpy_av(T * x, const vector<T> * v, size_t stride_x)
 {
 	uint i;
-	if (v->stride ==1 && stride_x == 1)
-		memcpy(x, v->data, v->size * sizeof(ok_float));
+	if (v->stride == 1 && stride_x == 1)
+		memcpy(x, v->data, v->size * sizeof(T));
 	else
 		for (i = 0; i < v->size; ++i)
 			x[i * stride_x] = __vector_get(v,i);
 }
 
-void vector_print(const vector * v)
+template<typename T>
+void vector_print(const vector<T> * v)
 {
 	uint i;
 	for (i = 0; i < v->size; ++i)
@@ -122,61 +136,70 @@ void vector_print(const vector * v)
 	printf("\n");
 }
 
-void vector_scale(vector * v, ok_float x)
+template<typename T>
+void vector_scale(vector<T> * v, T x)
 {
 	CBLAS(scal)( (int) v->size, x, v->data, (int) v->stride);
 }
 
-void vector_add(vector * v1, const vector * v2)
+template<typename T>
+void vector_add(vector<T> * v1, const vector<T> * v2)
 {
 	uint i;
 	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] += v2->data[i * v2->stride];
 }
 
-void vector_sub(vector * v1, const vector * v2)
+template<typename T>
+void vector_sub(vector<T> * v1, const vector<T> * v2)
 {
 	uint i;
 	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] -= v2->data[i * v2->stride];
 }
 
-void vector_mul(vector * v1, const vector * v2)
+template<typename T>
+void vector_mul(vector<T> * v1, const vector<T> * v2)
 {
 	uint i;
 	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] *= v2->data[i * v2->stride];
 }
 
-void vector_div(vector * v1, const vector * v2)
+template<typename T>
+void vector_div(vector<T> * v1, const vector<T> * v2)
 {
 	uint i;
 	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] /= v2->data[i * v2->stride];
 }
 
-void vector_add_constant(vector * v, const ok_float x)
+template<typename T>
+void vector_add_constant(vector<T> * v, const ok_float x)
 {
 	uint i;
 	for (i = 0; i < v->size; ++i)
 		v->data[i * v->stride] += x;
 }
 
-void vector_abs(vector * v)
+template<typename T>
+void vector_abs(vector<T> * v)
 {
 	uint i;
 	for (i = 0; i < v->size; ++i)
 		v->data[i * v->stride] = MATH(fabs)(v->data[i * v->stride]);
 }
 
-void vector_recip(vector * v)
+template<typename T>
+void vector_recip(vector<T> * v)
 {
 	uint i;
 	for (i = 0; i < v->size; ++i)
 		v->data[i * v->stride] = kOne / v->data[i * v->stride];
 }
 
-void vector_safe_recip(vector * v)
+template<typename T>
+void vector_safe_recip(vector<T> * v)
 {
 	uint i;
 	for (i = 0; i < v->size; ++i)
@@ -185,21 +208,24 @@ void vector_safe_recip(vector * v)
 			kOne / v->data[i * v->stride];
 }
 
-void vector_sqrt(vector * v)
+template<typename T>
+void vector_sqrt(vector<T> * v)
 {
 	uint i;
 	for (i = 0; i < v->size; ++i)
 		v->data[i * v->stride] = MATH(sqrt)(v->data[i * v->stride]);
 }
 
-void vector_pow(vector * v, const ok_float x)
+template<typename T>
+void vector_pow(vector<T> * v, const ok_float x)
 {
 	uint i;
 	for (i = 0; i < v->size; ++i)
 		v->data[i * v->stride] = MATH(pow)(v->data[i * v->stride], x);
 }
 
-void vector_exp(vector * v)
+template<typename T>
+void vector_exp(vector<T> * v)
 {
 	uint i;
 	for (i = 0; i < v->size; ++i)
@@ -207,9 +233,10 @@ void vector_exp(vector * v)
 
 }
 
-size_t vector_indmin(vector * v)
+template<typename T>
+size_t vector_indmin(vector<T> * v)
 {
-	ok_float minval = OK_FLOAT_MAX;
+	T minval = static_cast<T>(OK_FLOAT_MAX); /* todo: type detection here */
 	size_t minind = 0;
 	size_t i;
 
@@ -225,9 +252,10 @@ size_t vector_indmin(vector * v)
 	return i;
 }
 
-ok_float vector_min(vector * v)
+template<typename T>
+T vector_min(vector<T> * v)
 {
-	ok_float minval = OK_FLOAT_MAX;
+	T minval = static_cast<T>(OK_FLOAT_MAX); /* todo: type detection here */
 	size_t i;
 
 	#ifdef _OPENMP
@@ -240,9 +268,12 @@ ok_float vector_min(vector * v)
 	return minval;
 }
 
-ok_float vector_max(vector * v)
+	T minval = static_cast<T>(OK_FLOAT_MAX); /* todo: type detection here */
+
+template<typename T>
+T vector_max(vector<T> * v)
 {
-	ok_float maxval = -OK_FLOAT_MAX;
+	T maxval = -1 * static_cast<T>(OK_FLOAT_MAX); /* todo: type detection here */
 	size_t i;
 
 	#ifdef _OPENMP
@@ -259,7 +290,9 @@ ok_float vector_max(vector * v)
  * MATRIX methods
  * ==============
  */
-inline int __matrix_exists(matrix * A)
+
+template<typename T>
+inline int __matrix_exists(matrix<T> * A)
 {
 	if (A == OK_NULL) {
 	printf("Error: cannot write to uninitialized matrix pointer\n");
@@ -269,23 +302,26 @@ inline int __matrix_exists(matrix * A)
 	}
 }
 
-void matrix_alloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord)
+template<typename T>
+void matrix_alloc(matrix<T> * A, size_t m, size_t n, enum CBLAS_ORDER ord)
 {
 	A->size1 = m;
 	A->size2 = n;
-	A->data = (ok_float *) malloc(m * n * sizeof(ok_float));
+	A->data = (ok_float *) malloc(m * n * sizeof(T));
 	A->ld = (ord == CblasRowMajor) ? n : m;
 	A->order = ord;
 }
 
-void matrix_calloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord)
+template<typename T>
+void matrix_calloc(matrix<T> * A, size_t m, size_t n, enum CBLAS_ORDER ord)
 {
 	if (!__matrix_exists(A)) return;
 	matrix_alloc(A, m, n, ord);
-	memset(A->data, 0, m * n * sizeof(ok_float));
+	memset(A->data, 0, m * n * sizeof(T));
 }
 
-void matrix_free(matrix * A)
+template<typename T>
+void matrix_free(matrix<T> * A)
 {
 	if (!__matrix_exists(A))
 		return;
@@ -296,7 +332,8 @@ void matrix_free(matrix * A)
 	A->ld = (size_t) 0;
 }
 
-void matrix_submatrix(matrix * A_sub, matrix * A,
+template<typename T>
+void matrix_submatrix(matrix<T> * A_sub, matrix<T> * A,
     size_t i, size_t j, size_t n1, size_t n2)
 {
 	if (!__matrix_exists(A_sub))
@@ -312,7 +349,8 @@ void matrix_submatrix(matrix * A_sub, matrix * A,
 	A_sub->order = A->order;
 }
 
-void matrix_row(vector * row, matrix * A, size_t i)
+template<typename T>
+void matrix_row(vector<T> * row, matrix<T> * A, size_t i)
 {
 	if (!__vector_exists(row))
 		return;
@@ -325,7 +363,8 @@ void matrix_row(vector * row, matrix * A, size_t i)
 		    A->data + i;
 }
 
-void matrix_column(vector * col, matrix *A, size_t j)
+template<typename T>
+void matrix_column(vector<T> * col, matrix<T> *A, size_t j)
 {
 	if (!__vector_exists(col))
 		return;
@@ -338,7 +377,8 @@ void matrix_column(vector * col, matrix *A, size_t j)
 		    A->data + (j * A->ld);
 	}
 
-void matrix_diagonal(vector * diag, matrix * A)
+template<typename T>
+void matrix_diagonal(vector<T> * diag, matrix<T> * A)
 {
 	if (!__vector_exists(diag))
 		return;
@@ -349,7 +389,8 @@ void matrix_diagonal(vector * diag, matrix * A)
 	diag->size = (size_t) (A->size1 <= A->size2) ? A->size1 : A->size2;
 }
 
-void matrix_cast_vector(vector * v, matrix * A)
+template<typename T>
+void matrix_cast_vector(vector<T> * v, matrix<T> * A)
 {
 	if (!__vector_exists(v))
 		return;
@@ -360,39 +401,45 @@ void matrix_cast_vector(vector * v, matrix * A)
 	v->data = A->data;
 }
 
-void matrix_view_array(matrix * A, const ok_float *base, size_t n1, size_t n2,
+template<typename T>
+void matrix_view_array(matrix<T> * A, const T *base, size_t n1, size_t n2,
         enum CBLAS_ORDER ord)
 {
 	if (!__matrix_exists(A))
 		return;
 	A->size1 = n1;
 	A->size2 = n2;
-	A->data = (ok_float *) base;
+	A->data = (T *) base;
 	A->ld = (ord == CblasRowMajor) ? n2 : n1;
 	A->order = ord;
 }
 
-ok_float __matrix_get_colmajor(const matrix * A, size_t i, size_t j)
+template<typename T>
+T __matrix_get_colmajor(const matrix<T> * A, size_t i, size_t j)
 {
 	return A->data[i + j * A->ld];
 }
 
-ok_float __matrix_get_rowmajor(const matrix * A, size_t i, size_t j)
+template<typename T>
+T __matrix_get_rowmajor(const matrix<T> * A, size_t i, size_t j)
 {
 	return A->data[i * A->ld + j];
 }
 
-void __matrix_set_rowmajor(matrix * A, size_t i, size_t j, ok_float x)
+template<typename T>
+void __matrix_set_rowmajor(matrix<T> * A, size_t i, size_t j, T x)
 {
 	A->data[i * A->ld + j] = x;
 }
 
-void __matrix_set_colmajor(matrix * A, size_t i, size_t j, ok_float x)
+template<typename T>
+void __matrix_set_colmajor(matrix<T> * A, size_t i, size_t j, T x)
 {
 	A->data[i + j * A->ld] = x;
 }
 
-void matrix_set_all(matrix * A, ok_float x)
+template<typename T>
+void matrix_set_all(matrix<T> * A, T x)
 {
 	size_t i, j;
 	if (!__matrix_exists(A))
@@ -408,7 +455,8 @@ void matrix_set_all(matrix * A, ok_float x)
 				__matrix_set_colmajor(A, i, j, x);
 }
 
-void matrix_memcpy_mm(matrix * A, const matrix * B)
+template<typename T>
+void matrix_memcpy_mm(matrix<T> * A, const matrix<T> * B)
 {
 	uint i, j;
 	if (A->size1 != B->size1) {
@@ -419,12 +467,12 @@ void matrix_memcpy_mm(matrix * A, const matrix * B)
 		return;
 	}
 
-	void (* mset)(matrix * M, size_t i, size_t j, ok_float x) =
+	void (* mset)(matrix<T> * M, size_t i, size_t j, ok_float x) =
 		(A->order == CblasRowMajor) ?
 		__matrix_set_rowmajor :
 		__matrix_set_colmajor;
 
-	ok_float (* mget)(const matrix * M, size_t i, size_t j) =
+	T (* mget)(const matrix<T> * M, size_t i, size_t j) =
 		(B->order == CblasRowMajor) ?
 		__matrix_get_rowmajor :
 		__matrix_get_colmajor;
@@ -434,11 +482,11 @@ void matrix_memcpy_mm(matrix * A, const matrix * B)
 			  mset(A, i, j, mget(B, i , j));
 }
 
-void matrix_memcpy_ma(matrix * A, const ok_float * B,
-	const enum CBLAS_ORDER ord)
+template<typename T>
+void matrix_memcpy_ma(matrix<T> * A, const T * B, const enum CBLAS_ORDER ord)
 {
 	uint i, j;
-	void (* mset)(matrix * M, size_t i, size_t j, ok_float x) =
+	void (* mset)(matrix<T> * M, size_t i, size_t j, T x) =
 		(A->order == CblasRowMajor) ?
 		__matrix_set_rowmajor :
 		__matrix_set_colmajor;
@@ -450,14 +498,14 @@ void matrix_memcpy_ma(matrix * A, const ok_float * B,
 	else
 		for (i = 0; i < A->size1; ++i)
 			for (j = 0; j < A->size2; ++j)
-			mset(A, i, j, B[i + j * A->size1]);
+				mset(A, i, j, B[i + j * A->size1]);
 }
 
-void matrix_memcpy_am(ok_float * A, const matrix * B,
-	const enum CBLAS_ORDER ord)
+template<typename T>
+void matrix_memcpy_am(T * A, const matrix<T> * B, const enum CBLAS_ORDER ord)
 {
 	uint i, j;
-	ok_float (* mget)(const matrix * M, size_t i, size_t j) =
+	T (* mget)(const matrix<T> * M, size_t i, size_t j) =
 		(B->order == CblasRowMajor) ?
 		__matrix_get_rowmajor :
 		__matrix_get_colmajor;
@@ -472,10 +520,11 @@ void matrix_memcpy_am(ok_float * A, const matrix * B,
 				A[i + B->size1 * j] = mget(B, i, j);
 }
 
-void matrix_print(matrix * A)
+template<typename T>
+void matrix_print(matrix<T> * A)
 {
 	uint i, j;
-	ok_float (* mget)(const matrix * M, size_t i, size_t j) =
+	T (* mget)(const matrix<T> * M, size_t i, size_t j) =
 		(A->order == CblasRowMajor) ?
 		__matrix_get_rowmajor : __matrix_get_colmajor;
 
@@ -487,10 +536,11 @@ void matrix_print(matrix * A)
 	printf("\n");
 }
 
-void matrix_scale(matrix *A, ok_float x)
+template<typename T>
+void matrix_scale(matrix<T> *A, T x)
 {
 	size_t i;
-	vector row_col = (vector){0, 0, OK_NULL};
+	vector<T> row_col = (vector){0, 0, OK_NULL};
 	if (A->order == CblasRowMajor)
 		for(i = 0; i < A->size1; ++i) {
 			matrix_row(&row_col, A, i);
@@ -503,30 +553,33 @@ void matrix_scale(matrix *A, ok_float x)
 		}
 }
 
-void matrix_scale_left(matrix * A, const vector * v)
+template<typename T>
+void matrix_scale_left(matrix<T> * A, const vector<T> * v)
 {
 	size_t i;
-	vector row = (vector){0, 0, OK_NULL};
+	vector<T> row = (vector){0, 0, OK_NULL};
 	for(i = 0; i < A->size1; ++i) {
 		matrix_row(&row, A, i);
 		vector_scale(&row, v->data[i]);
 	}
 }
 
-void matrix_scale_right(matrix * A, const vector * v)
+template<typename T>
+void matrix_scale_right(matrix<T> * A, const vector<T> * v)
 {
 	size_t i;
-	vector col = (vector){0, 0, OK_NULL};
+	vector<T> col = (vector){0, 0, OK_NULL};
 	for(i = 0; i < A->size2; ++i) {
 		matrix_column(&col, A, i);
 		vector_scale(&col, v->data[i]);
 	}
 }
 
-void matrix_abs(matrix * A)
+template<typename T>
+void matrix_abs(matrix<T> * A)
 {
 	size_t i;
-	vector row_col = (vector){0, 0, OK_NULL};
+	vector<T> row_col = (vector){0, 0, OK_NULL};
 	if (A->order == CblasRowMajor)
 		for(i = 0; i < A->size1; ++i) {
 			matrix_row(&row_col, A, i);
@@ -539,10 +592,11 @@ void matrix_abs(matrix * A)
 		}
 }
 
-void matrix_pow(matrix * A, const ok_float x)
+template<typename T>
+void matrix_pow(matrix<T> * A, const ok_float x)
 {
 	size_t i;
-	vector row_col = (vector){0, 0, OK_NULL};
+	vector<T> row_col = (vector){0, 0, OK_NULL};
 	if (A->order == CblasRowMajor)
 		for(i = 0; i < A->size1; ++i) {
 			matrix_row(&row_col, A, i);
@@ -555,8 +609,9 @@ void matrix_pow(matrix * A, const ok_float x)
 	}
 }
 
-int __matrix_order_compat(const matrix * A, const matrix * B, const char * nm_A,
-        const char * nm_B, const char * nm_routine)
+template<typename T>
+int __matrix_order_compat(const matrix<T> * A, const matrix<T> * B,
+	const char * nm_A, const char * nm_B, const char * nm_routine)
 {
 	if (A->order == B->order)
 		return 1;
@@ -584,34 +639,40 @@ ok_status blas_destroy_handle(void * linalg_handle)
 
 /* BLAS LEVEL 1 */
 
-void blas_axpy(void * linalg_handle, ok_float alpha, const vector *x, vector *y)
+template<typename T>
+void blas_axpy(void * linalg_handle, T alpha, const vector<T> *x, vector<T> *y)
 {
 	CBLAS(axpy)((int) x->size, alpha, x->data, (int) x->stride, y->data,
 		(int) y->stride);
 }
 
-ok_float blas_nrm2(void * linalg_handle, const vector *x)
+template<typename T>
+T blas_nrm2(void * linalg_handle, const vector<T> *x)
 {
 	return CBLAS(nrm2)((int) x->size, x->data, (int) x->stride);
 }
 
-void blas_scal(void * linalg_handle, const ok_float alpha, vector *x)
+template<typename T>
+void blas_scal(void * linalg_handle, const ok_float alpha, vector<T> *x)
 {
 	CBLAS(scal)((int) x->size, alpha, x->data, (int) x->stride);
 }
 
-ok_float blas_asum(void * linalg_handle, const vector * x)
+template<typename T>
+ok_float blas_asum(void * linalg_handle, const vector<T> * x)
 {
 	return CBLAS(asum)((int) x->size, x->data, (int) x->stride);
 }
 
-ok_float blas_dot(void * linalg_handle, const vector * x, const vector * y)
+template<typename T>
+blas_dot(void * linalg_handle, const vector<T> * x, const vector<T> * y)
 {
 	return CBLAS(dot)((int) x->size, x->data, (int) x->stride, y->data,
 		(int) y->stride);
 }
 
-void blas_dot_inplace(void * linalg_handle, const vector * x, const vector * y,
+template<typename T>
+void blas_dot_inplace(void * linalg_handle, const vector<T> * x, const vector<T> * y,
 	ok_float * deviceptr_result)
 {
 	*deviceptr_result = CBLAS(dot)((int) x->size, x->data, (int) x->stride,
@@ -620,35 +681,40 @@ void blas_dot_inplace(void * linalg_handle, const vector * x, const vector * y,
 
 /* BLAS LEVEL 2 */
 
+template<typename T>
 void blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
-	ok_float alpha, const matrix *A, const vector *x, ok_float beta,
-	vector *y)
+	ok_float alpha, const matrix<T> *A, const vector<T> *x, ok_float beta,
+	vector<T> *y)
 {
 	CBLAS(gemv)(A->order, transA, (int) A->size1, (int) A->size2, alpha,
 		A->data, (int) A->ld, x->data, (int) x->stride, beta,
 		y->data, (int) y->stride);
 }
 
+template<typename T>
 void blas_trsv(void * linalg_handle, enum CBLAS_UPLO uplo,
-	enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, const matrix *A,
-	vector *x)
+	enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, const matrix<T> *A,
+	vector<T> *x)
 {
 	CBLAS(trsv)(A->order, uplo, transA, Diag, (int) A->size1, A->data,
 		(int) A->ld, x->data, (int) x->stride);
 }
 
+template<typename T>
 void blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
-	enum CBLAS_UPLO uplo, const size_t num_superdiag,
-	const ok_float alpha, const vector * vecA, const vector * x,
-	const ok_float beta, vector * y)
+	enum CBLAS_UPLO uplo, const size_t num_superdiag, const T alpha,
+	const vector<T> * vecA, const vector<T> * x, const T beta,
+	vector<T> * y)
 {
 	CBLAS(sbmv)(order, uplo, (int) y->size, (int) num_superdiag, alpha,
 		vecA->data, (int) num_superdiag + 1, x->data, (int) x->stride,
 		beta, y->data, (int) y->stride);
 }
 
+template<typename T>
 void blas_diagmv(void * linalg_handle, const ok_float alpha,
-	const vector * vecA, const vector * x, const ok_float beta, vector * y)
+	const vector<T> * vecA, const vector<T> * x, const ok_float beta,
+	vector<T> * y)
 {
 	blas_sbmv(linalg_handle, CblasColMajor, CblasLower, 0, alpha, vecA, x,
 		beta, y);
@@ -656,22 +722,29 @@ void blas_diagmv(void * linalg_handle, const ok_float alpha,
 
 /* BLAS LEVEL 3 */
 
+template<typename T>
 void blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
-	enum CBLAS_TRANSPOSE transA, ok_float alpha, const matrix * A,
-	ok_float beta, matrix * C)
+	enum CBLAS_TRANSPOSE transA, T alpha, const matrix<T> * A, T beta,
+	matrix<T> * C)
 {
 	const int k = (transA == CblasNoTrans) ? (int) A->size2 :
 						 (int) A->size1;
+	void (* syrk)(enum CBLAS_ORDER o, enum CBLAS_UPLO u,
+		enum CBLAS_TRANSPOSE tA, T alpha, T* A, T beta, T* B, T* C);
 
 	if (!( __matrix_order_compat(A, C, "A", "C", "blas_syrk") ))
 		return;
+
+	syrk = (T == float)
+
 	CBLAS(syrk)(A->order, uplo, transA, (int) C->size2, k, alpha, A->data,
 		(int) A->ld, beta, C->data, (int) C->ld);
 }
 
+template<typename T>
 void blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
-	enum CBLAS_TRANSPOSE transB, ok_float alpha, const matrix * A,
-	const matrix * B, ok_float beta, matrix * C)
+	enum CBLAS_TRANSPOSE transB, T alpha, const matrix<T> * A,
+	const matrix<T> * B, T beta, matrix<T> * C)
 {
 	const int NA = (transA == CblasNoTrans) ? (int) A->size2 :
 						  (int) A->size1;
@@ -684,9 +757,10 @@ void blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 		beta, C->data, (int) C->ld);
 }
 
+template<typename T>
 void blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side,
-	enum CBLAS_UPLO uplo, enum CBLAS_TRANSPOSE transA,
-	enum CBLAS_DIAG Diag, ok_float alpha, const matrix *A, matrix *B)
+	enum CBLAS_UPLO uplo, enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag,
+	T alpha, const matrix<T> *A, matrix<T> *B)
 {
 	if (!( __matrix_order_compat(A, B, "A", "B", "blas_trsm") ))
 		return;
@@ -701,16 +775,17 @@ void blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side,
  */
 
 /* Non-Block Cholesky. */
-void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
-	ok_float l11;
+template<typename T>
+void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix<T> *A) {
+	T l11;
 	matrix l21, a22;
 	size_t n = A->size1, i;
 
 	/* get order-specific matrix getter/setter */
-	void (* mset)(matrix * M, size_t i, size_t j, ok_float x) =
+	void (* mset)(matrix<T> * M, size_t i, size_t j, ok_float x) =
 		(A->order == CblasRowMajor) ?
 		__matrix_set_rowmajor : __matrix_set_colmajor;
-	ok_float (* mget)(const matrix * M, size_t i, size_t j) =
+	T (* mget)(const matrix<T> * M, size_t i, size_t j) =
 		(A->order == CblasRowMajor) ?
 		__matrix_get_rowmajor : __matrix_get_colmajor;
 
@@ -719,7 +794,7 @@ void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
 
 	for (i = 0; i < n; ++i) {
 		/* L11 = sqrt(A11) */
-		l11 = (ok_float) MATH(sqrt)(mget(A, i, i));
+		l11 = static_cast<T>(MATH(sqrt)(mget(A, i, i)));
 		mset(A, i, i, l11);
 
 		if (i + 1 == n)
@@ -744,7 +819,8 @@ void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
  *
  * Stores result in Lower triangular part.
  */
- void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
+template<typename T>
+void linalg_cholesky_decomp(void * linalg_handle, matrix<T> * A)
 {
 	matrix L11, L21, A22;
 	size_t n = A->size1, blk_dim, i, n11;
@@ -782,7 +858,8 @@ void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
 }
 
 /* Cholesky solve */
-void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x)
+template<typename T>
+void linalg_cholesky_svx(void * linalg_handle, const matrix<T> * L, vector<T> * x)
 {
 	blas_trsv(linalg_handle, CblasLower, CblasNoTrans, CblasNonUnit, L, x);
 	blas_trsv(linalg_handle, CblasLower, CblasTrans, CblasNonUnit, L, x);
