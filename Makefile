@@ -109,7 +109,7 @@ DENSESTATIC=$(PREFIX_OUT)dense_$(ORDER)$(DEVICETAG)$(PRECISION).o
 SPARSESTATIC=$(PREFIX_OUT)sparse_$(ORDER)$(DEVICETAG)$(PRECISION).o
 PROXSTATIC=$(PREFIX_OUT)$(PROXTARG)$(PRECISION).o
 PROJSTATIC=$(PREFIX_OUT)projector_$(DEVICETAG)$(PRECISION).o
-PROJSTATIC=$(PREFIX_OUT)projector_direct$(DEVICETAG)$(PRECISION).o
+PROJDIRECTSTATIC=$(PREFIX_OUT)projector_direct$(DEVICETAG)$(PRECISION).o
 EQUILSTATIC=$(PREFIX_OUT)equil_$(DEVICETAG)$(PRECISION).o
 EQUILDENSESTATIC=$(PREFIX_OUT)equil_dense_$(DEVICETAG)$(PRECISION).o
 POGSSTATIC=$(PREFIX_OUT)pogs_$(DEVICETAG)$(PRECISION).o
@@ -145,7 +145,7 @@ libok: libok_dense libok_sparse
 
 libpogs: $(POGSLIBS)
 
-libpogs_dense: pogs equil_dense projector $(LINSYSLIBS) libprox
+libpogs_dense: pogs equil_dense projector_direct $(LINSYSLIBS) libprox
 	mkdir -p $(OUT)	
 	$(CC) $(CCFLAGS) -shared -o \
 	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED)  \
@@ -241,19 +241,25 @@ pogs_abstract: $(SRC)optkit_abstract_pogs.c $(INCLUDE)optkit_abstract_pogs.h
 pogs: $(SRC)optkit_pogs.c $(INCLUDE)optkit_pogs.h
 	mkdir -p $(OUT) 
 	$(CC) $(CCFLAGS) -I$(INCLUDE)operator/ $< -c -o $(POGSSTATIC)
-	$(CC) $(CCFLAGS) $< -c -o $(EQUILDENSESTATIC) \
-	-I$(INCLUDE)operator/ -DABSTRACT_OPERATOR_BARE -DOPTKIT_NO_OPERATOR_EQUIL
-	$(CC) $(CXXFLAGS) $< -c -o $(PROJDIRECTSTATIC) -DABSTRACT_OPERATOR_BARE \
-	-DOPTKIT_NO_INDIRECT_PROJECTOR
 
 equil: $(SRC)optkit_equilibration.c $(INCLUDE)optkit_equilibration.h
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) $< -c -o $(EQUILSTATIC) \
 	-I$(INCLUDE)operator/ -DABSTRACT_OPERATOR_BARE
 
+equil_dense: $(SRC)optkit_equilibration.c $(INCLUDE)optkit_equilibration.h
+	mkdir -p $(OUT)
+	$(CC) $(CCFLAGS) $< -c -o $(EQUILDENSESTATIC) \
+	-I$(INCLUDE)operator/ -DABSTRACT_OPERATOR_BARE -DOPTKIT_NO_OPERATOR_EQUIL
+
 projector: $(SRC)optkit_projector.c $(INCLUDE)optkit_projector.h
 	mkdir -p $(OUT)
 	$(CC) $(CXXFLAGS) $< -c -o $(PROJSTATIC) -DABSTRACT_OPERATOR_BARE
+
+projector_direct: $(SRC)optkit_projector.c $(INCLUDE)optkit_projector.h
+	mkdir -p $(OUT)
+	$(CC) $(CXXFLAGS) $< -c -o $(PROJDIRECTSTATIC) -DABSTRACT_OPERATOR_BARE \
+	-DOPTKIT_NO_INDIRECT_PROJECTOR
 
 operator: $(OPERATOR_SRC) 
 	mkdir -p $(OUT)
