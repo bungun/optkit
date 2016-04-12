@@ -127,7 +127,7 @@ void linalg_matrix_broadcast_vector(void * linalg_handle, matrix * A,
 	const vector * v, const enum OPTKIT_TRANSFORM operation,
 	const enum CBLAS_SIDE side);
 void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
-	matrix * A, const enum CBLAS_SIDE side);
+	vector * minima, matrix * A, const enum CBLAS_SIDE side);
 void linalg_matrix_reduce_min(void * linalg_handle, vector * minima,
 	matrix * A, const enum CBLAS_SIDE side);
 void linalg_matrix_reduce_max(void * linalg_handle, vector * maxima,

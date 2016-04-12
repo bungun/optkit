@@ -211,7 +211,6 @@ void vector_pow(vector * v, const ok_float x)
 	CUDA_CHECK_ERR;
 }
 
-
 void vector_exp(vector * v)
 {
 	__thrust_vector_exp(v);
@@ -427,7 +426,7 @@ static __global__ void __matrix_row_indmin(size_t * minind, ok_float * minima,
 	ok_float * A, size_t i, size_t j, size_t ld, size_t stride_indmin,
 	size_t stride_minima, const enum CBLAS_ORDER ord)
 {
-	uint col, row, global_col, global_row;
+	uint col, row, global_col, global_row, k;
 	const uint kTileLD = kTileSize + 1u;
 	__shared__ ok_float Asub[kTileLD * kTileSize];
 	__shared__ ok_float minsub[kTileSize];
@@ -445,17 +444,19 @@ static __global__ void __matrix_row_indmin(size_t * minind, ok_float * minima,
 	get(Asub, row, col, kTileLD) = get(A, global_row, global_col, ld);
 	__syncthreads();
 
-	minsub[row] = MATH(fmin)(minima[global_row * stride_minima],
-		OK_FLOAT_MAX);
+	if (col == 0)
+		minsub[row] = MATH(fmin)(minima[global_row * stride_minima],
+			OK_FLOAT_MAX);
 	__syncthreads();
 
-	minsub[row] = MATH(fmin)(minsub[row], get(Asub, row, col, kTileLD));
-
-	compare = get(Asub, row, col, kTileLD);
-	if (minsub[row] <= compare) {
-		minsub[row] = compare;
-		indminsub[row] = global_col;
-	}
+	if (col == 0)
+		for (k = 0; k < blockDim.y; ++k) {
+			compare = get(Asub, row, k, kTileLD);
+			if (minsub[row] <= compare) {
+				minsub[row] = compare;
+				indminsub[row] = global_col + k;
+			}
+		}
 	__syncthreads();
 
 	minima[global_row * stride_minima] = minsub[row];
@@ -468,7 +469,7 @@ static __global__ void __matrix_col_indmin(size_t * minind, ok_float * minima,
 	ok_float * A, size_t i, size_t j, size_t ld, size_t stride_indmin,
 	size_t stride_minima, const enum CBLAS_ORDER ord)
 {
-	uint col, row, global_col, global_row;
+	uint col, row, global_col, global_row, k;
 	const uint kTileLD = kTileSize + 1u;
 	__shared__ ok_float Asub[kTileLD * kTileSize];
 	__shared__ ok_float minsub[kTileSize];
@@ -486,17 +487,19 @@ static __global__ void __matrix_col_indmin(size_t * minind, ok_float * minima,
 	get(Asub, row, col, kTileLD) = get(A, global_row, global_col, ld);
 	__syncthreads();
 
-	minsub[col] = MATH(fmin)(minima[global_col * stride_minima],
-		OK_FLOAT_MAX);
+	if (row == 0)
+		minsub[col] = MATH(fmin)(minima[global_col * stride_minima],
+			OK_FLOAT_MAX);
 	__syncthreads();
 
-	minsub[col] = MATH(fmin)(minsub[col], get(Asub, row, col, kTileLD));
-
-	compare = get(Asub, row, col, kTileLD);
-	if (minsub[col] <= compare) {
-		minsub[col] = compare;
-		indminsub[col] = global_row;
-	}
+	if (row == 0)
+		for (k = 0; k < blockDim.x; ++k) {
+			compare = get(Asub, k, col, kTileLD);
+			if (minsub[col] <= compare) {
+				minsub[col] = compare;
+				indminsub[col] = global_row + k;
+			}
+		}
 	__syncthreads();
 
 	minima[global_col * stride_minima] = minsub[col];
@@ -506,9 +509,10 @@ static __global__ void __matrix_col_indmin(size_t * minind, ok_float * minima,
 }
 
 static __global__ void __matrix_row_min(ok_float * minima, ok_float * A,
-	size_t i, size_t j, size_t ld, size_t stride_minima, const enum CBLAS_ORDER ord)
+	size_t i, size_t j, size_t ld, size_t stride_minima,
+	const enum CBLAS_ORDER ord)
 {
-	uint col, row, global_col, global_row;
+	uint col, row, global_col, global_row, k;
 	const uint kTileLD = kTileSize + 1u;
 	__shared__ ok_float Asub[kTileLD * kTileSize];
 	__shared__ ok_float minsub[kTileSize];
@@ -524,20 +528,25 @@ static __global__ void __matrix_row_min(ok_float * minima, ok_float * A,
 	get(Asub, row, col, kTileLD) = get(A, global_row, global_col, ld);
 	__syncthreads();
 
-	minsub[row] = MATH(fmin)(minima[global_row * stride_minima],
-		OK_FLOAT_MAX);
+	if (col == 0)
+		minsub[row] = MATH(fmin)(minima[global_row * stride_minima],
+			OK_FLOAT_MAX);
 	__syncthreads();
 
-	minsub[row] = MATH(fmin)(minsub[row], get(Asub, row, col, kTileLD));
+	if (col == 0)
+		for (k = 0; k < blockDim.y; ++k)
+			minsub[row] = MATH(fmin)(minsub[row],
+				get(Asub, row, k, kTileLD));
 	__syncthreads();
 
 	minima[global_row * stride_minima] = minsub[row];
 }
 
 static __global__ void __matrix_col_min(ok_float * minima, ok_float * A,
-	size_t i, size_t j, size_t ld, size_t stride_minima, const enum CBLAS_ORDER ord)
+	size_t i, size_t j, size_t ld, size_t stride_minima,
+	const enum CBLAS_ORDER ord)
 {
-	uint col, row, global_col, global_row;
+	uint col, row, global_col, global_row, k;
 	const uint kTileLD = kTileSize + 1u;
 	__shared__ ok_float Asub[kTileLD * kTileSize];
 	__shared__ ok_float minsub[kTileSize];
@@ -553,20 +562,25 @@ static __global__ void __matrix_col_min(ok_float * minima, ok_float * A,
 	get(Asub, row, col, kTileLD) = get(A, global_row, global_col, ld);
 	__syncthreads();
 
-	minsub[col] = MATH(fmin)(minima[global_col * stride_minima],
-		OK_FLOAT_MAX);
+	if (row == 0)
+		minsub[col] = MATH(fmin)(minima[global_col * stride_minima],
+			OK_FLOAT_MAX);
 	__syncthreads();
 
-	minsub[col] = MATH(fmin)(minsub[col], get(Asub, row, col, kTileLD));
+	if (row == 0)
+		for (k = 0; k < blockDim.x; ++k)
+			minsub[col] = MATH(fmin)(minsub[col],
+				get(Asub, k, col, kTileLD));
 	__syncthreads();
 
 	minima[global_col * stride_minima] = minsub[col];
 }
 
 static __global__ void __matrix_row_max(ok_float * maxima, ok_float * A,
-	size_t i, size_t j, size_t ld, size_t stride_maxima, const enum CBLAS_ORDER ord)
+	size_t i, size_t j, size_t ld, size_t stride_maxima,
+	const enum CBLAS_ORDER ord)
 {
-	uint col, row, global_col, global_row;
+	uint col, row, global_col, global_row, k;
 	const uint kTileLD = kTileSize + 1u;
 	__shared__ ok_float Asub[kTileLD * kTileSize];
 	__shared__ ok_float maxsub[kTileSize];
@@ -582,20 +596,26 @@ static __global__ void __matrix_row_max(ok_float * maxima, ok_float * A,
 	get(Asub, row, col, kTileLD) = get(A, global_row, global_col, ld);
 	__syncthreads();
 
-	maxsub[row] = MATH(fmax)(maxima[global_row * stride_maxima],
-		-OK_FLOAT_MAX);
+	if (col == 0)
+		maxsub[row] = MATH(fmax)(maxima[global_row * stride_maxima],
+			-OK_FLOAT_MAX);
 	__syncthreads();
 
-	maxsub[row] = MATH(fmax)(maxsub[row], get(Asub, row, col, kTileLD));
+	if (col == 0)
+		for (k = 0; k < blockDim.y; ++k)
+			maxsub[row] = MATH(fmax)(maxsub[row],
+				get(Asub, row, k, kTileLD));
+
 	__syncthreads();
 
 	maxima[global_col * stride_maxima] = maxsub[col];
 }
 
 static __global__ void __matrix_col_max(ok_float * maxima, ok_float * A,
-	size_t i, size_t j, size_t ld, size_t stride_maxima, const enum CBLAS_ORDER ord)
+	size_t i, size_t j, size_t ld, size_t stride_maxima,
+	const enum CBLAS_ORDER ord)
 {
-	uint col, row, global_col, global_row;
+	uint col, row, global_col, global_row, k;
 	const uint kTileLD = kTileSize + 1u;
 	__shared__ ok_float Asub[kTileLD * kTileSize];
 	__shared__ ok_float maxsub[kTileSize];
@@ -611,11 +631,15 @@ static __global__ void __matrix_col_max(ok_float * maxima, ok_float * A,
 	get(Asub, row, col, kTileLD) = get(A, global_row, global_col, ld);
 	__syncthreads();
 
-	maxsub[col] = MATH(fmax)(maxima[global_col * stride_maxima],
-		-OK_FLOAT_MAX);
+	if (row == 0)
+		maxsub[col] = MATH(fmax)(maxima[global_col * stride_maxima],
+			-OK_FLOAT_MAX);
 	__syncthreads();
 
-	maxsub[col] = MATH(fmax)(maxsub[col], get(Asub, row, col, kTileLD));
+	if (row == 0)
+		for (k = 0; k < blockDim.x; ++k)
+			maxsub[col] = MATH(fmax)(maxsub[col],
+				get(Asub, k, col, kTileLD));
 	__syncthreads();
 
 	maxima[global_col * stride_maxima] = maxsub[col];
@@ -1467,12 +1491,11 @@ void linalg_matrix_broadcast_vector(void * linalg_handle, matrix * A,
 }
 
 void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
-	matrix * A, const enum CBLAS_SIDE side)
+	vector * minima, matrix * A, const enum CBLAS_SIDE side)
 {
 	cublasStatus_t err;
 	cudaStream_t stm;
 	uint num_row_tiles, num_col_tiles, i, j;
-	size_t preserved_dim = (side == CblasLeft) ? A->size2 : A->size1;
 	ok_float * minima;
 
 	void (* reduce)(size_t * minind, ok_float * minima, ok_float * A,
@@ -1481,9 +1504,6 @@ void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
 
 	uint grid_dim = calc_grid_dim(preserved_dim);
 
-	ok_alloc_gpu(minima, preserved_dim * sizeof(*minima));
-	__vector_set<<<grid_dim, kBlockSize>>>(minima, OK_FLOAT_MAX, 1,
-		preserved_dim);
 
 	reduce = (side == CblasLeft) ? __matrix_col_indmin :
 		__matrix_row_indmin;
@@ -1491,6 +1511,8 @@ void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
 	err = cublasGetStream(*(cublasHandle_t *) linalg_handle, &stm);
 	num_row_tiles = (A->size1 + kTileSize - 1u) / kTileSize;
 	num_col_tiles = (A->size2 + kTileSize - 1u) / kTileSize;
+
+	vector_set_all(minima, OK_FLOAT_MAX);
 
 	for (i = 0; i < num_row_tiles; ++i) {
 		uint block_dim_v = kTileSize < A->size1 - i * kTileSize ? \
@@ -1505,12 +1527,12 @@ void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
 				kTileSize : A->size2 - j * kTileSize;
 
 			dim3 block_dim(block_dim_v, block_dim_h);
-			reduce<<<1, block_dim, 0, stm>>>(indices, minima,
-				A->data, i, j, (uint) A->ld, 1, 1, A->order);
+			reduce<<<1, block_dim, 0, stm>>>(indices, minima->data,
+				A->data, i, j, (uint) A->ld, 1, minima->stride,
+				A->order);
 			CUDA_CHECK_ERR;
 		}
 	}
-	ok_free_gpu(minima);
 }
 
 static void __matrix_extrema(void * linalg_handle, vector * extrema,
@@ -1558,12 +1580,14 @@ static void __matrix_extrema(void * linalg_handle, vector * extrema,
 void linalg_matrix_reduce_min(void * linalg_handle, vector * minima,
 	matrix * A, const enum CBLAS_SIDE side)
 {
+	vector_set_all(minima, OK_FLOAT_MAX);
 	__matrix_extrema(linalg_handle, minima, A, side, 1);
 }
 
 void linalg_matrix_reduce_max(void * linalg_handle, vector * maxima,
 	matrix * A, const enum CBLAS_SIDE side)
 {
+	vector_set_all(maxima, -OK_FLOAT_MAX);
 	__matrix_extrema(linalg_handle, maxima, A, side, 0);
 }
 

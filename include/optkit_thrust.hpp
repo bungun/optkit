@@ -262,8 +262,7 @@ inline size_t __thrust_vector_indmin(vector * v)
 	strided_range_t r = __make_strided_range(v);
 	ok_float * res = thrust::raw_pointer_cast(
 		&(thrust::min_element(r.begin(), r.end())[0]));
-
-	return (size_t) ((res - v->data) / (v->stride * sizeof(ok_float)));
+	return (size_t) (res - v->data);
 }
 
 inline ok_float __thrust_vector_min(vector * v)

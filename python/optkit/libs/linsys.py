@@ -226,7 +226,8 @@ class DenseLinsysLibs(object):
 			lib.linalg_matrix_broadcast_vector.argtypes = [c_void_p, matrix_p,
 													vector_p, c_uint, c_uint]
 			lib.linalg_matrix_reduce_indmin.argtypes = [c_void_p, c_size_t_p,
-														matrix_p, c_uint]
+														vector_p, matrix_p,
+														c_uint]
 			lib.linalg_matrix_reduce_min.argtypes = [c_void_p, vector_p,
 													 matrix_p, c_uint]
 			lib.linalg_matrix_reduce_max.argtypes = [c_void_p, vector_p,

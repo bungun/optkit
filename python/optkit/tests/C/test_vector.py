@@ -61,7 +61,6 @@ class VectorTestCase(unittest.TestCase):
 			len_v = 10 + int(1000 * np.random.rand())
 
 			v, v_py, v_ptr = self.make_vec_triplet(lib, len_v)
-
 			w, w_py, w_ptr = self.make_vec_triplet(lib, len_v)
 
 			# set_all
@@ -139,12 +138,20 @@ class VectorTestCase(unittest.TestCase):
 			val1 = 12 * np.random.rand()
 			val2 = 5 * np.random.rand()
 			len_v = 10 + int(1000 * np.random.rand())
+			# len_v = 10 + int(10 * np.random.rand())
 
 			RTOL = 10**(-DIGITS)
 			ATOL = RTOL * len_v**0.5
 
-			v, v_py, v_ptr = self.make_vec_triplet(lib, len_v)
-			w, w_py, w_ptr = self.make_vec_triplet(lib, len_v)
+			v = lib.vector(0, 0, None)
+			lib.vector_calloc(v, len_v)
+			v_py = np.zeros(len_v).astype(lib.pyfloat)
+			v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
+
+			w = lib.vector(0, 0, None)
+			lib.vector_calloc(w, len_v)
+			w_py = np.zeros(len_v).astype(lib.pyfloat)
+			w_ptr = w_py.ctypes.data_as(lib.ok_float_p)
 
 			# constant addition
 			lib.vector_add_constant(v, val1)

@@ -880,7 +880,7 @@ void linalg_matrix_broadcast_vector(void * linalg_handle, matrix * A,
 }
 
 void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
-	matrix * A, const enum CBLAS_SIDE side)
+	vector * minima, matrix * A, const enum CBLAS_SIDE side)
 {
 	int reduce_rows = (side == CblasLeft);
 	size_t output_dim = (reduce_rows) ? A->size2 : A->size1;
@@ -893,6 +893,7 @@ void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
 	for (k = 0; k < output_dim; ++k) {
 		matrix_subvec(&a, A, k);
 		indices[k] = vector_indmin(&a);
+		minima->data[k * minima->stride] = a[indices[k] * a->stride];
 	}
 }
 
