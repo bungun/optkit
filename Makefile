@@ -248,8 +248,8 @@ equil: $(SRC)optkit_equilibration.c $(INCLUDE)optkit_equilibration.h
 
 equil_dense: $(SRC)optkit_equilibration.c $(INCLUDE)optkit_equilibration.h
 	mkdir -p $(OUT)
-	$(CC) $(CCFLAGS) $< -c -o $(EQUILSTATIC) \
-	-I$(INCLUDE)operator/ -DABSTRACT_OPERATOR_BARE -DEQUIL_DENSE
+	$(CC) $(CCFLAGS) $< -c -o $(EQUILDENSESTATIC) \
+	-I$(INCLUDE)operator/ -DABSTRACT_OPERATOR_BARE -DOPTKIT_EQUIL_DENSE
 
 projector: $(SRC)optkit_projector.c $(INCLUDE)optkit_projector.h
 	mkdir -p $(OUT)
