@@ -91,13 +91,13 @@ void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 		blas_gemv(linalg_handle, CblasTrans, kOne, A_out, d, kZero, e);
 		vector_add_constant(e, kSinkhornConst / (ok_float) e->size);
 		vector_recip(e);
-		vector_scale(e, d->size);
+		vector_scale(e, (ok_float) d->size);
 
 		blas_gemv(linalg_handle, CblasNoTrans, kOne, A_out, e, kZero,
 			d);
 		vector_add_constant(d, kSinkhornConst / (ok_float) d->size);
 		vector_recip(d);
-		vector_scale(d, e->size);
+		vector_scale(d, (ok_float) e->size);
 
 		blas_axpy(linalg_handle, -kOne, d, &d_diff);
 		blas_axpy(linalg_handle, -kOne, e, &e_diff);
@@ -231,11 +231,11 @@ ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 		A->adjoint(A->data, d, e);
 		vector_add_constant(e, kSinkhornConst / (ok_float) e->size);
 		vector_recip(e);
-		vector_scale(e, d->size);
+		vector_scale(e, (ok_float) d->size);
 		A->apply(A->data, e, d);
 		vector_add_constant(d, kSinkhornConst / (ok_float) d->size);
 		vector_recip(d);
-		vector_scale(d, e->size);
+		vector_scale(d, (ok_float) e->size);
 
 		norm_d = MATH(sqrt)(blas_dot(linalg_handle, &d_diff, &d_diff));
 		norm_e = MATH(sqrt)(blas_dot(linalg_handle, &e_diff, &e_diff));
