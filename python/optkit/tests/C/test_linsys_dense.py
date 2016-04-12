@@ -1038,6 +1038,8 @@ class DenseLinalgTestCase(unittest.TestCase):
 												lib.enums.CblasLeft)
 				calcmin = np.array([A_py[inds[i], i] for i in xrange(n)])
 				colmin = np.min(A_py, 0)
+				print colmin
+				lib.vector_print(e)
 				print calcmin - colmin
 				self.assertTrue(np.linalg.norm(calcmin - colmin) <=
 								ATOLN + RTOL * np.linalg.norm(colmin))
@@ -1049,9 +1051,11 @@ class DenseLinalgTestCase(unittest.TestCase):
 												lib.enums.CblasRight)
 				calcmin = np.array([A_py[i, inds[i]] for i in xrange(m)])
 				rowmin = np.min(A_py, 1)
+				print rowmin
+				lib.vector_print(d)
 				print calcmin - rowmin
 				self.assertTrue(np.linalg.norm(calcmin - rowmin) <=
-											   ATOLM + RTOL * np.linalg.norm(rowmin))
+								ATOLM + RTOL * np.linalg.norm(rowmin))
 
 				# free memory
 				lib.matrix_free(A)

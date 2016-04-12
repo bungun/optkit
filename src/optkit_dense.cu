@@ -415,13 +415,6 @@ static __global__ void __matrix_add_right(ok_float * A, const ok_float * v,
 	get(A, global_row, global_col, ld) = get(Asub, row, col, kTileLD);
 }
 
-/*
- * Adapted from stackoverflow.com: Implementing Max Reduce in Cuda
- *
- * 	http://stackoverflow.com/questions/17371275/implementing-max-
- * 	reduce-in-cuda
- */
-
 static __global__ void __matrix_row_indmin(size_t * minind, ok_float * minima,
 	ok_float * A, size_t i, size_t j, size_t ld, size_t stride_indmin,
 	size_t stride_minima, const enum CBLAS_ORDER ord)
@@ -431,10 +424,13 @@ static __global__ void __matrix_row_indmin(size_t * minind, ok_float * minima,
 	__shared__ ok_float Asub[kTileLD * kTileSize];
 	__shared__ ok_float minsub[kTileSize];
 	__shared__ size_t indminsub[kTileSize];
-	ok_float compare;
+	ok_float prev;
 
 	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride) =
 		(ord == CblasRowMajor) ? __matrix_get_r : __matrix_get_c;
+	// ok_float& (* getp)(ok_float * A, uint i, uint j, uint stride) =
+	// 	(ord == CblasRowMajor) ?
+	// 	__matrix_get_ptr_r : __matrix_get_ptr_c;
 
 	row = threadIdx.x;
 	col = threadIdx.y;
@@ -451,11 +447,11 @@ static __global__ void __matrix_row_indmin(size_t * minind, ok_float * minima,
 
 	if (col == 0)
 		for (k = 0; k < blockDim.y; ++k) {
-			compare = get(Asub, row, k, kTileLD);
-			if (minsub[row] <= compare) {
-				minsub[row] = compare;
+			prev = minsub[row];
+			minsub[row] = MATH(fmin)(minsub[row],
+				get(Asub, row, k, kTileLD));
+			if (minsub[row] != prev)
 				indminsub[row] = global_col + k;
-			}
 		}
 	__syncthreads();
 
@@ -474,7 +470,7 @@ static __global__ void __matrix_col_indmin(size_t * minind, ok_float * minima,
 	__shared__ ok_float Asub[kTileLD * kTileSize];
 	__shared__ ok_float minsub[kTileSize];
 	__shared__ size_t indminsub[kTileSize];
-	ok_float compare;
+	ok_float prev;
 
 	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride) =
 		(ord == CblasRowMajor) ? __matrix_get_r : __matrix_get_c;
@@ -494,11 +490,11 @@ static __global__ void __matrix_col_indmin(size_t * minind, ok_float * minima,
 
 	if (row == 0)
 		for (k = 0; k < blockDim.x; ++k) {
-			compare = get(Asub, k, col, kTileLD);
-			if (minsub[col] <= compare) {
-				minsub[col] = compare;
+			prev = minsub[col];
+			minsub[col] = MATH(fmin)(minsub[col],
+				get(Asub, k, col, kTileLD));
+			if (minsub[col] != prev)
 				indminsub[col] = global_row + k;
-			}
 		}
 	__syncthreads();
 
@@ -1496,6 +1492,7 @@ void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
 	cublasStatus_t err;
 	cudaStream_t stm;
 	uint num_row_tiles, num_col_tiles, i, j;
+	size_t ind_local[minima->size];
 
 	void (* reduce)(size_t * minind, ok_float * minima, ok_float * A,
 		size_t i, size_t j, size_t ld, size_t stride_indmin,
@@ -1523,12 +1520,13 @@ void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
 				kTileSize : A->size2 - j * kTileSize;
 
 			dim3 block_dim(block_dim_v, block_dim_h);
-			reduce<<<1, block_dim, 0, stm>>>(indices, minima->data,
-				A->data, i, j, (uint) A->ld, 1, minima->stride,
-				A->order);
+			reduce<<<1, block_dim, 0, stm>>>(ind_local,
+				minima->data, A->data, i, j, (uint) A->ld, 1,
+				minima->stride, A->order);
 			CUDA_CHECK_ERR;
 		}
 	}
+	ok_memcpy_gpu(indices, ind_local, minima->size * sizeof(*indices));
 }
 
 static void __matrix_extrema(void * linalg_handle, vector * extrema,
