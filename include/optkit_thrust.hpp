@@ -8,6 +8,8 @@
 #include <thrust/functional.h>
 #include <thrust/inner_product.h>
 #include <thrust/reduce.h>
+#include <thrust/extrema.h>
+
 
 /*
  * strided iterator (from thrust:: examples)
@@ -22,7 +24,7 @@ public:
 		diff_t stride;
 		StrideF(diff_t stride) : stride(stride) { }
 
-		__host__ __device__ diff_t operator()(const diff_t& i) const {
+		diff_t operator()(const diff_t& i) const {
 			return stride * i;
 		}
 	};
@@ -32,18 +34,17 @@ public:
 		TransformIt;
 	typedef typename thrust::permutation_iterator<Iterator, TransformIt>
 		PermutationIt;
-	typedef PermutationIt strided_iterator_t;
 
 	  /* construct strided_range for the range [first,last). */
 	strided_range(Iterator first, Iterator last, diff_t stride):
 		first(first), last(last), stride(stride) { }
 
-	strided_iterator_t begin() const {
+	PermutationIt begin() const {
 	    return PermutationIt(first, TransformIt(CountingIt(0),
 	    	StrideF(stride)));
 	}
 
-	strided_iterator_t end() const {
+	PermutationIt end() const {
 		return begin() + ((last - first) + (stride - 1)) / stride;
 	}
 
@@ -89,8 +90,8 @@ struct ReciprF : thrust::unary_function<ok_float, ok_float>
 struct SafeReciprF : thrust::unary_function<ok_float, ok_float>
 {
 	ok_float alpha;
-	ReciprF() : alpha(1) {}
-	ReciprF(ok_float alpha) : alpha(alpha) {}
+	SafeReciprF() : alpha(1) {}
+	SafeReciprF(ok_float alpha) : alpha(alpha) {}
 	__device__ inline ok_float operator()(ok_float x)
 		{ return ((ok_float) (x == kZero)) * alpha / x; }
 };
@@ -124,15 +125,15 @@ struct ExpF : thrust::unary_function<ok_float, ok_float>
  *optkit.vector -> strided range
  * -----------------------------
  */
-__host__ __device__ inline strided_range_t __make_strided_range(vector * v)
+inline strided_range_t __make_strided_range(vector * v)
 {
 	return strided_range_t(
 		thrust::device_pointer_cast(v->data),
 		thrust::device_pointer_cast(v->data + v->stride * v->size),
-			v->stride);
+		v->stride);
 }
 
-__host__ __device__  inline strided_range_t __make_const_strided_range(
+inline strided_range_t __make_const_strided_range(
 	const vector * v)
 {
 	return strided_range_t(
@@ -233,6 +234,12 @@ inline void __thrust_vector_recip(vector * v)
 	__transform_r(r, ReciprF());
 }
 
+inline void __thrust_vector_safe_recip(vector * v)
+{
+	strided_range_t r = __make_strided_range(v);
+	__transform_r(r, SafeReciprF());
+}
+
 inline void __thrust_vector_sqrt(vector * v)
 {
 	strided_range_t r = __make_strided_range(v);
@@ -248,31 +255,28 @@ inline void __thrust_vector_pow(vector * v, const ok_float p)
 inline void __thrust_vector_exp(vector * v)
 {
 	strided_range_t r = __make_strided_range(v);
-	__transform_r(r, ExpF(p));
+	__transform_r(r, ExpF());
 }
 
-__host__ __device__ inline size_t __thrust_vector_indmin(vector * v)
+inline size_t __thrust_vector_indmin(vector * v)
 {
 	strided_range_t r = __make_strided_range(v);
-	thrust::device_ptr<ok_float> res = thrust::min_element(r.begin(),
-		r.end());
+	ok_float * res = thrust::raw_pointer_cast(
+		&(thrust::min_element(r.begin(), r.end())[0]));
+
 	return (size_t) ((res - v->data) / (v->stride * sizeof(ok_float)));
 }
 
-__host__ __device__ inline ok_float __thrust_vector_min(vector * v)
+inline ok_float __thrust_vector_min(vector * v)
 {
 	strided_range_t r = __make_strided_range(v);
-	thrust::device_ptr<ok_float> res = thrust::min_element(r.begin(),
-		r.end());
-	return res[0];
+	return thrust::min_element(r.begin(), r.end())[0];
 }
 
-__host__ __device__ inline ok_float __thrust_vector_min(vector * v)
+inline ok_float __thrust_vector_max(vector * v)
 {
 	strided_range_t r = __make_strided_range(v);
-	thrust::device_ptr<ok_float> res = thrust::max_element(r.begin(),
-		r.end());
-	return res[0];
+	return thrust::max_element(r.begin(), r.end())[0];
 }
 
 #endif /* OPTKIT_THRUST_H_ */

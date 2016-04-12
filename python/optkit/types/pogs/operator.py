@@ -1,62 +1,62 @@
-# from numpy import zeros, ones, ndarray, savez, load as np_load
-# from scipy.sparse import csr_matrix, csc_matrix, coo_matrix
-# from ctypes import c_void_p
-# from os import path
-# from optkit.types.operator import OperatorTypes
-# from optkit.types.pogs.common import PogsTypes
+from numpy import zeros, ones, ndarray, savez, load as np_load
+from scipy.sparse import csr_matrix, csc_matrix, coo_matrix
+from ctypes import c_void_p
+from os import path
+from optkit.types.operator import OperatorTypes
+from optkit.types.pogs.common import PogsTypes
 
-# class PogsOperatorTypes(PogsTypes):
-# 	def __init__(self, backend):
-# 		PogsTypes.__init__(self, backend)
-# 		PogsSettings = backend.pogs.pogs_settings
-# 		PogsInfo = backend.pogs.pogs_info
-# 		PogsOutput = backend.pogs.pogs_output
-# 		pogslib = backend.pogs
-# 		denselib = backend.dense
-# 		sparselib = backend.sparse
-# 		proxlib = backend.prox
-# 		operatorlib = backend.operator
+class PogsOperatorTypes(PogsTypes):
+	def __init__(self, backend):
+		PogsTypes.__init__(self, backend)
+		PogsSettings = backend.pogs.pogs_settings
+		PogsInfo = backend.pogs.pogs_info
+		PogsOutput = backend.pogs.pogs_output
+		pogslib = backend.pogs
+		denselib = backend.dense
+		sparselib = backend.sparse
+		proxlib = backend.prox
+		operatorlib = backend.operator
 
-# 		Operator = OperatorTypes(backend).AbstractLinearOperator
+		Operator = OperatorTypes(backend).AbstractLinearOperator
 
-# 		class Solver(object):
-# 			def __init__(self, A, **options):
-# 				self.A = Operator(A)
-# 				self.shape = (self.m, self.n) = (m, n) = self.A.shape
-# 				self.__f = zeros(m).astype(proxlib.function)
-# 				self.__f_ptr = self.__f.ctypes.data_as(proxlib.function_p)
-# 				self.__f_c = proxlib.function_vector(self.m, self.__f_ptr)
-# 				self.__g = zeros(n).astype(proxlib.function)
-# 				self.__g_ptr = self.__g.ctypes.data_as(proxlib.function_p)
-# 				self.__g_c = proxlib.function_vector(self.n, self.__g_ptr)
-# 				self.layout = layout = denselib.enums.CblasRowMajor if \
-# 					A.flags.c_contiguous else denselib.enums.CblasColMajor
+		class Solver(object):
+			def __init__(self, A, **options):
+				self.A = Operator(A)
+				self.shape = (self.m, self.n) = (m, n) = self.A.shape
+				self.__f = zeros(m).astype(proxlib.function)
+				self.__f_ptr = self.__f.ctypes.data_as(proxlib.function_p)
+				self.__f_c = proxlib.function_vector(self.m, self.__f_ptr)
+				self.__g = zeros(n).astype(proxlib.function)
+				self.__g_ptr = self.__g.ctypes.data_as(proxlib.function_p)
+				self.__g_c = proxlib.function_vector(self.n, self.__g_ptr)
+				self.layout = layout = denselib.enums.CblasRowMajor if \
+					A.flags.c_contiguous else denselib.enums.CblasColMajor
 
-# 				NO_INIT = bool(options.pop('no_init', False))
-# 				DIRECT = int(options.pop('direct', False))
-# 				EQUILNORM = float(options.pop('equil_norm', 1.))
+				NO_INIT = bool(options.pop('no_init', False))
+				DIRECT = int(options.pop('direct', False))
+				EQUILNORM = float(options.pop('equil_norm', 1.))
 
-# 				if NO_INIT:
-# 					self.c_solver = pogslib.pogs_init(self.A.c_ptr, DIRECT,
-# 													  EQUILNORM)
-# 					backend.increment_cobject_count()
-# 				else:
-# 					self.c_solver = None
+				if not NO_INIT:
+					self.c_solver = pogslib.pogs_init(self.A.c_ptr, DIRECT,
+													  EQUILNORM)
+					backend.increment_cobject_count()
+				else:
+					self.c_solver = None
 
-# 				self.settings = SolverSettings()
-# 				self.info = SolverInfo()
-# 				self.output = SolverOutput(m, n)
-# 				self.settings.update(**options)
-# 				self.first_run = True
+				self.settings = SolverSettings()
+				self.info = SolverInfo()
+				self.output = SolverOutput(m, n)
+				self.settings.update(**options)
+				self.first_run = True
 
-# 			def __update_function_vectors(self, f, g):
-# 				for i in xrange(f.size):
-# 					self.__f[i] = proxlib.function(f.h[i], f.a[i], f.b[i],
-# 												   f.c[i], f.d[i], f.e[i])
+			def __update_function_vectors(self, f, g):
+				for i in xrange(f.size):
+					self.__f[i] = proxlib.function(f.h[i], f.a[i], f.b[i],
+												   f.c[i], f.d[i], f.e[i])
 
-# 				for j in xrange(g.size):
-# 					self.__g[j] = proxlib.function(g.h[j], g.a[j], g.b[j],
-# 												   g.c[j], g.d[j], g.e[j])
+				for j in xrange(g.size):
+					self.__g[j] = proxlib.function(g.h[j], g.a[j], g.b[j],
+												   g.c[j], g.d[j], g.e[j])
 
 # 			def solve(self, f, g, **options):
 # 				if self.c_solver is None:
@@ -263,4 +263,4 @@
 # 					pogslib.pogs_finish(self.c_solver, 0)
 # 					backend.decrement_cobject_count()
 
-# 		self.Solver = Solver
+		self.Solver = Solver

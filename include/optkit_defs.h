@@ -1,6 +1,7 @@
 #ifndef OPTKIT_DEFS_H_
 #define OPTKIT_DEFS_H_
 
+#include <float.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -41,9 +42,9 @@ typedef enum optkit_status {
 } ok_status;
 
 enum OPTKIT_TRANSFORM {
-	OkTransformScale = 0;
-	OkTransformAdd = 1;
-}
+	OkTransformScale = 0,
+	OkTransformAdd = 1
+};
 
 #ifndef FLOAT
 	#define CBLAS(x) cblas_d ## x

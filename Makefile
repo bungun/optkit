@@ -20,7 +20,7 @@ CXXFLAGS += -Wall -Wconversion -Wpedantic -Wno-unused-function
 
 # CUDA Flags
 CUXX=nvcc
-CUXXFLAGS=-arch=sm_50 -Xcompiler -fPIC -I. -I$(INCLUDE) -I$(INCLUDE)external
+CUXXFLAGS=-arch=sm_50 -Xcompiler -fPIC -I. -I$(INCLUDE) -I$(INCLUDE)external -I$(INCLUDE)operator
 CULDFLAGS_=-lstdc++ -lm
 
 # Check system args

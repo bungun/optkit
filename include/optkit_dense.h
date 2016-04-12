@@ -80,7 +80,6 @@ void matrix_pow(matrix * A, const ok_float p);
 ok_status blas_make_handle(void ** linalg_handle);
 ok_status blas_destroy_handle(void * linalg_handle);
 
-
 /* BLAS LEVEL 1 */
 void blas_axpy(void * linalg_handle, ok_float alpha, const vector * x,
 	vector * y);
@@ -123,7 +122,16 @@ void blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side, enum CBLAS_UPLO uplo,
 /* LINEAR ALGEBRA routines */
 void linalg_cholesky_decomp(void * linalg_handle, matrix * A);
 void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x);
-
+void linalg_diag_gramian(void * linalg_handle, const matrix * A, vector * v);
+void linalg_matrix_broadcast_vector(void * linalg_handle, matrix * A,
+	const vector * v, const enum OPTKIT_TRANSFORM operation,
+	const enum CBLAS_SIDE side);
+void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
+	matrix * A, const enum CBLAS_SIDE side);
+void linalg_matrix_reduce_min(void * linalg_handle, vector * minima,
+	matrix * A, const enum CBLAS_SIDE side);
+void linalg_matrix_reduce_max(void * linalg_handle, vector * maxima,
+	matrix * A, const enum CBLAS_SIDE side);
 
 /* device reset */
 ok_status ok_device_reset(void);

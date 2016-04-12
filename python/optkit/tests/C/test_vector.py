@@ -136,11 +136,12 @@ class VectorTestCase(unittest.TestCase):
 
 			DIGITS = 7 - 2 * lib.FLOAT - 2 * lib.GPU
 
-			len_v = 10 + int(1000 * np.random.rand())
-
 			val1 = 12 * np.random.rand()
 			val2 = 5 * np.random.rand()
-			len_v = 10 + int(10 * np.random.rand())
+			len_v = 10 + int(1000 * np.random.rand())
+
+			RTOL = 10**(-DIGITS)
+			ATOL = RTOL * len_v**0.5
 
 			v, v_py, v_ptr = self.make_vec_triplet(lib, len_v)
 			w, w_py, w_ptr = self.make_vec_triplet(lib, len_v)
@@ -218,7 +219,6 @@ class VectorTestCase(unittest.TestCase):
 			for i in xrange(v.size):
 				self.assertTrue(approx_compare(w_py[i], val2, 3))
 
-
 			# vector recip
 			lib.vector_recip(w)
 			val2 = 1. / val2
@@ -240,6 +240,30 @@ class VectorTestCase(unittest.TestCase):
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			for i in xrange(v.size):
 				self.assertTrue(approx_compare(w_py[i], val2, 3))
+
+			# vector exp
+			lib.vector_exp(w)
+			val2 = np.exp(val2)
+			lib.vector_memcpy_av(w_ptr, w, 1)
+			self.assertTrue(np.linalg.norm(val2 - w_py) <=
+				ATOL + RTOL * np.linalg.norm(w_py))
+
+			# min / max
+			w_py *= 0
+			w_py += np.random.rand(len(w_py))
+			lib.vector_memcpy_va(w, w_ptr, 1)
+
+			# vector argmin
+			wargmin = lib.vector_indmin(w)
+			self.assertTrue(w_py[wargmin] - w_py.min() <= 10**-3)
+
+			# vector min
+			wmin = lib.vector_min(w)
+			self.assertTrue(wmin - w_py.min() <= 10**-3)
+
+			# vector max
+			wmax = lib.vector_max(w)
+			self.assertTrue(wmax - w_py.max() <= 10**-3)
 
 			lib.vector_free(v)
 			lib.vector_free(w)

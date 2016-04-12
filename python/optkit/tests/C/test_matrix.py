@@ -83,7 +83,7 @@ class MatrixTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * lib.FLOAT - 1 * lib.GPU
 
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
@@ -129,6 +129,8 @@ class MatrixTestCase(unittest.TestCase):
 				lib.matrix_memcpy_am(A_ptr, A, order)
 				self.assertTrue(np.allclose(A_py, A_rand, DIGITS))
 
+				lib.matrix_free(A)
+				lib.matrix_free(Z)
 			self.assertEqual(lib.ok_device_reset(), 0)
 
 	def test_slicing(self):
@@ -142,7 +144,7 @@ class MatrixTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * lib.FLOAT - 1 * lib.GPU
 
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
@@ -193,6 +195,10 @@ class MatrixTestCase(unittest.TestCase):
 				lib.vector_memcpy_av(v_ptr, v, 1)
 				self.assertTrue(np.allclose(np.diag(A_py), v_py, DIGITS))
 
+				lib.matrix_free(A)
+			self.assertEqual(lib.ok_device_reset(), 0)
+
+
 	def test_math(self):
 		(m, n) = self.shape
 		A_rand = self.A_test
@@ -203,7 +209,10 @@ class MatrixTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * lib.FLOAT - 1 * lib.GPU
+			RTOL = 10**(-DIGITS)
+			ATOLM = RTOL * m**0.5
+			ATOLN = RTOL * n**0.5
 
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
@@ -265,3 +274,9 @@ class MatrixTestCase(unittest.TestCase):
 				lib.matrix_pow(A, p)
 				lib.matrix_memcpy_am(A_ptr, A, order)
 				self.assertTrue(np.allclose(A_py, A_rand, DIGITS))
+
+				lib.vector_free(d)
+				lib.vector_free(e)
+				lib.matrix_free(A)
+
+			self.assertEqual(lib.ok_device_reset(), 0)

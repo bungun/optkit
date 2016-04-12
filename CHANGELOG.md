@@ -7,11 +7,11 @@
 - TODO: error checking throughout GPU calls (and mirrored for CPU)
 - TODO: license
 - TODO: cite POGS
-- TODO: append version numbers to .so, check version numbers when loading libs in pyton
-- TODO: debug/test vector_min, _max, _indmin, _exp
+- TODO: append version numbers to .so, check version numbers when loading libs in python
 - TODO: operator equilibration
-- TODO: operator l-BFGS preconditioner
 - TODO: operator IO
+- TODO: debug/test clustering
+- TODO: memory cleanup when tests fail 
 
 ###v0.0.4 (beta)
 - migrated tests to unittests
@@ -22,7 +22,8 @@
 - operator equilibration for: dense, sparse
 - approximate projection (with CGLS) for abstract linear operators
 - operator POGS for: dense, sparse
-
+- matrix, vector reductions (min, max, indmin); 
+- TODO: debug/test: matrix_min, _max, _indmin
 
 ###v0.0.3 (current)
 - CPU Sparse Linear Algebra
@@ -44,7 +45,6 @@
 - Dense, fully-separable implementation of POGS block splitting algorithm (see http://foges.github.io/pogs/ and http://arxiv.org/abs/1503.08366)
 - I/O for saving solver state (equilbrated matrix, projector factorization, iterates)
 - Backend switching
-
 
 #ROADMAP:
 ###v0.2
@@ -73,3 +73,5 @@
 - change Python bindings from ctypes -> Cython?
 - DCP ADMM
 - installation manifest (text or yaml) for clean uninstall
+- operator l-BFGS preconditioner
+- operator k-means

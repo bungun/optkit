@@ -203,7 +203,7 @@ void vector_exp(vector * v)
 {
 	uint i;
 	for (i = 0; i < v->size; ++i)
-		v->data[i * v->stride] = MATH(exp)(v->data[i * v->stride], x);
+		v->data[i * v->stride] = MATH(exp)(v->data[i * v->stride]);
 
 }
 
@@ -216,13 +216,14 @@ size_t vector_indmin(vector * v)
 	#ifdef _OPENMP
 	#pragma omp parallel for reduction(min : minval, minind)
 	#endif
-	for(i = 0; i < v->size; ++i)
-	if(v->data[i] > minval) {
-		minval = v->data[i];
-		minind = i;
+	for(i = 0; i < v->size; ++i) {
+		if(v->data[i * v->stride] < minval) {
+			minval = v->data[i * v->stride];
+			minind = i;
+		}
 	}
 
-	return i;
+	return minind;
 }
 
 ok_float vector_min(vector * v)
@@ -234,8 +235,8 @@ ok_float vector_min(vector * v)
 	#pragma omp parallel for reduction(min : minval)
 	#endif
 	for(i = 0; i < v->size; ++i)
-	if(v->data[i] > minval)
-		minval = v->data[i];
+		if(v->data[i * v->stride] < minval)
+			minval = v->data[i * v->stride];
 
 	return minval;
 }
@@ -249,8 +250,8 @@ ok_float vector_max(vector * v)
 	#pragma omp parallel for reduction(min : maxval)
 	#endif
 	for(i = 0; i < v->size; ++i)
-	if(v->data[i] > maxval)
-		maxval = v->data[i];
+		if(v->data[i * v->stride] > maxval)
+			maxval = v->data[i * v->stride];
 
 	return maxval;
 }
@@ -325,7 +326,7 @@ void matrix_row(vector * row, matrix * A, size_t i)
 		    A->data + i;
 }
 
-void matrix_column(vector * col, matrix *A, size_t j)
+void matrix_column(vector * col, matrix * A, size_t j)
 {
 	if (!__vector_exists(col))
 		return;
@@ -372,14 +373,14 @@ void matrix_view_array(matrix * A, const ok_float *base, size_t n1, size_t n2,
 	A->order = ord;
 }
 
-ok_float __matrix_get_colmajor(const matrix * A, size_t i, size_t j)
+ok_float * __matrix_get_colmajor(const matrix * A, size_t i, size_t j)
 {
-	return A->data[i + j * A->ld];
+	return A->data + i + j * A->ld;
 }
 
-ok_float __matrix_get_rowmajor(const matrix * A, size_t i, size_t j)
+ok_float * __matrix_get_rowmajor(const matrix * A, size_t i, size_t j)
 {
-	return A->data[i * A->ld + j];
+	return A->data + i * A->ld + j;
 }
 
 void __matrix_set_rowmajor(matrix * A, size_t i, size_t j, ok_float x)
@@ -424,14 +425,14 @@ void matrix_memcpy_mm(matrix * A, const matrix * B)
 		__matrix_set_rowmajor :
 		__matrix_set_colmajor;
 
-	ok_float (* mget)(const matrix * M, size_t i, size_t j) =
+	ok_float * (* mget)(const matrix * M, size_t i, size_t j) =
 		(B->order == CblasRowMajor) ?
 		__matrix_get_rowmajor :
 		__matrix_get_colmajor;
 
 	for (i = 0; i < A->size1; ++i)
 		for (j = 0; j < A->size2; ++j)
-			  mset(A, i, j, mget(B, i , j));
+			  mset(A, i, j, *mget(B, i , j));
 }
 
 void matrix_memcpy_ma(matrix * A, const ok_float * B,
@@ -457,7 +458,7 @@ void matrix_memcpy_am(ok_float * A, const matrix * B,
 	const enum CBLAS_ORDER ord)
 {
 	uint i, j;
-	ok_float (* mget)(const matrix * M, size_t i, size_t j) =
+	ok_float * (* mget)(const matrix * M, size_t i, size_t j) =
 		(B->order == CblasRowMajor) ?
 		__matrix_get_rowmajor :
 		__matrix_get_colmajor;
@@ -465,23 +466,23 @@ void matrix_memcpy_am(ok_float * A, const matrix * B,
 	if (ord == CblasRowMajor)
 		for (i = 0; i < B->size1; ++i)
 			for (j = 0; j < B->size2; ++j)
-				A[i * B->size2 + j] = mget(B, i, j);
+				A[i * B->size2 + j] = *mget(B, i, j);
 	else
 		for (j = 0; j < B->size2; ++j)
 			for (i = 0; i < B->size1; ++i)
-				A[i + B->size1 * j] = mget(B, i, j);
+				A[i + B->size1 * j] = *mget(B, i, j);
 }
 
 void matrix_print(matrix * A)
 {
 	uint i, j;
-	ok_float (* mget)(const matrix * M, size_t i, size_t j) =
+	ok_float * (* mget)(const matrix * M, size_t i, size_t j) =
 		(A->order == CblasRowMajor) ?
 		__matrix_get_rowmajor : __matrix_get_colmajor;
 
 	for (i = 0; i < A->size1; ++i) {
 		for (j = 0; j < A->size2; ++j)
-			printf("%e ", mget(A, i, j));
+			printf("%e ", *mget(A, i, j));
 		printf("\n");
 	}
 	printf("\n");
@@ -710,7 +711,7 @@ void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
 	void (* mset)(matrix * M, size_t i, size_t j, ok_float x) =
 		(A->order == CblasRowMajor) ?
 		__matrix_set_rowmajor : __matrix_set_colmajor;
-	ok_float (* mget)(const matrix * M, size_t i, size_t j) =
+	ok_float * (* mget)(const matrix * M, size_t i, size_t j) =
 		(A->order == CblasRowMajor) ?
 		__matrix_get_rowmajor : __matrix_get_colmajor;
 
@@ -719,7 +720,7 @@ void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
 
 	for (i = 0; i < n; ++i) {
 		/* L11 = sqrt(A11) */
-		l11 = (ok_float) MATH(sqrt)(mget(A, i, i));
+		l11 = (ok_float) MATH(sqrt)(*mget(A, i, i));
 		mset(A, i, i, l11);
 
 		if (i + 1 == n)
@@ -744,7 +745,7 @@ void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A) {
  *
  * Stores result in Lower triangular part.
  */
- void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
+void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 {
 	matrix L11, L21, A22;
 	size_t n = A->size1, blk_dim, i, n11;
@@ -786,6 +787,148 @@ void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x)
 {
 	blas_trsv(linalg_handle, CblasLower, CblasNoTrans, CblasNonUnit, L, x);
 	blas_trsv(linalg_handle, CblasLower, CblasTrans, CblasNonUnit, L, x);
+}
+
+/*
+ * if A is skinny, set
+ *
+ * 	v_i = a_i'a_i,
+ *
+ * where a_i is the ith _column_ of A. otherwise, set
+ *
+ *	v_i = \tilde a_i'\tilde a_i,
+ *
+ * where \tilde a_i is the ith _row_ of A
+ *
+ */
+void linalg_diag_gramian(void * linalg_handle, const matrix * A, vector * v)
+{
+	int skinny = (A->size1 >= A->size2);
+	size_t k, nvecs = (skinny) ? A->size2 : A->size1;
+	int vecsize = (skinny) ? (int) A->size1 : (int) A->size2;
+	size_t ptrstride = ((skinny) == (A->order == CblasRowMajor))
+		? (int) 1 : A->ld;
+	int stride = ((skinny) == (A->order == CblasRowMajor)) ?
+		(int) A->ld : 1;
+
+	/* check size == v->size */
+	if (v->size != nvecs) {
+		printf("%s %s\n", "ERROR: linalg_diag_gramian()",
+			"incompatible dimensions");
+		return;
+	}
+
+	#ifdef _OPENMP
+	#pragma omp parallel for
+	#endif
+	for (k = 0; k < nvecs; ++k) {
+		v->data[k * v->stride] = CBLAS(dot)(vecsize,
+			A->data + k * ptrstride, stride,
+			A->data + k * ptrstride, stride);
+	}
+}
+
+/*
+ * if operation == OkTransformScale:
+ * 	if side == CblasLeft, set
+ * 		A = A * diag(v)
+ *	else, set
+ *		A = diag(v) * A
+ * if operation == OkTransformAdd:
+ * 	if side == CblasLeft, perform
+ * 		A += v1^T
+ *	else, set
+ *		A += 1v^T
+ */
+void linalg_matrix_broadcast_vector(void * linalg_handle, matrix * A,
+	const vector * v, const enum OPTKIT_TRANSFORM operation,
+	const enum CBLAS_SIDE side)
+{
+	size_t k, nvecs = (side == CblasLeft) ? A->size2 : A->size1;
+	size_t ptrstride = ((side == CblasLeft) == (A->order == CblasRowMajor))
+		? (int) 1 : A->ld;
+
+	size_t stride = ((side == CblasLeft) == (A->order == CblasRowMajor)) ?
+		A->ld : 1;
+
+	/* check size == v->size */
+	if (((side == CblasLeft) && (v->size != A->size1)) ||
+		((side == CblasRight) && (v->size != A->size2))) {
+		printf("%s %s\nA (%u x %u)\nv %u\n",
+			"ERROR: linalg_matrix_broadcast_vector()",
+			"incompatible dimensions", (uint) A->size1,
+			(uint) A->size2, (uint) v->size);
+		return;
+	}
+
+	if (operation == OkTransformScale) {
+		#ifdef _OPENMP
+		#pragma omp parallel for
+		#endif
+		for (k = 0; k < v->size; ++k)
+			CBLAS(scal)( (int) nvecs, v->data[k * v->stride],
+				A->data + k * stride, (int) ptrstride);
+	} else {
+		#ifdef _OPENMP
+		#pragma omp parallel for
+		#endif
+		for (k = 0; k < nvecs; ++k)
+			CBLAS(axpy)((int) v->size, kOne, v->data,
+				(int) v->stride, A->data + k * ptrstride,
+				(int) stride);
+	}
+}
+
+void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
+	matrix * A, const enum CBLAS_SIDE side)
+{
+	int reduce_rows = (side == CblasLeft);
+	size_t output_dim = (reduce_rows) ? A->size2 : A->size1;
+	size_t k;
+	vector a;
+
+	void (* matrix_subvec)(vector * row_col, matrix * A, size_t k) =
+		(reduce_rows) ? matrix_column : matrix_row;
+
+	for (k = 0; k < output_dim; ++k) {
+		matrix_subvec(&a, A, k);
+		indices[k] = vector_indmin(&a);
+	}
+}
+
+static void __matrix_extrema(vector * extrema, matrix * A,
+	const enum CBLAS_SIDE side, const int minima)
+{
+	int reduce_rows = (side == CblasLeft);
+	size_t output_dim = (reduce_rows) ? A->size2 : A->size1;
+	size_t k;
+	vector a;
+
+	void (* matrix_subvec)(vector * row_col, matrix * A, size_t k) =
+		(reduce_rows) ? matrix_column : matrix_row;
+
+	if (minima)
+		for (k = 0; k < output_dim; ++k) {
+			matrix_subvec(&a, A, k);
+			extrema->data[k] = vector_min(&a);
+		}
+	else
+		for (k = 0; k < output_dim; ++k) {
+			matrix_subvec(&a, A, k);
+			extrema->data[k] = vector_max(&a);
+		}
+}
+
+void linalg_matrix_reduce_min(void * linalg_handle, vector * minima,
+	matrix * A, const enum CBLAS_SIDE side)
+{
+	__matrix_extrema(minima, A, side, 1);
+}
+
+void linalg_matrix_reduce_max(void * linalg_handle, vector * maxima,
+	matrix * A, const enum CBLAS_SIDE side)
+{
+	__matrix_extrema(maxima, A, side, 0);
 }
 
 /* device reset */
