@@ -1496,14 +1496,10 @@ void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
 	cublasStatus_t err;
 	cudaStream_t stm;
 	uint num_row_tiles, num_col_tiles, i, j;
-	ok_float * minima;
 
 	void (* reduce)(size_t * minind, ok_float * minima, ok_float * A,
 		size_t i, size_t j, size_t ld, size_t stride_indmin,
 		size_t stride_minima, const enum CBLAS_ORDER);
-
-	uint grid_dim = calc_grid_dim(preserved_dim);
-
 
 	reduce = (side == CblasLeft) ? __matrix_col_indmin :
 		__matrix_row_indmin;
