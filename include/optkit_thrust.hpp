@@ -24,7 +24,7 @@ public:
 		diff_t stride;
 		StrideF(diff_t stride) : stride(stride) { }
 
-		diff_t operator()(const diff_t& i) const {
+		__host__ __device__ diff_t operator()(const diff_t& i) const {
 			return stride * i;
 		}
 	};
@@ -55,7 +55,7 @@ public:
 };
 
 typedef thrust::constant_iterator<ok_float> constant_iterator_t;
-typedef strided_range< thrust::device_ptr<ok_float> > strided_range_t;
+typedef strided_range<thrust::device_ptr<ok_float> > strided_range_t;
 
 /*
  * thrust:: helper methods
@@ -125,8 +125,7 @@ struct ExpF : thrust::unary_function<ok_float, ok_float>
  *optkit.vector -> strided range
  * -----------------------------
  */
-inline strided_range_t __make_strided_range(vector * v)
-{
+inline strided_range_t __make_strided_range(vector * v){
 	return strided_range_t(
 		thrust::device_pointer_cast(v->data),
 		thrust::device_pointer_cast(v->data + v->stride * v->size),
@@ -139,7 +138,7 @@ inline strided_range_t __make_const_strided_range(
 	return strided_range_t(
 		thrust::device_pointer_cast(v->data),
 		thrust::device_pointer_cast(v->data + v->stride * v->size),
-			v->stride);
+		v->stride);
 }
 
 /*
