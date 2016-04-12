@@ -72,8 +72,12 @@ void direct_projector_free(direct_projector * P)
 void direct_projector_initialize(void * linalg_handle, direct_projector * P,
 	int normalize)
 {
-	vector diag = (vector){0, 0, OK_NULL};
+	vector diag;
 	ok_float mean_diag = kZero;
+
+	diag.data = OK_NULL;
+	diag.size = 0;
+	diag.stride = 0;
 
 	if (P->skinny)
 		blas_gemm(linalg_handle, CblasTrans, CblasNoTrans, kOne, P->A,
@@ -218,7 +222,7 @@ void dense_direct_projector_data_free(void * data)
 void dense_direct_projector_initialize(void * data, int normalize)
 {
 	dense_direct_projector * P = (dense_direct_projector *) data;
-	direct_projector DP = (direct_projector) {OK_NULL, OK_NULL, kOne, 0, 0};
+	direct_projector DP;
 	DP.A = P->A;
 	DP.L = P->L;
 	DP.normA = P->normA;
@@ -233,7 +237,7 @@ void dense_direct_projector_project(void * data, vector * x_in, vector * y_in,
 	vector * x_out, vector * y_out, ok_float tol)
 {
 	dense_direct_projector * P = (dense_direct_projector *) data;
-	direct_projector DP = (direct_projector) {OK_NULL, OK_NULL, kOne, 0, 0};
+	direct_projector DP;
 	DP.A = P->A;
 	DP.L = P->L;
 	DP.normA = P->normA;
