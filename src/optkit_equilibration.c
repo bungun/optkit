@@ -179,7 +179,7 @@ void dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out,
 	}
 }
 
-#ifndef OPTKIT_EQUIL_DENSE
+#ifndef OPTKIT_NO_OPERATOR_EQUIL
 ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 	vector * d, vector * e, const ok_float pnorm)
 {
@@ -337,7 +337,7 @@ ok_float operator_estimate_norm(void * linalg_handle, operator * A)
 {
 	return OPTKIT_ERROR;
 }
-#endif /* ndef OPTKIT_EQUIL_DENSE */
+#endif /* ndef OPTKIT_NO_OPERATOR_EQUIL */
 
 #ifdef __cplusplus
 }
