@@ -23,7 +23,6 @@
 - approximate projection (with CGLS) for abstract linear operators
 - operator POGS for: dense, sparse
 - matrix, vector reductions (min, max, indmin); 
-- TODO: debug/test: matrix_min, _max, _indmin
 
 ###v0.0.3 (current)
 - CPU Sparse Linear Algebra

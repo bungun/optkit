@@ -110,6 +110,7 @@ SPARSESTATIC=$(PREFIX_OUT)sparse_$(ORDER)$(DEVICETAG)$(PRECISION).o
 PROXSTATIC=$(PREFIX_OUT)$(PROXTARG)$(PRECISION).o
 PROJSTATIC=$(PREFIX_OUT)projector_$(DEVICETAG)$(PRECISION).o
 EQUILSTATIC=$(PREFIX_OUT)equil_$(DEVICETAG)$(PRECISION).o
+EQUILDENSESTATIC=$(PREFIX_OUT)equil_dense_$(DEVICETAG)$(PRECISION).o
 POGSSTATIC=$(PREFIX_OUT)pogs_$(DEVICETAG)$(PRECISION).o
 POGSABSTRACTSTATIC=$(PREFIX_OUT)pogs_abstract_$(DEVICETAG)$(PRECISION).o
 
@@ -125,15 +126,15 @@ CG_STATIC_DEPS=$(DENSESTATIC) $(CGSTATIC)
 OPERATOR_STATIC_DEPS=$(DENSESTATIC) $(SPARSESTATIC) $(OPSTATIC)
 EQUIL_STATIC_DEPS=$(DENSESTATIC) $(SPARSESTATIC) $(OPERATOR_OBJ) $(EQUILSTATIC) 
 PROJ_STATIC_DEPS=$(DENSESTATIC) $(CGSTATIC) $(PROJSTATIC)
-POGS_STATIC_DEPS=$(POGSSTATIC) $(EQUILSTATIC) $(PROJSTATIC)
-POGS_STATIC_DEPS += $(DENSESTATIC) $(PROXSTATIC)
+POGS_STATIC_DEPS=$(POGSSTATIC) $(EQUILDENSESTATIC) $(PROJSTATIC) $(PROXSTATIC)
+POGS_STATIC_DEPS += $(DENSESTATIC) 
 POGS_ABSTRACT_STATIC_DEPS=$(POGSABSTRACTSTATIC) $(EQUILSTATIC) $(PROJSTATIC)
 POGS_ABSTRACT_STATIC_DEPS += $(DENSESTATIC) $(SPARSESTATIC) $(PROXSTATIC) 
 POGS_ABSTRACT_STATIC_DEPS += $(CGSTATIC) $(OPERATOR_OBJ)
 
 .PHONY: default, all, libs, libok, libok_dense, libok_sparse, libprox
 .PHONY: libpogs, libpogs_dense, libpogs_sparse, pogs_dense, pogs_sparse
-.PHONY: libequil, equil, libprojector, projector, operator
+.PHONY: libequil, equil, equil_dense, libprojector, projector, operator
 default: cpu_dense
 all: libs libequil libprojector libpogs
 
@@ -143,7 +144,7 @@ libok: libok_dense libok_sparse
 
 libpogs: $(POGSLIBS)
 
-libpogs_dense: pogs equil projector $(LINSYSLIBS) libprox
+libpogs_dense: pogs equil_dense projector $(LINSYSLIBS) libprox
 	mkdir -p $(OUT)	
 	$(CC) $(CCFLAGS) -shared -o \
 	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED)  \
@@ -244,6 +245,11 @@ equil: $(SRC)optkit_equilibration.c $(INCLUDE)optkit_equilibration.h
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) $< -c -o $(EQUILSTATIC) \
 	-I$(INCLUDE)operator/ -DABSTRACT_OPERATOR_BARE
+
+equil_dense: $(SRC)optkit_equilibration.c $(INCLUDE)optkit_equilibration.h
+	mkdir -p $(OUT)
+	$(CC) $(CCFLAGS) $< -c -o $(EQUILSTATIC) \
+	-I$(INCLUDE)operator/ -DABSTRACT_OPERATOR_BARE -DEQUIL_DENSE
 
 projector: $(SRC)optkit_projector.c $(INCLUDE)optkit_projector.h
 	mkdir -p $(OUT)

@@ -89,13 +89,13 @@ void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 
 	for (i = 0; i < kMaxIter; ++i){
 		blas_gemv(linalg_handle, CblasTrans, kOne, A_out, d, kZero, e);
-		vector_add_constant(e, kSinkhornConst / e->size);
+		vector_add_constant(e, kSinkhornConst / (ok_float) e->size);
 		vector_recip(e);
 		vector_scale(e, d->size);
 
 		blas_gemv(linalg_handle, CblasNoTrans, kOne, A_out, e, kZero,
 			d);
-		vector_add_constant(d, kSinkhornConst / d->size);
+		vector_add_constant(d, kSinkhornConst / (ok_float) d->size);
 		vector_recip(d);
 		vector_scale(d, e->size);
 
@@ -179,6 +179,7 @@ void dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out,
 	}
 }
 
+#ifndef OPTKIT_EQUIL_DENSE
 ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 	vector * d, vector * e, const ok_float pnorm)
 {
@@ -228,11 +229,11 @@ ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 
 	for (k = 0; k < kMaxIter && !err; ++k) {
 		A->adjoint(A->data, d, e);
-		vector_add_constant(e, kSinkhornConst / e->size);
+		vector_add_constant(e, kSinkhornConst / (ok_float) e->size);
 		vector_recip(e);
 		vector_scale(e, d->size);
 		A->apply(A->data, e, d);
-		vector_add_constant(d, kSinkhornConst / d->size);
+		vector_add_constant(d, kSinkhornConst / (ok_float) d->size);
 		vector_recip(d);
 		vector_scale(d, e->size);
 
@@ -319,6 +320,24 @@ ok_float operator_estimate_norm(void * linalg_handle, operator * A)
 	vector_free(&Ax);
 	return norm_est;
 }
+#else
+ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
+	vector * d, vector * e, const ok_float pnorm)
+{
+	return OPTKIT_ERROR;
+}
+
+ok_status operator_equilibrate(void * linalg_handle, operator * A,
+	vector * d, vector * e, const ok_float pnorm)
+{
+	return OPTKIT_ERROR;
+}
+
+ok_float operator_estimate_norm(void * linalg_handle, operator * A)
+{
+	return OPTKIT_ERROR;
+}
+#endif /* ndef OPTKIT_EQUIL_DENSE */
 
 #ifdef __cplusplus
 }
