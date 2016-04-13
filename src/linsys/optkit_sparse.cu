@@ -65,7 +65,6 @@ ok_status sp_destroy_handle(void * sparse_handle)
 	return err;
 }
 
-
 #ifdef __cplusplus
 }
 #endif
@@ -86,9 +85,7 @@ void __set_all(T * data, T val, size_t stride, size_t size)
 	__set<T><<<grid_dim, kBlockSize>>>(data, val, stride, size);
 }
 
-
-
-template <typename T, I>
+template <typename T, typename I>
 void sp_matrix_alloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
 {
@@ -118,7 +115,7 @@ void sp_matrix_alloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
 	A->order = order;
 }
 
-template <typename T, I>
+template <typename T, typename I>
 void sp_matrix_calloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
 {
@@ -132,14 +129,14 @@ void sp_matrix_calloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
 	// 	err = __int_set_all(A->ptr, (ok_int) 0, 1,
 	// 		2 + A->size1 + A->size2);
 	// return err;
-	sp_matrix_alloc<T, I>(A, m, n, nnz, order);
+	sp_matrix_alloc_<T, I>(A, m, n, nnz, order);
 	__set_all<T>(A->val, static_cast<T>(0), 1, 2 * nnz);
 	__set_all<I>(A->ind, static_cast<I>(0), 1, 2 * nnz);
 	__set_all<I>(A->ptr, static_cast<I>(0), 1, 2 + A->size1 + A->size2);
 	CUDA_CHECK_ERR;
 }
 
-template <typename T, I>
+template <typename T, typename I>
 void sp_matrix_free_(sp_matrix_<T, I> * A)
 {
 	// ok_status err = OPTKIT_SUCCESS;
@@ -159,7 +156,7 @@ void sp_matrix_free_(sp_matrix_<T, I> * A)
 	// return err;
 }
 
-template <typename T, I>
+template <typename T, typename I>
 void sp_matrix_memcpy_mm_(sp_matrix_<T, I> * A, const sp_matrix_<T, I> * B)
 {
 	ok_memcpy_gpu(A->val, B->val, 2 * A->nnz * sizeof(T));
@@ -168,7 +165,7 @@ void sp_matrix_memcpy_mm_(sp_matrix_<T, I> * A, const sp_matrix_<T, I> * B)
 	CUDA_CHECK_ERR;
 }
 
-template <typename T, I>
+template <typename T, typename I>
 void sp_matrix_memcpy_vals_mm_(sp_matrix_<T, I> * A, const sp_matrix_<T, I> * B)
 {
 	ok_memcpy_gpu(A->val, B->val, 2 * A->nnz * sizeof(T));
@@ -216,17 +213,17 @@ void __transpose_inplace(void * sparse_handle, sp_matrix * A,
 
 void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
-	{ sp_matrix_alloc_<float, ok_int>(A, m, n, nnz, order); }
+	{ sp_matrix_alloc_<ok_float, ok_int>(A, m, n, nnz, order); }
 
 void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
-	{ sp_matrix_calloc_<float, ok_int>(A, m, n, nnz, order); }
+	{ sp_matrix_calloc_<ok_float, ok_int>(A, m, n, nnz, order); }
 
 void sp_matrix_free(sp_matrix * A)
-	{ sp_matrix_free_<float, ok_int>(A); }
+	{ sp_matrix_free_<ok_float, ok_int>(A); }
 
 void sp_matrix_memcpy_mm(sp_matrix * A, const sp_matrix * B)
-	{ sp_matrix_memcpy_mm_<float, ok_int>(A, B); }
+	{ sp_matrix_memcpy_mm_<ok_float, ok_int>(A, B); }
 
 void sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A,
 	const ok_float * val, const ok_int * ind, const ok_int * ptr)
@@ -248,7 +245,7 @@ void sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
 }
 
 void sp_matrix_memcpy_vals_mm(sp_matrix * A, const sp_matrix * B)
-	{ sp_matrix_memcpy_vals_mm_<float, ok_int>(A, B); }
+	{ sp_matrix_memcpy_vals_mm_<ok_float, ok_int>(A, B); }
 
 
 void sp_matrix_memcpy_vals_ma(void * sparse_handle, sp_matrix * A,
