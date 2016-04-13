@@ -4,8 +4,8 @@
 extern "C" {
 #endif
 
-const int kQuietCG = 1;
-const int kItersCG = 100;
+const uint kQuietCG = 1;
+const uint kItersCG = 100;
 
 void projectorlib_version(int * maj, int * min, int * change, int * status)
 {
