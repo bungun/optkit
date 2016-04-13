@@ -1,6 +1,6 @@
-#include "optkit_sparse.h"
 #include "optkit_defs_gpu.h"
 #include "optkit_thrust.hpp"
+#include "optkit_sparse.h"
 
 #ifdef __cplusplus
 extern "C" {

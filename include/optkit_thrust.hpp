@@ -1,7 +1,7 @@
 #ifndef OPTKIT_THRUST_H_
 #define OPTKIT_THRUST_H_
 
-#include "optkit_dense.h"
+#include "optkit_vector.h"
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
 #include <thrust/for_each.h>
@@ -54,12 +54,11 @@ public:
 };
 
 typedef thrust::constant_iterator<ok_float> constant_iterator_t;
-typedef strided_range< thrust::device_ptr<ok_float> > strided_range_t;
+typedef strided_range<thrust::device_ptr<ok_float>> strided_range_t;
 
 /*
  * thrust:: helper methods
  * =======================
- *
  *
  * unary math ops
  * --------------
@@ -124,7 +123,8 @@ struct ExpF : thrust::unary_function<ok_float, ok_float>
  *optkit.vector -> strided range
  * -----------------------------
  */
-__host__ __device__ inline strided_range_t __make_strided_range(vector * v)
+template<typename T>
+inline strided_range<thrust::device_ptr<T>> __make_strided_range(vector_<T> * v)
 {
 	return strided_range_t(
 		thrust::device_pointer_cast(v->data),
@@ -132,8 +132,10 @@ __host__ __device__ inline strided_range_t __make_strided_range(vector * v)
 			v->stride);
 }
 
-__host__ __device__  inline strided_range_t __make_const_strided_range(
-	const vector * v)
+
+template<typename T>
+inline strided_range<thrust::device_ptr<T>> __make_const_strided_range(
+	const vector_<T> * v)
 {
 	return strided_range_t(
 		thrust::device_pointer_cast(v->data),
@@ -155,7 +157,8 @@ inline void __transform_r(strided_range_t r, UnaryFunction f)
 
 /* binary op mapped to (strided range, strided range) */
 template <typename BinaryFunction>
-inline void __transform_rr(strided_range_t r1, strided_range_t r2, BinaryFunction f)
+inline void __transform_rr(strided_range_t r1, strided_range_t r2,
+	BinaryFunction f)
 {
 	thrust::transform(r1.begin(), r1.end(), r2.begin(), r1.begin(), f);
 }
@@ -183,93 +186,95 @@ inline void __transform_cr(ok_float x, strided_range_t r, BinaryFunction f)
 
 inline void __thrust_vector_scale(vector * v, ok_float x)
 {
-	strided_range_t r = __make_strided_range(v);
+	strided_range_t r = __make_strided_range<ok_float>(v);
 	__transform_rc(r, x, thrust::multiplies<ok_float>());
 }
 
 inline void __thrust_vector_add(vector * v1, const vector * v2)
 {
-	strided_range_t r1 = __make_strided_range(v1);
-	strided_range_t r2 = __make_const_strided_range(v2);
+	strided_range_t r1 = __make_strided_range<ok_float>(v1);
+	strided_range_t r2 = __make_const_strided_range<ok_float>(v2);
 	__transform_rr(r1, r2, thrust::plus<ok_float>());
 }
 
 inline void __thrust_vector_sub(vector * v1, const vector * v2)
 {
-	strided_range_t r1 = __make_strided_range(v1);
-	strided_range_t r2 = __make_const_strided_range(v2);
+	strided_range_t r1 = __make_strided_range<ok_float>(v1);
+	strided_range_t r2 = __make_const_strided_range<ok_float>(v2);
 	__transform_rr(r1, r2, thrust::minus<ok_float>());
 }
 
 inline void __thrust_vector_mul(vector * v1, const vector * v2)
 {
-	strided_range_t r1 = __make_strided_range(v1);
-	strided_range_t r2 = __make_const_strided_range(v2);
+	strided_range_t r1 = __make_strided_range<ok_float>(v1);
+	strided_range_t r2 = __make_const_strided_range<ok_float>(v2);
 	__transform_rr(r1, r2, thrust::multiplies<ok_float>());
 }
 
 inline void __thrust_vector_div(vector * v1, const vector * v2)
 {
-	strided_range_t r1 = __make_strided_range(v1);
-	strided_range_t r2 = __make_const_strided_range(v2);
+	strided_range_t r1 = __make_strided_range<ok_float>(v1);
+	strided_range_t r2 = __make_const_strided_range<ok_float>(v2);
 	__transform_rr(r1, r2, thrust::divides<ok_float>());
 }
 
 inline void __thrust_vector_add_constant(vector * v, const ok_float x)
 {
-	strided_range_t r = __make_strided_range(v);
+	strided_range_t r = __make_strided_range<ok_float>(v);
 	__transform_rc(r, x, thrust::plus<ok_float>());
 }
 
 inline void __thrust_vector_abs(vector * v)
 {
-	strided_range_t r = __make_strided_range(v);
+	strided_range_t r = __make_strided_range<ok_float>(v);
 	__transform_r(r, AbsF());
 }
 
 inline void __thrust_vector_recip(vector * v)
 {
-	strided_range_t r = __make_strided_range(v);
+	strided_range_t r = __make_strided_range<ok_float>(v);
 	__transform_r(r, ReciprF());
 }
 
 inline void __thrust_vector_sqrt(vector * v)
 {
-	strided_range_t r = __make_strided_range(v);
+	strided_range_t r = __make_strided_range<ok_float>(v);
 	__transform_r(r, SqrtF());
 }
 
 inline void __thrust_vector_pow(vector * v, const ok_float p)
 {
-	strided_range_t r = __make_strided_range(v);
+	strided_range_t r = __make_strided_range<ok_float>(v);
 	__transform_r(r, PowF(p));
 }
 
 inline void __thrust_vector_exp(vector * v)
 {
-	strided_range_t r = __make_strided_range(v);
+	strided_range<thrust::device_ptr<T> > r =
+		__make_strided_range<ok_float>(v);
 	__transform_r(r, ExpF(p));
 }
 
-__host__ __device__ inline size_t __thrust_vector_indmin(vector * v)
+template<typename T>
+inline size_t __thrust_vector_indmin(vector_<T> * v)
 {
-	strided_range_t r = __make_strided_range(v);
-	thrust::device_ptr<ok_float> res = thrust::min_element(r.begin(),
-		r.end());
-	return (size_t) ((res - v->data) / (v->stride * sizeof(ok_float)));
+	strided_range<thrust::device_ptr<T> > r = __make_strided_range<T>(v);
+	thrust::device_ptr<T> res = thrust::min_element(r.begin(), r.end());
+	return (size_t) ((res - v->data) / (v->stride * sizeof(T)));
 }
 
-__host__ __device__ inline ok_float __thrust_vector_min(vector * v)
+template<typename T>
+inline T __thrust_vector_min(vector_<T> * v)
 {
-	strided_range_t r = __make_strided_range(v);
-	thrust::device_ptr<ok_float> res = thrust::min_element(r.begin(),
-		r.end());
+	strided_range<thrust::device_ptr<T> > r = __make_strided_range<T>(v);
+	thrust::device_ptr<T> res = thrust::min_element(r.begin(), r.end());
 	return res[0];
 }
 
-__host__ __device__ inline ok_float __thrust_vector_min(vector * v)
+template<typename T>
+inline T __thrust_vector_min(vector_<T> * v)
 {
-	strided_range_t r = __make_strided_range(v);
+	strided_range<thrust::device_ptr<T> > r = __make_strided_range<T>(v);
 	thrust::device_ptr<ok_float> res = thrust::max_element(r.begin(),
 		r.end());
 	return res[0];

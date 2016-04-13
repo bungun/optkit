@@ -1,7 +1,7 @@
-#ifndef OPTKIT_SPARSE_H_
-#define OPTKIT_SPARSE_H_
+#ifndef OPTKIT_LINSYS_SPARSE_H_
+#define OPTKIT_LINSYS_SPARSE_H_
 
-#include "optkit_dense.h"
+#include "optkit_vector.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,13 +15,33 @@ typedef enum SparseTransposeDirection {
 	Adjoint2Forward
 } SPARSE_TRANSPOSE_DIRECTION;
 
+#ifdef __cplusplus
+}
+#endif
+
 /* MATRIX defition and methods */
-typedef struct sp_matrix {
+template<typename T>
+struct sp_matrix_ {
+public:
 	size_t size1, size2, nnz, ptrlen;
 	ok_float * val;
 	ok_int * ind, * ptr;
 	enum CBLAS_ORDER order;
-} sp_matrix;
+};
+
+void sp_matrix_alloc_(sp_matrix_<T> * A, size_t m, size_t n, size_t nnz,
+	enum CBLAS_ORDER order);
+void sp_matrix_calloc_(sp_matrix_<T> * A, size_t m, size_t n, size_t nnz,
+	enum CBLAS_ORDER order);
+void sp_matrix_free_(sp_matrix_<T> * A);
+void sp_matrix_memcpy_mm_(sp_matrix_<T> * A, const sp_matrix_<T> * B);
+void sp_matrix_memcpy_vals_mm_(sp_matrix_<T> * A, const sp_matrix_<T> * B);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef sp_matrix_<ok_float> sp_matrix;
 
 /* memory management */
 ok_status sp_make_handle(void ** sparse_handle);
@@ -65,4 +85,4 @@ void sp_blas_gemv(void * sparse_handle, enum CBLAS_TRANSPOSE transA,
 }
 #endif
 
-#endif  /* OPTKIT_SPARSE_H_ */
+#endif  /* OPTKIT_LINSYS_SPARSE_H_ */

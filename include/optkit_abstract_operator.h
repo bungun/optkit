@@ -50,16 +50,6 @@ typedef struct abstract_linear_operator {
 	OPTKIT_OPERATOR kind;
 } operator;
 
-#ifdef COMPILE_ABSTRACT_OPERATOR
-void operator_free(operator * o)
-{
-	if (o) {
-		o->free(o->data);
-		ok_free(o);
-	}
-}
-#endif
-
 static const char * optkit_op2str(OPTKIT_OPERATOR optype)
 {
 	switch(optype) {
