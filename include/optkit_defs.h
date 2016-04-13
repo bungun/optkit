@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <float.h>
 #include "gsl_cblas.h"
 
 #ifdef __CUDACC__
@@ -41,9 +42,9 @@ typedef enum optkit_status {
 } ok_status;
 
 enum OPTKIT_TRANSFORM {
-	OkTransformScale = 0;
-	OkTransformAdd = 1;
-}
+	OkTransformScale = 0,
+	OkTransformAdd = 1
+};
 
 #ifndef FLOAT
 	#define CBLAS(x) cblas_d ## x
