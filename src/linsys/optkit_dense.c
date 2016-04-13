@@ -12,37 +12,40 @@ void denselib_version(int * maj, int * min, int * change, int * status)
 	* status = (int) OPTKIT_VERSION_STATUS;
 }
 
-#ifdef __cplusplus
+inline ok_float __matrix_get_colmajor(const matrix * A, size_t i, size_t j)
+{
+	return A->data[i + j * A->ld];
 }
-#endif
 
-/*
- * LINEAR ALGEBRA routines
- * =======================
- */
+inline ok_float __matrix_get_rowmajor(const matrix * A, size_t i, size_t j)
+{
+	return A->data[i * A->ld + j];
+}
+
+inline void __matrix_set_rowmajor(matrix * A, size_t i, size_t j, ok_float x)
+{
+	A->data[i * A->ld + j] = x;
+}
+
+inline void __matrix_set_colmajor(matrix * A, size_t i, size_t j, ok_float x)
+{
+	A->data[i + j * A->ld] = x;
+}
 
 /* Non-Block Cholesky. */
-template<typename T>
-void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix<T> *A) {
-	T l11;
+void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A)
+{
+	ok_float l11;
 	matrix l21, a22;
 	size_t n = A->size1, i;
 
-	/* get order-specific matrix getter/setter */
-	void (* mset)(matrix<T> * M, size_t i, size_t j, ok_float x) =
-		(A->order == CblasRowMajor) ?
-		__matrix_set_rowmajor : __matrix_set_colmajor;
-	T (* mget)(const matrix<T> * M, size_t i, size_t j) =
-		(A->order == CblasRowMajor) ?
-		__matrix_get_rowmajor : __matrix_get_colmajor;
-
-	l21= (matrix){0, 0, 0, OK_NULL, CblasRowMajor};
-	a22= (matrix){0, 0, 0, OK_NULL, CblasRowMajor};
+	l21.data = OK_NULL;
+	a22.data = OK_NULL;
 
 	for (i = 0; i < n; ++i) {
 		/* L11 = sqrt(A11) */
-		l11 = static_cast<T>(MATH(sqrt)(mget(A, i, i)));
-		mset(A, i, i, l11);
+		l11 = MATH(sqrt)(A->data[i + i * A->ld]);
+		A->data[i + i * A->ld] = l11;
 
 		if (i + 1 == n)
 			break;
@@ -60,21 +63,20 @@ void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix<T> *A) {
 
 /*
  * Block Cholesky.
- *   l11 l11^T = a11
+ *   l11 l11^ok_float = a11
  *   l21 = a21 l11^(-T)
  *   a22 = a22 - l21 l21^T
  *
  * Stores result in Lower triangular part.
  */
-template<typename T>
-void linalg_cholesky_decomp(void * linalg_handle, matrix<T> * A)
+void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 {
 	matrix L11, L21, A22;
 	size_t n = A->size1, blk_dim, i, n11;
 
-	L11= (matrix){0, 0, 0, OK_NULL, CblasRowMajor};
-	L21= (matrix){0, 0, 0, OK_NULL, CblasRowMajor};
-	A22= (matrix){0, 0, 0, OK_NULL, CblasRowMajor};
+	L11.data = OK_NULL;
+	L21.data = OK_NULL;
+	A22.data = OK_NULL;
 
 	/* block dimension borrowed from Eigen. */
 	blk_dim = ((n / 128) * 16) < 8 ? (n / 128) * 16 : 8;
@@ -90,12 +92,12 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix<T> * A)
 		if (i + blk_dim >= n)
 			break;
 
-                /* L21 = A21 L21^-T */
+                /* L21 = A21 L21^-ok_float */
 		matrix_submatrix(&L21, A, i + n11, i, n - i - n11, n11);
 		blas_trsm(linalg_handle, CblasRight, CblasLower, CblasTrans,
 			CblasNonUnit, kOne, &L11, &L21);
 
-		/* A22 -= L21*L21^T */
+		/* A22 -= L21*L21^ok_float */
 		matrix_submatrix(&A22, A, i + blk_dim, i + blk_dim,
 			n - i - blk_dim, n - i - blk_dim);
 
@@ -105,8 +107,7 @@ void linalg_cholesky_decomp(void * linalg_handle, matrix<T> * A)
 }
 
 /* Cholesky solve */
-template<typename T>
-void linalg_cholesky_svx(void * linalg_handle, const matrix<T> * L, vector_<T> * x)
+void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x)
 {
 	blas_trsv(linalg_handle, CblasLower, CblasNoTrans, CblasNonUnit, L, x);
 	blas_trsv(linalg_handle, CblasLower, CblasTrans, CblasNonUnit, L, x);
@@ -202,7 +203,7 @@ void linalg_matrix_broadcast_vector(void * linalg_handle, matrix * A,
 	}
 }
 
-void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
+void linalg_matrix_reduce_indmin(void * linalg_handle, indvector * indices,
 	vector * minima, matrix * A, const enum CBLAS_SIDE side)
 {
 	int reduce_rows = (side == CblasLeft);
@@ -215,8 +216,9 @@ void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
 
 	for (k = 0; k < output_dim; ++k) {
 		matrix_subvec(&a, A, k);
-		indices[k] = vector_indmin(&a);
-		minima->data[k * minima->stride] = a[indices[k] * a->stride];
+		indices->data[k] = vector_indmin(&a);
+		minima->data[k * minima->stride] = a.data[indices->data[k] *
+			a.stride];
 	}
 }
 

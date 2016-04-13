@@ -7,9 +7,11 @@ PREFIX_OUT=$(OUT)optkit_
 
 LINSYS=linsys/optkit_
 LASRC=$(SRC)$(LINSYS)
+LAOUT=$(OUT)$(LINSYS)
 
 OPERATOR=operator/optkit_operator_
 OPSRC=$(SRC)$(OPERATOR)
+OPOUT=$(OUT)$(OPERATOR)
 
 # C Flags
 CC=gcc
@@ -100,18 +102,18 @@ POGSLIBS=libpogs_dense
 
 VECTOR_SRC=$(LASRC)vector.cpp
 VECTOR_OBJ=$(OUT)$(LINSYS)vector_$(LIBCONFIG).o
-DENSE_CPU_SRC=$(LASRC)vector.cpp $(LASRC)matrix.cpp $(LASRC)blas.c 
+DENSE_CPU_SRC=$(LASRC)vector.cpp $(LASRC)matrix.cpp $(LASRC)blas.c
 DENSE_CPU_SRC+=$(LASRC)dense.c
-DENSE_GPU_SRC=$(LASRC)matrix.cu $(LASRC)matrix.cu $(LASRC)blas.cu 
+DENSE_GPU_SRC=$(LASRC)vector.cu $(LASRC)matrix.cu $(LASRC)blas.cu 
 DENSE_GPU_SRC+=$(LASRC)dense.cu
-DENSE_OBJ=$(patsubst $(LASRC)%.cu,$(OUT)%$(LIBCONFIG).o,$(DENSE_GPU_SRC))
+DENSE_OBJ=$(patsubst $(LASRC)%.cu,$(LAOUT)%_$(LIBCONFIG).o,$(DENSE_GPU_SRC))
 SPARSE_OBJ=$(LASRC)sparse_$(LIBCONFIG).o
 
 
 PROX_OBJ=$(PREFIX_OUT)$(PROXTARG)$(PRECISION).o
 
 OPERATOR_SRC=$(OPSRC)dense.c $(OPSRC)sparse.c $(OPSRC)diagonal.c 
-OPERATOR_OBJ=$(patsubst $(OPSRC)%.c,$(OUT)%.o,$(OPERATOR_SRC))
+OPERATOR_OBJ=$(patsubst $(OPSRC)%.c,$(OPOUT)%_$(LIBCONFIG).o,$(OPERATOR_SRC))
 
 CG_OBJ=$(PREFIX_OUT)cg_$(LIBCONFIG).o
 PROJ_OBJ=$(PREFIX_OUT)projector_$(LIBCONFIG).o
@@ -132,15 +134,11 @@ POGS_ABSTRACT_STATIC_DEPS=$(POGS_ABSTRACT_OBJ) $(EQUIL_OBJ) $(PROJ_OBJ)
 POGS_ABSTRACT_STATIC_DEPS+=$(DENSE_OBJ) $(SPARSE_OBJ) $(PROX_OBJ) 
 POGS_ABSTRACT_STATIC_DEPS+=$(CG_OBJ) $(OPERATOR_OBJ)
 
-.PHONY: default, all, libs, libok, libok_dense, libok_sparse, libprox
-.PHONY: libpogs
-.PHONY: libequil, equil, libprojector, projector, operator
+.PHONY: default, all, libs, libok, libpogs
 default: cpu_dense
 all: libs libequil libprojector libpogs
 libs: libok libprox
-libok: liblinsys_dense liblinsys_sparse
-libok_sparse: liblinsys_sparse
-libok_dense: liblinsys_dense
+libok: libok_dense libok_sparse
 libpogs: libpogs_dense
 
 libpogs_abstract: pogs_abstract equil projector $(LINSYSLIBS) libprox
@@ -191,13 +189,13 @@ libprox: $(PROX_TARG)
 	$(OUT)$@_$(LIBCONFIG).$(SHARED) \
 	$(PROX_OBJ) $(LDFLAGS)
 
-liblinsys_sparse: $(SPARSE_TARG)
+libok_sparse: $(SPARSE_TARG)
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) -shared -o \
 	$(OUT)$@_$(LIBCONFIG).$(SHARED) \
 	$(SPARSE_OBJ) $(SPARSE_STATIC_DEPS) $(LDFLAGS) 
 
-liblinsys_dense: $(DENSE_TARG)
+libok_dense: $(DENSE_TARG)
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) -shared -o \
 	$(OUT)$@_$(LIBCONFIG).$(SHARED) \
@@ -245,12 +243,12 @@ gpu_prox: $(SRC)optkit_prox.cu
 	mkdir -p $(OUT)
 	$(CUXX) $(CUXXFLAGS) $< -c -o $(PROX_OBJ)
 
-cpu_sparse: $(SRC)optkit_sparse.cpp cpu_vector
+cpu_sparse: $(LASRC)sparse.cpp cpu_vector
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)/linsys
 	$(CXX) $(CXXFLAGS) $< -c -o $(SPARSE_OBJ)	
 
-gpu_sparse: $(SRC)optkit_sparse.cu gpu_vector
+gpu_sparse: $(LASRC)sparse.cu gpu_vector
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)/linsys
 	$(CUXX) $(CUXXFLAGS) $< -c -o $(SPARSE_OBJ)
@@ -262,8 +260,10 @@ cpu_dense: $(DENSE_CPU_SRC)
 	$(OUT)$(LINSYS)vector_$(LIBCONFIG).o
 	$(CXX) $(CXXFLAGS) $(LASRC)matrix.cpp -c -o \
 	$(OUT)$(LINSYS)matrix_$(LIBCONFIG).o
-	$(CC) $(CCFLAGS) $(LASRC)blas.c -c -o $(OUT)$(LINSYS)blas_$(LIBCONFIG).o
-	$(CC) $(CCFLAGS) $(LASRC)dense.c -c -o $(OUT)$(LINSYS)dense_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) $(LASRC)blas.c -c -o \
+	$(OUT)$(LINSYS)blas_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) $(LASRC)dense.c -c -o \
+	$(OUT)$(LINSYS)dense_$(LIBCONFIG).o
 
 gpu_dense: $(DENSE_GPU_SRC)
 	mkdir -p $(OUT)

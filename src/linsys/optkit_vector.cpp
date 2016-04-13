@@ -1,4 +1,4 @@
-#include "optkit_vector.hpp"
+#include "optkit_vector.h"
 
 template<typename T>
 void vector_alloc_(vector_<T> * v, size_t n)
@@ -13,7 +13,7 @@ void vector_alloc_(vector_<T> * v, size_t n)
 template<typename T>
 void vector_calloc_(vector_<T> * v, size_t n)
 {
-	vector_alloc(v, n);
+	vector_alloc_<T>(v, n);
 	memset(v->data, 0, n * sizeof(T));
 }
 
@@ -33,7 +33,7 @@ static inline void __vector_set(vector_<T> * v, size_t i, T x)
 }
 
 template<typename T>
-static ok_float __vector_get(const vector_<T> *v, size_t i)
+static inline T __vector_get(const vector_<T> *v, size_t i)
 {
 	return v->data[i * v->stride];
 }
@@ -79,7 +79,7 @@ void vector_memcpy_vv_(vector_<T> * v1, const vector_<T> * v2)
 }
 
 template<typename T>
-void vector_memcpy_va_(vector_<T> * v, const T *y, size_t stride_y)
+void vector_memcpy_va_(vector_<T> * v, const T * y, size_t stride_y)
 {
 	uint i;
 	if (v->stride == 1 && stride_y == 1)
@@ -99,6 +99,15 @@ void vector_memcpy_av_(T * x, const vector_<T> * v, size_t stride_x)
 		for (i = 0; i < v->size; ++i)
 			x[i * stride_x] = __vector_get<T>(v,i);
 }
+
+template<typename T>
+void vector_scale_(vector_<T> * v, T x)
+{
+	uint i;
+	for (i = 0; i < v->size; ++i)
+		v->data[i * v->stride] *= x;
+}
+
 
 template<typename T>
 void vector_add_(vector_<T> * v1, const vector_<T> * v2)
@@ -153,22 +162,22 @@ void vector_calloc(vector * v, size_t n)
 void vector_free(vector * v)
 	{ vector_free_<ok_float>(v); }
 
-void vector_set_all_(vector * v, ok_float x)
+void vector_set_all(vector * v, ok_float x)
 	{ vector_set_all_<ok_float>(v, x); }
 
-void vector_subvector_(vector * v_out, vector * v_in, size_t offset, size_t n)
+void vector_subvector(vector * v_out, vector * v_in, size_t offset, size_t n)
 	{ vector_subvector_<ok_float>(v_out, v_in, offset, n); }
 
-void vector_view_array_(vector * v, ok_float * base, size_t n)
+void vector_view_array(vector * v, ok_float * base, size_t n)
 	{ vector_view_array_<ok_float>(v, base, n); }
 
-void vector_memcpy_vv_(vector * v1, const vector * v2)
+void vector_memcpy_vv(vector * v1, const vector * v2)
 	{ vector_memcpy_vv_<ok_float>(v1, v2); }
 
-void vector_memcpy_va_(vector * v, const ok_float *y, size_t stride_y)
+void vector_memcpy_va(vector * v, const ok_float *y, size_t stride_y)
 	{ vector_memcpy_va_<ok_float>(v, y, stride_y); }
 
-void vector_memcpy_av_(ok_float * x, const vector * v, size_t stride_x)
+void vector_memcpy_av(ok_float * x, const vector * v, size_t stride_x)
 	{ vector_memcpy_av_<ok_float>(x, v, stride_x); }
 
 void vector_print(const vector * v)
@@ -290,6 +299,34 @@ ok_float vector_max(vector * v)
 
 	return maxval;
 }
+
+void indvector_alloc(indvector * v, size_t n)
+	{ vector_alloc_<size_t>(v, n); }
+
+void indvector_calloc(indvector * v, size_t n)
+	{ vector_calloc_<size_t>(v, n); }
+
+void indvector_free(indvector * v)
+	{ vector_free_<size_t>(v); }
+
+void indvector_set_all(indvector * v, size_t x)
+	{ vector_set_all_<size_t>(v, x); }
+
+void indvector_subvector(indvector * v_out, indvector * v_in, size_t offset,
+	size_t n)
+	{ vector_subvector_<size_t>(v_out, v_in, offset, n); }
+
+void indvector_view_array(indvector * v, size_t * base, size_t n)
+	{ vector_view_array_<size_t>(v, base, n); }
+
+void indvector_memcpy_vv(indvector * v1, const indvector * v2)
+	{ vector_memcpy_vv_<size_t>(v1, v2); }
+
+void indvector_memcpy_va(indvector * v, const size_t * y, size_t stride_y)
+	{ vector_memcpy_va_<size_t>(v, y, stride_y); }
+
+void indvector_memcpy_av(size_t * x, const indvector * v, size_t stride_x)
+	{ vector_memcpy_av_<size_t>(x, v, stride_x); }
 
 #ifdef __cplusplus
 }

@@ -1,6 +1,21 @@
 #include "optkit_defs_gpu.h"
 #include "optkit_dense.h"
 
+
+/* row major data retrieval */
+__device__ inline ok_float& __matrix_get_r(ok_float * A, uint i, uint j,
+	uint stride)
+{
+	return A[i * stride + j];
+}
+
+/* column major data retrieval */
+__device__ inline ok_float& __matrix_get_c(ok_float * A, uint i, uint j,
+	uint stride)
+{
+	return A[i + j * stride];
+}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,20 +37,6 @@ int __matrix_order_compat(const matrix * A, const matrix * B, const char * nm_A,
 	printf("OPTKIT ERROR (%s) matrices %s and %s must have same layout.\n",
 		 nm_routine, nm_A, nm_B);
 	return 0;
-}
-
-/* row major data retrieval */
-__device__ inline ok_float& __matrix_get_r(ok_float * A, uint i, uint j,
-	uint stride)
-{
-	return A[i * stride + j];
-}
-
-/* column major data retrieval */
-__device__ inline ok_float& __matrix_get_c(ok_float * A, uint i, uint j,
-	uint stride)
-{
-	return A[i + j * stride];
 }
 
 /* cholesky decomposition of a single block */
@@ -646,13 +647,12 @@ static __global__ void __matrix_col_max(ok_float * maxima, ok_float * A,
 	maxima[global_col * stride_maxima] = maxsub[col];
 }
 
-void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
+void linalg_matrix_reduce_indmin(void * linalg_handle, indvector * indices,
 	vector * minima, matrix * A, const enum CBLAS_SIDE side)
 {
 	cublasStatus_t err;
 	cudaStream_t stm;
 	uint num_row_tiles, num_col_tiles, i, j;
-	size_t ind_local[minima->size];
 
 	void (* reduce)(size_t * minind, ok_float * minima, ok_float * A,
 		size_t i, size_t j, size_t ld, size_t stride_indmin,
@@ -680,13 +680,12 @@ void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
 				kTileSize : A->size2 - j * kTileSize;
 
 			dim3 block_dim(block_dim_v, block_dim_h);
-			reduce<<<1, block_dim, 0, stm>>>(ind_local,
+			reduce<<<1, block_dim, 0, stm>>>(indices->data,
 				minima->data, A->data, i, j, (uint) A->ld, 1,
 				minima->stride, A->order);
 			CUDA_CHECK_ERR;
 		}
 	}
-	ok_memcpy_gpu(indices, ind_local, minima->size * sizeof(*indices));
 }
 
 static void __matrix_extrema(void * linalg_handle, vector * extrema,

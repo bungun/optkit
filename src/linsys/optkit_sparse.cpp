@@ -16,7 +16,7 @@ void sparselib_version(int * maj, int * min, int * change, int * status)
 }
 #endif
 
-template<typename T, I>
+template<typename T, typename I>
 void sp_matrix_alloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
 {
@@ -61,7 +61,7 @@ void sp_matrix_memcpy_mm_(sp_matrix_<T, I> * A, const sp_matrix_<T, I> * B)
 	memcpy(A->ptr, B->ptr, (A->size1 + A->size2 + 2) * sizeof(I));
 }
 
-template<typename T>
+template<typename T, typename I>
 void sp_matrix_memcpy_vals_mm_(sp_matrix_<T, I> * A, const sp_matrix_<T, I> * B)
 {
 	memcpy(A->val, B->val, 2 * A->nnz * sizeof(T));
@@ -141,7 +141,7 @@ void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
 	{ sp_matrix_calloc_<ok_float, ok_int>(A, m, n, nnz, order); }
 
 void sp_matrix_free(sp_matrix * A)
-	{ sp_matrix_free_<ok_float, ok_int>(A, B); }
+	{ sp_matrix_free_<ok_float, ok_int>(A); }
 
 void sp_matrix_memcpy_mm(sp_matrix * A, const sp_matrix * B)
 	{ sp_matrix_memcpy_mm_<ok_float, ok_int>(A, B); }

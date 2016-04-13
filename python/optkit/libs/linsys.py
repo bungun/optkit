@@ -64,6 +64,14 @@ class DenseLinsysLibs(object):
 			lib.vector = ok_vector
 			vector_p = lib.vector_p = POINTER(lib.vector)
 
+			# index vector struct
+			class ok_indvector(Structure):
+				_fields_ = [('size', c_size_t),
+							('stride', c_size_t),
+							('data', c_size_t_p)]
+			lib.indvector = ok_indvector
+			indvector_p = lib.indvector_p = POINTER(lib.indvector)
+
 			# matrix struct
 			class ok_matrix(Structure):
 				_fields_ = [('size1', c_size_t),
@@ -104,6 +112,20 @@ class DenseLinsysLibs(object):
 			lib.vector_min.argtypes = [vector_p]
 			lib.vector_max.argtypes = [vector_p]
 
+			lib.indvector_alloc.argtypes = [indvector_p, c_size_t]
+			lib.indvector_calloc.argtypes = [indvector_p, c_size_t]
+			lib.indvector_free.argtypes = [indvector_p]
+			lib.indvector_set_all.argtypes = [indvector_p, ok_float]
+			lib.indvector_subvector.argtypes = [indvector_p, indvector_p,
+												c_size_t, c_size_t]
+			lib.indvector_view_array.argtypes = [indvector_p, c_size_t_p,
+												 c_size_t]
+			lib.indvector_memcpy_vv.argtypes = [indvector_p, indvector_p]
+			lib.indvector_memcpy_va.argtypes = [indvector_p, c_size_t_p,
+												c_size_t]
+			lib.indvector_memcpy_av.argtypes = [c_size_t_p, indvector_p,
+												c_size_t]
+
 			## return values
 			lib.vector_alloc.restype = None
 			lib.vector_calloc.restype = None
@@ -129,6 +151,16 @@ class DenseLinsysLibs(object):
 			lib.vector_indmin.restype = c_size_t
 			lib.vector_min.restype = ok_float
 			lib.vector_max.restype = ok_float
+
+			lib.indvector_alloc.restype = None
+			lib.indvector_calloc.restype = None
+			lib.indvector_free.restype = None
+			lib.indvector_set_all.restype = None
+			lib.indvector_subvector.restype = None
+			lib.indvector_view_array.restype = None
+			lib.indvector_memcpy_vv.restype = None
+			lib.indvector_memcpy_va.restype = None
+			lib.indvector_memcpy_av.restype = None
 
 			# Matrix
 			# ------
@@ -225,7 +257,7 @@ class DenseLinsysLibs(object):
 			lib.linalg_diag_gramian.argtypes = [c_void_p, matrix_p, vector_p]
 			lib.linalg_matrix_broadcast_vector.argtypes = [c_void_p, matrix_p,
 													vector_p, c_uint, c_uint]
-			lib.linalg_matrix_reduce_indmin.argtypes = [c_void_p, c_size_t_p,
+			lib.linalg_matrix_reduce_indmin.argtypes = [c_void_p, indvector_p,
 														vector_p, matrix_p,
 														c_uint]
 			lib.linalg_matrix_reduce_min.argtypes = [c_void_p, vector_p,

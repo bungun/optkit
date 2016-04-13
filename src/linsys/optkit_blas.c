@@ -1,4 +1,4 @@
-#include "optkit_blas.hpp"
+#include "optkit_blas.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,7 +50,7 @@ ok_float blas_asum(void * linalg_handle, const vector * x)
 	return CBLAS(asum)((int) x->size, x->data, (int) x->stride);
 }
 
-blas_dot(void * linalg_handle, const vector * x, const vector * y)
+ok_float blas_dot(void * linalg_handle, const vector * x, const vector * y)
 {
 	return CBLAS(dot)((int) x->size, x->data, (int) x->stride, y->data,
 		(int) y->stride);
@@ -66,8 +66,8 @@ void blas_dot_inplace(void * linalg_handle, const vector * x, const vector * y,
 /* BLAS LEVEL 2 */
 
 void blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
-	ok_float alpha, const matrix *A, const vector *x, ok_float beta,
-	vector *y)
+	ok_float alpha, const matrix * A, const vector * x, ok_float beta,
+	vector * y)
 {
 	CBLAS(gemv)(A->order, transA, (int) A->size1, (int) A->size2, alpha,
 		A->data, (int) A->ld, x->data, (int) x->stride, beta,
@@ -103,18 +103,14 @@ void blas_diagmv(void * linalg_handle, const ok_float alpha,
 /* BLAS LEVEL 3 */
 
 void blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
-	enum CBLAS_TRANSPOSE transA, ok_float alpha, const matrix * A, ok_float beta,
-	matrix * C)
+	enum CBLAS_TRANSPOSE transA, ok_float alpha, const matrix * A,
+	ok_float beta, matrix * C)
 {
 	const int k = (transA == CblasNoTrans) ? (int) A->size2 :
 					 (int) A->size1;
-	void (* syrk)(enum CBLAS_ORDER o, enum CBLAS_UPLO u,
-		enum CBLAS_TRANSPOSE tA, ok_float alpha, T* A, ok_float beta, T* B, T* C);
 
 	if (!( __matrix_order_compat(A, C, "A", "C", "blas_syrk") ))
 		return;
-
-	syrk = (T == float)
 
 	CBLAS(syrk)(A->order, uplo, transA, (int) C->size2, k, alpha, A->data,
 		(int) A->ld, beta, C->data, (int) C->ld);
@@ -137,7 +133,7 @@ void blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 
 void blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side,
 	enum CBLAS_UPLO uplo, enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag,
-	T alpha, const matrix *A, matrix *B)
+	ok_float alpha, const matrix *A, matrix *B)
 {
 	if (!( __matrix_order_compat(A, B, "A", "B", "blas_trsm") ))
 		return;

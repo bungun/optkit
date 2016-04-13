@@ -1,8 +1,9 @@
 #ifndef OPTKIT_LINSYS_DENSE_H_
 #define OPTKIT_LINSYS_DENSE_H_
 
-#include "optkit_matrix.hpp"
-#include "optkit_blas.hpp"
+#include "optkit_vector.h"
+#include "optkit_matrix.h"
+#include "optkit_blas.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,7 +18,7 @@ void linalg_diag_gramian(void * linalg_handle, const matrix * A, vector * v);
 void linalg_matrix_broadcast_vector(void * linalg_handle, matrix * A,
 	const vector * v, const enum OPTKIT_TRANSFORM operation,
 	const enum CBLAS_SIDE side);
-void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
+void linalg_matrix_reduce_indmin(void * linalg_handle, indvector * indices,
 	vector * minima, matrix * A, const enum CBLAS_SIDE side);
 void linalg_matrix_reduce_min(void * linalg_handle, vector * minima,
 	matrix * A, const enum CBLAS_SIDE side);

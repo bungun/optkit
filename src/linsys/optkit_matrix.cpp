@@ -1,11 +1,11 @@
-#include "optkit_matrix.hpp"
+#include "optkit_matrix.h"
 
 template<typename T>
 void matrix_alloc_(matrix_<T> * A, size_t m, size_t n, enum CBLAS_ORDER ord)
 {
 	A->size1 = m;
 	A->size2 = n;
-	A->data = (ok_float *) malloc(m * n * sizeof(T));
+	A->data = (T *) malloc(m * n * sizeof(T));
 	A->ld = (ord == CblasRowMajor) ? n : m;
 	A->order = ord;
 }
@@ -15,7 +15,7 @@ void matrix_calloc_(matrix_<T> * A, size_t m, size_t n, enum CBLAS_ORDER ord)
 {
 	if (!A)
 		return;
-	matrix_alloc(A, m, n, ord);
+	matrix_alloc_<T>(A, m, n, ord);
 	memset(A->data, 0, m * n * sizeof(T));
 }
 
@@ -45,7 +45,7 @@ void matrix_submatrix_(matrix_<T> * A_sub, matrix_<T> * A,
 }
 
 template<typename T>
-void matrix_row(vector_<T> * row, matrix_<T> * A, size_t i)
+void matrix_row_(vector_<T> * row, matrix_<T> * A, size_t i)
 {
 	if (!row || !A)
 		return;
@@ -57,7 +57,7 @@ void matrix_row(vector_<T> * row, matrix_<T> * A, size_t i)
 }
 
 template<typename T>
-void matrix_column(vector_<T> * col, matrix_<T> *A, size_t j)
+void matrix_column_(vector_<T> * col, matrix_<T> *A, size_t j)
 {
 	if (!col || !A)
 		return;
@@ -69,7 +69,7 @@ void matrix_column(vector_<T> * col, matrix_<T> *A, size_t j)
 	}
 
 template<typename T>
-void matrix_diagonal(vector_<T> * diag, matrix_<T> * A)
+void matrix_diagonal_(vector_<T> * diag, matrix_<T> * A)
 {
 	if (!diag || !A)
 		return;
@@ -79,7 +79,7 @@ void matrix_diagonal(vector_<T> * diag, matrix_<T> * A)
 }
 
 template<typename T>
-void matrix_cast_vector(vector_<T> * v, matrix_<T> * A)
+void matrix_cast_vector_(vector_<T> * v, matrix_<T> * A)
 {
 	if (!v || !A)
 		return;
@@ -114,13 +114,13 @@ inline T __matrix_get_rowmajor(const matrix_<T> * A, size_t i, size_t j)
 }
 
 template<typename T>
-inline void __matrix_set_rowmajor_(matrix_<T> * A, size_t i, size_t j, T x)
+inline void __matrix_set_rowmajor(matrix_<T> * A, size_t i, size_t j, T x)
 {
 	A->data[i * A->ld + j] = x;
 }
 
 template<typename T>
-inline void __matrix_set_colmajor_(matrix_<T> * A, size_t i, size_t j, T x)
+inline void __matrix_set_colmajor(matrix_<T> * A, size_t i, size_t j, T x)
 {
 	A->data[i + j * A->ld] = x;
 }
@@ -135,11 +135,11 @@ void matrix_set_all_(matrix_<T> * A, T x)
 	if (A->order == CblasRowMajor)
 		for (i = 0; i < A->size1; ++i)
 			for (j = 0; j < A->size2; ++j)
-				__matrix_set_rowmajor(A, i, j, x);
+				__matrix_set_rowmajor<T>(A, i, j, x);
 	else
 		for (j = 0; j < A->size2; ++j)
 			for (i = 0; i < A->size1; ++i)
-				__matrix_set_colmajor(A, i, j, x);
+				__matrix_set_colmajor<T>(A, i, j, x);
 }
 
 template<typename T>
@@ -154,15 +154,15 @@ void matrix_memcpy_mm_(matrix_<T> * A, const matrix_<T> * B)
 		return;
 	}
 
-	void (* mset)_(matrix_<T> * M, size_t i, size_t j, ok_float x) =
+	void (* mset)(matrix_<T> * M, size_t i, size_t j, T x) =
 		(A->order == CblasRowMajor) ?
-		__matrix_set_rowmajor :
-		__matrix_set_colmajor;
+		__matrix_set_rowmajor<T> :
+		__matrix_set_colmajor<T>;
 
 	T (* mget)(const matrix_<T> * M, size_t i, size_t j) =
 		(B->order == CblasRowMajor) ?
-		__matrix_get_rowmajor :
-		__matrix_get_colmajor;
+		__matrix_get_rowmajor<T> :
+		__matrix_get_colmajor<T>;
 
 	for (i = 0; i < A->size1; ++i)
 		for (j = 0; j < A->size2; ++j)
@@ -173,10 +173,10 @@ template<typename T>
 void matrix_memcpy_ma_(matrix_<T> * A, const T * B, const enum CBLAS_ORDER ord)
 {
 	uint i, j;
-	void (* mset)_(matrix_<T> * M, size_t i, size_t j, T x) =
+	void (* mset)(matrix_<T> * M, size_t i, size_t j, T x) =
 		(A->order == CblasRowMajor) ?
-		__matrix_set_rowmajor :
-		__matrix_set_colmajor;
+		__matrix_set_rowmajor<T> :
+		__matrix_set_colmajor<T>;
 
 	if (ord == CblasRowMajor)
 		for (i = 0; i < A->size1; ++i)
@@ -189,13 +189,13 @@ void matrix_memcpy_ma_(matrix_<T> * A, const T * B, const enum CBLAS_ORDER ord)
 }
 
 template<typename T>
-void matrix_memcpy_am(T * A, const matrix_<T> * B, const enum CBLAS_ORDER ord)
+void matrix_memcpy_am_(T * A, const matrix_<T> * B, const enum CBLAS_ORDER ord)
 {
 	uint i, j;
 	T (* mget)(const matrix_<T> * M, size_t i, size_t j) =
 		(B->order == CblasRowMajor) ?
-		__matrix_get_rowmajor :
-		__matrix_get_colmajor;
+		__matrix_get_rowmajor<T> :
+		__matrix_get_colmajor<T>;
 
 	if (ord == CblasRowMajor)
 		for (i = 0; i < B->size1; ++i)
@@ -208,35 +208,20 @@ void matrix_memcpy_am(T * A, const matrix_<T> * B, const enum CBLAS_ORDER ord)
 }
 
 template<typename T>
-void matrix_print_(matrix_<T> * A)
-{
-	uint i, j;
-	T (* mget)(const matrix_<T> * M, size_t i, size_t j) =
-		(A->order == CblasRowMajor) ?
-		__matrix_get_rowmajor : __matrix_get_colmajor;
-
-	for (i = 0; i < A->size1; ++i) {
-		for (j = 0; j < A->size2; ++j)
-			printf("%e ", mget(A, i, j));
-		printf("\n");
-	}
-	printf("\n");
-}
-
-template<typename T>
 void matrix_scale_(matrix_<T> *A, T x)
 {
 	size_t i;
-	vector_<T> row_col = (vector){0, 0, OK_NULL};
+	vector_<T> row_col;
+	row_col.data = OK_NULL;
 	if (A->order == CblasRowMajor)
 		for(i = 0; i < A->size1; ++i) {
-			matrix_row(&row_col, A, i);
-			vector_scale(&row_col, x);
+			matrix_row_<T>(&row_col, A, i);
+			vector_scale_<T>(&row_col, x);
 		}
 	else
 		for(i = 0; i < A->size2; ++i) {
-			matrix_column(&row_col, A, i);
-			vector_scale(&row_col, x);
+			matrix_column_<T>(&row_col, A, i);
+			vector_scale_<T>(&row_col, x);
 		}
 }
 
@@ -244,10 +229,11 @@ template<typename T>
 void matrix_scale_left_(matrix_<T> * A, const vector_<T> * v)
 {
 	size_t i;
-	vector_<T> row = (vector){0, 0, OK_NULL};
+	vector_<T> row;
+	row.data = OK_NULL;
 	for(i = 0; i < A->size1; ++i) {
-		matrix_row(&row, A, i);
-		vector_scale(&row, v->data[i]);
+		matrix_row_<T>(&row, A, i);
+		vector_scale_<T>(&row, v->data[i]);
 	}
 }
 
@@ -255,10 +241,11 @@ template<typename T>
 void matrix_scale_right_(matrix_<T> * A, const vector_<T> * v)
 {
 	size_t i;
-	vector_<T> col = (vector){0, 0, OK_NULL};
+	vector_<T> col;
+	col.data = OK_NULL;
 	for(i = 0; i < A->size2; ++i) {
-		matrix_column(&col, A, i);
-		vector_scale(&col, v->data[i]);
+		matrix_column_<T>(&col, A, i);
+		vector_scale_<T>(&col, v->data[i]);
 	}
 }
 
@@ -273,7 +260,7 @@ void matrix_calloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord)
 	{ matrix_calloc_<ok_float>(A, m, n, ord); }
 
 void matrix_free(matrix * A)
-	{ matrix_free_<ok_flat>(A); }
+	{ matrix_free_<ok_float>(A); }
 
 void matrix_submatrix(matrix * A_sub, matrix * A, size_t i, size_t j, size_t n1,
 	size_t n2)
@@ -312,9 +299,10 @@ void matrix_memcpy_am(ok_float * A, const matrix * B,
 void matrix_print(matrix * A)
 {
 	uint i, j;
-	T (* mget)(const matrix * M, size_t i, size_t j) =
+	ok_float (* mget)(const matrix * M, size_t i, size_t j) =
 		(A->order == CblasRowMajor) ?
-		__matrix_get_rowmajor : __matrix_get_colmajor;
+		__matrix_get_rowmajor<ok_float> :
+		__matrix_get_colmajor<ok_float>;
 
 	for (i = 0; i < A->size1; ++i) {
 		for (j = 0; j < A->size2; ++j)
@@ -336,7 +324,8 @@ void matrix_scale_right(matrix * A, const vector * v)
 void matrix_abs(matrix * A)
 {
 	size_t i;
-	vector row_col = (vector){0, 0, OK_NULL};
+	vector row_col;
+	row_col.data = OK_NULL;
 	if (A->order == CblasRowMajor)
 		for(i = 0; i < A->size1; ++i) {
 			matrix_row(&row_col, A, i);
@@ -352,7 +341,8 @@ void matrix_abs(matrix * A)
 void matrix_pow(matrix * A, const ok_float x)
 {
 	size_t i;
-	vector row_col = (vector){0, 0, OK_NULL};
+	vector row_col;
+	row_col.data = OK_NULL;
 	if (A->order == CblasRowMajor)
 		for(i = 0; i < A->size1; ++i) {
 			matrix_row(&row_col, A, i);

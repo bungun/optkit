@@ -1,7 +1,8 @@
 #ifndef OPTKIT_LINSYS_BLAS_H_
 #define OPTKIT_LINSYS_BLAS_H_
 
-#include "optkit_matrix.hpp"
+#include "optkit_vector.h"
+#include "optkit_matrix.h"
 
 #ifdef __cplusplus
 extern "C" {

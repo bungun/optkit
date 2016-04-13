@@ -1,14 +1,23 @@
 #include "optkit_defs_gpu.h"
-#include "optkit_matrix.hpp"
+#include "optkit_matrix.h"
 
 /*
  * MATRIX CUDA helper methods
  * ==========================
  */
 
+template<typename T>
+static __global__ void __strided_memcpy(T * x, size_t stride_x, const T * y,
+	size_t stride_y, size_t size)
+{
+	uint i, tid = blockIdx.x * blockDim.x + threadIdx.x;
+	for (i = tid; i < size; i += gridDim.x * blockDim.x)
+	x[i * stride_x] = y[i * stride_y];
+}
+
 /* row major setter */
- template<typename T>
-__global__ void __matrix_set_r(T * data, T x, size_t stride, size_t size1,
+template<typename T>
+static __global__ void __matrix_set_r(T * data, T x, size_t stride, size_t size1,
 	size_t size2)
 {
 	uint i, j;
@@ -23,7 +32,7 @@ __global__ void __matrix_set_r(T * data, T x, size_t stride, size_t size1,
 
 /* column major setter */
 template<typename T>
-__global__ void __matrix_set_c(T * data, T x, size_t stride,
+static __global__ void __matrix_set_c(T * data, T x, size_t stride,
 	size_t size1, size_t size2)
 {
 	uint i, j;
@@ -37,7 +46,7 @@ __global__ void __matrix_set_c(T * data, T x, size_t stride,
 }
 
 template<typename T>
-void __matrix_set_all(matrix_<T> * A, T x)
+static void __matrix_set_all(matrix_<T> * A, T x)
 {
 	uint grid_dimx = calc_grid_dim(A->size1);
 	uint grid_dimy = calc_grid_dim(A->size2);
@@ -54,7 +63,7 @@ void __matrix_set_all(matrix_<T> * A, T x)
 }
 
 template<typename T>
-__global__ void __matrix_add_constant_diag(T * data, T x,
+static __global__ void __matrix_add_constant_diag(T * data, T x,
 	size_t stride)
 {
 	uint i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -350,7 +359,7 @@ void matrix_calloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord)
 	{ matrix_calloc_<ok_float>(A, m, n, ord); }
 
 void matrix_free(matrix * A)
-	{ matrix_free_<ok_flat>(A); }
+	{ matrix_free_<ok_float>(A); }
 
 void matrix_submatrix(matrix * A_sub, matrix * A, size_t i, size_t j, size_t n1,
 	size_t n2)

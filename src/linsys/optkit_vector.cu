@@ -1,6 +1,6 @@
 #include "optkit_defs_gpu.h"
 #include "optkit_thrust.hpp"
-#include "optkit_vector.hpp"
+#include "optkit_vector.h"
 
 /* CUDA helper methods */
 template<typename T>
@@ -233,24 +233,52 @@ void vector_exp(vector * v)
 
 size_t vector_indmin(vector * v)
 {
-	size_t minind = __thrust_vector_indmin(v);
+	size_t minind = __thrust_vector_indmin<ok_float>(v);
 	CUDA_CHECK_ERR;
 	return minind;
 }
 
 ok_float vector_min(vector * v)
 {
-	ok_float minval = __thrust_vector_min(v);
+	ok_float minval = __thrust_vector_min<ok_float>(v);
 	CUDA_CHECK_ERR;
 	return minval;
 }
 
 ok_float vector_max(vector * v)
 {
-	ok_float maxval = __thrust_vector_max(v);
+	ok_float maxval = __thrust_vector_max<ok_float>(v);
 	CUDA_CHECK_ERR;
 	return maxval;
 }
+
+void indvector_alloc(indvector * v, size_t n)
+	{ vector_alloc_<size_t>(v, n); }
+
+void indvector_calloc(indvector * v, size_t n)
+	{ vector_calloc_<size_t>(v, n); }
+
+void indvector_free(indvector * v)
+	{ vector_free_<size_t>(v); }
+
+void indvector_set_all(indvector * v, size_t x)
+	{ vector_set_all_<size_t>(v, x); }
+
+void indvector_subvector(indvector * v_out, indvector * v_in, size_t offset,
+	size_t n)
+	{ vector_subvector_<size_t>(v_out, v_in, offset, n); }
+
+void indvector_view_array(indvector * v, size_t * base, size_t n)
+	{ vector_view_array_<size_t>(v, base, n); }
+
+void indvector_memcpy_vv(indvector * v1, const indvector * v2)
+	{ vector_memcpy_vv_<size_t>(v1, v2); }
+
+void indvector_memcpy_va(indvector * v, const size_t * y, size_t stride_y)
+	{ vector_memcpy_va_<size_t>(v, y, stride_y); }
+
+void indvector_memcpy_av(size_t * x, const indvector * v, size_t stride_x)
+	{ vector_memcpy_av_<size_t>(x, v, stride_x); }
 
 #ifdef __cplusplus
 }

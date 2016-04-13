@@ -1032,10 +1032,14 @@ class DenseLinalgTestCase(unittest.TestCase):
 								ATOLM + RTOL * np.linalg.norm(rowmax))
 
 				# indmin - reduce columns
+				idx = lib.indvector(0, 0, None)
+				lib.indvector_calloc(idx, n)
 				inds = np.zeros(n).astype(c_size_t)
 				inds_ptr = inds.ctypes.data_as(lib.c_size_t_p)
-				lib.linalg_matrix_reduce_indmin(hdl, inds_ptr, e, A,
+				lib.linalg_matrix_reduce_indmin(hdl, idx, e, A,
 												lib.enums.CblasLeft)
+				lib.indvector_memcpy_av(inds_ptr, idx, 1)
+				lib.indvector_free(idx)
 				calcmin = np.array([A_py[inds[i], i] for i in xrange(n)])
 				colmin = np.min(A_py, 0)
 				print colmin
@@ -1045,10 +1049,13 @@ class DenseLinalgTestCase(unittest.TestCase):
 								ATOLN + RTOL * np.linalg.norm(colmin))
 
 				# indmin - reduce rows
+				lib.indvector_calloc(idx, m)
 				inds = np.zeros(m).astype(c_size_t)
 				inds_ptr = inds.ctypes.data_as(lib.c_size_t_p)
-				lib.linalg_matrix_reduce_indmin(hdl, inds_ptr, d, A,
+				lib.linalg_matrix_reduce_indmin(hdl, idx, d, A,
 												lib.enums.CblasRight)
+				lib.indvector_memcpy_av(inds_ptr, idx, 1)
+				lib.indvector_free(idx)
 				calcmin = np.array([A_py[i, inds[i]] for i in xrange(m)])
 				rowmin = np.min(A_py, 1)
 				print rowmin

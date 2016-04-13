@@ -19,8 +19,8 @@ typedef enum SparseTransposeDirection {
 }
 #endif
 
-/* MATRIX defition and methods */
-template<typename T, I>
+#ifdef __cplusplus
+template<typename T, typename I>
 struct sp_matrix_ {
 public:
 	size_t size1, size2, nnz, ptrlen;
@@ -33,7 +33,7 @@ template<typename T, typename I>
 void sp_matrix_alloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order);
 template<typename T, typename I>
-void sp_matrix_calloc_(sp_matrix_<T> * A, size_t m, size_t n, size_t nnz,
+void sp_matrix_calloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order);
 template<typename T, typename I>
 void sp_matrix_free_(sp_matrix_<T, I> * A);
@@ -42,12 +42,22 @@ void sp_matrix_memcpy_mm_(sp_matrix_<T, I> * A, const sp_matrix_<T, I> * B);
 template<typename T, typename I>
 void sp_matrix_memcpy_vals_mm_(sp_matrix_<T, I> * A,
 	const sp_matrix_<T, I> * B);
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#ifdef __cplusplus
 typedef sp_matrix_<ok_float, ok_int> sp_matrix;
+#else
+typedef struct sp_matrix {
+	size_t size1, size2, nnz, ptrlen;
+	ok_float * val;
+	ok_int * ind, * ptr;
+	enum CBLAS_ORDER order;
+} sp_matrix;
+#endif
 
 /* memory management */
 ok_status sp_make_handle(void ** sparse_handle);

@@ -5,6 +5,17 @@
 extern "C" {
 #endif
 
+static int __matrix_order_compat(const matrix * A, const matrix * B,
+	const char * nm_A, const char * nm_B, const char * nm_routine)
+{
+	if (A->order == B->order)
+		return 1;
+
+	printf("OPTKIT ERROR (%s) matrices %s and %s must have same layout.\n",
+		nm_routine, nm_A, nm_B);
+	return 0;
+}
+
 ok_status blas_make_handle(void ** handle)
 {
 	cublasStatus_t status;

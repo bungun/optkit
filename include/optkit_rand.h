@@ -10,7 +10,7 @@
 #include <time.h> /* to seed random */
 #endif
 
-#ifdef __cpluscplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -64,7 +64,7 @@ static void ok_rand(ok_float * x, size_t size)
 
 /* TODO: +1/-1 rand*/
 
-#ifdef __cpluscplus
+#ifdef __cplusplus
 }
 #endif
 

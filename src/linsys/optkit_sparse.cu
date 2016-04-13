@@ -20,69 +20,6 @@ typedef struct ok_sparse_handle{
 	cusparseMatDescr_t * descr;
 } ok_sparse_handle;
 
-/* helper methods for CUDA */
-__global__ void __float_set(ok_float * data, ok_float val, size_t stride,
-	size_t size)
-{
-	uint i, thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-	for (i = thread_id; i < size; i += gridDim.x * blockDim.x)
-		data[i * stride] = val;
-}
-
-__global__ void __int_set(ok_int * data, ok_int val, size_t stride, size_t size)
-{
-	uint i, thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-	for (i = thread_id; i < size; i += gridDim.x * blockDim.x)
-		data[i * stride] = val;
-}
-
-void __float_set_all(ok_float * data, ok_float val, size_t stride, size_t size)
-{
-	uint grid_dim = calc_grid_dim(size);
-	__float_set<<<grid_dim, kBlockSize>>>(data, val, stride, size);
-}
-
-void __int_set_all(ok_int * data, ok_int val, size_t stride, size_t size)
-{
-	uint grid_dim = calc_grid_dim(size);
-	__int_set<<<grid_dim, kBlockSize>>>(data, val, stride, size);
-}
-
-void __transpose_inplace(void * sparse_handle, sp_matrix * A,
-	SPARSE_TRANSPOSE_DIRECTION dir)
-{
-	ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
-	int size1, size2;
-	ok_int * ptr, * ind, * ptr_T, * ind_T;
-	ok_float * val, * val_T;
-
-	if (dir == Forward2Adjoint) {
-		size1 = (A->order == CblasRowMajor) ? A->size1 : A->size2;
-		size2 = (A->order == CblasRowMajor) ? A->size2 : A->size1;
-		ptr = A->ptr;
-		ind = A->ind;
-		val = A->val;
-		ptr_T = A->ptr + A->ptrlen;
-		ind_T = A->ind + A->nnz;
-		val_T = A->val + A->nnz;
-	} else {
-		size1 = (A->order == CblasRowMajor) ? A->size2 : A->size1;
-		size2 = (A->order == CblasRowMajor) ? A->size1 : A->size2;
-		ptr = A->ptr + A->ptrlen;
-		ind = A->ind + A->nnz;
-		val = A->val + A->nnz;
-		ptr_T = A->ptr;
-		ind_T = A->ind;
-		val_T = A->val;
-	}
-
-	CUSPARSE(csr2csc)(*(sp_hdl->hdl), size1, size2, (int) A->nnz, val, ptr,
-		ind, val_T, ind_T, ptr_T, CUSPARSE_ACTION_NUMERIC,
-		CUSPARSE_INDEX_BASE_ZERO);
-
-	CUDA_CHECK_ERR;
-}
-
 ok_status sp_make_handle(void ** sparse_handle)
 {
 	ok_status err = OPTKIT_SUCCESS;
@@ -128,7 +65,31 @@ ok_status sp_destroy_handle(void * sparse_handle)
 	return err;
 }
 
-void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
+
+#ifdef __cplusplus
+}
+#endif
+
+/* helper methods for CUDA */
+template <typename T>
+__global__ void __set(T * data, T val, size_t stride, size_t size)
+{
+	uint i, thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+	for (i = thread_id; i < size; i += gridDim.x * blockDim.x)
+		data[i * stride] = val;
+}
+
+template <typename T>
+void __set_all(T * data, T val, size_t stride, size_t size)
+{
+	uint grid_dim = calc_grid_dim(size);
+	__set<T><<<grid_dim, kBlockSize>>>(data, val, stride, size);
+}
+
+
+
+template <typename T, I>
+void sp_matrix_alloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
 {
  //        ok_status err;
@@ -150,14 +111,15 @@ void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
 	A->size2 = n;
 	A->nnz = nnz;
 	A->ptrlen = (order == CblasColMajor) ? n + 1 : m + 1;
-	ok_alloc_gpu(A->val, 2 * nnz * sizeof(ok_float));
-	ok_alloc_gpu(A->ind, 2 * nnz * sizeof(ok_int));
-	ok_alloc_gpu(A->ptr, (2 + m + n) * sizeof(ok_int));
+	ok_alloc_gpu(A->val, 2 * nnz * sizeof(T));
+	ok_alloc_gpu(A->ind, 2 * nnz * sizeof(I));
+	ok_alloc_gpu(A->ptr, (2 + m + n) * sizeof(I));
 	CUDA_CHECK_ERR;
 	A->order = order;
 }
 
-void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
+template <typename T, I>
+void sp_matrix_calloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
 {
 	// ok_status err = OPTKIT_SUCCESS;
@@ -170,14 +132,15 @@ void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
 	// 	err = __int_set_all(A->ptr, (ok_int) 0, 1,
 	// 		2 + A->size1 + A->size2);
 	// return err;
-	sp_matrix_alloc(A, m, n, nnz, order);
-	__float_set_all(A->val, (ok_float) 0, 1, 2 * nnz);
-	__int_set_all(A->ind, (ok_int) 0, 1, 2 * nnz);
-	__int_set_all(A->ptr, (ok_int) 0, 1, 2 + A->size1 + A->size2);
+	sp_matrix_alloc<T, I>(A, m, n, nnz, order);
+	__set_all<T>(A->val, static_cast<T>(0), 1, 2 * nnz);
+	__set_all<I>(A->ind, static_cast<I>(0), 1, 2 * nnz);
+	__set_all<I>(A->ptr, static_cast<I>(0), 1, 2 + A->size1 + A->size2);
 	CUDA_CHECK_ERR;
 }
 
-void sp_matrix_free(sp_matrix * A)
+template <typename T, I>
+void sp_matrix_free_(sp_matrix_<T, I> * A)
 {
 	// ok_status err = OPTKIT_SUCCESS;
 	// err = ok_free_gpu(A->val);
@@ -196,14 +159,74 @@ void sp_matrix_free(sp_matrix * A)
 	// return err;
 }
 
-void sp_matrix_memcpy_mm(sp_matrix * A, const sp_matrix * B)
+template <typename T, I>
+void sp_matrix_memcpy_mm_(sp_matrix_<T, I> * A, const sp_matrix_<T, I> * B)
 {
-	ok_memcpy_gpu(A->val, B->val, 2 * A->nnz * sizeof(ok_float));
-	ok_memcpy_gpu(A->ind, B->ind, 2 * A->nnz * sizeof(ok_int));
-	ok_memcpy_gpu(A->ptr, B->ptr, (2 + A->size1 + A->size2) *
-		sizeof(ok_int));
+	ok_memcpy_gpu(A->val, B->val, 2 * A->nnz * sizeof(T));
+	ok_memcpy_gpu(A->ind, B->ind, 2 * A->nnz * sizeof(I));
+	ok_memcpy_gpu(A->ptr, B->ptr, (2 + A->size1 + A->size2) * sizeof(I));
 	CUDA_CHECK_ERR;
 }
+
+template <typename T, I>
+void sp_matrix_memcpy_vals_mm_(sp_matrix_<T, I> * A, const sp_matrix_<T, I> * B)
+{
+	ok_memcpy_gpu(A->val, B->val, 2 * A->nnz * sizeof(T));
+	CUDA_CHECK_ERR;
+}
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void __transpose_inplace(void * sparse_handle, sp_matrix * A,
+	SPARSE_TRANSPOSE_DIRECTION dir)
+{
+	ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
+	int size1, size2;
+	ok_int * ptr, * ind, * ptr_T, * ind_T;
+	ok_float * val, * val_T;
+
+	if (dir == Forward2Adjoint) {
+		size1 = (A->order == CblasRowMajor) ? A->size1 : A->size2;
+		size2 = (A->order == CblasRowMajor) ? A->size2 : A->size1;
+		ptr = A->ptr;
+		ind = A->ind;
+		val = A->val;
+		ptr_T = A->ptr + A->ptrlen;
+		ind_T = A->ind + A->nnz;
+		val_T = A->val + A->nnz;
+	} else {
+		size1 = (A->order == CblasRowMajor) ? A->size2 : A->size1;
+		size2 = (A->order == CblasRowMajor) ? A->size1 : A->size2;
+		ptr = A->ptr + A->ptrlen;
+		ind = A->ind + A->nnz;
+		val = A->val + A->nnz;
+		ptr_T = A->ptr;
+		ind_T = A->ind;
+		val_T = A->val;
+	}
+
+	CUSPARSE(csr2csc)(*(sp_hdl->hdl), size1, size2, (int) A->nnz, val, ptr,
+		ind, val_T, ind_T, ptr_T, CUSPARSE_ACTION_NUMERIC,
+		CUSPARSE_INDEX_BASE_ZERO);
+
+	CUDA_CHECK_ERR;
+}
+
+void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
+	enum CBLAS_ORDER order)
+	{ sp_matrix_alloc_<float, ok_int>(A, m, n, nnz, order); }
+
+void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
+	enum CBLAS_ORDER order)
+	{ sp_matrix_calloc_<float, ok_int>(A, m, n, nnz, order); }
+
+void sp_matrix_free(sp_matrix * A)
+	{ sp_matrix_free_<float, ok_int>(A); }
+
+void sp_matrix_memcpy_mm(sp_matrix * A, const sp_matrix * B)
+	{ sp_matrix_memcpy_mm_<float, ok_int>(A, B); }
 
 void sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A,
 	const ok_float * val, const ok_int * ind, const ok_int * ptr)
@@ -225,10 +248,8 @@ void sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
 }
 
 void sp_matrix_memcpy_vals_mm(sp_matrix * A, const sp_matrix * B)
-{
-	ok_memcpy_gpu(A->val, B->val, 2 * A->nnz * sizeof(ok_float));
-	CUDA_CHECK_ERR;
-}
+	{ sp_matrix_memcpy_vals_mm_<float, ok_int>(A, B); }
+
 
 void sp_matrix_memcpy_vals_ma(void * sparse_handle, sp_matrix * A,
 	const ok_float * val)

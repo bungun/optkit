@@ -258,32 +258,30 @@ inline void __thrust_vector_pow(vector * v, const ok_float p)
 inline void __thrust_vector_exp(vector * v)
 {
 	strided_range_t r = __make_strided_range<ok_float>(v);
-	__transform_r(r, ExpF(p));
+	__transform_r(r, ExpF());
 }
 
 template<typename T>
 inline size_t __thrust_vector_indmin(vector_<T> * v)
 {
 	strided_range<thrust::device_ptr<T> > r = __make_strided_range<T>(v);
-	thrust::device_ptr<T> res = thrust::min_element(r.begin(), r.end());
-	return (size_t) ((res - v->data) / (v->stride * sizeof(T)));
+	T * res = thrust::raw_pointer_cast(
+		&(thrust::min_element(r.begin(), r.end())[0]));
+	return (size_t) (res - v->data);
 }
 
 template<typename T>
 inline T __thrust_vector_min(vector_<T> * v)
 {
 	strided_range<thrust::device_ptr<T> > r = __make_strided_range<T>(v);
-	thrust::device_ptr<T> res = thrust::min_element(r.begin(), r.end());
-	return res[0];
+	return thrust::min_element(r.begin(), r.end())[0];
 }
 
 template<typename T>
-inline T __thrust_vector_min(vector_<T> * v)
+inline T __thrust_vector_max(vector_<T> * v)
 {
 	strided_range<thrust::device_ptr<T> > r = __make_strided_range<T>(v);
-	thrust::device_ptr<ok_float> res = thrust::max_element(r.begin(),
-		r.end());
-	return res[0];
+	return thrust::max_element(r.begin(), r.end())[0];
 }
 
 #endif /* OPTKIT_THRUST_H_ */
