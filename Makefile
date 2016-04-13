@@ -100,7 +100,6 @@ PROX_TARG=$(DEVICETAG)_prox
 LINSYSLIBS=libok_dense libok_sparse
 POGSLIBS=libpogs_dense
 
-VECTOR_SRC=$(LASRC)vector.cpp
 VECTOR_OBJ=$(OUT)$(LINSYS)vector_$(LIBCONFIG).o
 DENSE_CPU_SRC=$(LASRC)vector.cpp $(LASRC)matrix.cpp $(LASRC)blas.c
 DENSE_CPU_SRC+=$(LASRC)dense.c
@@ -138,16 +137,16 @@ default: cpu_dense
 all: libs libequil libprojector libpogs
 libs: libok libprox
 libok: libok_dense libok_sparse
-libpogs: libpogs_dense
+libpogs: libpogs_dense libpogs_abstract
 
-libpogs_abstract: pogs_abstract equil projector $(LINSYSLIBS) libprox
+libpogs_abstract: pogs_abstract operator cg equil projector $(LINSYSLIBS) libprox
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) -shared -o \
 	$(OUT)$@_$(LIBCONFIG).$(SHARED)  \
 	$(POGS_ABSTRACT_STATIC_DEPS) $(LDFLAGS) 
 
 libpogs_sparse: pogs equil projector $(LINSYSLIBS) libprox
-	mkdir -p $(OUT) \	
+	mkdir -p $(OUT)	
 	$(CC) $(CCFLAGS) -shared -o \
 	$(OUT)$@_$(LIBCONFIG).$(SHARED)  \
 	$(POGS_STATIC_DEPS) $(SPARSE_OBJ) $(LDFLAGS)
@@ -201,6 +200,7 @@ libok_dense: $(DENSE_TARG)
 	$(DENSE_OBJ) $(LDFLAGS)
 
 pogs_abstract: $(SRC)optkit_abstract_pogs.c
+	mkdir -p $(OUT) 
 	$(CC) $(CCFLAGS) $< -c -o $(POGS_ABSTRACT_OBJ) \
 
 pogs: $(SRC)optkit_pogs.c
@@ -279,12 +279,12 @@ gpu_dense: $(DENSE_GPU_SRC)
 	$(CUXX) $(CUXXFLAGS) $(LASRC)dense.cu -c -o \
 	$(OUT)$(LINSYS)dense_$(LIBCONFIG).o
 
-cpu_vector: $(VECTOR_SRC)
+cpu_vector: $(LASRC)vector.cpp
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)/linsys
 	$(CXX) $(CXXFLAGS) $< -c -o $(VECTOR_OBJ)
 
-gpu_vector: $(VECTOR_SRC)
+gpu_vector: $(LASRC)vector.cu
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)/linsys
 	$(CUXX) $(CUXXFLAGS) $< -c -o $(VECTOR_OBJ)

@@ -177,7 +177,8 @@ void indirect_projector_project(void * linalg_handle, indirect_projector * P,
 	P->A->fused_apply(P->A->data, -kOne, x_in, kOne, y_out);
 
 	/* Minimize ||Ax_out - (y_in - Ax_in) ||_2 + ||x_out||_2*/
-	cgls_solve(P->cgls_work, P->A, y_out, x_out, kOne, 1e-12, 100, 1);
+	cgls_solve(P->cgls_work, P->A, y_out, x_out, kOne, (ok_float) 1e-12,
+		100, 1);
 
 	/* x_out += x0 */
 	blas_axpy(linalg_handle, kOne, x_in, x_out);

@@ -53,16 +53,16 @@ enum OPTKIT_TRANSFORM {
 	#define CBLAS(x) cblas_d ## x
 	#define MATH(x) x
 	typedef double ok_float;
-	#define MACHINETOL (ok_float) 10e-10
-	#define OK_NAN ((ok_float)0x7ff8000000000000)
-	#define OK_FLOAT_MAX FLT_MAX
+	#define MACHINETOL (double) 10e-10
+	#define OK_NAN ((double) 0x7ff8000000000000)
+	#define OK_FLOAT_MAX DBL_MAX
 #else
 	#define CBLAS(x) cblas_s ## x
 	#define MATH(x) x ## f
 	typedef float ok_float;
-	#define MACHINETOL (ok_float) 10e-5
-	#define OK_NAN ((ok_float)0x7fc00000)
-	#define OK_FLOAT_MAX DBL_MAX
+	#define MACHINETOL (float) 10e-5
+	#define OK_NAN ((float) 0x7fc00000)
+	#define OK_FLOAT_MAX FLT_MAX
 #endif
 
 #define kZero (ok_float) 0

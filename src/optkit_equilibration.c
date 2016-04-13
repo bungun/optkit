@@ -18,7 +18,9 @@ void sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out,
 {
 	size_t m = A_out->size1, n = A_out->size2, k, NUMITER=10;
 	ok_float sqrtm, sqrtn, nrm_d2, nrm_e2, fac;
-	vector a = (vector) {0, 0, OK_NULL};
+	vector a;
+	a.data = OK_NULL;
+
 	sqrtm = MATH(sqrt)( (ok_float) m);
 	sqrtn = MATH(sqrt)( (ok_float) n);
 
@@ -61,15 +63,17 @@ void sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out,
 void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 	matrix * A_out, vector * d, vector * e, enum CBLAS_ORDER ord)
 {
-	const ok_float kSinkhornConst = 1e-4;
-	const ok_float kEps = 1e-2;
+	const ok_float kSinkhornConst = (ok_float) 1e-4;
+	const ok_float kEps = (ok_float) 1e-2;
 	const size_t kMaxIter = 300;
 	ok_float norm_d, norm_e;
 	size_t i;
 
-	vector a = (vector) {0, 0, OK_NULL};
-	vector d_diff = (vector) {0, 0, OK_NULL};
-	vector e_diff = (vector) {0, 0, OK_NULL};
+	vector a, d_diff, e_diff;
+	a.data = OK_NULL;
+	d_diff.data = OK_NULL;
+	e_diff.data = OK_NULL;
+
 	vector_calloc(&d_diff, A_out->size1);
 	vector_calloc(&e_diff, A_out->size2);
 
@@ -138,7 +142,8 @@ void dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out,
 	vector * d, vector * e, enum CBLAS_ORDER ord)
 {
 	size_t k, m = A_out->size1, n = A_out->size2;
-	vector a = (vector){0, 0, OK_NULL};
+	vector a;
+	a.data = OK_NULL;
 
 	if (A_in == A_out->data) {
 		printf("Error: Dense l2 equilibration requires \
@@ -185,15 +190,16 @@ ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 {
 	transformable_operator * transform = OK_NULL;
 	void * A_temp = OK_NULL;
-	const ok_float kSinkhornConst = 1e-4;
-	const ok_float kEps = 1e-2;
+	const ok_float kSinkhornConst = (ok_float) 1e-4;
+	const ok_float kEps = (ok_float) 1e-2;
 	const size_t kMaxIter = 300;
 	ok_float norm_d, norm_e;
 	ok_status err = OPTKIT_SUCCESS;
 	size_t k;
 	int blas_handle_provided = 1;
-	vector d_diff = (vector) {0, 0, OK_NULL};
-	vector e_diff = (vector) {0, 0, OK_NULL};
+	vector d_diff, e_diff;
+	d_diff.data = OK_NULL;
+	e_diff.data = OK_NULL;
 
 	if (!linalg_handle) {
 		blas_make_handle(&linalg_handle);
@@ -293,12 +299,15 @@ ok_status operator_equilibrate(void * linalg_handle, operator * A,
  */
 ok_float operator_estimate_norm(void * linalg_handle, operator * A)
 {
-	const ok_float kNormTol = 1e-5;
+	const ok_float kNormTol = (ok_float) 1e-5;
 	const uint kNormIter = 50u;
 
 	ok_float norm_est = kZero, norm_est_prev, norm_x, norm_Ax;
 	vector x, Ax;
 	uint i;
+
+	x.data = OK_NULL;
+	Ax.data = OK_NULL;
 
 	vector_calloc(&x, A->size2);
 	vector_calloc(&Ax, A->size1);

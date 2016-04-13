@@ -8,7 +8,7 @@
 - TODO: license
 - TODO: cite POGS
 - TODO: append version numbers to .so, check version numbers when loading libs in python
-- TODO: operator equilibration
+- TODO: operator typesafe equilibration
 - TODO: operator IO
 - TODO: debug/test clustering
 - TODO: memory cleanup when tests fail 

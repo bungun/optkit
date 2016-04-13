@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-const ok_float kProjectorTolInitial = 1e-6;
+const ok_float kProjectorTolInitial = (ok_float) 1e-6;
 
 void pogslib_version(int * maj, int * min, int * change, int * status)
 {

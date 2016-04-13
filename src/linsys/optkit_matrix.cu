@@ -103,11 +103,11 @@ void matrix_free_(matrix_<T> * A)
 }
 
 template<typename T>
-void matrix_submatrix(matrix_<T> * A_sub, matrix_<T> * A, size_t i, size_t j,
+void matrix_submatrix_(matrix_<T> * A_sub, matrix_<T> * A, size_t i, size_t j,
 	size_t n1, size_t n2)
 {
 	if (!A_sub || !A)
-		return
+		return;
 	A_sub->size1 = n1;
 	A_sub->size2 = n2;
 	A_sub->ld = A->ld;
@@ -117,7 +117,7 @@ void matrix_submatrix(matrix_<T> * A_sub, matrix_<T> * A, size_t i, size_t j,
 }
 
 template<typename T>
-void matrix_row(vector_<T> * row, matrix_<T> * A, size_t i)
+void matrix_row_(vector_<T> * row, matrix_<T> * A, size_t i)
 {
 	if (!row || !A)
 		return;
@@ -128,7 +128,7 @@ void matrix_row(vector_<T> * row, matrix_<T> * A, size_t i)
 }
 
 template<typename T>
-void matrix_column(vector * col, matrix *A, size_t j)
+void matrix_column_(vector * col, matrix *A, size_t j)
 {
 	if (!col || !A)
 		return;
@@ -139,7 +139,7 @@ void matrix_column(vector * col, matrix *A, size_t j)
 }
 
 template<typename T>
-void matrix_diagonal(vector_<T> * diag, matrix_<T> *A)
+void matrix_diagonal_(vector_<T> * diag, matrix_<T> *A)
 {
 	if (!diag || !A)
 		return;
@@ -149,7 +149,7 @@ void matrix_diagonal(vector_<T> * diag, matrix_<T> *A)
 }
 
 template<typename T>
-void matrix_cast_vector(vector_<T> * v, matrix_<T> * A)
+void matrix_cast_vector_(vector_<T> * v, matrix_<T> * A)
 {
 	if (!v || !A)
 		return;
@@ -159,7 +159,7 @@ void matrix_cast_vector(vector_<T> * v, matrix_<T> * A)
 }
 
 template<typename T>
-void matrix_view_array(matrix_<T> * A, const T * base, size_t n1, size_t n2,
+void matrix_view_array_(matrix_<T> * A, const T * base, size_t n1, size_t n2,
 	enum CBLAS_ORDER ord)
 {
 	if (!A || !base)
@@ -172,7 +172,7 @@ void matrix_view_array(matrix_<T> * A, const T * base, size_t n1, size_t n2,
 }
 
 template<typename T>
-void matrix_set_all(matrix_<T> * A, T x)
+void matrix_set_all_(matrix_<T> * A, T x)
 {
 	if (!A)
 		return;
@@ -180,7 +180,7 @@ void matrix_set_all(matrix_<T> * A, T x)
 }
 
 template<typename T>
-void matrix_memcpy_mm(matrix_<T> * A, const matrix_<T> * B)
+void matrix_memcpy_mm_(matrix_<T> * A, const matrix_<T> * B)
 {
 	uint i, j, grid_dim;
 	if (A->size1 != B->size1) {
@@ -219,7 +219,7 @@ void matrix_memcpy_mm(matrix_<T> * A, const matrix_<T> * B)
  *      A->order != ord, ord == CblasRowMajor (A col major, B row major)
  */
 template<typename T>
-void matrix_memcpy_ma(matrix_<T> * A, const T * B, const enum CBLAS_ORDER ord)
+void matrix_memcpy_ma_(matrix_<T> * A, const T * B, const enum CBLAS_ORDER ord)
 {
 	uint i, j, grid_dim;
 	T * row, * col;
@@ -264,7 +264,7 @@ void matrix_memcpy_ma(matrix_<T> * A, const T * B, const enum CBLAS_ORDER ord)
  *      ord != B->ord, order == CblasColMajor (A col major, B row major)
  */
 template<typename T>
-void matrix_memcpy_am(T * A, const matrix_<T> * B, const enum CBLAS_ORDER ord)
+void matrix_memcpy_am_(T * A, const matrix_<T> * B, const enum CBLAS_ORDER ord)
 {
 	uint i, j, grid_dim;
 	T * row, * col;
@@ -301,51 +301,6 @@ void matrix_memcpy_am(T * A, const matrix_<T> * B, const enum CBLAS_ORDER ord)
 		ok_free_gpu(col);
 	}
 	CUDA_CHECK_ERR;
-}
-
-template<typename T>
-void matrix_scale(matrix_<T> * A, T x)
-{
-	size_t i;
-	vector_<T> row_col;
-	row_col.data = OK_NULL;
-
-	if (A->order == CblasRowMajor)
-		for(i = 0; i < A->size1; ++i) {
-			matrix_row_<T>(&row_col, A, i);
-			vector_scale_<T>(&row_col, x);
-		}
-	else
-		for(i = 0; i < A->size2; ++i) {
-			matrix_column_<T>(&row_col, A, i);
-			vector_scale_<T>(&row_col, x);
-		}
-}
-
-template<typename T>
-void matrix_scale_left(matrix_<T> * A, const vector_<T> * v)
-{
-	size_t i;
-	vector_<T> col;
-	col.data = OK_NULL;
-
-	for(i = 0; i < A->size2; ++i) {
-		matrix_column_<T>(&col, A, i);
-		vector_mul_<T>(&col, v);
-	}
-}
-
-template<typename T>
-void matrix_scale_right(matrix_<T> * A, const vector_<T> * v)
-{
-	size_t i;
-	vector_<T> row;
-	row.data = OK_NULL;
-
-	for(i = 0; i < A->size1; ++i) {
-		matrix_row_<T>(&row, A, i);
-		vector_mul_<T>(&row, v);
-	}
 }
 
 #ifdef __cplusplus
@@ -410,14 +365,47 @@ void matrix_print(matrix * A)
 	printf("\n");
 }
 
-void matrix_scale(matrix *A, ok_float x)
-	{ matrix_scale_<ok_float>(A, x); }
+void matrix_scale(matrix * A, ok_float x)
+{
+	size_t i;
+	vector row_col;
+	row_col.data = OK_NULL;
+
+	if (A->order == CblasRowMajor)
+		for(i = 0; i < A->size1; ++i) {
+			matrix_row(&row_col, A, i);
+			vector_scale(&row_col, x);
+		}
+	else
+		for(i = 0; i < A->size2; ++i) {
+			matrix_column(&row_col, A, i);
+			vector_scale(&row_col, x);
+		}
+}
 
 void matrix_scale_left(matrix * A, const vector * v)
-	{ matrix_scale_left_<ok_float>(A, v); }
+{
+	size_t i;
+	vector col;
+	col.data = OK_NULL;
+
+	for(i = 0; i < A->size2; ++i) {
+		matrix_column(&col, A, i);
+		vector_mul(&col, v);
+	}
+}
 
 void matrix_scale_right(matrix * A, const vector * v)
-	{ matrix_scale_right_<ok_float>(A, v); }
+{
+	size_t i;
+	vector row;
+	row.data = OK_NULL;
+
+	for(i = 0; i < A->size1; ++i) {
+		matrix_row(&row, A, i);
+		vector_mul(&row, v);
+	}
+}
 
 void matrix_abs(matrix * A)
 {

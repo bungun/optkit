@@ -55,13 +55,13 @@ void vector_free_(vector_<T> * v)
 }
 
 template<typename T>
-void vector_set_all(vector_<T> * v, T x)
+void vector_set_all_(vector_<T> * v, T x)
 {
 	__vector_set_all(v, x);
 }
 
 template<typename T>
-void vector_subvector(vector_<T> * v_out, vector_<T> * v_in, size_t offset,
+void vector_subvector_(vector_<T> * v_out, vector_<T> * v_in, size_t offset,
 	size_t n)
 {
 	if (!v_out || !v_in)
@@ -95,7 +95,7 @@ void vector_memcpy_vv_(vector_<T> * v1, const vector_<T> * v2)
 }
 
 template<typename T>
-void vector_memcpy_va(vector_<T> * v, const T *y, size_t stride_y)
+void vector_memcpy_va_(vector_<T> * v, const T *y, size_t stride_y)
 {
 	uint i;
 	if (v->stride == 1 && stride_y == 1)
@@ -107,7 +107,7 @@ void vector_memcpy_va(vector_<T> * v, const T *y, size_t stride_y)
 }
 
 template<typename T>
-void vector_memcpy_av(T *x, const vector_<T> *v, size_t stride_x)
+void vector_memcpy_av_(T *x, const vector_<T> *v, size_t stride_x)
 {
 	uint i;
 	if (v->stride == 1 && stride_x == 1)
@@ -117,11 +117,6 @@ void vector_memcpy_av(T *x, const vector_<T> *v, size_t stride_x)
 			ok_memcpy_gpu(x + i * stride_x, v->data + i * v->stride,
 				sizeof(T));
 }
-
-/* explicit instantiations for downstream code*/
-/* vector_scale required by: equilibration */
-template void vector_scale_(vector_<float> * v, float x);
-template void vector_scale_(vector_<double> * v, double x);
 
 #ifdef __cplusplus
 extern "C" {
@@ -136,22 +131,22 @@ void vector_calloc(vector * v, size_t n)
 void vector_free(vector * v)
 	{ vector_free_<ok_float>(v); }
 
-void vector_set_all_(vector * v, ok_float x)
+void vector_set_all(vector * v, ok_float x)
 	{ vector_set_all_<ok_float>(v, x); }
 
-void vector_subvector_(vector * v_out, vector * v_in, size_t offset, size_t n)
+void vector_subvector(vector * v_out, vector * v_in, size_t offset, size_t n)
 	{ vector_subvector_<ok_float>(v_out, v_in, offset, n); }
 
-void vector_view_array_(vector * v, ok_float * base, size_t n)
+void vector_view_array(vector * v, ok_float * base, size_t n)
 	{ vector_view_array_<ok_float>(v, base, n); }
 
-void vector_memcpy_vv_(vector * v1, const vector * v2)
+void vector_memcpy_vv(vector * v1, const vector * v2)
 	{ vector_memcpy_vv_<ok_float>(v1, v2); }
 
-void vector_memcpy_va_(vector * v, const ok_float *y, size_t stride_y)
+void vector_memcpy_va(vector * v, const ok_float *y, size_t stride_y)
 	{ vector_memcpy_va_<ok_float>(v, y, stride_y); }
 
-void vector_memcpy_av_(ok_float * x, const vector * v, size_t stride_x)
+void vector_memcpy_av(ok_float * x, const vector * v, size_t stride_x)
 	{ vector_memcpy_av_<ok_float>(x, v, stride_x); }
 
 void vector_print(const vector * v)
