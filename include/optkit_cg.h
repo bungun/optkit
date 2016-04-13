@@ -1,8 +1,8 @@
 #ifndef OPTKIT_CG_H_
 #define OPTKIT_CG_H_
 
+#include "optkit_vector.h"
 #include "optkit_abstract_operator.h"
-#include "optkit_dense.h"
 
 #ifdef __cplusplus
 extern "C" {

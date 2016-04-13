@@ -97,7 +97,7 @@ DENSE_TARG=$(DEVICETAG)_dense
 SPARSE_TARG=$(DEVICETAG)_sparse
 PROX_TARG=$(DEVICETAG)_prox
 
-LINSYSLIBS=liblinsys_dense liblinsys_sparse
+LINSYSLIBS=libok_dense libok_sparse
 POGSLIBS=libpogs_dense
 
 VECTOR_SRC=$(LASRC)vector.cpp
@@ -109,8 +109,7 @@ DENSE_GPU_SRC+=$(LASRC)dense.cu
 DENSE_OBJ=$(patsubst $(LASRC)%.cu,$(LAOUT)%_$(LIBCONFIG).o,$(DENSE_GPU_SRC))
 SPARSE_OBJ=$(LASRC)sparse_$(LIBCONFIG).o
 
-
-PROX_OBJ=$(PREFIX_OUT)$(PROXTARG)$(PRECISION).o
+PROX_OBJ=$(PREFIX_OUT)prox_$(LIBCONFIG).o
 
 OPERATOR_SRC=$(OPSRC)dense.c $(OPSRC)sparse.c $(OPSRC)diagonal.c 
 OPERATOR_OBJ=$(patsubst $(OPSRC)%.c,$(OPOUT)%_$(LIBCONFIG).o,$(OPERATOR_SRC))
@@ -227,9 +226,12 @@ projector_direct: $(SRC)optkit_projector.c
 operator: $(OPERATOR_SRC) 
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)/operator
-	$(CC) $(CCFLAGS) $(OPSRC)dense.c  -c -o $(OUT)$(OPERATOR)dense.o
-	$(CC) $(CCFLAGS) $(OPSRC)sparse.c  -c -o $(OUT)$(OPERATOR)sparse.o
-	$(CC) $(CCFLAGS) $(OPSRC)diagonal.c -c -o $(OUT)$(OPERATOR)diagonal.o
+	$(CC) $(CCFLAGS) $(OPSRC)dense.c  -c -o \
+	$(OUT)$(OPERATOR)dense_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) $(OPSRC)sparse.c  -c -o \
+	$(OUT)$(OPERATOR)sparse_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) $(OPSRC)diagonal.c -c -o \
+	$(OUT)$(OPERATOR)diagonal_$(LIBCONFIG).o
 
 cg: $(SRC)optkit_cg.c
 	mkdir -p $(OUT)

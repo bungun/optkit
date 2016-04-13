@@ -149,6 +149,11 @@ void vector_add_constant_(vector_<T> * v, const T x)
 		v->data[i * v->stride] += x;
 }
 
+/* explicit instantiations for downstream code*/
+/* vector_scale required by: equilibration */
+template void vector_scale_(vector_<float> * v, float x);
+template void vector_scale_(vector_<double> * v, double x);
+
 #ifdef __cplusplus
 extern "C" {
 #endif
