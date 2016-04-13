@@ -134,7 +134,7 @@ POGS_ABSTRACT_STATIC_DEPS+=$(CG_OBJ) $(OPERATOR_OBJ)
 
 .PHONY: default, all, libs, libok, libpogs
 default: cpu_dense
-all: libs libequil libprojector libpogs
+all: libs liboperator libcg libequil libprojector libpogs
 libs: libok libprox
 libok: libok_dense libok_sparse
 libpogs: libpogs_dense libpogs_abstract
