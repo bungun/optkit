@@ -61,7 +61,6 @@ class VectorTestCase(unittest.TestCase):
 			len_v = 10 + int(1000 * np.random.rand())
 
 			v, v_py, v_ptr = self.make_vec_triplet(lib, len_v)
-
 			w, w_py, w_ptr = self.make_vec_triplet(lib, len_v)
 
 			# set_all
@@ -134,77 +133,88 @@ class VectorTestCase(unittest.TestCase):
 			if lib is None:
 				continue
 
-			DIGITS = 7 - 2 * lib.FLOAT - 2 * lib.GPU
-
-			len_v = 10 + int(1000 * np.random.rand())
+			DIGITS = 7 - 2 * lib.FLOAT - 1 * lib.GPU
 
 			val1 = 12 * np.random.rand()
 			val2 = 5 * np.random.rand()
-			len_v = 10 + int(10 * np.random.rand())
+			len_v = 10 + int(1000 * np.random.rand())
+			# len_v = 10 + int(10 * np.random.rand())
 
-			v, v_py, v_ptr = self.make_vec_triplet(lib, len_v)
-			w, w_py, w_ptr = self.make_vec_triplet(lib, len_v)
+			RTOL = 10**(-DIGITS)
+			ATOL = RTOL * len_v**0.5
+
+			v = lib.vector(0, 0, None)
+			lib.vector_calloc(v, len_v)
+			v_py = np.zeros(len_v).astype(lib.pyfloat)
+			v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
+
+			w = lib.vector(0, 0, None)
+			lib.vector_calloc(w, len_v)
+			w_py = np.zeros(len_v).astype(lib.pyfloat)
+			w_ptr = w_py.ctypes.data_as(lib.ok_float_p)
 
 			# constant addition
 			lib.vector_add_constant(v, val1)
 			lib.vector_add_constant(w, val2)
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(w_ptr, w, 1)
-			for i in xrange(v.size):
-				self.assertTrue(approx_compare(v_py[i], val1, DIGITS))
-				self.assertTrue(approx_compare(w_py[i], val2, DIGITS))
+			self.assertTrue(np.linalg.norm(v_py - val1) <=
+				ATOL + RTOL * np.linalg.norm(v_py))
+			self.assertTrue(np.linalg.norm(w_py - val2) <=
+				ATOL + RTOL * np.linalg.norm(w_py))
 
 			# add two vectors
 			lib.vector_add(v, w)
 			val1 += val2
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(w_ptr, w, 1)
-			for i in xrange(v.size):
-				self.assertTrue(approx_compare(v_py[i], val1, DIGITS))
-				self.assertTrue(approx_compare(w_py[i], val2, DIGITS))
+			self.assertTrue(np.linalg.norm(v_py - val1) <=
+				ATOL + RTOL * np.linalg.norm(v_py))
+			self.assertTrue(np.linalg.norm(w_py - val2) <=
+				ATOL + RTOL * np.linalg.norm(w_py))
 
 			# subtract two vectors
 			lib.vector_sub(w, v)
 			val2 -= val1
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(w_ptr, w, 1)
-			for i in xrange(v.size):
-				self.assertTrue(approx_compare(v_py[i], val1, DIGITS))
-				self.assertTrue(approx_compare(w_py[i], val2, DIGITS))
+			self.assertTrue(np.linalg.norm(v_py - val1) <=
+				ATOL + RTOL * np.linalg.norm(v_py))
+			self.assertTrue(np.linalg.norm(w_py - val2) <=
+				ATOL + RTOL * np.linalg.norm(w_py))
 
 			# multiply two vectors
 			lib.vector_mul(v, w)
 			val1 *= val2
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(w_ptr, w, 1)
-			for i in xrange(v.size):
-				self.assertTrue(approx_compare(v_py[i], val1, DIGITS))
-				self.assertTrue(approx_compare(w_py[i], val2, DIGITS))
-
+			self.assertTrue(np.linalg.norm(v_py - val1) <=
+				ATOL + RTOL * np.linalg.norm(v_py))
+			self.assertTrue(np.linalg.norm(w_py - val2) <=
+				ATOL + RTOL * np.linalg.norm(w_py))
 
 			# vector scale
 			scal = 3 * np.random.rand()
 			val1 *= scal
 			lib.vector_scale(v, scal)
 			lib.vector_memcpy_av(v_ptr, v, 1)
-			for i in xrange(v.size):
-				self.assertTrue(approx_compare(v_py[i], val1, DIGITS))
+			self.assertTrue(np.linalg.norm(v_py - val1) <=
+				ATOL + RTOL * np.linalg.norm(v_py))
 
 			# make sure v is strictly positive
 			val1 = 0.7 + np.random.rand()
 			lib.vector_scale(v, 0)
 			lib.vector_add_constant(v, val1)
 
-			DIGITS -= 1
-
 			# divide two vectors
 			lib.vector_div(w, v)
 			val2 /= float(val1)
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			lib.vector_memcpy_av(w_ptr, w, 1)
-			for i in xrange(v.size):
-				self.assertTrue(approx_compare(v_py[i], val1, DIGITS))
-				self.assertTrue(approx_compare(w_py[i], val2, DIGITS))
+			self.assertTrue(np.linalg.norm(v_py - val1) <=
+				ATOL + RTOL * np.linalg.norm(v_py))
+			self.assertTrue(np.linalg.norm(w_py - val2) <=
+				ATOL + RTOL * np.linalg.norm(w_py))
 
 			# make w strictly negative
 			w_max = w_py.max()
@@ -215,31 +225,57 @@ class VectorTestCase(unittest.TestCase):
 			lib.vector_abs(w)
 			val2 = abs(val2)
 			lib.vector_memcpy_av(w_ptr, w, 1)
-			for i in xrange(v.size):
-				self.assertTrue(approx_compare(w_py[i], val2, 3))
-
+			self.assertTrue(np.linalg.norm(w_py - val2) <=
+				ATOL + RTOL * np.linalg.norm(w_py))
 
 			# vector recip
 			lib.vector_recip(w)
 			val2 = 1. / val2
 			lib.vector_memcpy_av(w_ptr, w, 1)
-			for i in xrange(v.size):
-				self.assertTrue(approx_compare(w_py[i], val2, 3))
+			self.assertTrue(np.linalg.norm(w_py - val2) <=
+				ATOL + RTOL * np.linalg.norm(w_py))
 
 			# vector sqrt
 			lib.vector_sqrt(w)
 			val2 **= 0.5
 			lib.vector_memcpy_av(w_ptr, w, 1)
-			for i in xrange(v.size):
-				self.assertTrue(approx_compare(w_py[i], val2, 3))
+			self.assertTrue(np.linalg.norm(w_py - val2) <=
+				ATOL + RTOL * np.linalg.norm(w_py))
 
 			# vector pow
 			pow_val = -2 + 4 * np.random.rand()
 			lib.vector_pow(w, pow_val)
 			val2 **= pow_val
 			lib.vector_memcpy_av(w_ptr, w, 1)
-			for i in xrange(v.size):
-				self.assertTrue(approx_compare(w_py[i], val2, 3))
+			self.assertTrue(np.linalg.norm(w_py - val2) <=
+				ATOL + RTOL * np.linalg.norm(w_py))
+
+			# vector exp
+			lib.vector_exp(w)
+			val2 = np.exp(val2)
+			lib.vector_memcpy_av(w_ptr, w, 1)
+			self.assertTrue(np.linalg.norm(val2 - w_py) <=
+				ATOL + RTOL * np.linalg.norm(w_py))
+
+			# min / max
+			w_py *= 0
+			w_py += np.random.rand(len(w_py))
+			lib.vector_memcpy_va(w, w_ptr, 1)
+
+			# vector argmin
+			wargmin = lib.vector_indmin(w)
+			self.assertTrue(w_py[wargmin] - w_py.min() <=
+				ATOL + RTOL * np.linalg.norm(w_py))
+
+			# vector min
+			wmin = lib.vector_min(w)
+			self.assertTrue(wmin - w_py.min() <=
+				ATOL + RTOL * np.linalg.norm(w_py))
+
+			# vector max
+			wmax = lib.vector_max(w)
+			self.assertTrue(wmax - w_py.max() <=
+				ATOL + RTOL * np.linalg.norm(w_py))
 
 			lib.vector_free(v)
 			lib.vector_free(w)

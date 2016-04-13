@@ -22,9 +22,7 @@ void matrix_calloc_(matrix_<T> * A, size_t m, size_t n, enum CBLAS_ORDER ord)
 template<typename T>
 void matrix_free_(matrix_<T> * A)
 {
-	if (!A)
-		return;
-	if (A->data != OK_NULL)
+	if (A && A->data)
 		ok_free(A->data);
 	A->size1 = (size_t) 0;
 	A->size2 = (size_t) 0;

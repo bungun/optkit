@@ -8,6 +8,8 @@
 #include <thrust/functional.h>
 #include <thrust/inner_product.h>
 #include <thrust/reduce.h>
+#include <thrust/extrema.h>
+
 
 /*
  * strided iterator (from thrust:: examples)
@@ -32,18 +34,17 @@ public:
 		TransformIt;
 	typedef typename thrust::permutation_iterator<Iterator, TransformIt>
 		PermutationIt;
-	typedef PermutationIt strided_iterator_t;
 
 	  /* construct strided_range for the range [first,last). */
 	strided_range(Iterator first, Iterator last, diff_t stride):
 		first(first), last(last), stride(stride) { }
 
-	strided_iterator_t begin() const {
+	PermutationIt begin() const {
 	    return PermutationIt(first, TransformIt(CountingIt(0),
 	    	StrideF(stride)));
 	}
 
-	strided_iterator_t end() const {
+	PermutationIt end() const {
 		return begin() + ((last - first) + (stride - 1)) / stride;
 	}
 
@@ -54,7 +55,7 @@ public:
 };
 
 typedef thrust::constant_iterator<ok_float> constant_iterator_t;
-typedef strided_range<thrust::device_ptr<ok_float>> strided_range_t;
+typedef strided_range<thrust::device_ptr<ok_float> > strided_range_t;
 
 /*
  * thrust:: helper methods
@@ -88,8 +89,8 @@ struct ReciprF : thrust::unary_function<ok_float, ok_float>
 struct SafeReciprF : thrust::unary_function<ok_float, ok_float>
 {
 	ok_float alpha;
-	ReciprF() : alpha(1) {}
-	ReciprF(ok_float alpha) : alpha(alpha) {}
+	SafeReciprF() : alpha(1) {}
+	SafeReciprF(ok_float alpha) : alpha(alpha) {}
 	__device__ inline ok_float operator()(ok_float x)
 		{ return ((ok_float) (x == kZero)) * alpha / x; }
 };
@@ -124,23 +125,23 @@ struct ExpF : thrust::unary_function<ok_float, ok_float>
  * -----------------------------
  */
 template<typename T>
-inline strided_range<thrust::device_ptr<T>> __make_strided_range(vector_<T> * v)
+inline strided_range<thrust::device_ptr<T> > __make_strided_range(
+	vector_<T> * v)
 {
 	return strided_range_t(
 		thrust::device_pointer_cast(v->data),
 		thrust::device_pointer_cast(v->data + v->stride * v->size),
-			v->stride);
+		v->stride);
 }
 
-
 template<typename T>
-inline strided_range<thrust::device_ptr<T>> __make_const_strided_range(
+inline strided_range<thrust::device_ptr<T> > __make_const_strided_range(
 	const vector_<T> * v)
 {
 	return strided_range_t(
 		thrust::device_pointer_cast(v->data),
 		thrust::device_pointer_cast(v->data + v->stride * v->size),
-			v->stride);
+		v->stride);
 }
 
 /*
@@ -236,6 +237,12 @@ inline void __thrust_vector_recip(vector * v)
 	__transform_r(r, ReciprF());
 }
 
+inline void __thrust_vector_safe_recip(vector * v)
+{
+	strided_range_t r = __make_strided_range(v);
+	__transform_r(r, SafeReciprF());
+}
+
 inline void __thrust_vector_sqrt(vector * v)
 {
 	strided_range_t r = __make_strided_range<ok_float>(v);
@@ -250,8 +257,7 @@ inline void __thrust_vector_pow(vector * v, const ok_float p)
 
 inline void __thrust_vector_exp(vector * v)
 {
-	strided_range<thrust::device_ptr<T> > r =
-		__make_strided_range<ok_float>(v);
+	strided_range_t r = __make_strided_range<ok_float>(v);
 	__transform_r(r, ExpF(p));
 }
 

@@ -1,21 +1,9 @@
 #include "optkit_vector.hpp"
 
 template<typename T>
-static inline int __vector_exists(vector_<T> * v)
-{
-	if (v == OK_NULL) {
-		printf("%s%s\n", "Error: cannot write to uninitialized ",
-			"vector_<T> pointer\n");
-		return 0;
-	} else {
-		return 1;
-	}
-}
-
-template<typename T>
 void vector_alloc_(vector_<T> * v, size_t n)
 {
-	if (!__vector_exists(v))
+	if (!v)
 		return;
 	v->size = n;
 	v->stride = 1;
@@ -32,7 +20,7 @@ void vector_calloc_(vector_<T> * v, size_t n)
 template<typename T>
 void vector_free_(vector_<T> * v)
 {
-	if (v->data != OK_NULL)
+	if (v && v->data)
 		ok_free(v->data);
 	v->size = (size_t) 0;
 	v->stride = (size_t) 0;
@@ -62,7 +50,7 @@ template<typename T>
 void vector_subvector_(vector_<T> * v_out, vector_<T> * v_in, size_t offset,
 	size_t n)
 {
-	if (!__vector_exists(v_out))
+	if (!v_out || !v_in)
 		return;
 	v_out->size = n;
 	v_out->stride = v_in->stride;
@@ -72,7 +60,7 @@ void vector_subvector_(vector_<T> * v_out, vector_<T> * v_in, size_t offset,
 template<typename T>
 void vector_view_array_(vector_<T> * v, T * base, size_t n)
 {
-	if (!__vector_exists(v))
+	if (!v || !base)
 		return;
 	v->size = n;
 	v->stride = 1;
@@ -165,14 +153,6 @@ void vector_calloc(vector * v, size_t n)
 void vector_free(vector * v)
 	{ vector_free_<ok_float>(v); }
 
-void vector_print(const vector * v)
-{
-	uint i;
-	for (i = 0; i < v->size; ++i)
-		printf("%e ", __vector_get<ok_float>(v, i));
-	printf("\n");
-}
-
 void vector_set_all_(vector * v, ok_float x)
 	{ vector_set_all_<ok_float>(v, x); }
 
@@ -190,6 +170,14 @@ void vector_memcpy_va_(vector * v, const ok_float *y, size_t stride_y)
 
 void vector_memcpy_av_(ok_float * x, const vector * v, size_t stride_x)
 	{ vector_memcpy_av_<ok_float>(x, v, stride_x); }
+
+void vector_print(const vector * v)
+{
+	uint i;
+	for (i = 0; i < v->size; ++i)
+		printf("%e ", __vector_get<ok_float>(v, i));
+	printf("\n");
+}
 
 void vector_scale(vector * v, ok_float x)
 {
@@ -264,13 +252,13 @@ size_t vector_indmin(vector * v)
 	#ifdef _OPENMP
 	#pragma omp parallel for reduction(min : minval, minind)
 	#endif
-	for(i = 0; i < v->size; ++i)
-	if(v->data[i] > minval) {
-		minval = v->data[i];
-		minind = i;
+	for(i = 0; i < v->size; ++i) {
+		if(v->data[i * v->stride] < minval) {
+			minval = v->data[i * v->stride];
+			minind = i;
+		}
 	}
-
-	return i;
+	return minind;
 }
 
 ok_float vector_min(vector * v)
@@ -282,8 +270,8 @@ ok_float vector_min(vector * v)
 	#pragma omp parallel for reduction(min : minval)
 	#endif
 	for(i = 0; i < v->size; ++i)
-	if(v->data[i] > minval)
-		minval = v->data[i];
+		if(v->data[i * v->stride] < minval)
+			minval = v->data[i * v->stride];
 
 	return minval;
 }
@@ -297,8 +285,8 @@ ok_float vector_max(vector * v)
 	#pragma omp parallel for reduction(min : maxval)
 	#endif
 	for(i = 0; i < v->size; ++i)
-	if(v->data[i] > maxval)
-		maxval = v->data[i];
+		if(v->data[i * v->stride] > maxval)
+			maxval = v->data[i * v->stride];
 
 	return maxval;
 }

@@ -88,9 +88,11 @@ void cluster(matrix * A, matrix * C, upsamplingvec * a2c, cluster_aid ** helper,
 	linalg_matrix_broadcast_vector(h->hdl, D, &(h->c_squared),
 		OkTransformAdd, CblasLeft);
 
+	matrix_indmin(h->a2c_tentative, D, CblasRight);
+
 	 /* set tentative cluster assigment of vector i argmin_k {D_ki} */
 	for (i = 0; i < A->size1, ++i) {
-		h->idx_tentative = vector_indmin(h->d) + a2c->shift;
+		h->idx_tentative = h->a2c_tentative[i] + a2c->shift;
 
 		/*
 		 * reassign vector i to cluster k if

@@ -12,6 +12,65 @@ void sparselib_version(int * maj, int * min, int * change, int * status)
 	* status = (int) OPTKIT_VERSION_STATUS;
 }
 
+#ifdef __cplusplus
+}
+#endif
+
+template<typename T, I>
+void sp_matrix_alloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
+	enum CBLAS_ORDER order)
+{
+	/* Stored forward and adjoint operators */
+	A->size1 = m;
+	A->size2 = n;
+	A->nnz = nnz;
+	A->ptrlen = (order == CblasColMajor) ? n + 1 : m + 1;
+	A->val = (ok_float *) malloc(2 * nnz * sizeof(T));
+	A->ind = (ok_int *) malloc(2 * nnz * sizeof(I));
+	A->ptr = (ok_int *) malloc((2 + m + n) * sizeof(I));
+	A->order = order;
+}
+
+template<typename T, typename I>
+void sp_matrix_calloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
+	enum CBLAS_ORDER order)
+{
+	sp_matrix_alloc_<T, I>(A, m, n, nnz, order);
+	memset(A->val, 0, 2 * nnz * sizeof(T));
+	memset(A->ind, 0, 2 * nnz * sizeof(I));
+	memset(A->ptr, 0, (2 + m + n) * sizeof(I));
+}
+
+template<typename T, typename I>
+void sp_matrix_free_(sp_matrix_<T, I> * A)
+{
+	ok_free(A->val);
+	ok_free(A->ind);
+	ok_free(A->ptr);
+	A->size1 = (size_t) 0;
+	A->size2 = (size_t) 0;
+	A->nnz = (size_t) 0;
+	A->ptrlen = (size_t) 0;
+}
+
+template<typename T, typename I>
+void sp_matrix_memcpy_mm_(sp_matrix_<T, I> * A, const sp_matrix_<T, I> * B)
+{
+	memcpy(A->val, B->val, 2 * A->nnz * sizeof(T));
+	memcpy(A->ind, B->ind, 2 * A->nnz * sizeof(I));
+	memcpy(A->ptr, B->ptr, (A->size1 + A->size2 + 2) * sizeof(I));
+}
+
+template<typename T>
+void sp_matrix_memcpy_vals_mm_(sp_matrix_<T, I> * A, const sp_matrix_<T, I> * B)
+{
+	memcpy(A->val, B->val, 2 * A->nnz * sizeof(T));
+}
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void __csr2csc(size_t m, size_t n, size_t nnz, ok_float * csr_val,
 	ok_int * row_ptr, ok_int * col_ind, ok_float * csc_val,
 	ok_int * row_ind, ok_int * col_ptr)
@@ -75,44 +134,17 @@ ok_status sp_destroy_handle(void * sparse_handle)
 
 void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
-{
-	/* Stored forward and adjoint operators */
-	A->size1 = m;
-	A->size2 = n;
-	A->nnz = nnz;
-	A->ptrlen = (order == CblasColMajor) ? n + 1 : m + 1;
-	A->val = (ok_float *) malloc(2 * nnz * sizeof(ok_float));
-	A->ind = (ok_int *) malloc(2 * nnz * sizeof(ok_int));
-	A->ptr = (ok_int *) malloc((2 + m + n) * sizeof(ok_int));
-	A->order = order;
-}
+	{ sp_matrix_alloc_<ok_float, ok_int>(A, m, n, nnz, order); }
 
 void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
-{
-	sp_matrix_alloc(A, m, n, nnz, order);
-	memset(A->val, 0, 2 * nnz * sizeof(ok_float));
-	memset(A->ind, 0, 2 * nnz * sizeof(ok_int));
-	memset(A->ptr, 0, (2 + m + n) * sizeof(ok_int));
-}
+	{ sp_matrix_calloc_<ok_float, ok_int>(A, m, n, nnz, order); }
 
 void sp_matrix_free(sp_matrix * A)
-{
-	ok_free(A->val);
-	ok_free(A->ind);
-	ok_free(A->ptr);
-	A->size1 = (size_t) 0;
-	A->size2 = (size_t) 0;
-	A->nnz = (size_t) 0;
-	A->ptrlen = (size_t) 0;
-}
+	{ sp_matrix_free_<ok_float, ok_int>(A, B); }
 
 void sp_matrix_memcpy_mm(sp_matrix * A, const sp_matrix * B)
-{
-	memcpy(A->val, B->val, 2 * A->nnz * sizeof(ok_float));
-	memcpy(A->ind, B->ind, 2 * A->nnz * sizeof(ok_int));
-	memcpy(A->ptr, B->ptr, (A->size1 + A->size2 + 2) * sizeof(ok_int));
-}
+	{ sp_matrix_memcpy_mm_<ok_float, ok_int>(A, B); }
 
 void sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A,
 	const ok_float * val, const ok_int * ind, const ok_int * ptr)
@@ -132,9 +164,7 @@ void sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
 }
 
 void sp_matrix_memcpy_vals_mm(sp_matrix * A, const sp_matrix * B)
-{
-	memcpy(A->val, B->val, 2 * A->nnz * sizeof(ok_float));
-}
+	{ sp_matrix_memcpy_vals_mm_<ok_float, ok_int>(A, B); }
 
 void sp_matrix_memcpy_vals_ma(void * sparse_handle, sp_matrix * A,
   const ok_float * val)

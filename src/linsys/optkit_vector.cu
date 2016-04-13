@@ -2,12 +2,9 @@
 #include "optkit_thrust.hpp"
 #include "optkit_vector.hpp"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* CUDA helper methods */
-__global__ void __vector_set(ok_float * data, ok_float val, size_t stride,
+template<typename T>
+static __global__ void __vector_set(T * data, T val, size_t stride,
 	size_t size)
 {
 	uint i, thread_id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -15,120 +12,142 @@ __global__ void __vector_set(ok_float * data, ok_float val, size_t stride,
 	data[i * stride] = val;
 }
 
-void __vector_set_all(vector * v, ok_float x)
+template<typename T>
+static void __vector_set_all(vector_<T> * v, T x)
 {
 	uint grid_dim = calc_grid_dim(v->size);
-	__vector_set<<<grid_dim, kBlockSize>>>(v->data, x, v->stride, v->size);
+	__vector_set<T><<<grid_dim, kBlockSize>>>(v->data, x, v->stride, v->size);
 }
 
-__global__ void __strided_memcpy(ok_float * x, size_t stride_x,
-	const ok_float * y, size_t stride_y, size_t size)
+template<typename T>
+static __global__ void __strided_memcpy(T * x, size_t stride_x, const T * y,
+	size_t stride_y, size_t size)
 {
 	uint i, tid = blockIdx.x * blockDim.x + threadIdx.x;
 	for (i = tid; i < size; i += gridDim.x * blockDim.x)
 	x[i * stride_x] = y[i * stride_y];
 }
 
-/* vector methods */
-inline int __vector_exists(vector * v)
+template<typename T>
+void vector_alloc_(vector_<T> * v, size_t n)
 {
-	if (v == OK_NULL) {
-		printf("Error: cannot write to uninitialized vector pointer\n");
-		return 0;
-	} else {
-		return 1;
-	}
-}
-
-void vector_alloc(vector * v, size_t n)
-{
-	if (!__vector_exists(v))
+	if (!v || !v->data)
 		return;
-	v->size=n;
-	v->stride=1;
-	ok_alloc_gpu(v->data, n * sizeof(ok_float));
+	v->size = n;
+	v->stride = 1;
+	ok_alloc_gpu(v->data, n * sizeof(T));
 }
 
-void vector_calloc(vector * v, size_t n)
+template<typename T>
+void vector_calloc_(vector_<T> * v, size_t n)
 {
-	vector_alloc(v, n);
-	__vector_set_all(v, ok_float(0));
+	vector_alloc_<T>(v, n);
+	__vector_set_all<T>(v, static_cast<T>(0));
 }
 
-void vector_free(vector * v)
+template<typename T>
+void vector_free_(vector_<T> * v)
 {
-	if (v != OK_NULL)
-		if (v->data != OK_NULL) ok_free_gpu(v->data);
+	if (v && v->data != OK_NULL)
+		ok_free_gpu(v->data);
 	v->size = (size_t) 0;
 	v->stride = (size_t) 0;
 }
 
-void vector_set_all(vector * v, ok_float x)
+template<typename T>
+void vector_set_all(vector_<T> * v, T x)
 {
 	__vector_set_all(v, x);
 }
 
-void vector_subvector(vector * v_out, vector * v_in, size_t offset, size_t n)
+template<typename T>
+void vector_subvector(vector_<T> * v_out, vector_<T> * v_in, size_t offset,
+	size_t n)
 {
-	if (!__vector_exists(v_out))
+	if (!v_out || !v_in)
 		return;
 	v_out->size=n;
 	v_out->stride=v_in->stride;
 	v_out->data=v_in->data + offset * v_in->stride;
 }
 
-vector vector_subvector_gen(vector * v_in, size_t offset, size_t n)
+template<typename T>
+void vector_view_array_(vector_<T> * v, T * base, size_t n)
 {
-	return (vector){
-		.size = n,
-		.stride = v_in->stride,
-		.data = v_in->data + offset * v_in->stride
-	};
-}
-
-void vector_view_array(vector * v, ok_float * base, size_t n)
-{
-	  if (!__vector_exists(v))
+	  if (!v)
 		return;
 	  v->size=n;
 	  v->stride=1;
 	  v->data=base;
 }
 
-
-void vector_memcpy_vv(vector * v1, const vector * v2)
+template<typename T>
+void vector_memcpy_vv_(vector_<T> * v1, const vector_<T> * v2)
 {
 	uint grid_dim;
 	if ( v1->stride == 1 && v2->stride == 1) {
-		ok_memcpy_gpu(v1->data, v2->data, v1->size * sizeof(ok_float));
+		ok_memcpy_gpu(v1->data, v2->data, v1->size * sizeof(T));
 	} else {
 		grid_dim = calc_grid_dim(v1->size);
-		__strided_memcpy<<<grid_dim, kBlockSize>>>(v1->data, v1->stride,
-			v2->data, v2->stride, v1->size);
+		__strided_memcpy<T><<<grid_dim, kBlockSize>>>(v1->data,
+			v1->stride, v2->data, v2->stride, v1->size);
 	}
 }
 
-void vector_memcpy_va(vector * v, const ok_float *y, size_t stride_y)
+template<typename T>
+void vector_memcpy_va(vector_<T> * v, const T *y, size_t stride_y)
 {
 	uint i;
 	if (v->stride == 1 && stride_y == 1)
-		ok_memcpy_gpu(v->data, y, v->size * sizeof(ok_float));
+		ok_memcpy_gpu(v->data, y, v->size * sizeof(T));
 	else
 		for (i = 0; i < v->size; ++i)
-	ok_memcpy_gpu(v->data + i * v->stride, y + i * stride_y,
-	sizeof(ok_float));
+			ok_memcpy_gpu(v->data + i * v->stride, y + i * stride_y,
+				sizeof(T));
 }
 
-void vector_memcpy_av(ok_float *x, const vector *v, size_t stride_x)
+template<typename T>
+void vector_memcpy_av(T *x, const vector_<T> *v, size_t stride_x)
 {
 	uint i;
 	if (v->stride == 1 && stride_x == 1)
-		ok_memcpy_gpu(x, v->data, v->size * sizeof(ok_float));
+		ok_memcpy_gpu(x, v->data, v->size * sizeof(T));
 	else
 		for (i = 0; i < v->size; ++i)
-	ok_memcpy_gpu(x + i * stride_x, v->data + i * v->stride,
-	sizeof(ok_float));
+			ok_memcpy_gpu(x + i * stride_x, v->data + i * v->stride,
+				sizeof(T));
 }
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void vector_alloc(vector * v, size_t n)
+	{ vector_alloc_<ok_float>(v, n); }
+
+void vector_calloc(vector * v, size_t n)
+	{ vector_calloc_<ok_float>(v, n); }
+
+void vector_free(vector * v)
+	{ vector_free_<ok_float>(v); }
+
+void vector_set_all_(vector * v, ok_float x)
+	{ vector_set_all_<ok_float>(v, x); }
+
+void vector_subvector_(vector * v_out, vector * v_in, size_t offset, size_t n)
+	{ vector_subvector_<ok_float>(v_out, v_in, offset, n); }
+
+void vector_view_array_(vector * v, ok_float * base, size_t n)
+	{ vector_view_array_<ok_float>(v, base, n); }
+
+void vector_memcpy_vv_(vector * v1, const vector * v2)
+	{ vector_memcpy_vv_<ok_float>(v1, v2); }
+
+void vector_memcpy_va_(vector * v, const ok_float *y, size_t stride_y)
+	{ vector_memcpy_va_<ok_float>(v, y, stride_y); }
+
+void vector_memcpy_av_(ok_float * x, const vector * v, size_t stride_x)
+	{ vector_memcpy_av_<ok_float>(x, v, stride_x); }
 
 void vector_print(const vector * v)
 {
@@ -206,30 +225,29 @@ void vector_pow(vector * v, const ok_float x)
 	CUDA_CHECK_ERR;
 }
 
-
 void vector_exp(vector * v)
 {
-	__thrust_vector_exp(v, x);
+	__thrust_vector_exp(v);
 	CUDA_CHECK_ERR;
 }
 
 size_t vector_indmin(vector * v)
 {
-	size_t minind = __thrust_vector_indmin<ok_float>(v, x);
+	size_t minind = __thrust_vector_indmin(v);
 	CUDA_CHECK_ERR;
 	return minind;
 }
 
 ok_float vector_min(vector * v)
 {
-	ok_float minval = __thrust_vector_min<ok_float>(v, x);
+	ok_float minval = __thrust_vector_min(v);
 	CUDA_CHECK_ERR;
 	return minval;
 }
 
 ok_float vector_max(vector * v)
 {
-	ok_float maxval = __thrust_vector_max<ok_float>(v, x);
+	ok_float maxval = __thrust_vector_max(v);
 	CUDA_CHECK_ERR;
 	return maxval;
 }

@@ -15,6 +15,4 @@ test
 
 *cython*
 include/*graph*
-include/*cluster*
 src/*graph*
-src/*cluster*

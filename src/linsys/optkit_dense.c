@@ -112,6 +112,149 @@ void linalg_cholesky_svx(void * linalg_handle, const matrix<T> * L, vector_<T> *
 	blas_trsv(linalg_handle, CblasLower, CblasTrans, CblasNonUnit, L, x);
 }
 
+/*
+ * if A is skinny, set
+ *
+ * 	v_i = a_i'a_i,
+ *
+ * where a_i is the ith _column_ of A. otherwise, set
+ *
+ *	v_i = \tilde a_i'\tilde a_i,
+ *
+ * where \tilde a_i is the ith _row_ of A
+ *
+ */
+void linalg_diag_gramian(void * linalg_handle, const matrix * A, vector * v)
+{
+	int skinny = (A->size1 >= A->size2);
+	size_t k, nvecs = (skinny) ? A->size2 : A->size1;
+	int vecsize = (skinny) ? (int) A->size1 : (int) A->size2;
+	size_t ptrstride = ((skinny) == (A->order == CblasRowMajor))
+		? (int) 1 : A->ld;
+	int stride = ((skinny) == (A->order == CblasRowMajor)) ?
+		(int) A->ld : 1;
+
+	/* check size == v->size */
+	if (v->size != nvecs) {
+		printf("%s %s\n", "ERROR: linalg_diag_gramian()",
+			"incompatible dimensions");
+		return;
+	}
+
+	#ifdef _OPENMP
+	#pragma omp parallel for
+	#endif
+	for (k = 0; k < nvecs; ++k) {
+		v->data[k * v->stride] = CBLAS(dot)(vecsize,
+			A->data + k * ptrstride, stride,
+			A->data + k * ptrstride, stride);
+	}
+}
+
+/*
+ * if operation == OkTransformScale:
+ * 	if side == CblasLeft, set
+ * 		A = A * diag(v)
+ *	else, set
+ *		A = diag(v) * A
+ * if operation == OkTransformAdd:
+ * 	if side == CblasLeft, perform
+ * 		A += v1^T
+ *	else, set
+ *		A += 1v^T
+ */
+void linalg_matrix_broadcast_vector(void * linalg_handle, matrix * A,
+	const vector * v, const enum OPTKIT_TRANSFORM operation,
+	const enum CBLAS_SIDE side)
+{
+	size_t k, nvecs = (side == CblasLeft) ? A->size2 : A->size1;
+	size_t ptrstride = ((side == CblasLeft) == (A->order == CblasRowMajor))
+		? (int) 1 : A->ld;
+
+	size_t stride = ((side == CblasLeft) == (A->order == CblasRowMajor)) ?
+		A->ld : 1;
+
+	/* check size == v->size */
+	if (((side == CblasLeft) && (v->size != A->size1)) ||
+		((side == CblasRight) && (v->size != A->size2))) {
+		printf("%s %s\nA (%u x %u)\nv %u\n",
+			"ERROR: linalg_matrix_broadcast_vector()",
+			"incompatible dimensions", (uint) A->size1,
+			(uint) A->size2, (uint) v->size);
+		return;
+	}
+
+	if (operation == OkTransformScale) {
+		#ifdef _OPENMP
+		#pragma omp parallel for
+		#endif
+		for (k = 0; k < v->size; ++k)
+			CBLAS(scal)( (int) nvecs, v->data[k * v->stride],
+				A->data + k * stride, (int) ptrstride);
+	} else {
+		#ifdef _OPENMP
+		#pragma omp parallel for
+		#endif
+		for (k = 0; k < nvecs; ++k)
+			CBLAS(axpy)((int) v->size, kOne, v->data,
+				(int) v->stride, A->data + k * ptrstride,
+				(int) stride);
+	}
+}
+
+void linalg_matrix_reduce_indmin(void * linalg_handle, size_t * indices,
+	vector * minima, matrix * A, const enum CBLAS_SIDE side)
+{
+	int reduce_rows = (side == CblasLeft);
+	size_t output_dim = (reduce_rows) ? A->size2 : A->size1;
+	size_t k;
+	vector a;
+
+	void (* matrix_subvec)(vector * row_col, matrix * A, size_t k) =
+		(reduce_rows) ? matrix_column : matrix_row;
+
+	for (k = 0; k < output_dim; ++k) {
+		matrix_subvec(&a, A, k);
+		indices[k] = vector_indmin(&a);
+		minima->data[k * minima->stride] = a[indices[k] * a->stride];
+	}
+}
+
+static void __matrix_extrema(vector * extrema, matrix * A,
+	const enum CBLAS_SIDE side, const int minima)
+{
+	int reduce_rows = (side == CblasLeft);
+	size_t output_dim = (reduce_rows) ? A->size2 : A->size1;
+	size_t k;
+	vector a;
+
+	void (* matrix_subvec)(vector * row_col, matrix * A, size_t k) =
+		(reduce_rows) ? matrix_column : matrix_row;
+
+	if (minima)
+		for (k = 0; k < output_dim; ++k) {
+			matrix_subvec(&a, A, k);
+			extrema->data[k] = vector_min(&a);
+		}
+	else
+		for (k = 0; k < output_dim; ++k) {
+			matrix_subvec(&a, A, k);
+			extrema->data[k] = vector_max(&a);
+		}
+}
+
+void linalg_matrix_reduce_min(void * linalg_handle, vector * minima,
+	matrix * A, const enum CBLAS_SIDE side)
+{
+	__matrix_extrema(minima, A, side, 1);
+}
+
+void linalg_matrix_reduce_max(void * linalg_handle, vector * maxima,
+	matrix * A, const enum CBLAS_SIDE side)
+{
+	__matrix_extrema(maxima, A, side, 0);
+}
+
 /* device reset */
 ok_status ok_device_reset()
 {

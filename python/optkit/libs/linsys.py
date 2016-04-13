@@ -35,6 +35,8 @@ class DenseLinsysLibs(object):
 				CblasUnit = c_uint(132).value
 				CblasLeft = c_uint(141).value
 				CblasRight = c_uint(142).value
+				OkTransformScale = c_uint(0).value
+				OkTransformAdd = c_uint(1).value
 
 			lib.enums = OKEnums()
 
@@ -47,6 +49,7 @@ class DenseLinsysLibs(object):
 
 			# pointers to C types
 			c_int_p = lib.c_int_p = POINTER(c_int)
+			c_size_t_p = lib.c_size_t_p = POINTER(c_size_t)
 			ok_float_p = lib.ok_float_p = POINTER(ok_float)
 			ok_int_p = lib.ok_int_p = POINTER(ok_int)
 
@@ -96,7 +99,10 @@ class DenseLinsysLibs(object):
 			lib.vector_recip.argtypes = [vector_p]
 			lib.vector_sqrt.argtypes = [vector_p]
 			lib.vector_pow.argtypes = [vector_p, ok_float]
-
+			lib.vector_exp.argtypes = [vector_p]
+			lib.vector_indmin.argtypes = [vector_p]
+			lib.vector_min.argtypes = [vector_p]
+			lib.vector_max.argtypes = [vector_p]
 
 			## return values
 			lib.vector_alloc.restype = None
@@ -119,7 +125,10 @@ class DenseLinsysLibs(object):
 			lib.vector_recip.restype = None
 			lib.vector_sqrt.restype = None
 			lib.vector_pow.restype = None
-
+			lib.vector_exp.restype = None
+			lib.vector_indmin.restype = c_size_t
+			lib.vector_min.restype = ok_float
+			lib.vector_max.restype = ok_float
 
 			# Matrix
 			# ------
@@ -165,7 +174,6 @@ class DenseLinsysLibs(object):
 			lib.matrix_abs.restype = None
 			lib.matrix_pow.restype = None
 
-
 			# BLAS
 			# ----
 
@@ -193,7 +201,6 @@ class DenseLinsysLibs(object):
 			lib.blas_trsm.argtypes = [c_void_p, c_uint, c_uint, c_uint, c_uint,
 										ok_float, matrix_p, matrix_p]
 
-
 			## return values
 			lib.blas_make_handle.restype = c_uint
 			lib.blas_destroy_handle.restype = c_uint
@@ -215,10 +222,25 @@ class DenseLinsysLibs(object):
 			## arguments
 			lib.linalg_cholesky_decomp.argtypes = [c_void_p, matrix_p]
 			lib.linalg_cholesky_svx.argtypes = [c_void_p, matrix_p, vector_p]
+			lib.linalg_diag_gramian.argtypes = [c_void_p, matrix_p, vector_p]
+			lib.linalg_matrix_broadcast_vector.argtypes = [c_void_p, matrix_p,
+													vector_p, c_uint, c_uint]
+			lib.linalg_matrix_reduce_indmin.argtypes = [c_void_p, c_size_t_p,
+														vector_p, matrix_p,
+														c_uint]
+			lib.linalg_matrix_reduce_min.argtypes = [c_void_p, vector_p,
+													 matrix_p, c_uint]
+			lib.linalg_matrix_reduce_max.argtypes = [c_void_p, vector_p,
+													 matrix_p, c_uint]
 
 			## return values
 			lib.linalg_cholesky_decomp.restype = None
 			lib.linalg_cholesky_svx.restype = None
+			lib.linalg_diag_gramian.restype = None
+			lib.linalg_matrix_broadcast_vector.restype = None
+			lib.linalg_matrix_reduce_indmin.restype = None
+			lib.linalg_matrix_reduce_min.restype = None
+			lib.linalg_matrix_reduce_max.restype = None
 
 			# DEVICE
 			# ------

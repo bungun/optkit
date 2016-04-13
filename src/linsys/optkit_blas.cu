@@ -5,23 +5,6 @@
 extern "C" {
 #endif
 
-__global__ void _get_cuda_nan(ok_float * val)
-{
-	*val = OK_CUDA_NAN;
-}
-
-inline ok_float get_cuda_nan()
-{
-	ok_float res;
-	ok_float * res_dev;
-
-	ok_alloc_gpu(res_dev, sizeof(ok_float));
-	cudaMemcpy(&res, res_dev, sizeof(ok_float), cudaMemcpyDeviceToHost);
-	ok_free_gpu(res_dev);
-
-	return res;
-}
-
 ok_status blas_make_handle(void ** handle)
 {
 	cublasStatus_t status;
@@ -61,7 +44,7 @@ ok_float blas_nrm2(void * linalg_handle, const vector *x)
 {
 	ok_float result = kZero;
 	if (!linalg_handle)
-		return get_cuda_nan();
+		return OK_NAN;
 	CUBLAS(nrm2)(*(cublasHandle_t *) linalg_handle, (int) x->size, x->data,
 		(int) x->stride, &result);
 	CUDA_CHECK_ERR;
@@ -81,7 +64,7 @@ ok_float blas_asum(void * linalg_handle, const vector * x)
 {
 	ok_float result = kZero;
 	if (!linalg_handle)
-		return get_cuda_nan();
+		return OK_NAN;
 	CUBLAS(asum)(*(cublasHandle_t *) linalg_handle, (int) x->size, x->data,
 		(int) x->stride, &result);
 	CUDA_CHECK_ERR;
@@ -92,7 +75,7 @@ ok_float blas_dot(void * linalg_handle, const vector * x, const vector * y)
 {
 	ok_float result = kZero;
 	if (!linalg_handle)
-		return get_cuda_nan();
+		return OK_NAN;
 	CUBLAS(dot)(*(cublasHandle_t *) linalg_handle, (int) x->size, x->data,
 		(int) x->stride, y->data, (int) y->stride, &result);
 	CUDA_CHECK_ERR;
@@ -261,6 +244,7 @@ void blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side, enum CBLAS_UPLO uplo,
 {
 	printf("Method `blas_trsm()` not implemented for GPU\n");
 }
+
 
 #ifdef __cplusplus
 }

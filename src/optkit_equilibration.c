@@ -89,15 +89,15 @@ void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 
 	for (i = 0; i < kMaxIter; ++i){
 		blas_gemv(linalg_handle, CblasTrans, kOne, A_out, d, kZero, e);
-		vector_add_constant(e, kSinkhornConst / e->size);
+		vector_add_constant(e, kSinkhornConst / (ok_float) e->size);
 		vector_recip(e);
-		vector_scale(e, d->size);
+		vector_scale(e, (ok_float) d->size);
 
 		blas_gemv(linalg_handle, CblasNoTrans, kOne, A_out, e, kZero,
 			d);
-		vector_add_constant(d, kSinkhornConst / d->size);
+		vector_add_constant(d, kSinkhornConst / (ok_float) d->size);
 		vector_recip(d);
-		vector_scale(d, e->size);
+		vector_scale(d, (ok_float) e->size);
 
 		blas_axpy(linalg_handle, -kOne, d, &d_diff);
 		blas_axpy(linalg_handle, -kOne, e, &e_diff);
@@ -179,6 +179,7 @@ void dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out,
 	}
 }
 
+#ifndef OPTKIT_NO_OPERATOR_EQUIL
 ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 	vector * d, vector * e, const ok_float pnorm)
 {
@@ -228,13 +229,13 @@ ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 
 	for (k = 0; k < kMaxIter && !err; ++k) {
 		A->adjoint(A->data, d, e);
-		vector_add_constant(e, kSinkhornConst / e->size);
+		vector_add_constant(e, kSinkhornConst / (ok_float) e->size);
 		vector_recip(e);
-		vector_scale(e, d->size);
+		vector_scale(e, (ok_float) d->size);
 		A->apply(A->data, e, d);
-		vector_add_constant(d, kSinkhornConst / d->size);
+		vector_add_constant(d, kSinkhornConst / (ok_float) d->size);
 		vector_recip(d);
-		vector_scale(d, e->size);
+		vector_scale(d, (ok_float) e->size);
 
 		norm_d = MATH(sqrt)(blas_dot(linalg_handle, &d_diff, &d_diff));
 		norm_e = MATH(sqrt)(blas_dot(linalg_handle, &e_diff, &e_diff));
@@ -319,6 +320,24 @@ ok_float operator_estimate_norm(void * linalg_handle, operator * A)
 	vector_free(&Ax);
 	return norm_est;
 }
+#else
+ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
+	vector * d, vector * e, const ok_float pnorm)
+{
+	return OPTKIT_ERROR;
+}
+
+ok_status operator_equilibrate(void * linalg_handle, operator * A,
+	vector * d, vector * e, const ok_float pnorm)
+{
+	return OPTKIT_ERROR;
+}
+
+ok_float operator_estimate_norm(void * linalg_handle, operator * A)
+{
+	return OPTKIT_ERROR;
+}
+#endif /* ndef OPTKIT_NO_OPERATOR_EQUIL */
 
 #ifdef __cplusplus
 }

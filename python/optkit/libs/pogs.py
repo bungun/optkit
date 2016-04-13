@@ -311,7 +311,6 @@ class PogsLibs(object):
 			lib.INITIALIZED = True
 			return lib
 
-
 class PogsAbstractLibs(object):
 	def __init__(self):
 		self.libs, search_results = retrieve_libs('libpogs_abstract_')

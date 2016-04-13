@@ -107,6 +107,7 @@ DENSE_GPU_SRC+=$(LASRC)dense.cu
 DENSE_OBJ=$(patsubst $(LASRC)%.cu,$(OUT)%$(LIBCONFIG).o,$(DENSE_GPU_SRC))
 SPARSE_OBJ=$(LASRC)sparse_$(LIBCONFIG).o
 
+
 PROX_OBJ=$(PREFIX_OUT)$(PROXTARG)$(PRECISION).o
 
 OPERATOR_SRC=$(OPSRC)dense.c $(OPSRC)sparse.c $(OPSRC)diagonal.c 
@@ -114,7 +115,9 @@ OPERATOR_OBJ=$(patsubst $(OPSRC)%.c,$(OUT)%.o,$(OPERATOR_SRC))
 
 CG_OBJ=$(PREFIX_OUT)cg_$(LIBCONFIG).o
 PROJ_OBJ=$(PREFIX_OUT)projector_$(LIBCONFIG).o
+PROJ_DIRECT_OBJ=$(PREFIX_OUT)projector_direct_$(LIBCONFIG).o
 EQUIL_OBJ=$(PREFIX_OUT)equil_$(LIBCONFIG).o
+EQUIL_DENSE_OBJ=$(PREFIX_OUT)equil_dense_$(LIBCONFIG).o
 POGS_OBJ=$(PREFIX_OUT)pogs_$(LIBCONFIG).o
 POGS_ABSTRACT_OBJ=$(PREFIX_OUT)pogs_abstract_$(LIBCONFIG).o
 
@@ -152,7 +155,7 @@ libpogs_sparse: pogs equil projector $(LINSYSLIBS) libprox
 	$(OUT)$@_$(LIBCONFIG).$(SHARED)  \
 	$(POGS_STATIC_DEPS) $(SPARSE_OBJ) $(LDFLAGS)
 
-libpogs_dense: pogs equil projector $(LINSYSLIBS) libprox
+libpogs_dense: pogs equil_dense projector_direct $(LINSYSLIBS) libprox
 	mkdir -p $(OUT)	
 	$(CC) $(CCFLAGS) -shared -o \
 	$(OUT)$@_$(LIBCONFIG).$(SHARED)  \
@@ -210,10 +213,18 @@ pogs: $(SRC)optkit_pogs.c
 equil: $(SRC)optkit_equilibration.c 
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) $< -c -o $(EQUIL_OBJ) \
-	
+
+equil_dense: $(SRC)optkit_equilibration.c
+	mkdir -p $(OUT)
+	$(CC) $(CCFLAGS) $< -c -o $(EQUIL_DENSE_OBJ) -DOPTKIT_NO_OPERATOR_EQUIL
+
 projector: $(SRC)optkit_projector.c
 	mkdir -p $(OUT)
 	$(CC) $(CXXFLAGS) $< -c -o $(PROJ_OBJ)
+
+projector_direct: $(SRC)optkit_projector.c
+	mkdir -p $(OUT)
+	$(CC) $(CXXFLAGS) $< -c -o $(PROJ_DIRECT_OBJ) -DOPTKIT_NO_INDIRECT_PROJECTOR
 
 operator: $(OPERATOR_SRC) 
 	mkdir -p $(OUT)

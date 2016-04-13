@@ -72,8 +72,12 @@ void direct_projector_free(direct_projector * P)
 void direct_projector_initialize(void * linalg_handle, direct_projector * P,
 	int normalize)
 {
-	vector diag = (vector){0, 0, OK_NULL};
+	vector diag;
 	ok_float mean_diag = kZero;
+
+	diag.data = OK_NULL;
+	diag.size = 0;
+	diag.stride = 0;
 
 	if (P->skinny)
 		blas_gemm(linalg_handle, CblasTrans, CblasNoTrans, kOne, P->A,
@@ -120,6 +124,7 @@ void direct_projector_project(void * linalg_handle, direct_projector * P,
 	}
 }
 
+#ifndef OPTKIT_NO_INDIRECT_PROJECTOR
 /* Indirect Projector methods */
 void indirect_projector_alloc(indirect_projector * P, operator * A)
 {
@@ -187,6 +192,7 @@ void indirect_projector_free(indirect_projector * P)
 	cgls_finish(P->cgls_work);
 	P->cgls_work = OK_NULL;
 }
+#endif /* ndef OPTKIT_NO_INDIRECT_PROJECTOR */
 
 void * dense_direct_projector_data_alloc(matrix * A)
 {
@@ -216,7 +222,7 @@ void dense_direct_projector_data_free(void * data)
 void dense_direct_projector_initialize(void * data, int normalize)
 {
 	dense_direct_projector * P = (dense_direct_projector *) data;
-	direct_projector DP = (direct_projector) {OK_NULL, OK_NULL, kOne, 0, 0};
+	direct_projector DP;
 	DP.A = P->A;
 	DP.L = P->L;
 	DP.normA = P->normA;
@@ -231,7 +237,7 @@ void dense_direct_projector_project(void * data, vector * x_in, vector * y_in,
 	vector * x_out, vector * y_out, ok_float tol)
 {
 	dense_direct_projector * P = (dense_direct_projector *) data;
-	direct_projector DP = (direct_projector) {OK_NULL, OK_NULL, kOne, 0, 0};
+	direct_projector DP;
 	DP.A = P->A;
 	DP.L = P->L;
 	DP.normA = P->normA;
@@ -255,6 +261,7 @@ projector * dense_direct_projector_alloc(matrix * A)
 	return P;
 }
 
+#ifndef OPTKIT_NO_INDIRECT_PROJECTOR
 void * indirect_projector_data_alloc(operator * A)
 {
 	indirect_projector_generic * P;
@@ -315,6 +322,7 @@ projector * indirect_projector_generic_alloc(operator * A)
 	P->free = indirect_projector_data_free;
 	return P;
 }
+#endif /* ndef OPTKIT_NO_INDIRECT_PROJECTOR */
 
 
 #ifdef __cplusplus

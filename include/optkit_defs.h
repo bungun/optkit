@@ -1,6 +1,7 @@
 #ifndef OPTKIT_DEFS_H_
 #define OPTKIT_DEFS_H_
 
+#include <float.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>

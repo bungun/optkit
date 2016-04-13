@@ -25,8 +25,6 @@ ok_status operator_equilibrate(void * linalg_handle, operator * A, vector * d,
 	vector * e, const ok_float pnorm);
 ok_float operator_estimate_norm(void * linalg_handle, operator * A);
 
-
-
 #ifdef __cplusplus
 }
 #endif
