@@ -118,6 +118,11 @@ void vector_memcpy_av(T *x, const vector_<T> *v, size_t stride_x)
 				sizeof(T));
 }
 
+/* explicit instantiations for downstream code*/
+/* vector_scale required by: equilibration */
+template void vector_scale_(vector_<float> * v, float x);
+template void vector_scale_(vector_<double> * v, double x);
+
 #ifdef __cplusplus
 extern "C" {
 #endif
