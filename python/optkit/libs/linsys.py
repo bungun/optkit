@@ -254,16 +254,15 @@ class DenseLinsysLibs(object):
 			## arguments
 			lib.linalg_cholesky_decomp.argtypes = [c_void_p, matrix_p]
 			lib.linalg_cholesky_svx.argtypes = [c_void_p, matrix_p, vector_p]
-			lib.linalg_diag_gramian.argtypes = [c_void_p, matrix_p, vector_p]
-			lib.linalg_matrix_broadcast_vector.argtypes = [c_void_p, matrix_p,
-													vector_p, c_uint, c_uint]
-			lib.linalg_matrix_reduce_indmin.argtypes = [c_void_p, indvector_p,
-														vector_p, matrix_p,
-														c_uint]
-			lib.linalg_matrix_reduce_min.argtypes = [c_void_p, vector_p,
-													 matrix_p, c_uint]
-			lib.linalg_matrix_reduce_max.argtypes = [c_void_p, vector_p,
-													 matrix_p, c_uint]
+			lib.linalg_diag_gramian.argtypes = [matrix_p, vector_p]
+			lib.linalg_matrix_broadcast_vector.argtypes = [matrix_p, vector_p,
+														   c_uint, c_uint]
+			lib.linalg_matrix_reduce_indmin.argtypes = [indvector_p, vector_p,
+												 matrix_p, c_uint]
+			lib.linalg_matrix_reduce_min.argtypes = [vector_p, matrix_p,
+													 c_uint]
+			lib.linalg_matrix_reduce_max.argtypes = [vector_p, matrix_p,
+													 c_uint]
 
 			## return values
 			lib.linalg_cholesky_decomp.restype = None

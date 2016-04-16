@@ -13,6 +13,10 @@ OPERATOR=operator/optkit_operator_
 OPSRC=$(SRC)$(OPERATOR)
 OPOUT=$(OUT)$(OPERATOR)
 
+CLUSTER=clustering/optkit_
+CLUSRC=$(SRC)$(CLUSTER)
+CLUOUT=$(OUT)$(CLUSTER)
+
 # C Flags
 CC=gcc
 CCFLAGS= -g -O3 -fPIC -I. -I$(INCLUDE) -I$(INCLUDE)external 
@@ -96,6 +100,7 @@ VECTOR_TARG=$(DEVICETAG)_vector
 DENSE_TARG=$(DEVICETAG)_dense
 SPARSE_TARG=$(DEVICETAG)_sparse
 PROX_TARG=$(DEVICETAG)_prox
+CLUSTER_TARG=$(DEVICETAG)_cluster
 
 LINSYSLIBS=libok_dense libok_sparse
 POGSLIBS=libpogs_dense
@@ -112,6 +117,10 @@ PROX_OBJ=$(PREFIX_OUT)prox_$(LIBCONFIG).o
 
 OPERATOR_SRC=$(OPSRC)dense.c $(OPSRC)sparse.c $(OPSRC)diagonal.c 
 OPERATOR_OBJ=$(patsubst $(OPSRC)%.c,$(OPOUT)%_$(LIBCONFIG).o,$(OPERATOR_SRC))
+
+CLUSTER_CPU_SRC=$(CLUSRC)clustering.c $(CLUSRC)upsampling_vector.c
+CLUSTER_GPU_SRC=$(CLUSRC)clustering.cu $(CLUSRC)upsampling_vector.cu
+CLUSTER_OBJ=$(patsubst $(CLUSRC)%.c,$(CLUOUT)%_$(LIBCONFIG).o,$(CLUSTER_CPU_SRC))
 
 CG_OBJ=$(PREFIX_OUT)cg_$(LIBCONFIG).o
 PROJ_OBJ=$(PREFIX_OUT)projector_$(LIBCONFIG).o
@@ -181,6 +190,12 @@ liboperator: operator $(DENSE_TARG) $(SPARSE_TARG)
 	$(OUT)$@_$(LIBCONFIG).$(SHARED) \
 	$(OPERATOR_STATIC_DEPS) $(LDFLAGS)
 
+libcluster: $(CLUSTER_TARG)
+	mkdir -p $(OUT)
+	$(CC) $(CCFLAGS) -shared -o \
+	$(OUT)$@_$(LIBCONFIG).$(SHARED) \
+	$(CLUSTER_OBJ) $(LDFLAGS)	
+
 libprox: $(PROX_TARG)
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) -shared -o \
@@ -236,6 +251,22 @@ operator: $(OPERATOR_SRC)
 cg: $(SRC)optkit_cg.c
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) $< -c -o $(CG_OBJ)
+
+cpu_cluster: $(CLUSTER_CPU_SRC)
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)clustering/
+	$(CC) $(CCFLAGS) $(CLUSRC)upsampling_vector.c -c -o \
+	$(CLUOUT)upsampling_vector_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) $(CLUSRC)clustering.c -c -o \
+	$(CLUOUT)clustering_$(LIBCONFIG).o
+
+gpu_cluster: $(CLUSTER_GPU_SRC)
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)clustering/
+	$(CC) $(CCFLAGS) $(CLUSRC)upsampling_vector.cu -c -o \
+	$(CLUOUT)upsampling_vector_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) $(CLUSRC)clustering.cu -c -o \
+	$(CLUOUT)clustering_$(LIBCONFIG).o
 
 cpu_prox: $(SRC)optkit_prox.cpp
 	mkdir -p $(OUT)

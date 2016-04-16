@@ -789,8 +789,6 @@ class DenseLinalgTestCase(unittest.TestCase):
 		(m, n) = self.shape
 		mindim = min(m, n)
 
-		hdl = c_void_p()
-
 		# Python: calculate diag of (AA') (A fat) or (A'A) (A skinny)
 		Acols = self.A_test if m >= n else self.A_test.T
 		py_diag = np.zeros(mindim)
@@ -807,8 +805,6 @@ class DenseLinalgTestCase(unittest.TestCase):
 			DIGITS = 7 - 5 * lib.FLOAT - 1 * lib.GPU
 			RTOL = 10**(-DIGITS)
 			ATOLMIN = RTOL * mindim**0.5
-
-			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
@@ -829,18 +825,17 @@ class DenseLinalgTestCase(unittest.TestCase):
 				x_ptr = x_py.ctypes.data_as(lib.ok_float_p)
 
 				# C: calculate diag of (AA') (A fat) or (A'A) (A skinny)
-				lib.linalg_diag_gramian(hdl, A, x)
+				lib.linalg_diag_gramian(A, x)
 				lib.vector_memcpy_av(x_ptr, x, 1)
 
 				# compare C vs Python results
-				# self.assertTrue(np.linalg.norm(x_py - py_diag) <=
-								# ATOLMIN + RTOL * np.linalg.norm(py_diag))
+				self.assertTrue(np.linalg.norm(x_py - py_diag) <=
+								ATOLMIN + RTOL * np.linalg.norm(py_diag))
 
 				# free memory
 				lib.matrix_free(A)
 				lib.vector_free(x)
 
-			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
 
 	def test_broadcast(self):
@@ -1005,28 +1000,32 @@ class DenseLinalgTestCase(unittest.TestCase):
 
 				# min - reduce columns
 				colmin = np.min(A_py, 0)
-				lib.linalg_matrix_reduce_min(hdl, e, A, lib.enums.CblasLeft)
+				lib.linalg_matrix_reduce_min(hdl, e, A,
+					lib.enums.CblasLeft)
 				lib.vector_memcpy_av(e_ptr, e, 1)
 				self.assertTrue(np.linalg.norm(e_py - colmin) <=
 								ATOLN + RTOL * np.linalg.norm(colmin))
 
 				# min - reduce rows
 				rowmin = np.min(A_py, 1)
-				lib.linalg_matrix_reduce_min(hdl, d, A, lib.enums.CblasRight)
+				lib.linalg_matrix_reduce_min(hdl, d, A,
+					lib.enums.CblasRight)
 				lib.vector_memcpy_av(d_ptr, d, 1)
 				self.assertTrue(np.linalg.norm(d_py - rowmin) <=
 								ATOLM + RTOL * np.linalg.norm(rowmin))
 
 				# max - reduce columns
 				colmax = np.max(A_py, 0)
-				lib.linalg_matrix_reduce_max(hdl, e, A, lib.enums.CblasLeft)
+				lib.linalg_matrix_reduce_max(hdl, e, A,
+					lib.enums.CblasLeft)
 				lib.vector_memcpy_av(e_ptr, e, 1)
 				self.assertTrue(np.linalg.norm(e_py - colmax) <=
 								ATOLN + RTOL * np.linalg.norm(colmax))
 
 				# max - reduce rows
 				rowmax = np.max(A_py, 1)
-				lib.linalg_matrix_reduce_max(hdl, d, A, lib.enums.CblasRight)
+				lib.linalg_matrix_reduce_max(hdl, d, A,
+					lib.enums.CblasRight)
 				lib.vector_memcpy_av(d_ptr, d, 1)
 				self.assertTrue(np.linalg.norm(d_py - rowmax) <=
 								ATOLM + RTOL * np.linalg.norm(rowmax))

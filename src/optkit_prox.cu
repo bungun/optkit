@@ -108,6 +108,7 @@ void function_vector_calloc(FunctionVector * f, size_t n)
 		__set_fn_vector<<<grid_dim, kBlockSize>>>(f->objectives,
 			(ok_float) 1, (ok_float) 0, (ok_float) 1, (ok_float) 0,
 			(ok_float) 0, FnZero, n);
+		cudaDeviceSynchronize();
 	}
 }
 

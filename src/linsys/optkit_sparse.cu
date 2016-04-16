@@ -83,6 +83,7 @@ void __set_all(T * data, T val, size_t stride, size_t size)
 {
 	uint grid_dim = calc_grid_dim(size);
 	__set<T><<<grid_dim, kBlockSize>>>(data, val, stride, size);
+	cudaDeviceSynchronize();
 }
 
 template <typename T, typename I>
@@ -208,6 +209,7 @@ void __transpose_inplace(void * sparse_handle, sp_matrix * A,
 		ind, val_T, ind_T, ptr_T, CUSPARSE_ACTION_NUMERIC,
 		CUSPARSE_INDEX_BASE_ZERO);
 
+	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 }
 
@@ -467,6 +469,9 @@ void sp_blas_gemv(void * sparse_handle, enum CBLAS_TRANSPOSE transA,
 		size1, size2, (int) A->nnz, &alpha, *(sp_hdl->descr),
 		A->val + offset, A->ptr + offset_ptr, A->ind + offset, x->data,
 		&beta, y->data);
+
+	cudaDeviceSynchronize();
+	CUDA_CHECK_ERR;
 }
 
 #ifdef __cplusplus

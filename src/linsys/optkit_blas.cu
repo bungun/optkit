@@ -48,6 +48,7 @@ void blas_axpy(void * linalg_handle, ok_float alpha, const vector *x, vector *y)
 		return;
 	CUBLAS(axpy)(*(cublasHandle_t *) linalg_handle, (int) x->size, &alpha,
 		x->data, (int) x->stride, y->data, (int) y->stride);
+	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 }
 
@@ -58,6 +59,7 @@ ok_float blas_nrm2(void * linalg_handle, const vector *x)
 		return OK_NAN;
 	CUBLAS(nrm2)(*(cublasHandle_t *) linalg_handle, (int) x->size, x->data,
 		(int) x->stride, &result);
+	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 	return result;
 }
@@ -68,6 +70,7 @@ void blas_scal(void * linalg_handle, const ok_float alpha, vector *x)
 		return;
 	CUBLAS(scal)(*(cublasHandle_t *) linalg_handle, (int) x->size, &alpha,
 		x->data, (int) x->stride);
+	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 }
 
@@ -78,6 +81,7 @@ ok_float blas_asum(void * linalg_handle, const vector * x)
 		return OK_NAN;
 	CUBLAS(asum)(*(cublasHandle_t *) linalg_handle, (int) x->size, x->data,
 		(int) x->stride, &result);
+	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 	return result;
 }
@@ -89,6 +93,7 @@ ok_float blas_dot(void * linalg_handle, const vector * x, const vector * y)
 		return OK_NAN;
 	CUBLAS(dot)(*(cublasHandle_t *) linalg_handle, (int) x->size, x->data,
 		(int) x->stride, y->data, (int) y->stride, &result);
+	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 	return result;
 }
@@ -98,6 +103,7 @@ void blas_dot_inplace(void * linalg_handle, const vector * x, const vector * y,
 {
 	CUBLAS(dot)(*(cublasHandle_t *) linalg_handle, (int) x->size, x->data,
 		(int) x->stride, y->data, (int) y->stride, deviceptr_result);
+	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 }
 
@@ -124,6 +130,8 @@ void blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 	CUBLAS(gemv)(*(cublasHandle_t *) linalg_handle, tA, s1, s2, &alpha,
 		A->data, (int) A->ld, x->data, (int) x->stride, &beta, y->data,
 		(int) y->stride);
+
+	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 }
 
@@ -152,6 +160,8 @@ void blas_trsv(void * linalg_handle, enum CBLAS_UPLO uplo,
 
 	CUBLAS(trsv)(*(cublasHandle_t *) linalg_handle, ul, tA, di,
 		(int) A->size1, A->data, (int) A->ld, x->data, (int) x->stride);
+
+	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 }
 
@@ -171,6 +181,9 @@ void blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
 	       (int) y->size, (int) num_superdiag, &alpha,
 	       vecA->data, (int) (num_superdiag + 1),
 	       x->data, (int) x->stride, &beta, y->data, (int) y->stride);
+
+	cudaDeviceSynchronize();
+	CUDA_CHECK_ERR;
 }
 
 void blas_diagmv(void * linalg_handle, const ok_float alpha,
@@ -212,6 +225,7 @@ void blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
 	CUBLAS(syrk)(*(cublasHandle_t *) linalg_handle, ul, tA, (int) C->size2,
 		k, &alpha, A->data, (int) A->ld, &beta, C->data, (int) C->ld);
 
+	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 }
 
@@ -246,6 +260,7 @@ void blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 		&alpha, A->data, (int) A->ld, B->data, (int) B->ld, &beta,
 		C->data, (int) C->ld);
 
+	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 }
 

@@ -9,7 +9,7 @@ static __global__ void __vector_set(T * data, T val, size_t stride,
 {
 	uint i, thread_id = blockIdx.x * blockDim.x + threadIdx.x;
 	for (i = thread_id; i < size; i += gridDim.x * blockDim.x)
-	data[i * stride] = val;
+		data[i * stride] = val;
 }
 
 template<typename T>
@@ -17,6 +17,7 @@ static void __vector_set_all(vector_<T> * v, T x)
 {
 	uint grid_dim = calc_grid_dim(v->size);
 	__vector_set<T><<<grid_dim, kBlockSize>>>(v->data, x, v->stride, v->size);
+	cudaDeviceSynchronize();
 }
 
 template<typename T>
@@ -91,6 +92,7 @@ void vector_memcpy_vv_(vector_<T> * v1, const vector_<T> * v2)
 		grid_dim = calc_grid_dim(v1->size);
 		__strided_memcpy<T><<<grid_dim, kBlockSize>>>(v1->data,
 			v1->stride, v2->data, v2->stride, v1->size);
+		cudaDeviceSynchronize();
 	}
 }
 

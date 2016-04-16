@@ -33,7 +33,7 @@ inline void __matrix_set_colmajor(matrix * A, size_t i, size_t j, ok_float x)
 }
 
 /* Non-Block Cholesky. */
-void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A)
+static void __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A)
 {
 	ok_float l11;
 	matrix l21, a22;
@@ -125,7 +125,7 @@ void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x)
  * where \tilde a_i is the ith _row_ of A
  *
  */
-void linalg_diag_gramian(void * linalg_handle, const matrix * A, vector * v)
+void matrix_diag_gramian(void * linalg_handle, const matrix * A, vector * v)
 {
 	int skinny = (A->size1 >= A->size2);
 	size_t k, nvecs = (skinny) ? A->size2 : A->size1;
@@ -164,9 +164,8 @@ void linalg_diag_gramian(void * linalg_handle, const matrix * A, vector * v)
  *	else, set
  *		A += 1v^T
  */
-void linalg_matrix_broadcast_vector(void * linalg_handle, matrix * A,
-	const vector * v, const enum OPTKIT_TRANSFORM operation,
-	const enum CBLAS_SIDE side)
+void matrix_broadcast_vector(matrix * A, const vector * v,
+	const enum OPTKIT_TRANSFORM operation, const enum CBLAS_SIDE side)
 {
 	size_t k, nvecs = (side == CblasLeft) ? A->size2 : A->size1;
 	size_t ptrstride = ((side == CblasLeft) == (A->order == CblasRowMajor))
@@ -203,8 +202,8 @@ void linalg_matrix_broadcast_vector(void * linalg_handle, matrix * A,
 	}
 }
 
-void linalg_matrix_reduce_indmin(void * linalg_handle, indvector * indices,
-	vector * minima, matrix * A, const enum CBLAS_SIDE side)
+void matrix_reduce_indmin(indvector * indices, vector * minima, matrix * A,
+	const enum CBLAS_SIDE side)
 {
 	int reduce_rows = (side == CblasLeft);
 	size_t output_dim = (reduce_rows) ? A->size2 : A->size1;
@@ -245,14 +244,12 @@ static void __matrix_extrema(vector * extrema, matrix * A,
 		}
 }
 
-void linalg_matrix_reduce_min(void * linalg_handle, vector * minima,
-	matrix * A, const enum CBLAS_SIDE side)
+void matrix_reduce_min(vector * minima, matrix * A, const enum CBLAS_SIDE side)
 {
 	__matrix_extrema(minima, A, side, 1);
 }
 
-void linalg_matrix_reduce_max(void * linalg_handle, vector * maxima,
-	matrix * A, const enum CBLAS_SIDE side)
+void matrix_reduce_max(vector * maxima, matrix * A, const enum CBLAS_SIDE side)
 {
 	__matrix_extrema(maxima, A, side, 0);
 }

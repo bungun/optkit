@@ -59,6 +59,7 @@ static void __matrix_set_all(matrix_<T> * A, T x)
 	else
 		__matrix_set_c<T><<<grid_dim, block_dim>>>(A->data, x, A->ld,
 			A->size1, A->size2);
+	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 }
 
@@ -197,17 +198,21 @@ void matrix_memcpy_mm_(matrix_<T> * A, const matrix_<T> * B)
 	} else if (A->order == CblasRowMajor) {
 		/* A row major, B column major */
 		grid_dim = calc_grid_dim(A->size1);
-		for (i = 0; i < A->size1; ++i)
+		for (i = 0; i < A->size1; ++i) {
 			__strided_memcpy<T><<<grid_dim, kBlockSize>>>(
 				A->data + i * A->size2, 1,
 				B->data + i, A->ld, A->size2);
+			cudaDeviceSynchronize();
+		}
 	} else {
 		/* A column major, B row major */
 		grid_dim = calc_grid_dim(A->size2);
-		for (j= 0; j < A->size2; ++j)
+		for (j= 0; j < A->size2; ++j) {
 			__strided_memcpy<T><<<grid_dim, kBlockSize>>>(
 				A->data + j * A->size1, 1,
 				B->data + j, A->ld, A->size1);
+			cudaDeviceSynchronize();
+		}
 	}
 	CUDA_CHECK_ERR;
 }
@@ -241,6 +246,7 @@ void matrix_memcpy_ma_(matrix_<T> * A, const T * B, const enum CBLAS_ORDER ord)
 				A->size1 * sizeof(T));
 			__strided_memcpy<T><<<grid_dim, kBlockSize>>>(
 				A->data + j, A->ld, col, 1, A->size1);
+			cudaDeviceSynchronize();
 		}
 		ok_free_gpu(col);
 	} else {
@@ -251,6 +257,7 @@ void matrix_memcpy_ma_(matrix_<T> * A, const T * B, const enum CBLAS_ORDER ord)
 				      A->size2 * sizeof(T));
 			__strided_memcpy<T><<<grid_dim, kBlockSize>>>(
 				A->data + i, A->ld, row, 1, A->size2);
+			cudaDeviceSynchronize();
 		}
 		ok_free_gpu(row);
 	}
@@ -285,6 +292,7 @@ void matrix_memcpy_am_(T * A, const matrix_<T> * B, const enum CBLAS_ORDER ord)
 		for (i = 0; i < B->size1; ++i) {
 			__strided_memcpy<T><<<grid_dim, kBlockSize>>>(row, 1,
 				B->data + i, B->ld, B->size2);
+			cudaDeviceSynchronize();
 			ok_memcpy_gpu(A + i * B->size2, row,
 				      B->size2 * sizeof(T));
 		}
@@ -295,6 +303,7 @@ void matrix_memcpy_am_(T * A, const matrix_<T> * B, const enum CBLAS_ORDER ord)
 		for (j = 0; j < B->size2; ++j) {
 			__strided_memcpy<T><<<grid_dim, kBlockSize>>>(col, 1,
 				B->data + j, B->ld, B->size1);
+			cudaDeviceSynchronize();
 			ok_memcpy_gpu(A + j * B->size1, col,
 				      B->size1 * sizeof(T));
 		}

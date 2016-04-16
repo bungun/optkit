@@ -41,16 +41,22 @@ typedef enum optkit_status {
 	OPTKIT_ERROR_CUBLAS = 3,
 	OPTKIT_ERROR_CUSPARSE = 4,
 	OPTKIT_ERROR_UNALLOCATED = 10,
-	OPTKIT_ERROR_DIMENSION_MISMATCH = 11
+	OPTKIT_ERROR_OVERWRITE = 11,
+	OPTKIT_ERROR_OUT_OF_BOUNDS = 100,
+	OPTKIT_ERROR_DIMENSION_MISMATCH = 101,
+	OPTKIT_ERROR_LAYOUT_MISMATCH = 102
 } ok_status;
 
 enum OPTKIT_TRANSFORM {
 	OkTransformScale = 0,
-	OkTransformAdd = 1
+	OkTransformAdd = 1,
+	OkTransformIncrement = 2,
+	OkTransformDecrement = 3
 };
 
 #ifndef FLOAT
 	#define CBLAS(x) cblas_d ## x
+	#define CBLASI(x) cblas_id ## x
 	#define MATH(x) x
 	typedef double ok_float;
 	#define MACHINETOL (double) 10e-10
@@ -58,6 +64,7 @@ enum OPTKIT_TRANSFORM {
 	#define OK_FLOAT_MAX DBL_MAX
 #else
 	#define CBLAS(x) cblas_s ## x
+	#define CBLASI(x) cblas_is ## x
 	#define MATH(x) x ## f
 	typedef float ok_float;
 	#define MACHINETOL (float) 10e-5
