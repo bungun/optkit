@@ -149,6 +149,57 @@ void vector_add_constant_(vector_<T> * v, const T x)
 		v->data[i * v->stride] += x;
 }
 
+template<typename T>
+size_t vector_indmin_(const vector_<T> * v, const T default_value)
+{
+	T minval = default_value;
+	size_t minind = 0;
+	size_t i;
+
+	#ifdef _OPENMP
+	#pragma omp parallel for reduction(min : minval, minind)
+	#endif
+	for (i = 0; i < v->size; ++i) {
+		if(v->data[i * v->stride] < minval) {
+			minval = v->data[i * v->stride];
+			minind = i;
+		}
+	}
+	return minind;
+}
+
+template<typename T>
+T vector_min_(const vector_<T> * v, const T default_value)
+{
+	T minval = default_value;
+	size_t i;
+
+	#ifdef _OPENMP
+	#pragma omp parallel for reduction(min : minval)
+	#endif
+	for(i = 0; i < v->size; ++i)
+		if(v->data[i * v->stride] < minval)
+			minval = v->data[i * v->stride];
+
+	return minval;
+}
+
+template<typename T>
+T vector_max_(const vector_<T> * v, const T default_value)
+{
+	T maxval = default_value;
+	size_t i;
+
+	#ifdef _OPENMP
+	#pragma omp parallel for reduction(max : maxval)
+	#endif
+	for(i = 0; i < v->size; ++i)
+		if(v->data[i * v->stride] > maxval)
+			maxval = v->data[i * v->stride];
+
+	return maxval;
+}
+
 /* explicit instantiations for downstream code*/
 /* vector_scale required by: equilibration */
 template void vector_scale_(vector_<float> * v, float x);
@@ -257,53 +308,14 @@ void vector_exp(vector * v)
 		v->data[i * v->stride] = MATH(exp)(v->data[i * v->stride]);
 }
 
-size_t vector_indmin(vector * v)
-{
-	ok_float minval = OK_FLOAT_MAX;
-	size_t minind = 0;
-	size_t i;
+size_t vector_indmin(const vector * v)
+	{ return vector_indmin_<ok_float>(v, OK_FLOAT_MAX); }
 
-	#ifdef _OPENMP
-	#pragma omp parallel for reduction(min : minval, minind)
-	#endif
-	for(i = 0; i < v->size; ++i) {
-		if(v->data[i * v->stride] < minval) {
-			minval = v->data[i * v->stride];
-			minind = i;
-		}
-	}
-	return minind;
-}
+ok_float vector_min(const vector * v)
+	{ return vector_min_<ok_float>(v, OK_FLOAT_MAX); }
 
-ok_float vector_min(vector * v)
-{
-	ok_float minval = OK_FLOAT_MAX;
-	size_t i;
-
-	#ifdef _OPENMP
-	#pragma omp parallel for reduction(min : minval)
-	#endif
-	for(i = 0; i < v->size; ++i)
-		if(v->data[i * v->stride] < minval)
-			minval = v->data[i * v->stride];
-
-	return minval;
-}
-
-ok_float vector_max(vector * v)
-{
-	ok_float maxval = -OK_FLOAT_MAX;
-	size_t i;
-
-	#ifdef _OPENMP
-	#pragma omp parallel for reduction(min : maxval)
-	#endif
-	for(i = 0; i < v->size; ++i)
-		if(v->data[i * v->stride] > maxval)
-			maxval = v->data[i * v->stride];
-
-	return maxval;
-}
+ok_float vector_max(const vector * v)
+	{ return vector_min_<ok_float>(v, -OK_FLOAT_MAX); }
 
 void indvector_alloc(indvector * v, size_t n)
 	{ vector_alloc_<size_t>(v, n); }
@@ -332,6 +344,15 @@ void indvector_memcpy_va(indvector * v, const size_t * y, size_t stride_y)
 
 void indvector_memcpy_av(size_t * x, const indvector * v, size_t stride_x)
 	{ vector_memcpy_av_<size_t>(x, v, stride_x); }
+
+size_t indvector_indmin(const indvector * v)
+	{ return vector_indmin_<size_t>(v, (size_t) INT_MAX); }
+
+size_t indvector_min(const indvector * v)
+	{ return vector_min_<size_t>(v, (size_t) INT_MAX); }
+
+size_t indvector_max(const indvector * v)
+	{ return vector_min_<size_t>(v, 0); }
 
 #ifdef __cplusplus
 }

@@ -1,3 +1,4 @@
+#include "optkit_defs_gpu.h"
 #include "optkit_clustering.h"
 
 #ifdef __cplusplus
@@ -11,14 +12,15 @@ extern "C" {
  *
  * tally the number of reassignments.
  */
-static __global__ void __assign_clusters_l2_lInf_cap(size_t * a2c_curr,
+static __global__ void __assign_clusters_l2(size_t * a2c_curr,
 	const size_t len_a2c, const size_t stride_curr, size_t * a2c_tentative,
 	const size_t stride_tentative, size_t * reassigned, const size_t i)
 {
-	uint row = i + threadIdx.x;
+	size_t * new_, * curr;
+	size_t row = i + threadIdx.x;
 	if (row < len_a2c) {
 		new_ = a2c_tentative + row * stride_tentative;
-		curr = a2c + row * stride_a2c;
+		curr = a2c_curr + row * stride_curr;
 		*reassigned += (size_t)(*curr != *new_);
 		*curr = *new_;
 	}
@@ -29,22 +31,21 @@ static void assign_clusters_l2(matrix * A, matrix * C,
 {
 	size_t i, * reassigned;
 	h->reassigned = 0;
-	reassigned = ok_alloc_gpu(reassigned, sizeof(size_t));
-	ok_memcpy_gpu(reassigned, &(h->reassigned), sizeof(size_t))
+	ok_alloc_gpu(reassigned, sizeof(size_t));
+	ok_memcpy_gpu(reassigned, &(h->reassigned), sizeof(size_t));
 
-	/* reduce each row block in one stream */
-	for (i = 0; i < A->size1; i += block_size) {
+	for (i = 0; i < A->size1; i += kBlockSize) {
 		cudaStream_t s;
-		cudaStreamCreate(s);
+		cudaStreamCreate(&s);
 		__assign_clusters_l2<<<1, kBlockSize, 0, s>>>(a2c->indices,
-			a2c->size, a2c->stride, h->a2c.indices, h->a2c.stride,
-			reassigned, i);
+			a2c->size1, a2c->stride, h->a2c_tentative.indices,
+			h->a2c_tentative.stride, reassigned, i);
 		cudaStreamDestroy(s);
 	}
 	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 
-	ok_memcpy_gpu(&(h->reassigned), reassigned, sizeof(size_t))
+	ok_memcpy_gpu(&(h->reassigned), reassigned, sizeof(size_t));
 }
 
 static __global__ void __dist_lInf_A_minus_UC(const ok_float * A,
@@ -59,7 +60,7 @@ static __global__ void __dist_lInf_A_minus_UC(const ok_float * A,
 	uint col = threadIdx.y;
 	uint global_row = i + row;
 	uint global_col = j + col;
-	uint kTileLD = kTileSize + 1u;
+	const uint kTileLD = kTileSize + 1u;
 	__shared__ ok_float Asub[kTileSize * kTileLD];
 	__shared__ ok_float Csub[kTileSize * kTileLD];
 	__shared__ ok_float dist_sub[kTileSize];
@@ -70,7 +71,7 @@ static __global__ void __dist_lInf_A_minus_UC(const ok_float * A,
 	/* initialize distances -> 0 */
 	if (col == 0)
 		dist_sub[row] = 0;
-	__syncThreads();
+	__syncthreads();
 
 	/* copy Asub = A */
 	Asub[row * kTileLD + col] = A[global_row * row_stride_A +
@@ -79,16 +80,16 @@ static __global__ void __dist_lInf_A_minus_UC(const ok_float * A,
 	/* Csub = UC */
 	Csub[row * kTileLD + col] = C[a2c[global_row * stride_a2c] *
 		row_stride_A + global_col * col_stride_A];
-	__syncThreads();
+	__syncthreads();
 
 	/* A -= UC */
 	Asub[row * kTileLD + col] -= Csub[row * kTileLD + col];
-	__syncThreads();
+	__syncthreads();
 
 	/* set amax */
 	dist_sub[row] = MATH(fmax)(dist_sub[row],
 		MATH(abs)(Asub[row * kTileLD + col]));
-	__syncThreads();
+	__syncthreads();
 
 	/* copy distances */
 	if (col == 0)
@@ -126,8 +127,6 @@ static void assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 {
 	uint i, j;
 	uint block_size = kTiles2D * kTileSize;
-	uint row_blocks = (A->size1 + block_size - 1u) / block_size;
-	uint col_blocks = (A->size2 + block_size - 1u) / block_size;
 
 	dim3 grid_dim(kTileSize, kTileSize);
 	dim3 blk_dim(kTiles2D, kTiles2D);
@@ -137,11 +136,13 @@ static void assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	size_t row_stride_C = (C->order == CblasRowMajor) ? C->ld : 1;
 	size_t col_stride_C = (C->order == CblasRowMajor) ? 1 : A->ld;
 
-	vector * dmax = h->dmin;
+	size_t * reassigned;
+
+	vector * dmax = &(h->d_min);
 
 	h->reassigned = 0;
-	reassigned = ok_alloc_gpu(reassigned, sizeof(size_t));
-	ok_memcpy_gpu(reassigned, &(h->reassigned), sizeof(size_t))
+	ok_alloc_gpu(reassigned, sizeof(size_t));
+	ok_memcpy_gpu(reassigned, &(h->reassigned), sizeof(size_t));
 
 	/* zero out distances */
 	vector_scale(dmax, kZero);
@@ -149,16 +150,16 @@ static void assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	/* reduce one bundle of [block_size] rows x N cols per stream */
 	for (i = 0; i < A->size1; i += block_size) {
 		cudaStream_t s;
-		cudaStreamCreate(s);
+		cudaStreamCreate(&s);
 		for (j = 0; j < A->size2; j += block_size)
 			__dist_lInf_A_minus_UC<<<grid_dim, blk_dim, 0, s>>>(
 				A->data, A->size1, A->size2, row_stride_A,
-				col_stride_A, u->indices, u->stride, C->data,
-				row_stride_C, col_stride_C, dmax->data,
-				dmax->stride, i, j);
+				col_stride_A, a2c->indices, a2c->stride,
+				C->data, row_stride_C, col_stride_C,
+				dmax->data, dmax->stride, i, j);
 
 		__assign_clusters_l2_lInf_cap<<<1, block_size, 0, s>>>(
-			a2c->indices, a2c->size, a2c->stride,
+			a2c->indices, a2c->size1, a2c->stride,
 			h->a2c_tentative.indices, h->a2c_tentative.stride,
 			dmax->data, dmax->stride, maxdist, reassigned, i);
 		cudaStreamDestroy(s);
@@ -166,7 +167,7 @@ static void assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 
-	ok_memcpy_gpu(&(h->reassigned), reassigned, sizeof(size_t))
+	ok_memcpy_gpu(&(h->reassigned), reassigned, sizeof(size_t));
 }
 
 #ifdef __cplusplus

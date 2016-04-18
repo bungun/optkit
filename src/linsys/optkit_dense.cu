@@ -223,19 +223,16 @@ static __global__ void __block_diag_gramian(const ok_float * A,
 	v[global_row * stride_v] = vsub[row];
 }
 
-void linalg_diag_gramian(void * linalg_handle, const matrix * A, vector * v)
+void linalg_diag_gramian(const matrix * A, vector * v)
 {
 	uint i, j;
 	uint block_size = kTiles2D * kTileSize;
-	uint row_blocks = (A->size1 + block_size - 1u) / block_size;
-	uint col_blocks = (A->size2 + block_size - 1u) / block_size;
 
 	dim3 grid_dim(kTileSize, kTileSize);
 	dim3 blk_dim(kTiles2D, kTiles2D);
 
 	int skinny = A->size1 == v->size;
 	int rowmajor = A->order == CblasRowMajor;
-	enum CBLAS_ORDER order;
 
 	/*
 	 * logic for gram matrix:
@@ -260,7 +257,7 @@ void linalg_diag_gramian(void * linalg_handle, const matrix * A, vector * v)
 	/* transform one bundle of [block_size] columns x M rows per stream */
 	for (j = 0; j < size2; j += block_size) {
 		cudaStream_t s;
-		cudaStreamCreate(s);
+		cudaStreamCreate(&s);
 		for (i = 0; i < size1; i += block_size)
 			__block_diag_gramian<<<grid_dim, blk_dim, 0, s>>>(
 				A->data, size1, size2, row_stride, col_stride,
@@ -275,14 +272,14 @@ static __device__ void __entry_add(ok_float * data, const size_t row,
 	const size_t col, const size_t stride_r, const size_t stride_c,
 	const ok_float value)
 {
-	A[row * stride_r + col * stride_c] += value;
+	data[row * stride_r + col * stride_c] += value;
 }
 
 static __device__ void __entry_mul(ok_float * data, const size_t row,
 	const size_t col, const size_t stride_r, const size_t stride_c,
 	const ok_float value)
 {
-	A[row * stride_r + col * stride_c] *= value;
+	data[row * stride_r + col * stride_c] *= value;
 }
 
 static __global__ void __matrix_broadcast_vector(ok_float * A,
@@ -319,14 +316,11 @@ static __global__ void __matrix_broadcast_vector(ok_float * A,
 		Asub[row * kTileLD + col];
 }
 
-void linalg_matrix_broadcast_vector(void * linalg_handle, matrix * A,
-	const vector * v, const enum OPTKIT_TRANSFORM operation,
-	const enum CBLAS_SIDE side)
+void linalg_matrix_broadcast_vector(matrix * A, const vector * v,
+	const enum OPTKIT_TRANSFORM operation, const enum CBLAS_SIDE side)
 {
 	uint i, j;
 	uint block_size = kTiles2D * kTileSize;
-	uint row_blocks = (A->size1 + block_size - 1u) / block_size;
-	uint col_blocks = (A->size2 + block_size - 1u) / block_size;
 
 	dim3 grid_dim(kTileSize, kTileSize);
 	dim3 blk_dim(kTiles2D, kTiles2D);
@@ -343,14 +337,15 @@ void linalg_matrix_broadcast_vector(void * linalg_handle, matrix * A,
 	size_t row_stride = (left == rowmajor) ? A->ld : 1;
 	size_t col_stride = (left == rowmajor) ? 1 : A->ld;
 
-	void (*transform)(ok_float * A, const ok_float * v, uint i, uint j,
-		size_t ld, size_t stride_v, const enum CBLAS_ORDER) =
-		(operation == OkTransformScale) ? __entry_mul : __entry_add;
+	void (*transform)(ok_float * data, const size_t row, const size_t col,
+		const size_t stride_r, const size_t stride_c,
+		const ok_float value) = (operation == OkTransformScale) ?
+		__entry_mul : __entry_add;
 
 	/* transform one bundle of [block_size] rows x N cols per stream */
 	for (i = 0; i < size1; i += block_size) {
 		cudaStream_t s;
-		cudaStreamCreate(s);
+		cudaStreamCreate(&s);
 		for (j = 0; j < size2; j += block_size)
 			__matrix_broadcast_vector<<<grid_dim, blk_dim, 0, s>>>(
 				A->data, size1, size2, row_stride, col_stride,
@@ -362,7 +357,7 @@ void linalg_matrix_broadcast_vector(void * linalg_handle, matrix * A,
 }
 
 static __global__ void __matrix_row_indmin(size_t * indmin,
-	const size_t stride_i, ok_float * minima, const size_t stride_min,
+	const size_t stride_indmin, ok_float * minima, const size_t stride_min,
 	const ok_float * A, const size_t size1, const size_t size2,
 	const size_t row_stride, const size_t col_stride, const size_t i,
 	const size_t j)
@@ -377,7 +372,7 @@ static __global__ void __matrix_row_indmin(size_t * indmin,
 	__shared__ size_t indminsub[kTileSize];
 	ok_float previous;
 
-	if (global_row >= rowsA || global_col >= colsA)
+	if (global_row >= size1 || global_col >= size2)
 		return;
 
 	Asub[row * kTileLD + col] = A[global_row * row_stride +
@@ -391,7 +386,7 @@ static __global__ void __matrix_row_indmin(size_t * indmin,
 
 	previous = minsub[row];
 	minsub[row] = MATH(fmin)(minsub[row], Asub[row * kTileLD + col]);
-	if (minsub[row] != prev)
+	if (minsub[row] != previous)
 		indminsub[row] = global_col;
 	__syncthreads();
 
@@ -416,9 +411,8 @@ static __global__ void __matrix_row_reduce(ok_float * reduced,
 	const uint kTileLD = kTileSize + 1u;
 	__shared__ ok_float Asub[kTileLD * kTileSize];
 	__shared__ ok_float reduced_sub[kTileSize];
-	ok_float previous;
 
-	if (global_row >= rowsA || global_col >= colsA)
+	if (global_row >= size1 || global_col >= size2)
 		return;
 
 	Asub[row * kTileLD + col] = A[global_row * row_stride +
@@ -438,13 +432,11 @@ static __global__ void __matrix_row_reduce(ok_float * reduced,
 		reduced[global_row * stride] = reduced_sub[row];
 }
 
-void linalg_matrix_reduce_indmin(void * linalg_handle, indvector * indices,
-	vector * minima, matrix * A, const enum CBLAS_SIDE side)
+void linalg_matrix_reduce_indmin(indvector * indices, vector * minima,
+	matrix * A, const enum CBLAS_SIDE side)
 {
 	uint i, j;
 	uint block_size = kTiles2D * kTileSize;
-	uint row_blocks = (A->size1 + block_size - 1u) / block_size;
-	uint col_blocks = (A->size2 + block_size - 1u) / block_size;
 
 	dim3 grid_dim(kTileSize, kTileSize);
 	dim3 blk_dim(kTiles2D, kTiles2D);
@@ -466,7 +458,7 @@ void linalg_matrix_reduce_indmin(void * linalg_handle, indvector * indices,
 	/* reduce one bundle of [block_size] rows x N cols per stream */
 	for (i = 0; i < size1; i += block_size) {
 		cudaStream_t s;
-		cudaStreamCreate(s);
+		cudaStreamCreate(&s);
 		for (j = 0; j < size2; j += block_size)
 			__matrix_row_indmin<<<grid_dim, blk_dim, 0, s>>>(
 				indices->data, indices->stride, minima->data,
@@ -480,12 +472,10 @@ void linalg_matrix_reduce_indmin(void * linalg_handle, indvector * indices,
 
 static void __matrix_reduce_binary(vector * reduced, matrix * A,
 	const enum CBLAS_SIDE side, const ok_float default_value,
-	ok_float (* binary_op_)(const ok_float, const ok_float))
+	ok_float (* binary_op_)(const ok_float first, const ok_float second))
 {
 	uint i, j;
 	uint block_size = kTiles2D * kTileSize;
-	uint row_blocks = (A->size1 + block_size - 1u) / block_size;
-	uint col_blocks = (A->size2 + block_size - 1u) / block_size;
 
 	dim3 grid_dim(kTileSize, kTileSize);
 	dim3 blk_dim(kTiles2D, kTiles2D);
@@ -502,12 +492,12 @@ static void __matrix_reduce_binary(vector * reduced, matrix * A,
 	size_t row_stride = (left == rowmajor) ? A->ld : 1;
 	size_t col_stride = (left == rowmajor) ? 1 : A->ld;
 
-	vector_set_all(minima, OK_FLOAT_MAX);
+	vector_set_all(reduced, default_value);
 
 	/* reduce one bundle of [block_size] rows x N cols per stream */
 	for (i = 0; i < size1; i += block_size) {
 		cudaStream_t s;
-		cudaStreamCreate(s);
+		cudaStreamCreate(&s);
 		for (j = 0; j < size2; j += block_size)
 			__matrix_row_reduce<<<grid_dim, blk_dim, 0, s>>>(
 				reduced->data, reduced->stride, A->data, size1,

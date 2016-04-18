@@ -20,20 +20,20 @@ CLUOUT=$(OUT)$(CLUSTER)
 # C Flags
 CC=gcc
 CCFLAGS= -g -O3 -fPIC -I. -I$(INCLUDE) -I$(INCLUDE)external 
-CCFLAGS+=-I$(INCLUDE)linsys -I$(INCLUDE)operator
+CCFLAGS+=-I$(INCLUDE)linsys -I$(INCLUDE)operator -I$(INCLUDE)clustering
 CCFLAGS+=-Wall -Wconversion -Wpedantic -Wno-unused-function -std=c99
 LDFLAGS_=-lstdc++ -lm
 
 # C++ Flags
 CXX=g++
 CXXFLAGS= -g -O3 -fPIC -I. -I$(INCLUDE) -I$(INCLUDE)external
-CXXFLAGS+=-I$(INCLUDE)linsys -I$(INCLUDE)operator
+CXXFLAGS+=-I$(INCLUDE)linsys -I$(INCLUDE)operator -I$(INCLUDE)clustering
 CXXFLAGS+=-Wall -Wconversion -Wpedantic -Wno-unused-function
 
 # CUDA Flags
 CUXX=nvcc
 CUXXFLAGS=-arch=sm_50 -Xcompiler -fPIC -I. -I$(INCLUDE) -I$(INCLUDE)external
-CUXXFLAGS+=-I$(INCLUDE)linsys -I$(INCLUDE)operator
+CUXXFLAGS+=-I$(INCLUDE)linsys -I$(INCLUDE)operator -I$(INCLUDE)clustering
 CULDFLAGS_=-lstdc++ -lm
 
 # Darwin / Linux
@@ -190,11 +190,11 @@ liboperator: operator $(DENSE_TARG) $(SPARSE_TARG)
 	$(OUT)$@_$(LIBCONFIG).$(SHARED) \
 	$(OPERATOR_STATIC_DEPS) $(LDFLAGS)
 
-libcluster: $(CLUSTER_TARG)
+libcluster: $(CLUSTER_TARG) $(DENSE_TARG)
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) -shared -o \
 	$(OUT)$@_$(LIBCONFIG).$(SHARED) \
-	$(CLUSTER_OBJ) $(LDFLAGS)	
+	$(CLUSTER_OBJ) $(DENSE_OBJ) $(LDFLAGS)	
 
 libprox: $(PROX_TARG)
 	mkdir -p $(OUT)
@@ -263,9 +263,9 @@ cpu_cluster: $(CLUSTER_CPU_SRC)
 gpu_cluster: $(CLUSTER_GPU_SRC)
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)clustering/
-	$(CC) $(CCFLAGS) $(CLUSRC)upsampling_vector.cu -c -o \
+	$(CUXX) $(CUXXFLAGS) $(CLUSRC)upsampling_vector.cu -c -o \
 	$(CLUOUT)upsampling_vector_$(LIBCONFIG).o
-	$(CC) $(CCFLAGS) $(CLUSRC)clustering.cu -c -o \
+	$(CUXX) $(CUXXFLAGS) $(CLUSRC)clustering.cu -c -o \
 	$(CLUOUT)clustering_$(LIBCONFIG).o
 
 cpu_prox: $(SRC)optkit_prox.cpp

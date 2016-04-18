@@ -42,6 +42,12 @@ template<typename T>
 void vector_div_(vector_<T> * v1, const vector_<T> * v2);
 template<typename T>
 void vector_add_constant_(vector_<T> *v, const T x);
+template<typename T>
+size_t vector_indmin_(const vector_<T> * v, const T default_value);
+template<typename T>
+T vector_min_(const vector_<T> * v, const T default_value);
+template<typename T>
+T vector_max_(const vector_<T> * v, const T default_value);
 #endif
 
 #ifdef __cplusplus
@@ -79,9 +85,9 @@ void vector_safe_recip(vector * v);
 void vector_sqrt(vector * v);
 void vector_pow(vector * v, const ok_float x);
 void vector_exp(vector * v);
-size_t vector_indmin(vector * v);
-ok_float vector_min(vector * v);
-ok_float vector_max(vector * v);
+size_t vector_indmin(const vector * v);
+ok_float vector_min(const vector * v);
+ok_float vector_max(const vector * v);
 
 #ifdef __cplusplus
 typedef vector_<size_t> indvector;
@@ -102,6 +108,9 @@ void indvector_view_array(indvector * v, size_t * base, size_t n);
 void indvector_memcpy_vv(indvector * v1, const indvector * v2);
 void indvector_memcpy_va(indvector * v, const size_t * y, size_t stride_y);
 void indvector_memcpy_av(size_t * x, const indvector * v, size_t stride_x);
+size_t indvector_indmin(const indvector * v);
+size_t indvector_min(const indvector * v);
+size_t indvector_max(const indvector * v);
 
 #ifdef __cplusplus
 }

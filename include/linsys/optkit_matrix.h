@@ -63,7 +63,7 @@ typedef struct matrix {
 } matrix;
 #endif
 
-void matrix_alloc_(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord);
+void matrix_alloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord);
 void matrix_calloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord);
 void matrix_free(matrix * A);
 void matrix_submatrix(matrix * A_sub, matrix * A, size_t i, size_t j,

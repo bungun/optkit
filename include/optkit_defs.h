@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <float.h>
+#include <limits.h>
 #include "gsl_cblas.h"
 
 #ifdef __CUDACC__

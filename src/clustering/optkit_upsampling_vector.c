@@ -11,14 +11,14 @@ static inline int upsampling_dims_compatible(const int transpose,
 	const size_t output_dim2)
 {
 	if (transpose)
-		return (dim_in2 != dim_out2) &&
-		((u->size2 <= dim_out1) && (u->size1 == dim_in1));
+		return (input_dim2 != output_dim2) &&
+		((u->size2 <= output_dim1) && (u->size1 == input_dim1));
 	else
-		return (dim_in2 != dim_out2) &&
-		((u->size1 == dim_out1) && (u->size2 <= dim_in1));
+		return (input_dim2 != output_dim2) &&
+		((u->size1 == output_dim1) && (u->size2 <= input_dim1));
 }
 
-ok_status upsamplingvec_alloc(upsamplingvec * u, size_t size1, size2)
+ok_status upsamplingvec_alloc(upsamplingvec * u, size_t size1, size_t size2)
 {
 	if (!u)
 		return OPTKIT_ERROR_UNALLOCATED;
@@ -26,7 +26,7 @@ ok_status upsamplingvec_alloc(upsamplingvec * u, size_t size1, size2)
 		return OPTKIT_ERROR_OVERWRITE;
 	u->size1 = size1;
 	u->size2 = size2;
-	invector_calloc(&(u->vec), size1);
+	indvector_calloc(&(u->vec), size1);
 	u->indices = u->vec.data;
 	u->stride = u->vec.stride;
 	return OPTKIT_SUCCESS;
@@ -44,12 +44,22 @@ ok_status upsamplingvec_free(upsamplingvec * u)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status upsamplingvec_check_size(const upsamplingvec * u)
+ok_status upsamplingvec_check_bounds(const upsamplingvec * u)
 {
-	if (vector_max_<size_t>(uvec) < u->size2)
+	if (indvector_max(&(u->vec)) < u->size2)
 		return OPTKIT_SUCCESS;
 	else
-		return OPTKIT_DIMENSION_MISMATCH;
+		return OPTKIT_ERROR_DIMENSION_MISMATCH;
+}
+
+ok_status upsamplingvec_subvector(upsamplingvec * usub, upsamplingvec * u,
+	size_t offset1, size_t offset2, size_t length1, size_t length2)
+{
+	indvector_subvector(&(usub->vec), &(u->vec), offset1, length1);
+	usub->indices = usub->vec.data;
+	usub->size1 = length1;
+	usub->size2 = length2 - offset2;
+	return OPTKIT_SUCCESS;
 }
 
 ok_status upsamplingvec_mul_matrix(const enum CBLAS_TRANSPOSE transU,
@@ -59,7 +69,7 @@ ok_status upsamplingvec_mul_matrix(const enum CBLAS_TRANSPOSE transU,
 {
 	size_t i, dim_in1, dim_in2, dim_out1, dim_out2;
 	size_t ptr_stride_in, ptr_stride_out;
-	int i, stride_in, stride_out,
+	int stride_in, stride_out;
 	int transpose = transU == CblasTrans;
 
 	if ((!u || !M_in || !M_out) ||
@@ -73,7 +83,7 @@ ok_status upsamplingvec_mul_matrix(const enum CBLAS_TRANSPOSE transU,
 
 	if (!upsampling_dims_compatible(transpose, u, dim_in1, dim_in2,
 		dim_out1, dim_out2))
-		return OPTKIT_DIMENSION_MISMATCH;
+		return OPTKIT_ERROR_DIMENSION_MISMATCH;
 
 	stride_in =
 		((transI == CblasNoTrans) == (M_in->order == CblasRowMajor)) ?
@@ -117,20 +127,24 @@ ok_status upsamplingvec_count(const upsamplingvec * u, vector * counts)
 		return OPTKIT_ERROR_UNALLOCATED;
 
 	if (u->size2 > counts->size)
-		return OPTKIT_DIMENSION_MISMATCH;
+		return OPTKIT_ERROR_DIMENSION_MISMATCH;
 
 	vector_scale(counts, kZero);
 
 	#ifdef _openmp
 	#pragma omp parallel for
 	#endif
-	for (i = 0; i < M_in->size1; ++i)
-		counts[u->indices[i * u->stride] * counts->stride] += kOne;
+	for (i = 0; i < u->size1; ++i)
+		counts->data[u->indices[i * u->stride] * counts->stride] +=
+			kOne;
+
+	return OPTKIT_SUCCESS;
 }
 
 ok_status upsamplingvec_shift(upsamplingvec * u, const size_t shift,
 	const enum OPTKIT_TRANSFORM direction)
 {
+	size_t i;
 	if (direction == OkTransformDecrement) {
 		if (shift >= u->size2)
 			return OPTKIT_ERROR_OUT_OF_BOUNDS;
