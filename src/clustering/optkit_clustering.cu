@@ -88,7 +88,7 @@ static __global__ void __dist_lInf_A_minus_UC(const ok_float * A,
 
 	/* set amax */
 	dist_sub[row] = MATH(fmax)(dist_sub[row],
-		MATH(abs)(Asub[row * kTileLD + col]));
+		MATH(fabs)(Asub[row * kTileLD + col]));
 	__syncthreads();
 
 	/* copy distances */
