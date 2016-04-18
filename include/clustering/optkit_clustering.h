@@ -13,7 +13,7 @@ typedef struct cluster_aid {
 	upsamplingvec a2c_tentative_full, a2c_tentative;
 	vector d_min_full, d_min, c_squared_full, c_squared;
         matrix D_full, D, A_reducible;
-        size_t reassigned, shift;
+        size_t reassigned;
 } cluster_aid;
 
 /* CPU/GPU-SPECIFIC IMPLEMENTATION */
@@ -27,7 +27,6 @@ void cluster_aid_alloc(cluster_aid * h, size_t size_A, size_t size_C,
 {
 	/* TODO: check A->order == C->order */
 	h->reassigned = 0;
-	h->shift = 0;
 	upsamplingvec_alloc(&(h->a2c_tentative_full), size_A, size_C);
 	vector_calloc(&(h->c_squared_full), size_C);
 	vector_calloc(&(h->d_min_full), size_A);
@@ -191,6 +190,14 @@ static void block_select(matrix * A_sub, matrix * C_sub,
 		0, 0, sizeA, sizeC);
 }
 
+/*
+ *
+ * n_blocks: number of k-means blocks
+ * blocksA: block sizes of matrix A
+ * blocksC: block sizes of matrix C
+ * change_tols: reassignment threshold by block
+ *
+ */
 void blockwise_kmeans(matrix * A, matrix * C, upsamplingvec * a2c,
 	vector * counts, const size_t n_blocks, const size_t * blocksA,
 	const size_t * blocksC, const size_t maxiter, const ok_float dist_tol,
