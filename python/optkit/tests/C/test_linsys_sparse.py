@@ -6,6 +6,7 @@ from ctypes import c_int, c_uint, Structure, byref, c_void_p
 from optkit.libs import DenseLinsysLibs, SparseLinsysLibs
 from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string, \
 							  DEFAULT_SHAPE
+from optkit.tests.C.base import OptkitCTestCase
 
 class SparseLibsTestCase(unittest.TestCase):
 	@classmethod
@@ -90,7 +91,7 @@ class SparseLibsTestCase(unittest.TestCase):
 			if VERBOSE_TEST:
 				print("sparselib version", sversion)
 
-class SparseMatrixTestCase(unittest.TestCase):
+class SparseMatrixTestCase(OptkitCTestCase):
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
@@ -105,6 +106,8 @@ class SparseMatrixTestCase(unittest.TestCase):
 	def setUp(self):
 		self.shape = DEFAULT_SHAPE
 
+	def tearDown(self):
+		self.free_all_vars()
 
 	@staticmethod
 	def make_vec_triplet(lib, size_):
@@ -146,6 +149,8 @@ class SparseMatrixTestCase(unittest.TestCase):
 
 			# rowmajor: calloc, free
 			lib.sp_matrix_calloc(A, m, n, nnz, dlib.enums.CblasRowMajor)
+			self.register_var('A', A, lib.sp_matrix_free)
+
 			self.assertEqual(A.size1, m)
 			self.assertEqual(A.size2, n)
 			self.assertEqual(A.nnz, nnz)
@@ -175,7 +180,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 				map(lambda i : self.assertEqual(A.ptr[i], 0),
 					xrange(2 + m + n))
 
-			lib.sp_matrix_free(A)
+			self.free_var('A')
 			self.assertEqual(A.size1, 0)
 			self.assertEqual(A.size2, 0)
 			self.assertEqual(A.nnz, 0)
@@ -208,6 +213,8 @@ class SparseMatrixTestCase(unittest.TestCase):
 						lib, shape, rowmajor=rowmajor)
 				B, B_py, B_ptr_p, B_ind_p, B_val_p = self.make_spmat_quintet(
 						lib, shape, rowmajor=rowmajor)
+				self.register_var('A', A, lib.sp_matrix_free)
+				self.register_var('B', B, lib.sp_matrix_free)
 
 				x_rand = np.random.rand(n)
 				A_copy = A_py.toarray()
@@ -268,6 +275,9 @@ class SparseMatrixTestCase(unittest.TestCase):
 				self.assertTrue(np.allclose(A_py * x_rand, B_py * x_rand,
 											DIGITS))
 
+				self.free_var('A')
+				self.free_var('B')
+
 				self.assertEqual(lib.sp_destroy_handle(hdl), 0)
 				self.assertEqual(dlib.ok_device_reset(), 0)
 
@@ -293,6 +303,9 @@ class SparseMatrixTestCase(unittest.TestCase):
 						lib, shape, rowmajor=rowmajor)
 				x, x_py, x_ptr = self.make_vec_triplet(dlib, n)
 				y, y_py, y_ptr = self.make_vec_triplet(dlib, m)
+				self.register_var('A', A, lib.sp_matrix_free)
+				self.register_var('x', x, dlib.vector_free)
+				self.register_var('y', y, dlib.vector_free)
 
 				x_rand = np.random.rand(n)
 				x_py[:] = x_rand[:]
@@ -322,6 +335,10 @@ class SparseMatrixTestCase(unittest.TestCase):
 				dlib.vector_memcpy_av(y_ptr, y, 1)
 				self.assertTrue(np.allclose(result, y_py, DIGITS))
 
+				self.free_var('x')
+				self.free_var('y')
+				self.free_var('A')
+
 				self.assertEqual(lib.sp_destroy_handle(hdl), 0)
 				self.assertEqual(dlib.ok_device_reset(), 0)
 
@@ -347,6 +364,9 @@ class SparseMatrixTestCase(unittest.TestCase):
 						lib, shape, rowmajor=rowmajor)
 				x, x_py, x_ptr = self.make_vec_triplet(dlib, n)
 				y, y_py, y_ptr = self.make_vec_triplet(dlib, m)
+				self.register_var('A', A, lib.sp_matrix_free)
+				self.register_var('x', x, dlib.vector_free)
+				self.register_var('y', y, dlib.vector_free)
 
 				amax = A_py.data.max()
 				x_rand = np.random.rand(n)
@@ -382,6 +402,10 @@ class SparseMatrixTestCase(unittest.TestCase):
 				dlib.vector_memcpy_av(y_ptr, y, 1)
 				self.assertTrue(np.allclose(y_py, A_copy.dot(x_rand), DIGITS))
 
+				self.free_var('x')
+				self.free_var('y')
+				self.free_var('A')
+
 				self.assertEqual(lib.sp_destroy_handle(hdl), 0)
 				self.assertEqual(dlib.ok_device_reset(), 0)
 
@@ -409,6 +433,11 @@ class SparseMatrixTestCase(unittest.TestCase):
 				y, y_py, y_ptr = self.make_vec_triplet(dlib, m)
 				d, d_py, d_ptr = self.make_vec_triplet(dlib, m)
 				e, e_py, e_ptr = self.make_vec_triplet(dlib, n)
+				self.register_var('A', A, lib.sp_matrix_free)
+				self.register_var('x', x, dlib.vector_free)
+				self.register_var('y', y, dlib.vector_free)
+				self.register_var('d', d, dlib.vector_free)
+				self.register_var('e', e, dlib.vector_free)
 
 				amax = A_py.data.max()
 				x_rand = np.random.rand(n)
@@ -437,6 +466,12 @@ class SparseMatrixTestCase(unittest.TestCase):
 				dlib.vector_memcpy_av(y_ptr, y, 1)
 				result = (np.diag(d_py) * A_py).dot(e_py * x_py)
 				self.assertTrue(np.allclose(y_py,  result, DIGITS))
+
+				self.free_var('x')
+				self.free_var('y')
+				self.free_var('d')
+				self.free_var('e')
+				self.free_var('A')
 
 				self.assertEqual(lib.sp_destroy_handle(hdl), 0)
 				self.assertEqual(dlib.ok_device_reset(), 0)

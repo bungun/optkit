@@ -6,6 +6,7 @@ from optkit.libs import DenseLinsysLibs, ProxLibs
 from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string, \
 							  DEFAULT_SHAPE, significant_digits
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
+from optkit.tests.C.base import OptkitCTestCase
 
 class ProxLibsTestCase(unittest.TestCase):
 	@classmethod
@@ -77,7 +78,7 @@ class ProxLibsTestCase(unittest.TestCase):
 			if VERBOSE_TEST:
 				print("proxlib version", pxversion)
 
-class ProxTestCase(unittest.TestCase):
+class ProxTestCase(OptkitCTestCase):
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
@@ -117,10 +118,11 @@ class ProxTestCase(unittest.TestCase):
 			self.assertEqual(f.size, 0)
 
 			lib.function_vector_calloc(f, m)
+			self.register_var('f', f, lib.function_vector_free)
 			self.assertEqual(f.size, m)
 
 			# free
-			lib.function_vector_free(f)
+			self.free_var('f')
 			self.assertEqual(f.size, 0)
 
 			self.assertEqual(dlib.ok_device_reset(), 0)
@@ -145,6 +147,7 @@ class ProxTestCase(unittest.TestCase):
 			DIGITS = 5 if lib.FLOAT else 7
 
 			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
+			self.register_var('f', f, lib.function_vector_free)
 
 			# initialize to default values
 			hlast = 0
@@ -204,6 +207,8 @@ class ProxTestCase(unittest.TestCase):
 				dlast = d
 				elast = e
 
+			self.free_var('f')
+
 	def test_math(self):
 		m, n = self.shape
 		a = 1 + np.random.rand(m)
@@ -226,8 +231,12 @@ class ProxTestCase(unittest.TestCase):
 			DIGITS = 5 if lib.FLOAT else 7
 
 			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
+			self.register_var('f', f, lib.function_vector_free)
+
 			v = dlib.vector(0, 0, None)
 			dlib.vector_calloc(v, m)
+			self.register_var('v', v, lib.vector_free)
+
 			v_py = np.zeros(m).astype(dlib.pyfloat)
 			v_ptr = v_py.ctypes.data_as(dlib.ok_float_p)
 
@@ -279,8 +288,8 @@ class ProxTestCase(unittest.TestCase):
 				self.assertAlmostEqual(significant_digits(f_list[i].e),
 									   significant_digits(e[i]), DIGITS)
 
-			lib.function_vector_free(f)
-			dlib.vector_free(v)
+			self.free_var('f')
+			self.free_var('v')
 
 	def test_eval(self):
 		m, n = self.shape
@@ -303,15 +312,19 @@ class ProxTestCase(unittest.TestCase):
 			DIGITS = 5 if lib.FLOAT else 7
 
 			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
+			self.register_var('f', f, lib.function_vector_free)
+
 			x = dlib.vector(0, 0, None)
 			x_py = np.zeros(m).astype(dlib.pyfloat)
 			x_ptr = x_py.ctypes.data_as(dlib.ok_float_p)
 			dlib.vector_calloc(x, m)
+			self.register_var('x', x, lib.vector_free)
 
 			xout = dlib.vector(0, 0, None)
 			xout_py = np.zeros(m).astype(dlib.pyfloat)
 			xout_ptr = xout_py.ctypes.data_as(dlib.ok_float_p)
 			dlib.vector_calloc(xout, m)
+			self.register_var('xout', xout, lib.vector_free)
 
 			# populate
 			x_py += x_rand
@@ -350,4 +363,6 @@ class ProxTestCase(unittest.TestCase):
 				else:
 					self.assertTrue(np.allclose(xout_py, prox_py, 2))
 
-			lib.function_vector_free(f)
+			self.free_var('f')
+			self.free_var('x')
+			self.free_var('xout')

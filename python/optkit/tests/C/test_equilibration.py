@@ -6,8 +6,9 @@ from optkit.libs import DenseLinsysLibs, SparseLinsysLibs, EquilibrationLibs, \
 						OperatorLibs
 from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
 import optkit.tests.C.operator_helper as op_helper
+from optkit.tests.C.base import OptkitCTestCase
 
-class EquilLibsTestCase(unittest.TestCase):
+class EquilLibsTestCase(OptkitCTestCase):
 	"""
 		Equilibrate input A_in as
 
@@ -63,6 +64,9 @@ class EquilLibsTestCase(unittest.TestCase):
 
 	def setUp(self):
 		pass
+
+	def tearDown(self):
+		self.free_all_vars()
 
 	@property
 	def op_keys(self):
@@ -315,6 +319,10 @@ class EquilLibsTestCase(unittest.TestCase):
 			dlib.vector_calloc(y, m)
 			dlib.vector_calloc(d, m)
 			dlib.vector_calloc(e, n)
+			self.register_var('x', x, dlib.vector_free)
+			self.register_var('y', y, dlib.vector_free)
+			self.register_var('d', d, dlib.vector_free)
+			self.register_var('e', e, dlib.vector_free)
 
 			# declare Py vectors, and corresponding pointers
 			x_py = np.zeros(n).astype(dlib.pyfloat)
@@ -334,12 +342,12 @@ class EquilLibsTestCase(unittest.TestCase):
 			# self.op_keys
 			for op_ in self.op_keys:
 				print "opeartor sinkhorn, operator type:", op_
-				(
-						A_, gen_operator, gen_args, release_operator,
-						release_args
-				) = self.get_opmethods(op_, dlib, slib, olib)
+				A_, gen_operator, gen_args = self.get_opmethods(op_, dlib,
+																slib, olib)
 
-				A, o = gen_operator(*gen_args)
+				A, o, freeA = gen_operator(*gen_args)
+				self.register_var('A', A, freeA)
+				self.register_var('o', o, o.contents.free)
 
 				# equilibrate operator
 				status = lib.operator_regularized_sinkhorn(hdl, o, d, e, 1.)
@@ -359,17 +367,17 @@ class EquilLibsTestCase(unittest.TestCase):
 				self.assertTrue(np.linalg.norm(A_eqx - DAEx) <=
 								ATOLN + RTOL * np.linalg.norm(DAEx))
 
-				release_args += [A, o]
-				release_operator(*release_args)
+				self.free_var('A')
+				self.free_var('o')
 
 			# -----------------------------------------
 			# free x, y, d, e
-			dlib.vector_free(x)
-			dlib.vector_free(y)
-			dlib.vector_free(d)
-			dlib.vector_free(e)
+			self.free_var('x')
+			self.free_var('y')
+			self.free_var('d')
+			self.free_var('e')
 
-			dlib.blas_destroy_handle(byref(hdl))
+			dlib.blas_destroy_handle(hdl)
 			dlib.ok_device_reset()
 
 	def test_operator_equil(self):
@@ -408,6 +416,10 @@ class EquilLibsTestCase(unittest.TestCase):
 			dlib.vector_calloc(y, m)
 			dlib.vector_calloc(d, m)
 			dlib.vector_calloc(e, n)
+			self.register_var('x', x, dlib.vector_free)
+			self.register_var('y', y, dlib.vector_free)
+			self.register_var('d', d, dlib.vector_free)
+			self.register_var('e', e, dlib.vector_free)
 
 			# declare Py vectors, and corresponding pointers
 			x_py = np.zeros(n).astype(dlib.pyfloat)
@@ -427,12 +439,12 @@ class EquilLibsTestCase(unittest.TestCase):
 			# self.op_keys
 			for op_ in self.op_keys:
 				print "opeartor sinkhorn, operator type:", op_
-				(
-						A_, gen_operator, gen_args, release_operator,
-						release_args
-				) = self.get_opmethods(op_, dlib, slib, olib)
+				A_, gen_operator, gen_args = self.get_opmethods(op_, dlib,
+																slib, olib)
 
-				A, o = gen_operator(*gen_args)
+				A, o, freeA = gen_operator(*gen_args)
+				self.register_var('A', A, freeA)
+				self.register_var('o', o, o.contents.free)
 
 				# equilibrate operator
 				status = lib.operator_equilibrate(hdl, o, d, e, 1.)
@@ -456,17 +468,17 @@ class EquilLibsTestCase(unittest.TestCase):
 				# self.assertTrue(np.linalg.norm(A_eqx - DAEx) <=
 				# 				ATOLN + RTOL * np.linalg.norm(DAEx))
 
-				release_args += [A, o]
-				release_operator(*release_args)
+				self.free_var('A')
+				self.free_var('o')
 
 			# -----------------------------------------
 			# free x, y, d, e
-			dlib.vector_free(x)
-			dlib.vector_free(y)
-			dlib.vector_free(d)
-			dlib.vector_free(e)
+			self.free_var('x')
+			self.free_var('y')
+			self.free_var('d')
+			self.free_var('e')
 
-			dlib.blas_destroy_handle(byref(hdl))
+			dlib.blas_destroy_handle(hdl)
 			dlib.ok_device_reset()
 
 	def test_operator_norm(self):
@@ -496,12 +508,12 @@ class EquilLibsTestCase(unittest.TestCase):
 			# self.op_keys
 			for op_ in self.op_keys:
 				print "indirect projection, operator type:", op_
-				(
-						A_, gen_operator, gen_args, release_operator,
-						release_args
-				) = self.get_opmethods(op_, dlib, slib, olib)
+				A_, gen_operator, gen_args = self.get_opmethods(op_, dlib,
+																slib, olib)
 
-				A, o = gen_operator(*gen_args)
+				A, o, freeA = gen_operator(*gen_args)
+				self.register_var('A', A, freeA)
+				self.register_var('o', o, o.contents.free)
 
 				# estimate operator norm
 				pynorm = np.linalg.norm(A_)
@@ -510,9 +522,8 @@ class EquilLibsTestCase(unittest.TestCase):
 				self.assertTrue(np.abs(pynorm - cnorm) <=
 								ATOL + RTOL * pynorm)
 
-				release_args += [A, o]
-				release_operator(*release_args)
+				self.free_var('A')
+				self.free_var('o')
 
-
-			dlib.blas_destroy_handle(byref(hdl))
+			dlib.blas_destroy_handle(hdl)
 			dlib.ok_device_reset()

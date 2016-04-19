@@ -10,7 +10,6 @@
 - TODO: append version numbers to .so, check version numbers when loading libs in python
 - TODO: operator typesafe equilibration
 - TODO: operator IO
-- TODO: memory cleanup when tests fail 
 
 ###v0.0.4 (beta)
 - migrated tests to unittests
@@ -22,7 +21,8 @@
 - approximate projection (with CGLS) for abstract linear operators
 - operator POGS for: dense, sparse
 - matrix, vector reductions (min, max, indmin); 
-- TODO: debug/test clustering
+- memory cleanup when tests fail 
+- TODO: test clustering
 
 ###v0.0.3 (current)
 - CPU Sparse Linear Algebra

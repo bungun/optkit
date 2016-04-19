@@ -295,6 +295,16 @@ void indvector_memcpy_va(indvector * v, const size_t * y, size_t stride_y)
 void indvector_memcpy_av(size_t * x, const indvector * v, size_t stride_x)
 	{ vector_memcpy_av_<size_t>(x, v, stride_x); }
 
+void indvector_print(const indvector * v)
+{
+	uint i;
+	T v_host[v->size];
+	indvector_memcpy_av(v_host, v, 1);
+	for (i = 0; i < v->size; ++i)
+		printf("%zu ", v_host[i]);
+	printf("\n");
+}
+
 size_t indvector_indmin(const indvector * v)
 	{ return vector_indmin_<size_t>(v, (size_t) INT_MAX); }
 

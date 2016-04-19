@@ -1,0 +1,26 @@
+def optkit_print_error(err, print_success=False):
+	if err == 0L:
+		if print_success:
+			print '\nOPTKIT SUCCESS'
+	elif err == 2L:
+		print '\nOPTKIT ERROR'
+	elif err == 2L:
+		print '\nOPTKIT ERROR CUDA'
+	elif err == 3L:
+		print '\nOPTKIT ERROR CUBLAS'
+	elif err == 4L:
+		print '\nOPTKIT ERROR CUSPARSE'
+	elif err == 10L:
+		print '\nOPTKIT ERROR UNALLOCATED'
+	elif err == 11L:
+		print '\nOPTKIT ERROR OVERWRITE'
+	elif err == 100L:
+		print '\nOPTKIT ERROR OUT OF BOUNDS'
+	elif err == 101L:
+		print '\nOPTKIT ERROR DIMENSION MISMATCH'
+	elif err == 102L:
+		print '\nOPTKIT ERROR LAYOUT MISMATCH'
+	else:
+		print '\nunrecognized error code: {}'.format(err)
+
+	return err

@@ -5,9 +5,9 @@ from scipy.sparse import csr_matrix, csc_matrix
 from ctypes import c_void_p, byref, CFUNCTYPE
 from optkit.libs import DenseLinsysLibs, SparseLinsysLibs, OperatorLibs
 from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
-import pdb
+from optkit.tests.C.base import OptkitCTestCase
 
-class OperatorLibsTestCase(unittest.TestCase):
+class OperatorLibsTestCase(OptkitCTestCase):
 	"""TODO: docstring"""
 
 	@classmethod
@@ -49,6 +49,9 @@ class OperatorLibsTestCase(unittest.TestCase):
 	def setUp(self):
 		pass
 
+	def tearDown(self):
+		self.free_all_vars()
+
 	def validate_operator(self, operator_, m, n, OPERATOR_KIND):
 		o = operator_
 		self.assertEqual(o.size1, m)
@@ -77,12 +80,15 @@ class OperatorLibsTestCase(unittest.TestCase):
 		x_ptr = x_.ctypes.data_as(dlib.ok_float_p)
 		x = dlib.vector(0, 0, None)
 		dlib.vector_calloc(x, n)
+		self.register_var('x', x, dlib.vector_free)
+
 		dlib.vector_memcpy_va(x, x_ptr, 1)
 
 		y_ = np.zeros(m).astype(dlib.pyfloat)
 		y_ptr = y_.ctypes.data_as(dlib.ok_float_p)
 		y = dlib.vector(0, 0, None)
 		dlib.vector_calloc(y, m)
+		self.register_var('y', y, dlib.vector_free)
 
 		# test Ax
 		Ax = A_py.dot(x_)
@@ -115,8 +121,8 @@ class OperatorLibsTestCase(unittest.TestCase):
 		self.assertTrue(np.linalg.norm(x_ - Atypx) <=
 						ATOLN + RTOL * np.linalg.norm(Atypx))
 
-		dlib.vector_free(x)
-		dlib.vector_free(y)
+		self.free_var('x')
+		self.free_var('y')
 
 	def test_libs_exist(self):
 		dlibs = []
@@ -154,12 +160,15 @@ class OperatorLibsTestCase(unittest.TestCase):
 
 				A = dlib.matrix(0, 0, 0, None, order)
 				dlib.matrix_calloc(A, m, n, order)
+				self.register_var('A', A, dlib.matrix_free)
 
 				o = lib.dense_operator_alloc(A)
+				self.register_var('o', o, o.contents.free)
 				self.validate_operator(o.contents, m, n, lib.enums.DENSE)
-				lib.operator_free(o)
 
-				dlib.matrix_free(A)
+				self.free('o')
+				self.free('A')
+
 				self.assertEqual(dlib.ok_device_reset(), 0)
 
 	def test_dense_operator(self):
@@ -189,13 +198,18 @@ class OperatorLibsTestCase(unittest.TestCase):
 				A_ptr = A_.ctypes.data_as(dlib.ok_float_p)
 				A = dlib.matrix(0, 0, 0, None, order)
 				dlib.matrix_calloc(A, m, n, order)
+				self.register_var('A', A, dlib.matrix_free)
+
 				dlib.matrix_memcpy_ma(A, A_ptr, order)
 
 				o = lib.dense_operator_alloc(A)
-				self.exercise_operator(dlib, o.contents, A_, TOL)
-				lib.operator_free(o)
+				self.register_var('o', o, o.contents.free)
 
-				dlib.matrix_free(A)
+				self.exercise_operator(dlib, o.contents, A_, TOL)
+
+				self.free_var('o')
+				self.free_var('A')
+
 				self.assertEqual(dlib.ok_device_reset(), 0)
 
 	def test_sparse_alloc_free(self):
@@ -221,12 +235,15 @@ class OperatorLibsTestCase(unittest.TestCase):
 
 				A = slib.sparse_matrix(0, 0, 0, 0, None, None, None, order)
 				slib.sp_matrix_calloc(A, m, n, self.nnz, order)
+				self.register_var('A', A, slib.sp_matrix_free)
 
 				o = lib.sparse_operator_alloc(A)
+				self.register_var('o', o, o.contents.free)
 				self.validate_operator(o.contents, m, n, enum)
-				lib.operator_free(o)
 
-				slib.sp_matrix_free(A)
+				self.free_var('o')
+				self.free_var('A')
+
 				self.assertEqual(dlib.ok_device_reset(), 0)
 
 	def test_sparse_operator(self):
@@ -263,13 +280,17 @@ class OperatorLibsTestCase(unittest.TestCase):
 
 				A = slib.sparse_matrix(0, 0, 0, 0, None, None, None, order)
 				slib.sp_matrix_calloc(A, m, n, A_sp.nnz, order)
+				self.register_var('A', A, slib.sp_matrix_free)
+
 				slib.sp_matrix_memcpy_ma(hdl, A, A_val, A_ind, A_ptr, order)
 
 				o = lib.sparse_operator_alloc(A)
-				self.exercise_operator(dlib, o.contents, A_, TOL)
-				lib.operator_free(o)
+				self.register_var('o', o, o.contents.free)
 
-				slib.sp_matrix_free(A)
+				self.exercise_operator(dlib, o.contents, A_, TOL)
+
+				self.free_var('o')
+				self.free_var('A')
 
 				self.assertEqual(slib.sp_destroy_handle(hdl), 0)
 				self.assertEqual(dlib.ok_device_reset(), 0)
@@ -291,12 +312,16 @@ class OperatorLibsTestCase(unittest.TestCase):
 			for rowmajor in (True, False):
 				d = dlib.vector(0, 0, None)
 				dlib.vector_calloc(d, n)
+				self.register_var('d', d, dlib.vector_free)
 
 				o = lib.diagonal_operator_alloc(d)
-				self.validate_operator(o.contents, n, n, lib.enums.DIAGONAL)
-				lib.operator_free(o)
+				self.register_var('o', o, o.contents.free)
 
-				dlib.vector_free(d)
+				self.validate_operator(o.contents, n, n, lib.enums.DIAGONAL)
+
+				self.free_var('o')
+				self.free_var('d')
+
 				self.assertEqual(dlib.ok_device_reset(), 0)
 
 	def test_diagonal_operator(self):
@@ -322,11 +347,16 @@ class OperatorLibsTestCase(unittest.TestCase):
 				d_ptr = d_.ctypes.data_as(dlib.ok_float_p)
 				d = dlib.vector(0, 0, None)
 				dlib.vector_calloc(d, n)
+				self.register_var('d', d, dlib.vector_free)
+
 				dlib.vector_memcpy_va(d, d_ptr, 1)
 
 				o = lib.diagonal_operator_alloc(d)
-				self.exercise_operator(dlib, o.contents, np.diag(d_), TOL)
-				lib.operator_free(o)
+				self.register_var('o', o, o.contents.free)
 
-				dlib.vector_free(d)
+				self.exercise_operator(dlib, o.contents, np.diag(d_), TOL)
+
+				self.free_var('o')
+				self.free_var('d')
+
 				self.assertEqual(dlib.ok_device_reset(), 0)

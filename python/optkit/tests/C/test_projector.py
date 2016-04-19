@@ -6,6 +6,7 @@ from optkit.libs import DenseLinsysLibs, SparseLinsysLibs, EquilibrationLibs, \
 						ProjectorLibs, OperatorLibs
 from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
 import optkit.tests.C.operator_helper as op_helper
+from optkit.tests.C.base import OptkitCTestCase
 
 class ProjectorLibsTestCase(unittest.TestCase):
 	"""
@@ -65,7 +66,6 @@ class DirectProjectorTestCase(unittest.TestCase):
 
 		self.x_test = np.random.rand(self.shape[1])
 		self.y_test = np.random.rand(self.shape[0])
-
 
 	@staticmethod
 	def project(projectorlib, denselib, order, A, x, y,
@@ -300,7 +300,7 @@ class DirectProjectorTestCase(unittest.TestCase):
 					self.assertTrue(np.allclose(self.A_test.dot(x_proj),
 												y_proj, DIGITS))
 
-class IndirectProjectorTestCase(unittest.TestCase):
+class IndirectProjectorTestCase(OptktiCTestCase):
 	"""
 	TODO: docstring
 	"""
@@ -317,6 +317,9 @@ class IndirectProjectorTestCase(unittest.TestCase):
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
+
+	def tearDown(self):
+		self.free_all_vars()
 
 	def setUp(self):
 		self.shape = None
@@ -350,14 +353,10 @@ class IndirectProjectorTestCase(unittest.TestCase):
 			A = self.A_test
 			gen = op_helper.gen_dense_operator
 			arg_gen = [denselib, operatorlib, A]
-			release = op_helper.release_dense_operator
-			arg_release = [denselib, operatorlib]
 		elif opkey == 'sparse':
 			A = self.A_test_sparse
 			gen = op_helper.gen_sparse_operator
 			arg_gen = [denselib, sparselib, operatorlib, A]
-			release = op_helper.release_sparse_operator
-			arg_release = [sparselib, operatorlib]
 		else:
 			raise ValueError('invalid operator type')
 
@@ -381,22 +380,24 @@ class IndirectProjectorTestCase(unittest.TestCase):
 			# self.op_keys
 			for op_ in self.op_keys:
 				print "test indirect projector alloc, operator type:", op_
-				(
-						A_, gen_operator, gen_args, release_operator,
-						release_args
-				) = self.get_opmethods(op_, dlib, slib, olib)
+				A_, gen_operator, gen_args = self.get_opmethods(op_, dlib,
+																slib, olib)
 
-				A, o = gen_operator(*gen_args)
+				A, o, freeA = gen_operator(*gen_args)
+				self.register_var('A', A, freeA)
+				self.register_var('o', o, o.contents.free)
 
 				p = plib.indirect_projector(None, None)
 
 				plib.indirect_projector_alloc(p, o)
+				self.register_var('p', p, plib.indirect_projector_free)
+
 				self.assertNotEqual(p.A, 0)
 				self.assertNotEqual(p.cgls_work, 0)
-				plib.indirect_projector_free(p)
 
-				release_args += [A, o]
-				release_operator(*release_args)
+				self.free_var('p')
+				self.free_var('A')
+				self.free_var('o')
 
 	def test_projection(self):
 		m, n = self.shape
@@ -426,11 +427,13 @@ class IndirectProjectorTestCase(unittest.TestCase):
 			# inputs
 			x = dlib.vector(0, 0, None)
 			dlib.vector_calloc(x, n)
+			self.register_var('x', x, dlib.vector_free)
 			x_ = np.zeros(n).astype(dlib.pyfloat)
 			x_ptr = x_.ctypes.data_as(dlib.ok_float_p)
 
 			y = dlib.vector(0, 0, None)
 			dlib.vector_calloc(y, m)
+			self.register_var('y', y, dlib.vector_free)
 			y_ = np.zeros(m).astype(dlib.pyfloat)
 			y_ptr = y_.ctypes.data_as(dlib.ok_float_p)
 
@@ -443,11 +446,13 @@ class IndirectProjectorTestCase(unittest.TestCase):
 			# outputs
 			x_out = dlib.vector(0, 0, None)
 			dlib.vector_calloc(x_out, n)
+			self.register_var('x_out', x_out, dlib.vector_free)
 			x_proj = np.zeros(n).astype(dlib.pyfloat)
 			x_p_ptr = x_proj.ctypes.data_as(dlib.ok_float_p)
 
 			y_out = dlib.vector(0, 0, None)
 			dlib.vector_calloc(y_out, m)
+			self.register_var('y_out', y_out, dlib.vector_free)
 			y_proj = np.zeros(m).astype(dlib.pyfloat)
 			y_p_ptr = y_proj.ctypes.data_as(dlib.ok_float_p)
 
@@ -455,18 +460,19 @@ class IndirectProjectorTestCase(unittest.TestCase):
 			# test projection for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "indirect projection, operator type:", op_
-				(
-						A_, gen_operator, gen_args, release_operator,
-						release_args
-				) = self.get_opmethods(op_, dlib, slib, olib)
+				A_, gen_operator, gen_args = self.get_opmethods(op_, dlib,
+																slib, olib)
 
-				A, o = gen_operator(*gen_args)
+				A, o, freeA = gen_operator(*gen_args)
+				self.register_var('A', A, freeA)
+				self.register_var('o', o, o.contents.free)
 
 				p = plib.indirect_projector(None, None)
 
 				plib.indirect_projector_alloc(p, o)
+				self.register_var('p', p, plib.indrect_projector_free)
 				plib.indirect_projector_project(hdl, p, x, y, x_out, y_out)
-				plib.indirect_projector_free(p)
+				self.free_var('p')
 
 				dlib.vector_memcpy_av(x_p_ptr, x_out, 1)
 				dlib.vector_memcpy_av(y_p_ptr, y_out, 1)
@@ -475,16 +481,19 @@ class IndirectProjectorTestCase(unittest.TestCase):
 						np.linalg.norm(A_.dot(x_proj) - y_proj) <=
 						ATOLM + RTOL * np.linalg.norm(y_proj))
 
-				release_args += [A, o]
-				release_operator(*release_args)
+				self.free_var('A')
+				self.free_var('o')
 
 			# -----------------------------------------
 			# free x, y
-			dlib.vector_free(x)
-			dlib.vector_free(y)
+			self.free_var('x')
+			self.free_var('y')
+			self.free_var('x_out')
+			self.free_var('y_out')
+
 			dlib.blas_destroy_handle(byref(hdl))
 
-class DenseDirectProjectorTestCase(unittest.TestCase):
+class DenseDirectProjectorTestCase(OptkitCTestCase):
 	"""
 	TODO: docstring
 	"""
@@ -514,6 +523,9 @@ class DenseDirectProjectorTestCase(unittest.TestCase):
 		self.x_test = np.random.rand(self.shape[1])
 		self.y_test = np.random.rand(self.shape[0])
 
+	def tearDown(self):
+		self.free_all_vars()
+
 	def test_alloc_free(self):
 		m, n = self.shape
 
@@ -535,11 +547,13 @@ class DenseDirectProjectorTestCase(unittest.TestCase):
 				A = dlib.matrix(0, 0, 0, None, order)
 
 				dlib.matrix_calloc(A, m, n, order)
+				self.register_var('A', A, dlib.matrix_free)
 
 				A_ += self.A_test
 				dlib.matrix_memcpy_ma(A, A_ptr, order)
 
 				p = plib.dense_direct_projector_alloc(A)
+				self.register_var('p', p, plib.projector_free)
 				self.assertEqual(p.contents.kind, plib.enums.DENSE_DIRECT)
 				self.assertEqual(p.contents.size1, m)
 				self.assertEqual(p.contents.size2, n)
@@ -547,9 +561,10 @@ class DenseDirectProjectorTestCase(unittest.TestCase):
 				self.assertNotEqual(p.contents.initialize, 0)
 				self.assertNotEqual(p.contents.project, 0)
 				self.assertNotEqual(p.contents.free, 0)
-				plib.projector_free(p)
 
-				dlib.matrix_free(A)
+				self.free_var('p')
+				self.free_var('A')
+
 			dlib.ok_device_reset()
 
 
@@ -578,11 +593,13 @@ class DenseDirectProjectorTestCase(unittest.TestCase):
 			# inputs
 			x = dlib.vector(0, 0, None)
 			dlib.vector_calloc(x, n)
+			self.register_var('x', x, dlib.vector_free)
 			x_ = np.zeros(n).astype(dlib.pyfloat)
 			x_ptr = x_.ctypes.data_as(dlib.ok_float_p)
 
 			y = dlib.vector(0, 0, None)
 			dlib.vector_calloc(y, m)
+			self.register_var('y', y, dlib.vector_free)
 			y_ = np.zeros(m).astype(dlib.pyfloat)
 			y_ptr = y_.ctypes.data_as(dlib.ok_float_p)
 
@@ -595,11 +612,15 @@ class DenseDirectProjectorTestCase(unittest.TestCase):
 			# outputs
 			x_out = dlib.vector(0, 0, None)
 			dlib.vector_calloc(x_out, n)
+			self.register_var('x_out', x_out, dlib.vector_free)
+
 			x_proj = np.zeros(n).astype(dlib.pyfloat)
 			x_p_ptr = x_proj.ctypes.data_as(dlib.ok_float_p)
 
 			y_out = dlib.vector(0, 0, None)
 			dlib.vector_calloc(y_out, m)
+			self.register_var('y_out', y_out, dlib.vector_free)
+
 			y_proj = np.zeros(m).astype(dlib.pyfloat)
 			y_p_ptr = y_proj.ctypes.data_as(dlib.ok_float_p)
 
@@ -614,16 +635,19 @@ class DenseDirectProjectorTestCase(unittest.TestCase):
 				A_ptr = A_.ctypes.data_as(dlib.ok_float_p)
 				A = dlib.matrix(0, 0, 0, None, order)
 				dlib.matrix_calloc(A, m, n, order)
+				self.register_var('A', A, dlib.matrix_free)
 
 				A_ += self.A_test
 				dlib.matrix_memcpy_ma(A, A_ptr, order)
 
 				p = plib.dense_direct_projector_alloc(A)
+				self.register_var('p', p, plib.projector_free)
 				p.contents.initialize(p.contents.data, 0)
 
 				p.contents.project(p.contents.data, x, y, x_out, y_out,
 								   TOL_PLACEHOLDER)
-				plib.projector_free(p)
+
+				self.free_var('p')
 
 				dlib.vector_memcpy_av(x_p_ptr, x_out, 1)
 				dlib.vector_memcpy_av(y_p_ptr, y_out, 1)
@@ -632,16 +656,18 @@ class DenseDirectProjectorTestCase(unittest.TestCase):
 						np.linalg.norm(A_.dot(x_proj) - y_proj) <=
 						ATOLM + RTOL * np.linalg.norm(y_proj))
 
-				dlib.matrix_free(A)
+				self.free_var('A')
 
 			# -----------------------------------------
 			# free x, y
-			dlib.vector_free(x)
-			dlib.vector_free(y)
+			self.free_var('x')
+			self.free_var('y')
+			self.free_var('x_out')
+			self.free_var('y_out')
 			dlib.blas_destroy_handle(byref(hdl))
 			dlib.ok_device_reset()
 
-class GenericIndirectProjectorTestCase(unittest.TestCase):
+class GenericIndirectProjectorTestCase(OptkitCTestCase):
 	"""
 	TODO: docstring
 	"""
@@ -681,6 +707,9 @@ class GenericIndirectProjectorTestCase(unittest.TestCase):
 		self.x_test = np.random.rand(self.shape[1])
 		self.y_test = np.random.rand(self.shape[0])
 		self.nnz = sum(sum(self.A_test_sparse > 0))
+
+	def tearDown(self):
+		self.free_all_vars()
 
 	@property
 	def op_keys(self):
@@ -723,14 +752,15 @@ class GenericIndirectProjectorTestCase(unittest.TestCase):
 			# test projection for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "test indirect projector alloc, operator type:", op_
-				(
-						A_, gen_operator, gen_args, release_operator,
-						release_args
-				) = self.get_opmethods(op_, dlib, slib, olib)
+				A_, gen_operator, gen_args = self.get_opmethods(op_, dlib,
+																slib, olib)
 
-				A, o = gen_operator(*gen_args)
+				A, o, freeA = gen_operator(*gen_args)
+				self.register_var('A', A, freeA)
+				self.register_var('o', o, o.contents.free)
 
 				p = plib.indirect_projector_generic_alloc(o)
+				self.register_var('p', p, plib.projector_free)
 				self.assertEqual(p.contents.kind, plib.enums.INDIRECT)
 				self.assertEqual(p.contents.size1, m)
 				self.assertEqual(p.contents.size2, n)
@@ -738,10 +768,11 @@ class GenericIndirectProjectorTestCase(unittest.TestCase):
 				self.assertNotEqual(p.contents.initialize, 0)
 				self.assertNotEqual(p.contents.project, 0)
 				self.assertNotEqual(p.contents.free, 0)
-				plib.projector_free(p)
+				self.free_var('p')
 
-				release_args += [A, o]
-				release_operator(*release_args)
+				self.free_var('A')
+				self.free_var('o')
+
 			dlib.ok_device_reset()
 
 	def test_projection(self):
@@ -773,11 +804,13 @@ class GenericIndirectProjectorTestCase(unittest.TestCase):
 			# inputs
 			x = dlib.vector(0, 0, None)
 			dlib.vector_calloc(x, n)
+			self.register_var('x', x, dlib.vector_free)
 			x_ = np.zeros(n).astype(dlib.pyfloat)
 			x_ptr = x_.ctypes.data_as(dlib.ok_float_p)
 
 			y = dlib.vector(0, 0, None)
 			dlib.vector_calloc(y, m)
+			self.register_var('y', y, dlib.vector_free)
 			y_ = np.zeros(m).astype(dlib.pyfloat)
 			y_ptr = y_.ctypes.data_as(dlib.ok_float_p)
 
@@ -790,11 +823,13 @@ class GenericIndirectProjectorTestCase(unittest.TestCase):
 			# outputs
 			x_out = dlib.vector(0, 0, None)
 			dlib.vector_calloc(x_out, n)
+			self.register_var('x_out', x_out, dlib.vector_free)
 			x_proj = np.zeros(n).astype(dlib.pyfloat)
 			x_p_ptr = x_proj.ctypes.data_as(dlib.ok_float_p)
 
 			y_out = dlib.vector(0, 0, None)
 			dlib.vector_calloc(y_out, m)
+			self.register_var('y_out', y_out, dlib.vector_free)
 			y_proj = np.zeros(m).astype(dlib.pyfloat)
 			y_p_ptr = y_proj.ctypes.data_as(dlib.ok_float_p)
 
@@ -802,16 +837,17 @@ class GenericIndirectProjectorTestCase(unittest.TestCase):
 			# test projection for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "indirect projection, operator type:", op_
-				(
-						A_, gen_operator, gen_args, release_operator,
-						release_args
-				) = self.get_opmethods(op_, dlib, slib, olib)
+				A_, gen_operator, gen_args = self.get_opmethods(op_, dlib,
+																slib, olib)
 
-				A, o = gen_operator(*gen_args)
+				A, o, freeA = gen_operator(*gen_args)
+				self.register_var('A', A, freeA)
+				self.register_var('o', o, o.contents.free)
 
 				p = plib.indirect_projector_generic_alloc(o)
+				self.register_var('p', p, plib.projector_free)
 				p.contents.project(p.contents.data, x, y, x_out, y_out, TOL_CG)
-				plib.projector_free(p)
+				self.free_var('p')
 
 				dlib.vector_memcpy_av(x_p_ptr, x_out, 1)
 				dlib.vector_memcpy_av(y_p_ptr, y_out, 1)
@@ -820,12 +856,14 @@ class GenericIndirectProjectorTestCase(unittest.TestCase):
 						np.linalg.norm(A_.dot(x_proj) - y_proj) <=
 						ATOLM + RTOL * np.linalg.norm(y_proj))
 
-				release_args += [A, o]
-				release_operator(*release_args)
+				self.free_var('A')
+				self.free_var('o')
 
 			# -----------------------------------------
 			# free x, y
-			dlib.vector_free(x)
-			dlib.vector_free(y)
+			self.free_var('x')
+			self.free_var('y')
+			self.free_var('x_out')
+			self.free_var('y_out')
 			dlib.blas_destroy_handle(byref(hdl))
 			dlib.ok_device_reset()

@@ -27,7 +27,7 @@ class ClusteringLibs(object):
 			return lib
 		else:
 			ok_float = denselib.ok_float
-			c_size_t_p = densleib.c_size_t_p
+			c_size_t_p = denselib.c_size_t_p
 			vector = denselib.vector
 			vector_p = denselib.vector_p
 			indvector_p = denselib.indvector_p

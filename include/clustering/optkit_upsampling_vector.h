@@ -12,7 +12,7 @@ extern "C" {
 typedef struct upsamplingvec {
 	size_t size1, size2, stride;
 	size_t * indices;
-	indvector vec;
+	indvector * vec;
 } upsamplingvec;
 
 ok_status upsamplingvec_alloc(upsamplingvec * u, size_t size1, size_t size2);

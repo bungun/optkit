@@ -6,6 +6,7 @@ from optkit.libs import DenseLinsysLibs, SparseLinsysLibs
 from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string, \
 							  DEFAULT_SHAPE, DEFAULT_MATRIX_PATH, \
 							  significant_digits
+from optkit.tests.C.base import OptkitCTestCase
 
 class DenseLibsTestCase(unittest.TestCase):
 	@classmethod
@@ -96,7 +97,7 @@ class DenseLibsTestCase(unittest.TestCase):
 			if VERBOSE_TEST:
 				print("denselib version", version)
 
-class DenseBLASTestCase(unittest.TestCase):
+class DenseBLASTestCase(OptkitCTestCase):
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
@@ -118,6 +119,9 @@ class DenseBLASTestCase(unittest.TestCase):
 		if self.shape is None:
 			self.shape = DEFAULT_SHAPE
 			self.A_test = np.random.rand(*self.shape)
+
+	def tearDown(self):
+		self.free_all_vars()
 
 	@staticmethod
 	def make_vec_triplet(lib, size_):
@@ -153,6 +157,8 @@ class DenseBLASTestCase(unittest.TestCase):
 
 			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
 			w, w_py, w_ptr = self.make_vec_triplet(lib, m)
+			self.register_var('v', v, lib.vector_free)
+			self.register_var('w', w, lib.vector_free)
 
 			v_py += np.random.rand(m)
 			w_py += np.random.rand(m)
@@ -162,6 +168,9 @@ class DenseBLASTestCase(unittest.TestCase):
 
 			self.assertAlmostEqual(significant_digits(answer),
 								   significant_digits(v_py.dot(w_py)), DIGITS)
+
+			self.free_var('v')
+			self.free_var('w')
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -181,12 +190,16 @@ class DenseBLASTestCase(unittest.TestCase):
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
+			self.register_var('v', v, lib.vector_free)
+
 			v_py += np.random.rand(m)
 			lib.vector_memcpy_va(v, v_ptr, 1)
 			answer = lib.blas_nrm2(hdl, v)
 			self.assertAlmostEqual(significant_digits(answer),
 								   significant_digits(np.linalg.norm(v_py)),
 								   DIGITS)
+
+			self.free_var('v')
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -206,12 +219,16 @@ class DenseBLASTestCase(unittest.TestCase):
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
+			self.register_var('v', v, lib.vector_free)
+
 			v_py += np.random.rand(m)
 			lib.vector_memcpy_va(v, v_ptr, 1)
 			answer = lib.blas_asum(hdl, v)
 			self.assertAlmostEqual(significant_digits(answer),
 								   significant_digits(np.linalg.norm(v_py, 1)),
 								   DIGITS)
+
+			self.free_var('v')
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -233,12 +250,16 @@ class DenseBLASTestCase(unittest.TestCase):
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
+			self.register_var('v', v, lib.vector_free)
+
 			v_py += v_rand
 			lib.vector_memcpy_va(v, v_ptr, 1)
 			alpha = np.random.rand()
 			lib.blas_scal(hdl, alpha, v)
 			lib.vector_memcpy_av(v_ptr, v, 1)
 			self.assertTrue(np.allclose(v_py, alpha * v_rand, DIGITS))
+
+			self.free_var('v')
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -260,6 +281,8 @@ class DenseBLASTestCase(unittest.TestCase):
 
 			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
 			w, w_py, w_ptr = self.make_vec_triplet(lib, m)
+			self.register_var('v', v, lib.vector_free)
+			self.register_var('w', w, lib.vector_free)
 
 			v_py += np.random.rand(m)
 			w_py += np.random.rand(m)
@@ -270,6 +293,9 @@ class DenseBLASTestCase(unittest.TestCase):
 			lib.blas_axpy(hdl, alpha, v, w)
 			lib.vector_memcpy_av(w_ptr, w, 1)
 			self.assertTrue(np.allclose(w_py, pyresult, DIGITS))
+
+			self.free_var('v')
+			self.free_var('w')
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -297,6 +323,9 @@ class DenseBLASTestCase(unittest.TestCase):
 													   rowmajor=rowmajor)
 				x, x_py, x_ptr = self.make_vec_triplet(lib, n)
 				y, y_py, y_ptr = self.make_vec_triplet(lib, m)
+				self.register_var('A', A, lib.matrix_free)
+				self.register_var('x', x, lib.vector_free)
+				self.register_var('y', y, lib.vector_free)
 
 				# populate A, x, y (in Py and C)
 				A_py += self.A_test
@@ -323,9 +352,9 @@ class DenseBLASTestCase(unittest.TestCase):
 				lib.vector_memcpy_av(x_ptr, x, 1)
 				self.assertTrue(np.allclose(x_py, pyresult, DIGITS))
 
-				lib.matrix_free(A)
-				lib.vector_free(x)
-				lib.vector_free(y)
+				self.free_var('A')
+				self.free_var('x')
+				self.free_var('y')
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -369,6 +398,8 @@ class DenseBLASTestCase(unittest.TestCase):
 				L, L_py, L_ptr = self.make_mat_triplet(lib, (n, n),
 													   rowmajor=rowmajor)
 				x, x_py, x_ptr = self.make_vec_triplet(lib, n)
+				self.register_var('L', L, lib.matrix_free)
+				self.register_var('x', x, lib.vector_free)
 
 				# populate L, x
 				L_py += L_test
@@ -385,8 +416,8 @@ class DenseBLASTestCase(unittest.TestCase):
 
 				self.assertTrue(np.allclose(x_py, pyresult, DIGITS))
 
-				lib.matrix_free(L)
-				lib.vector_free(x)
+				self.free_var('L')
+				self.free_var('x')
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -417,6 +448,9 @@ class DenseBLASTestCase(unittest.TestCase):
 			s, s_py, s_ptr = self.make_vec_triplet(lib, n * diags)
 			x, x_py, x_ptr = self.make_vec_triplet(lib, n)
 			y, y_py, y_ptr = self.make_vec_triplet(lib, n)
+			self.register_var('s', s, lib.vector_free)
+			self.register_var('x', x, lib.vector_free)
+			self.register_var('y', y, lib.vector_free)
 
 			# populate vectors
 			s_py += s_test
@@ -445,9 +479,9 @@ class DenseBLASTestCase(unittest.TestCase):
 
 			self.assertTrue(np.allclose(y_py, pyresult, DIGITS))
 
-			lib.vector_free(x)
-			lib.vector_free(y)
-			lib.vector_free(s)
+			self.free_var('x')
+			self.free_var('y')
+			self.free_var('s')
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -477,6 +511,9 @@ class DenseBLASTestCase(unittest.TestCase):
 			d, d_py, d_ptr = self.make_vec_triplet(lib, n)
 			x, x_py, x_ptr = self.make_vec_triplet(lib, n)
 			y, y_py, y_ptr = self.make_vec_triplet(lib, n)
+			self.register_var('d', d, lib.vector_free)
+			self.register_var('x', x, lib.vector_free)
+			self.register_var('y', y, lib.vector_free)
 
 			# populate vectors
 			d_py += d_test
@@ -495,9 +532,9 @@ class DenseBLASTestCase(unittest.TestCase):
 
 			self.assertTrue(np.allclose(y_py, pyresult, DIGITS))
 
-			lib.vector_free(x)
-			lib.vector_free(y)
-			lib.vector_free(d)
+			self.free_var('x')
+			self.free_var('y')
+			self.free_var('d')
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -531,6 +568,10 @@ class DenseBLASTestCase(unittest.TestCase):
 													   rowmajor=rowmajor)
 				C, C_py, C_ptr = self.make_mat_triplet(lib, (n, n),
 													   rowmajor=rowmajor)
+				self.register_var('A', A, lib.matrix_free)
+				self.register_var('B', B, lib.matrix_free)
+				self.register_var('C', C, lib.matrix_free)
+
 
 				# populate
 				A_py += self.A_test
@@ -549,9 +590,9 @@ class DenseBLASTestCase(unittest.TestCase):
 				lib.matrix_memcpy_am(C_ptr, C, order)
 				self.assertTrue(np.allclose(pyresult, C_py, DIGITS))
 
-				lib.matrix_free(A)
-				lib.matrix_free(B)
-				lib.matrix_free(C)
+				self.free_var('A')
+				self.free_var('B')
+				self.free_var('C')
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -586,6 +627,8 @@ class DenseBLASTestCase(unittest.TestCase):
 													   rowmajor=rowmajor)
 				B, B_py, B_ptr = self.make_mat_triplet(lib, (n, n),
 													   rowmajor=rowmajor)
+				self.register_var('A', A, lib.matrix_free)
+				self.register_var('B', B, lib.matrix_free)
 
 				# populate
 				if m >= n:
@@ -610,8 +653,8 @@ class DenseBLASTestCase(unittest.TestCase):
 							B_py[i, j] *= 0
 				self.assertTrue(np.allclose(pyresult, B_py, DIGITS))
 
-				lib.matrix_free(A)
-				lib.matrix_free(B)
+				self.free_var('A')
+				self.free_var('B')
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -652,6 +695,8 @@ class DenseBLASTestCase(unittest.TestCase):
 													   rowmajor=rowmajor)
 				L, L_py, L_ptr = self.make_mat_triplet(lib, (n, n),
 													   rowmajor=rowmajor)
+				self.register_var('A', A, lib.matrix_free)
+				self.register_var('L', L, lib.matrix_free)
 
 				# populate
 				A_py += self.A_test
@@ -668,13 +713,13 @@ class DenseBLASTestCase(unittest.TestCase):
 
 				self.assertTrue(np.allclose(pyresult, A_py, DIGITS))
 
-				lib.matrix_free(A)
-				lib.matrix_free(L)
+				self.free_var('A')
+				self.free_var('L')
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
 
-class DenseLinalgTestCase(unittest.TestCase):
+class DenseLinalgTestCase(OptkitCTestCase):
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
@@ -696,6 +741,9 @@ class DenseLinalgTestCase(unittest.TestCase):
 		if self.shape is None:
 			self.shape = DEFAULT_SHAPE
 			self.A_test = np.random.rand(*self.shape)
+
+	def tearDown(self):
+		self.free_all_vars()
 
 	def test_cholesky(self):
 		(m, n) = self.shape
@@ -736,12 +784,14 @@ class DenseLinalgTestCase(unittest.TestCase):
 				# allocate L, x
 				L = lib.matrix(0, 0, 0, None, order)
 				lib.matrix_calloc(L, mindim, mindim, order)
+				self.register_var('L', L, lib.matrix_free)
 				L_py = np.zeros((mindim, mindim), order=pyorder).astype(
 							lib.pyfloat)
 				L_ptr = L_py.ctypes.data_as(lib.ok_float_p)
 
 				x = lib.vector(0, 0, None)
 				lib.vector_calloc(x, mindim, order)
+				self.register_var('x', x, lib.vector_free)
 				x_py = np.zeros(mindim).astype(lib.pyfloat)
 				x_ptr = x_py.ctypes.data_as(lib.ok_float_p)
 
@@ -779,8 +829,8 @@ class DenseLinalgTestCase(unittest.TestCase):
 				norm = np.linalg.norm(pysol)
 				self.assertTrue(norm_diff <= atol * mindim**0.5 + rtol * norm)
 
-				lib.matrix_free(L)
-				lib.vector_free(x)
+				self.free_var('L')
+				self.free_var('x')
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -814,6 +864,7 @@ class DenseLinalgTestCase(unittest.TestCase):
 				# allocate A, x
 				A = lib.matrix(0, 0, 0, None, order)
 				lib.matrix_calloc(A, m, n, order)
+				self.register_var('A', A, lib.matrix_free)
 				A_py = np.zeros((m, n), order=pyorder).astype(lib.pyfloat)
 				A_py += self.A_test
 				A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
@@ -821,6 +872,7 @@ class DenseLinalgTestCase(unittest.TestCase):
 
 				x = lib.vector(0, 0, None)
 				lib.vector_calloc(x, mindim, order)
+				self.register_var('x', x, lib.vector_free)
 				x_py = np.zeros(mindim).astype(lib.pyfloat)
 				x_ptr = x_py.ctypes.data_as(lib.ok_float_p)
 
@@ -833,8 +885,8 @@ class DenseLinalgTestCase(unittest.TestCase):
 								ATOLMIN + RTOL * np.linalg.norm(py_diag))
 
 				# free memory
-				lib.matrix_free(A)
-				lib.vector_free(x)
+				self.free_var('A')
+				self.free_var('x')
 
 			self.assertEqual(lib.ok_device_reset(), 0)
 
@@ -862,6 +914,7 @@ class DenseLinalgTestCase(unittest.TestCase):
 				# allocate A, d, e
 				A = lib.matrix(0, 0, 0, None, order)
 				lib.matrix_calloc(A, m, n, order)
+				self.register_var('A', A, lib.matrix_free)
 				A_py = np.zeros((m, n), order=pyorder).astype(lib.pyfloat)
 				A_py += self.A_test
 				A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
@@ -869,21 +922,25 @@ class DenseLinalgTestCase(unittest.TestCase):
 
 				d = lib.vector(0, 0, None)
 				lib.vector_calloc(d, m)
+				self.register_var('d', d, lib.vector_free)
 				d_py = np.zeros(m).astype(lib.pyfloat)
 				d_ptr = d_py.ctypes.data_as(lib.ok_float_p)
 
 				e = lib.vector(0, 0, None)
 				lib.vector_calloc(e, n)
+				self.register_var('e', e, lib.vector_free)
 				e_py = np.zeros(n).astype(lib.pyfloat)
 				e_ptr = e_py.ctypes.data_as(lib.ok_float_p)
 
 				x = lib.vector(0, 0, None)
 				lib.vector_calloc(x, n)
+				self.register_var('x', x, lib.vector_free)
 				x_py = np.zeros(n).astype(lib.pyfloat)
 				x_ptr = x_py.ctypes.data_as(lib.ok_float_p)
 
 				y = lib.vector(0, 0, None)
 				lib.vector_calloc(y, m)
+				self.register_var('y', y, lib.vector_free)
 				y_py = np.zeros(m).astype(lib.pyfloat)
 				y_ptr = y_py.ctypes.data_as(lib.ok_float_p)
 
@@ -895,7 +952,7 @@ class DenseLinalgTestCase(unittest.TestCase):
 				lib.vector_memcpy_va(x, x_ptr, 1)
 
 				# A = A * diag(E)
-				lib.linalg_matrix_broadcast_vector(hdl, A, e,
+				lib.linalg_matrix_broadcast_vector(A, e,
 					lib.enums.OkTransformScale, lib.enums.CblasRight)
 
 				lib.blas_gemv(hdl, lib.enums.CblasNoTrans, 1, A, x, 0, y)
@@ -906,7 +963,7 @@ class DenseLinalgTestCase(unittest.TestCase):
 								ATOLM + RTOL * np.linalg.norm(AEx))
 
 				# A = diag(D) * A
-				lib.linalg_matrix_broadcast_vector(hdl, A, d,
+				lib.linalg_matrix_broadcast_vector(A, d,
 					lib.enums.OkTransformScale, lib.enums.CblasLeft)
 				lib.blas_gemv(hdl, lib.enums.CblasNoTrans, 1, A, x, 0, y)
 				lib.vector_memcpy_av(y_ptr, y, 1)
@@ -916,7 +973,7 @@ class DenseLinalgTestCase(unittest.TestCase):
 								ATOLM + RTOL * np.linalg.norm(DAEx))
 
 				# A += 1e'
-				lib.linalg_matrix_broadcast_vector(hdl, A, e,
+				lib.linalg_matrix_broadcast_vector(A, e,
 					lib.enums.OkTransformAdd, lib.enums.CblasRight)
 				lib.blas_gemv(hdl, lib.enums.CblasNoTrans, 1, A, x, 0, y)
 				lib.vector_memcpy_av(y_ptr, y, 1)
@@ -926,7 +983,7 @@ class DenseLinalgTestCase(unittest.TestCase):
 								ATOLM + RTOL * np.linalg.norm(A_updatex))
 
 				# A += d1'
-				lib.linalg_matrix_broadcast_vector(hdl, A, d,
+				lib.linalg_matrix_broadcast_vector(A, d,
 					lib.enums.OkTransformAdd, lib.enums.CblasLeft)
 				lib.blas_gemv(hdl, lib.enums.CblasNoTrans, 1, A, x, 0, y)
 				lib.vector_memcpy_av(y_ptr, y, 1)
@@ -936,11 +993,11 @@ class DenseLinalgTestCase(unittest.TestCase):
 								ATOLM + RTOL * np.linalg.norm(A_updatex))
 
 				# free memory
-				lib.matrix_free(A)
-				lib.vector_free(d)
-				lib.vector_free(e)
-				lib.vector_free(x)
-				lib.vector_free(y)
+				self.free_var('A')
+				self.free_var('d')
+				self.free_var('e')
+				self.free_var('x')
+				self.free_var('y')
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
@@ -970,6 +1027,7 @@ class DenseLinalgTestCase(unittest.TestCase):
 				# allocate A, d, e
 				A = lib.matrix(0, 0, 0, None, order)
 				lib.matrix_calloc(A, m, n, order)
+				self.register_var('A', A, lib.matrix_free)
 				A_py = np.zeros((m, n), order=pyorder).astype(lib.pyfloat)
 				A_py += self.A_test
 				A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
@@ -977,21 +1035,25 @@ class DenseLinalgTestCase(unittest.TestCase):
 
 				d = lib.vector(0, 0, None)
 				lib.vector_calloc(d, m)
+				self.register_var('d', d, lib.vector_free)
 				d_py = np.zeros(m).astype(lib.pyfloat)
 				d_ptr = d_py.ctypes.data_as(lib.ok_float_p)
 
 				e = lib.vector(0, 0, None)
 				lib.vector_calloc(e, n)
+				self.register_var('e', e, lib.vector_free)
 				e_py = np.zeros(n).astype(lib.pyfloat)
 				e_ptr = e_py.ctypes.data_as(lib.ok_float_p)
 
 				x = lib.vector(0, 0, None)
 				lib.vector_calloc(x, n)
+				self.register_var('x', x, lib.vector_free)
 				x_py = np.zeros(n).astype(lib.pyfloat)
 				x_ptr = x_py.ctypes.data_as(lib.ok_float_p)
 
 				y = lib.vector(0, 0, None)
 				lib.vector_calloc(y, m)
+				self.register_var('y', y, lib.vector_free)
 				y_py = np.zeros(m).astype(lib.pyfloat)
 				y_ptr = y_py.ctypes.data_as(lib.ok_float_p)
 
@@ -1000,32 +1062,28 @@ class DenseLinalgTestCase(unittest.TestCase):
 
 				# min - reduce columns
 				colmin = np.min(A_py, 0)
-				lib.linalg_matrix_reduce_min(hdl, e, A,
-					lib.enums.CblasLeft)
+				lib.linalg_matrix_reduce_min(e, A, lib.enums.CblasLeft)
 				lib.vector_memcpy_av(e_ptr, e, 1)
 				self.assertTrue(np.linalg.norm(e_py - colmin) <=
 								ATOLN + RTOL * np.linalg.norm(colmin))
 
 				# min - reduce rows
 				rowmin = np.min(A_py, 1)
-				lib.linalg_matrix_reduce_min(hdl, d, A,
-					lib.enums.CblasRight)
+				lib.linalg_matrix_reduce_min(d, A, lib.enums.CblasRight)
 				lib.vector_memcpy_av(d_ptr, d, 1)
 				self.assertTrue(np.linalg.norm(d_py - rowmin) <=
 								ATOLM + RTOL * np.linalg.norm(rowmin))
 
 				# max - reduce columns
 				colmax = np.max(A_py, 0)
-				lib.linalg_matrix_reduce_max(hdl, e, A,
-					lib.enums.CblasLeft)
+				lib.linalg_matrix_reduce_max(e, A, lib.enums.CblasLeft)
 				lib.vector_memcpy_av(e_ptr, e, 1)
 				self.assertTrue(np.linalg.norm(e_py - colmax) <=
 								ATOLN + RTOL * np.linalg.norm(colmax))
 
 				# max - reduce rows
 				rowmax = np.max(A_py, 1)
-				lib.linalg_matrix_reduce_max(hdl, d, A,
-					lib.enums.CblasRight)
+				lib.linalg_matrix_reduce_max(d, A, lib.enums.CblasRight)
 				lib.vector_memcpy_av(d_ptr, d, 1)
 				self.assertTrue(np.linalg.norm(d_py - rowmax) <=
 								ATOLM + RTOL * np.linalg.norm(rowmax))
@@ -1033,10 +1091,10 @@ class DenseLinalgTestCase(unittest.TestCase):
 				# indmin - reduce columns
 				idx = lib.indvector(0, 0, None)
 				lib.indvector_calloc(idx, n)
+				self.register_var('idx', idx, lib.indvector_free)
 				inds = np.zeros(n).astype(c_size_t)
 				inds_ptr = inds.ctypes.data_as(lib.c_size_t_p)
-				lib.linalg_matrix_reduce_indmin(hdl, idx, e, A,
-												lib.enums.CblasLeft)
+				lib.linalg_matrix_reduce_indmin(idx, e, A, lib.enums.CblasLeft)
 				lib.indvector_memcpy_av(inds_ptr, idx, 1)
 				lib.indvector_free(idx)
 				calcmin = np.array([A_py[inds[i], i] for i in xrange(n)])
@@ -1051,7 +1109,7 @@ class DenseLinalgTestCase(unittest.TestCase):
 				lib.indvector_calloc(idx, m)
 				inds = np.zeros(m).astype(c_size_t)
 				inds_ptr = inds.ctypes.data_as(lib.c_size_t_p)
-				lib.linalg_matrix_reduce_indmin(hdl, idx, d, A,
+				lib.linalg_matrix_reduce_indmin(idx, d, A,
 												lib.enums.CblasRight)
 				lib.indvector_memcpy_av(inds_ptr, idx, 1)
 				lib.indvector_free(idx)
@@ -1064,11 +1122,12 @@ class DenseLinalgTestCase(unittest.TestCase):
 								ATOLM + RTOL * np.linalg.norm(rowmin))
 
 				# free memory
-				lib.matrix_free(A)
-				lib.vector_free(d)
-				lib.vector_free(e)
-				lib.vector_free(x)
-				lib.vector_free(y)
+				self.free_var('A')
+				self.free_var('d')
+				self.free_var('e')
+				self.free_var('x')
+				self.free_var('y')
+				self.free_var('idx')
 
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)

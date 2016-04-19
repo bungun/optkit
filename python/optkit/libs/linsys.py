@@ -125,6 +125,10 @@ class DenseLinsysLibs(object):
 												c_size_t]
 			lib.indvector_memcpy_av.argtypes = [c_size_t_p, indvector_p,
 												c_size_t]
+			lib.indvector_print.argtypes = [indvector_p]
+			lib.indvector_indmin.argtypes = [indvector_p]
+			lib.indvector_max.argtypes = [indvector_p]
+			lib.indvector_min.argtypes = [indvector_p]
 
 			## return values
 			lib.vector_alloc.restype = None
@@ -161,6 +165,10 @@ class DenseLinsysLibs(object):
 			lib.indvector_memcpy_vv.restype = None
 			lib.indvector_memcpy_va.restype = None
 			lib.indvector_memcpy_av.restype = None
+			lib.indvector_print.restype = None
+			lib.vector_indmin.restype = c_size_t
+			lib.vector_min.restype = c_size_t
+			lib.vector_max.restype = c_size_t
 
 			# Matrix
 			# ------

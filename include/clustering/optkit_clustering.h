@@ -85,7 +85,7 @@ void cluster(matrix * A, matrix * C, upsamplingvec * a2c, cluster_aid ** helper,
 		OkTransformAdd, CblasLeft);
 
 	/* set tentative cluster assigment of vector i argmin_k {D_ki} */
-	linalg_matrix_reduce_indmin(&(h->a2c_tentative.vec), &(h->d_min),
+	linalg_matrix_reduce_indmin(h->a2c_tentative.vec, &(h->d_min),
 		&(h->D), CblasRight);
 
 	/* finalize cluster assignements */

@@ -8,6 +8,7 @@ from optkit.libs import DenseLinsysLibs, SparseLinsysLibs, ProxLibs, \
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
 from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
 from optkit.tests.C.pogs_helper import PogsVariablesLocal, PogsOutputLocal
+from optkit.tests.C.base import OptkitCTestCase
 
 ALPHA_DEFAULT = 1.7
 RHO_DEFAULT = 1
@@ -63,7 +64,7 @@ class PogsAbstractLibsTestCase(unittest.TestCase):
 		self.assertTrue(any(olibs))
 		self.assertTrue(any(libs))
 
-class PogsAbstractTestCases(unittest.TestCase):
+class PogsAbstractTestCases(OptkitCTestCase):
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
@@ -146,6 +147,8 @@ class PogsAbstractTestCases(unittest.TestCase):
 
 		denselib.vector_calloc(x, n);
 		denselib.vector_calloc(y, m);
+		self.register_var('x', x, denselib.vector_free)
+		self.register_var('y', y, denselib.vector_free)
 
 		denselib.vector_memcpy_va(x, x_ptr, 1)
 		opA.contents.apply(opA.contents.data, x, y)
@@ -157,8 +160,8 @@ class PogsAbstractTestCases(unittest.TestCase):
 		self.assertTrue(np.linalg.norm(A_eqx - DAEx) <=
 						ATOLM + RTOL * np.linalg.norm(DAEx))
 
-		denselib.vector_free(x)
-		denselib.vector_free(y)
+		self.free_var('x')
+		self.free_var('y')
 
 	def pogs_projector(self, denselib, pogslib, blas_handle, solver, opA):
 		DIGITS = 7 - 2 * pogslib.FLOAT - 1 * pogslib.GPU
@@ -178,6 +181,11 @@ class PogsAbstractTestCases(unittest.TestCase):
 		denselib.vector_calloc(x_out, n)
 		denselib.vector_calloc(y_out, m)
 		denselib.vector_calloc(y_c, m)
+		self.register_var('x_in', x_in, denselib.vector_free)
+		self.register_var('y_in', y_in, denselib.vector_free)
+		self.register_var('x_out', x_out, denselib.vector_free)
+		self.register_var('y_out', y_out, denselib.vector_free)
+		self.register_var('y_c', y_c, denselib.vector_free)
 
 		x_in_py = np.random.rand(n).astype(denselib.pyfloat)
 		y_in_py = np.random.rand(m).astype(denselib.pyfloat)
@@ -209,11 +217,11 @@ class PogsAbstractTestCases(unittest.TestCase):
 		self.assertTrue(np.linalg.norm(y_ - y_out_py) <=
 						ATOLM + RTOL * np.linalg.norm(y_))
 
-		denselib.vector_free(x_in)
-		denselib.vector_free(y_in)
-		denselib.vector_free(x_out)
-		denselib.vector_free(y_out)
-		denselib.vector_free(y_c)
+		self.free_var('x_in')
+		self.free_var('y_in')
+		self.free_var('x_out')
+		self.free_var('y_out')
+		self.free_var('y_c')
 
 	def pogs_scaling(self, denselib, proxlib, pogslib, solver, f, f_py, g,
 					 g_py, localvars):
@@ -421,6 +429,7 @@ class PogsAbstractTestCases(unittest.TestCase):
 
 		y = denselib.vector(0, 0, None)
 		denselib.vector_calloc(y, opA.contents.size1)
+		self.register_var('y', y, denselib.vector_free)
 		y_ = np.zeros(m).astype(denselib.pyfloat)
 
 		# form y_ = Ax_out
@@ -428,7 +437,7 @@ class PogsAbstractTestCases(unittest.TestCase):
 		opA.contents.apply(opA.contents.data, x, y)
 		self.load_to_local(denselib, y_, y)
 
-		denselib.vector_free(y)
+		self.free_var('y')
 
 		self.assertTrue(np.linalg.norm(y_ - localvars.y) <=
 						ATOLM + RTOL * np.linalg.norm(localvars.y))
@@ -523,6 +532,9 @@ class PogsAbstractTestCases(unittest.TestCase):
 		At_yt12 = denselib.vector(0, 0, None)
 		denselib.vector_calloc(A_x12, m)
 		denselib.vector_calloc(At_yt12, n)
+		self.register_var('Ax', A_x12, denselib.vector_free)
+		self.register_var('Ay', At_yt12, denselib.vector_free)
+
 		opA.contents.adjoint(opA.contents.data,
 			solver.contents.z.contents.dual12.contents.y, At_yt12)
 		opA.contents.apply(opA.contents.data,
@@ -533,8 +545,8 @@ class PogsAbstractTestCases(unittest.TestCase):
 		self.load_to_local(denselib, A_x12_, A_x12)
 		self.load_to_local(denselib, At_yt12_, At_yt12)
 
-		denselib.vector_free(A_x12)
-		denselib.vector_free(At_yt12)
+		self.free('Ax')
+		self.free('Ay')
 
 		res_primal = np.linalg.norm(A_x12_ - localvars.y12)
 		res_dual = np.linalg.norm(At_yt12_ + localvars.xt12)
@@ -644,10 +656,6 @@ class PogsAbstractTestCases(unittest.TestCase):
 
 		return f, g, f_py, g_py
 
-	def del_prox(self, proxlib, f, g):
-		proxlib.function_vector_free(f)
-		proxlib.function_vector_free(g)
-
 	def gen_pogs_operator(self, denselib, pogslib, type_='dense'):
 		m, n = self.shape
 
@@ -660,7 +668,8 @@ class PogsAbstractTestCases(unittest.TestCase):
 			A_ptr = A_.ctypes.data_as(denselib.ok_float_p)
 			order = denselib.enums.CblasRowMajor if A_.flags.c_contiguous \
 					else denselib.enums.CblasColMajor
-			return A_, pogslib.pogs_dense_operator_gen(A_ptr, m, n, order)
+			return A_, pogslib.pogs_dense_operator_gen(A_ptr, m, n, order),
+				   pogslib.pogs_dense_operator_free
 		elif type_ == 'sparse':
 			A_ = self.A_test_sparse
 			A_sp = csr_matrix(A_.astype(denselib.pyfloat))
@@ -669,20 +678,8 @@ class PogsAbstractTestCases(unittest.TestCase):
 			A_val = A_sp.data.ctypes.data_as(denselib.ok_float_p)
 			order = denselib.enums.CblasRowMajor
 			return A_, pogslib.pogs_sparse_operator_gen(
-					A_val, A_ind, A_ptr, m, n, self.nnz, order)
-		else:
-			raise RuntimeError('this should be unreachable due to ValueError '
-							   'raised above')
-
-	def del_pogs_operator(self, pogslib, operator_, type_='dense'):
-		if type_ not in self.optypes:
-			raise ValueError('argument "type" must be one of {}'.format(
-							 self.optypes))
-
-		if type_ == 'dense':
-			pogslib.pogs_dense_operator_free(operator_)
-		elif type_ == 'sparse':
-			pogslib.pogs_sparse_operator_free(operator_)
+					A_val, A_ind, A_ptr, m, n, self.nnz, order),
+					pogslib.pogs_sparse_operator_free
 		else:
 			raise RuntimeError('this should be unreachable due to ValueError '
 							   'raised above')
@@ -750,9 +747,10 @@ class PogsAbstractTestCases(unittest.TestCase):
 				continue
 
 			for optype in self.optypes:
-				_, o = self.gen_pogs_operator(dlib, lib, optype)
+				_, o, free_o = self.gen_pogs_operator(dlib, lib, optype)
+				self.register_var('o', o, free_o)
 				self.assertEqual(type(o), olib.operator_p)
-				self.del_pogs_operator(lib, o, optype)
+				self.free_var('o')
 
 	def test_pogs_init_finish(self):
 		for (gpu, single_precision) in CONDITIONS:
@@ -776,7 +774,9 @@ class PogsAbstractTestCases(unittest.TestCase):
 			for optype in self.optypes:
 				for DIRECT in [0, 1]:
 					for EQUILNORM in [1., 2.]:
-						_, o = self.gen_pogs_operator(dlib, lib, optype)
+						_, o, free_o = self.gen_pogs_operator(dlib, lib,
+															  optype)
+						self.register_var('o', o, free_o)
 						solver = lib.pogs_init(o, DIRECT, EQUILNORM)
 						self.assertNotEqual(solver, 0)
 						lib.pogs_finish(solver, NO_DEVICE_RESET)
@@ -810,13 +810,19 @@ class PogsAbstractTestCases(unittest.TestCase):
 				self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
 
 				f, g, f_py, g_py = self.gen_prox(pxlib)
+				self.register_var('f', f, pxlib.function_vector_free)
+				self.register_var('g', g, pxlib.function_vector_free)
+
 				f_list = [pxlib.function(*f_) for f_ in f_py]
 				g_list = [pxlib.function(*g_) for g_ in g_py]
 
 				for DIRECT in [0, 1]:
 					for EQUILNORM in [1., 2.]:
 
-						A, o = self.gen_pogs_operator(dlib, lib, optype)
+						A, o, free_o = self.gen_pogs_operator(dlib, lib,
+															  optype)
+						self.register_var('o', o, free_o)
+
 						solver = lib.pogs_init(o, DIRECT, EQUILNORM)
 						self.assertNotEqual(solver, 0)
 
@@ -859,9 +865,10 @@ class PogsAbstractTestCases(unittest.TestCase):
 												localvars)
 
 						lib.pogs_finish(solver, NO_DEVICE_RESET)
-						self.del_pogs_operator(lib, o, optype)
+						self.free_var('o')
 
-				self.del_prox(pxlib, f, g)
+				self.free_var('f')
+				self.free_var('g')
 
 				# now reset device (once operator is freed)
 				self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
@@ -892,12 +899,18 @@ class PogsAbstractTestCases(unittest.TestCase):
 				self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
 
 				f, g, f_py, g_py = self.gen_prox(pxlib)
+				self.register_var('f', f, pxlib.function_vector_free)
+				self.register_var('g', g, pxlib.function_vector_free)
+
 				f_list = [pxlib.function(*f_) for f_ in f_py]
 				g_list = [pxlib.function(*g_) for g_ in g_py]
 
 				for DIRECT in [0, 1]:
 					for EQUILNORM in [1., 2.]:
-						A, o = self.gen_pogs_operator(dlib, lib, optype)
+						A, o, free_o = self.gen_pogs_operator(dlib, lib,
+															  optype)
+						self.register_var('o', o, free_o)
+
 						solver = lib.pogs_init(o, DIRECT, EQUILNORM)
 						self.assertNotEqual(solver, 0)
 
@@ -918,7 +931,7 @@ class PogsAbstractTestCases(unittest.TestCase):
 						err = lib.pogs_finish(solver, NO_DEVICE_RESET)
 						self.assertEqual(err, 0)
 
-						self.del_pogs_operator(lib, o, optype)
+						self.free_var('o')
 
 						if info.converged:
 							rtol = settings.reltol
@@ -937,7 +950,8 @@ class PogsAbstractTestCases(unittest.TestCase):
 							self.assertTrue(dual_feas <=
 											20 * (atoln + rtol * mu_norm))
 
-				self.del_prox(pxlib, f, g)
+				self.free_var('f')
+				self.free_var('g')
 				self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
 				self.assertEqual(dlib.ok_device_reset(), 0)
 
@@ -966,12 +980,16 @@ class PogsAbstractTestCases(unittest.TestCase):
 				self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
 
 				f, g, f_py, g_py = self.gen_prox(pxlib)
+				self.register_var('f', f, pxlib.function_vector_free)
+				self.register_var('g', g, pxlib.function_vector_free)
 				f_list = [pxlib.function(*f_) for f_ in f_py]
 				g_list = [pxlib.function(*g_) for g_ in g_py]
 
 				for DIRECT in [0, 1]:
 					for EQUILNORM in [1., 2.]:
-						A, o = self.gen_pogs_operator(dlib, lib, optype)
+						A, o, free_o = self.gen_pogs_operator(dlib, lib,
+															  optype)
+						self.register_var('o', o, free_o)
 
 						output = PogsOutputLocal(dlib, lib, m, n)
 						info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan,
@@ -984,7 +1002,7 @@ class PogsAbstractTestCases(unittest.TestCase):
 						err = lib.pogs(o, f, g, settings, info, output.ptr,
 									   DIRECT, EQUILNORM, NO_DEVICE_RESET)
 
-						self.del_pogs_operator(lib, o, optype)
+						self.free_var('o')
 						self.assertEqual(err, 0)
 
 						if info.converged:
@@ -1004,7 +1022,8 @@ class PogsAbstractTestCases(unittest.TestCase):
 							self.assertTrue(dual_feas <=
 											20 * (atoln + rtol * mu_norm))
 
-				self.del_prox(pxlib, f, g)
+				self.free_var('f')
+				self.free_var('g')
 				self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
 				self.assertEqual(dlib.ok_device_reset(), 0)
 
@@ -1038,6 +1057,8 @@ class PogsAbstractTestCases(unittest.TestCase):
 				self.assertEqual(dlib.blas_make_handle(byref(hdl)), 0)
 
 				f, g, f_py, g_py = self.gen_prox(pxlib)
+				self.register_var('f', f, pxlib.function_vector_free)
+				self.register_var('g', g, pxlib.function_vector_free)
 				f_list = [pxlib.function(*f_) for f_ in f_py]
 				g_list = [pxlib.function(*g_) for g_ in g_py]
 
@@ -1047,7 +1068,9 @@ class PogsAbstractTestCases(unittest.TestCase):
 				x_rand = np.random.rand(n).astype(dlib.pyfloat)
 				nu_rand = np.random.rand(m).astype(dlib.pyfloat)
 
-				A, o = self.gen_pogs_operator(dlib, lib, optype)
+				A, o, free_o = self.gen_pogs_operator(dlib, lib, optype)
+				self.register_var('o', o, free_o)
+
 				solver = lib.pogs_init(o, DIRECT, EQUILNORM)
 				self.assertNotEqual(solver, 0)
 
@@ -1154,8 +1177,10 @@ class PogsAbstractTestCases(unittest.TestCase):
 				self.assertTrue(info.converged or info.k >= settings.maxiter)
 
 				self.assertEqual(lib.pogs_finish(solver, 0), 0)
+				self.free_var('o')
 
-			self.del_prox(pxlib, f, g)
+			self.free_var('f')
+			self.free_var('g')
 			self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(dlib.ok_device_reset(), 0)
 

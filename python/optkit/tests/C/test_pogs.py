@@ -7,6 +7,7 @@ from optkit.utils.proxutils import func_eval_python, prox_eval_python
 from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH, \
 							  significant_digits
 from optkit.tests.C.pogs_helper import PogsVariablesLocal, PogsOutputLocal
+from optkit.tests.C.base import OptkitCTestCase
 
 ALPHA_DEFAULT = 1.7
 RHO_DEFAULT = 1
@@ -51,7 +52,7 @@ class PogsLibsTestCase(unittest.TestCase):
 		self.assertTrue(any(pxlibs))
 		self.assertTrue(any(libs))
 
-class PogsTestCase(unittest.TestCase):
+class PogsTestCase(OptkitCTestCase):
 	"""TODO: docstring"""
 
 	@classmethod
@@ -81,6 +82,9 @@ class PogsTestCase(unittest.TestCase):
 
 	def setUp(self):
 		pass
+
+	def tearDown(self):
+		self.free_all_vars()
 
 	@staticmethod
 	def load_to_local(denselib, py_vector, c_vector):
@@ -135,7 +139,10 @@ class PogsTestCase(unittest.TestCase):
 		denselib.vector_calloc(y_in, m)
 		denselib.vector_calloc(x_out, n)
 		denselib.vector_calloc(y_out, m)
-
+		self.register_var('x_in', x_in, denselib.vector_free)
+		self.register_var('y_in', y_in, denselib.vector_free)
+		self.register_var('x_out', x_out, denselib.vector_free)
+		self.register_var('y_out', y_out, denselib.vector_free)
 
 		x_in_py = np.random.rand(n).astype(denselib.pyfloat)
 		y_in_py = np.random.rand(m).astype(denselib.pyfloat)
@@ -163,10 +170,10 @@ class PogsTestCase(unittest.TestCase):
 
 		self.assertTrue(np.allclose(localA.dot(x_out_py), y_out_py, DIGITS))
 
-		denselib.vector_free(x_in)
-		denselib.vector_free(y_in)
-		denselib.vector_free(x_out)
-		denselib.vector_free(y_out)
+		self.free_var('x_in')
+		self.free_var('y_in')
+		self.free_var('x_out')
+		self.free_var('y_out')
 
 	def pogs_scaling(self, denselib, proxlib, pogslib, solver, f, f_py, g,
 					 g_py, localvars):
@@ -569,6 +576,8 @@ class PogsTestCase(unittest.TestCase):
 			g = pxlib.function_vector(0, None)
 			pxlib.function_vector_calloc(f, m)
 			pxlib.function_vector_calloc(g, n)
+			self.register_var('f', f, pxlib.function_vector_free)
+			self.register_var('g', g, pxlib.function_vector_free)
 			f_py = np.zeros(m).astype(pxlib.function)
 			g_py = np.zeros(n).astype(pxlib.function)
 			for i in xrange(m):
@@ -634,8 +643,8 @@ class PogsTestCase(unittest.TestCase):
 
 			lib.pogs_finish(solver, 0)
 
-			pxlib.function_vector_free(f)
-			pxlib.function_vector_free(g)
+			self.free_var('f')
+			self.free_var('g')
 			self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(dlib.ok_device_reset(), 0)
 
@@ -661,6 +670,8 @@ class PogsTestCase(unittest.TestCase):
 
 			pxlib.function_vector_calloc(f, m)
 			pxlib.function_vector_calloc(g, n)
+			self.register_var('f', f, pxlib.function_vector_free)
+			self.register_var('g', g, pxlib.function_vector_free)
 			f_py = np.zeros(m).astype(pxlib.function)
 			g_py = np.zeros(n).astype(pxlib.function)
 			f_ptr = f_py.ctypes.data_as(pxlib.function_p)
@@ -711,8 +722,8 @@ class PogsTestCase(unittest.TestCase):
 					self.assertTrue(primal_feas <= 10 * (atolm + rtol * y_norm))
 					self.assertTrue(dual_feas <= 20 * (atoln + rtol * mu_norm))
 
-			pxlib.function_vector_free(f)
-			pxlib.function_vector_free(g)
+			self.free_var('f')
+			self.free_var('g')
 			self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(dlib.ok_device_reset(), 0)
 
@@ -738,6 +749,8 @@ class PogsTestCase(unittest.TestCase):
 
 			pxlib.function_vector_calloc(f, m)
 			pxlib.function_vector_calloc(g, n)
+			self.register_var('f', f, pxlib.function_vector_free)
+			self.register_var('g', g, pxlib.function_vector_free)
 			f_py = np.zeros(m).astype(pxlib.function)
 			g_py = np.zeros(n).astype(pxlib.function)
 			f_ptr = f_py.ctypes.data_as(pxlib.function_p)
@@ -784,8 +797,8 @@ class PogsTestCase(unittest.TestCase):
 					self.assertTrue(primal_feas <= 10 * (atolm + rtol * y_norm))
 					self.assertTrue(dual_feas <= 20 * (atoln + rtol * mu_norm))
 
-			pxlib.function_vector_free(f)
-			pxlib.function_vector_free(g)
+			self.free_var('f')
+			self.free_var('g')
 
 			self.assertEqual(dlib.ok_device_reset(), 0)
 
@@ -816,6 +829,8 @@ class PogsTestCase(unittest.TestCase):
 
 			pxlib.function_vector_calloc(f, m)
 			pxlib.function_vector_calloc(g, n)
+			self.register_var('f', f, pxlib.function_vector_free)
+			self.register_var('g', g, pxlib.function_vector_free)
 			f_py = np.zeros(m).astype(pxlib.function)
 			g_py = np.zeros(n).astype(pxlib.function)
 			f_ptr = f_py.ctypes.data_as(pxlib.function_p)
@@ -947,8 +962,8 @@ class PogsTestCase(unittest.TestCase):
 				lib.pogs_finish(solver, 0)
 
 
-			pxlib.function_vector_free(f)
-			pxlib.function_vector_free(g)
+			self.free_var('f')
+			self.free_var('g')
 			self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(dlib.ok_device_reset(), 0)
 
@@ -977,6 +992,8 @@ class PogsTestCase(unittest.TestCase):
 
 			pxlib.function_vector_calloc(f, m)
 			pxlib.function_vector_calloc(g, n)
+			self.register_var('f', f, pxlib.function_vector_free)
+			self.register_var('g', g, pxlib.function_vector_free)
 			f_py = np.zeros(m).astype(pxlib.function)
 			g_py = np.zeros(n).astype(pxlib.function)
 			f_ptr = f_py.ctypes.data_as(pxlib.function_p)
@@ -1064,7 +1081,7 @@ class PogsTestCase(unittest.TestCase):
 				self.assertTrue(info.k <= k_orig or not info.converged)
 				lib.pogs_finish(solver, 0)
 
-			pxlib.function_vector_free(f)
-			pxlib.function_vector_free(g)
+			self.free_var('f')
+			self.free_var('g')
 			self.assertEqual(dlib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(dlib.ok_device_reset(), 0)

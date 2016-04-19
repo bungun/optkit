@@ -108,6 +108,7 @@ void indvector_view_array(indvector * v, size_t * base, size_t n);
 void indvector_memcpy_vv(indvector * v1, const indvector * v2);
 void indvector_memcpy_va(indvector * v, const size_t * y, size_t stride_y);
 void indvector_memcpy_av(size_t * x, const indvector * v, size_t stride_x);
+void indvector_print(const indvector * v);
 size_t indvector_indmin(const indvector * v);
 size_t indvector_min(const indvector * v);
 size_t indvector_max(const indvector * v);
