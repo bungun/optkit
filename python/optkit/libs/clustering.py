@@ -89,11 +89,6 @@ class ClusteringLibs(object):
 			lib.k_means.argtypes = [matrix_p, matrix_p, upsamplingvec_p,
 									vector_p, cluster_aid_p, ok_float,
 									c_size_t, c_size_t, c_uint]
-			lib.blockwise_kmeans.argtypes = [matrix_p, matrix_p,
-											 upsamplingvec_p, vector_p,
-											 c_size_t, c_size_t_p, c_size_t_p,
-											 c_size_t, ok_float, c_size_t_p,
-											 c_uint]
 
 			# return types
 			lib.upsamplingvec_alloc.restype = c_uint
@@ -108,7 +103,6 @@ class ClusteringLibs(object):
 			lib.cluster.restype = c_uint
 			lib.calculate_centroids.restype = c_uint
 			lib.k_means.restype = c_uint
-			lib.blockwise_kmeans.restype = c_uint
 
 			lib.FLOAT = single_precision
 			lib.GPU = gpu
