@@ -30,6 +30,7 @@ class ClusteringLibs(object):
 			c_size_t_p = denselib.c_size_t_p
 			vector = denselib.vector
 			vector_p = denselib.vector_p
+			indvector = denselib.indvector
 			indvector_p = denselib.indvector_p
 			matrix = denselib.matrix
 			matrix_p = denselib.matrix_p
@@ -39,7 +40,7 @@ class ClusteringLibs(object):
 							('size2', c_size_t),
 							('stride', c_size_t),
 							('indices', c_size_t_p),
-							('vec', indvector_p)]
+							('vec', indvector)]
 
 			upsamplingvec_p = POINTER(upsamplingvec)
 			lib.upsamplingvec = upsamplingvec
@@ -91,7 +92,7 @@ class ClusteringLibs(object):
 			lib.blockwise_kmeans.argtypes = [matrix_p, matrix_p,
 											 upsamplingvec_p, vector_p,
 											 c_size_t, c_size_t_p, c_size_t_p,
-											 c_size_t, ok_float, c_size_t,
+											 c_size_t, ok_float, c_size_t_p,
 											 c_uint]
 
 			# return types
@@ -102,12 +103,12 @@ class ClusteringLibs(object):
 			lib.upsamplingvec_mul_matrix.restype = c_uint
 			lib.upsamplingvec_count.restype = c_uint
 			lib.upsamplingvec_shift.restype = c_uint
-			lib.cluster_aid_alloc.restype = None
-			lib.cluster_aid_free.restype = None
-			lib.cluster.restype = None
-			lib.calculate_centroids.restype = None
-			lib.k_means.restype = None
-			lib.blockwise_kmeans.restype = None
+			lib.cluster_aid_alloc.restype = c_uint
+			lib.cluster_aid_free.restype = c_uint
+			lib.cluster.restype = c_uint
+			lib.calculate_centroids.restype = c_uint
+			lib.k_means.restype = c_uint
+			lib.blockwise_kmeans.restype = c_uint
 
 			lib.FLOAT = single_precision
 			lib.GPU = gpu

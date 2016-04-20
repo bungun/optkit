@@ -1,4 +1,4 @@
-#include "optkit_defs_gpu.h"
+	#include "optkit_defs_gpu.h"
 #include "optkit_upsampling_vector.h"
 
 inline __device__ ok_float& __get(ok_float * data, uint i, uint j,
@@ -32,10 +32,9 @@ ok_status upsamplingvec_alloc(upsamplingvec * u, size_t size1, size_t size2)
 		return OPTKIT_ERROR_OVERWRITE;
 	u->size1 = size1;
 	u->size2 = size2;
-	u->vec = (indvector *) malloc(sizeof(*(u->vec)));
-	indvector_calloc(u->vec, size1);
-	u->indices = u->vec->data;
-	u->stride = u->vec->stride;
+	indvector_calloc(&(u->vec), size1);
+	u->indices = u->vec.data;
+	u->stride = u->vec.stride;
 	return OPTKIT_SUCCESS;
 }
 
@@ -43,8 +42,9 @@ ok_status upsamplingvec_free(upsamplingvec * u)
 {
 	if (!u || !(u->indices))
 		return OPTKIT_ERROR_UNALLOCATED;
-	indvector_free(u->vec);
-	ok_free(u->vec);
+	ok_free(u->vec.data);
+	u->vec.size = 0;
+	u->vec.stride = 0;
 	u->indices = OK_NULL;
 	u->size1 = 0;
 	u->size2 = 0;
@@ -54,7 +54,7 @@ ok_status upsamplingvec_free(upsamplingvec * u)
 
 ok_status upsamplingvec_check_bounds(const upsamplingvec * u)
 {
-	if (indvector_max(u->vec) < u->size2)
+	if (indvector_max(&(u->vec)) < u->size2)
 		return OPTKIT_SUCCESS;
 	else
 		return OPTKIT_ERROR_DIMENSION_MISMATCH;
@@ -63,8 +63,8 @@ ok_status upsamplingvec_check_bounds(const upsamplingvec * u)
 ok_status upsamplingvec_subvector(upsamplingvec * usub, upsamplingvec * u,
 	size_t offset1, size_t offset2, size_t length1, size_t length2)
 {
-	indvector_subvector(usub->vec, u->vec, offset1, length1);
-	usub->indices = usub->vec->data;
+	indvector_subvector(&(usub->vec), &(u->vec), offset1, length1);
+	usub->indices = usub->vec.data;
 	usub->size1 = length1;
 	usub->size2 = length2 - offset2;
 	return OPTKIT_SUCCESS;

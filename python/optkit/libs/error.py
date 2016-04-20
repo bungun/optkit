@@ -1,5 +1,7 @@
 def optkit_print_error(err, print_success=False):
-	if err == 0L:
+	if err is None:
+		return
+	elif err == 0L:
 		if print_success:
 			print '\nOPTKIT SUCCESS'
 	elif err == 2L:

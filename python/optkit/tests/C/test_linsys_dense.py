@@ -835,16 +835,15 @@ class DenseLinalgTestCase(OptkitCTestCase):
 			self.assertEqual(lib.blas_destroy_handle(hdl), 0)
 			self.assertEqual(lib.ok_device_reset(), 0)
 
-	def test_diag_gramian(self):
-		(m, n) = self.shape
-		mindim = min(m, n)
+	def test_row_squares(self):
+		m, n = self.shape
 
-		# Python: calculate diag of (AA') (A fat) or (A'A) (A skinny)
-		Acols = self.A_test if m >= n else self.A_test.T
-		py_diag = np.zeros(mindim)
-		for j in xrange(mindim):
-			py_diag[j] = Acols[:, j].dot(Acols[:, j])
-
+		py_rows = np.zeros(m)
+		py_cols = np.zeros(n)
+		for i in xrange(m):
+			py_rows[i] = self.A_test[i, :].dot(self.A_test[i, :])
+		for j in xrange(n):
+			py_cols[j] = self.A_test[:, j].dot(self.A_test[:, j])
 
 		for (gpu, single_precision) in CONDITIONS:
 			lib = self.dense_libs.get(
@@ -854,7 +853,8 @@ class DenseLinalgTestCase(OptkitCTestCase):
 
 			DIGITS = 7 - 5 * lib.FLOAT - 1 * lib.GPU
 			RTOL = 10**(-DIGITS)
-			ATOLMIN = RTOL * mindim**0.5
+			ATOLM = RTOL * m**0.5
+			ATOLN = RTOL * n**0.5
 
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
@@ -870,23 +870,38 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
 				lib.matrix_memcpy_ma(A, A_ptr, order)
 
-				x = lib.vector(0, 0, None)
-				lib.vector_calloc(x, mindim, order)
-				self.register_var('x', x, lib.vector_free)
-				x_py = np.zeros(mindim).astype(lib.pyfloat)
-				x_ptr = x_py.ctypes.data_as(lib.ok_float_p)
+				r = lib.vector(0, 0, None)
+				lib.vector_calloc(r, m, order)
+				self.register_var('r', r, lib.vector_free)
+				r_py = np.zeros(m).astype(lib.pyfloat)
+				r_ptr = r_py.ctypes.data_as(lib.ok_float_p)
 
-				# C: calculate diag of (AA') (A fat) or (A'A) (A skinny)
-				lib.linalg_diag_gramian(A, x)
-				lib.vector_memcpy_av(x_ptr, x, 1)
+				# C: calculate row squares
+				lib.linalg_matrix_row_squares(lib.enums.CblasNoTrans, A, r)
+				lib.vector_memcpy_av(r_ptr, r, 1)
 
 				# compare C vs Python results
-				self.assertTrue(np.linalg.norm(x_py - py_diag) <=
-								ATOLMIN + RTOL * np.linalg.norm(py_diag))
+				self.assertTrue(np.linalg.norm(r_py - py_rows) <=
+								ATOLM + RTOL * np.linalg.norm(py_rows))
+
+				c = lib.vector(0, 0, None)
+				lib.vector_calloc(c, n, order)
+				self.register_var('c', c, lib.vector_free)
+				c_py = np.zeros(n).astype(lib.pyfloat)
+				c_ptr = c_py.ctypes.data_as(lib.ok_float_p)
+
+				# C: calculate column squares
+				lib.linalg_matrix_row_squares(lib.enums.CblasTrans, A, c)
+				lib.vector_memcpy_av(c_ptr, c, 1)
+
+				# compare C vs Python results
+				self.assertTrue(np.linalg.norm(c_py - py_cols) <=
+								ATOLN + RTOL * np.linalg.norm(py_cols))
 
 				# free memory
 				self.free_var('A')
-				self.free_var('x')
+				self.free_var('r')
+				self.free_var('c')
 
 			self.assertEqual(lib.ok_device_reset(), 0)
 
@@ -1099,9 +1114,6 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				lib.indvector_free(idx)
 				calcmin = np.array([A_py[inds[i], i] for i in xrange(n)])
 				colmin = np.min(A_py, 0)
-				print colmin
-				lib.vector_print(e)
-				print calcmin - colmin
 				self.assertTrue(np.linalg.norm(calcmin - colmin) <=
 								ATOLN + RTOL * np.linalg.norm(colmin))
 
@@ -1115,9 +1127,6 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				lib.indvector_free(idx)
 				calcmin = np.array([A_py[i, inds[i]] for i in xrange(m)])
 				rowmin = np.min(A_py, 1)
-				print rowmin
-				lib.vector_print(d)
-				print calcmin - rowmin
 				self.assertTrue(np.linalg.norm(calcmin - rowmin) <=
 								ATOLM + RTOL * np.linalg.norm(rowmin))
 

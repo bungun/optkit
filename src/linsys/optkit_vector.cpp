@@ -74,6 +74,9 @@ void vector_memcpy_vv_(vector_<T> * v1, const vector_<T> * v2)
 	if ( v1->stride == 1 && v2->stride == 1)
 		memcpy(v1->data, v2->data, v1->size * sizeof(T));
 	else
+		// #ifdef _OPENMP
+		// #pragma omp parallel for
+		// #endif
 		for (i = 0; i < v1->size; ++i)
 			__vector_set<T>(v1, i, __vector_get<T>(v2,i));
 }
@@ -85,6 +88,9 @@ void vector_memcpy_va_(vector_<T> * v, const T * y, size_t stride_y)
 	if (v->stride == 1 && stride_y == 1)
 		memcpy(v->data, y, v->size * sizeof(T));
 	else
+		// #ifdef _OPENMP
+		// #pragma omp parallel for
+		// #endif
 		for (i = 0; i < v->size; ++i)
 			__vector_set<T>(v, i, y[i * stride_y]);
 }
@@ -96,6 +102,9 @@ void vector_memcpy_av_(T * x, const vector_<T> * v, size_t stride_x)
 	if (v->stride == 1 && stride_x == 1)
 		memcpy(x, v->data, v->size * sizeof(T));
 	else
+		// #ifdef _OPENMP
+		// #pragma omp parallel for
+		// #endif
 		for (i = 0; i < v->size; ++i)
 			x[i * stride_x] = __vector_get<T>(v,i);
 }
@@ -104,6 +113,9 @@ template<typename T>
 void vector_scale_(vector_<T> * v, T x)
 {
 	uint i;
+	// #ifdef _OPENMP
+	// #pragma omp parallel for
+	// #endif
 	for (i = 0; i < v->size; ++i)
 		v->data[i * v->stride] *= x;
 }
@@ -113,6 +125,9 @@ template<typename T>
 void vector_add_(vector_<T> * v1, const vector_<T> * v2)
 {
 	uint i;
+	// #ifdef _OPENMP
+	// #pragma omp parallel for
+	// #endif
 	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] += v2->data[i * v2->stride];
 }
@@ -121,6 +136,9 @@ template<typename T>
 void vector_sub_(vector_<T> * v1, const vector_<T> * v2)
 {
 	uint i;
+	// #ifdef _OPENMP
+	// #pragma omp parallel for
+	// #endif
 	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] -= v2->data[i * v2->stride];
 }
@@ -129,6 +147,9 @@ template<typename T>
 void vector_mul_(vector_<T> * v1, const vector_<T> * v2)
 {
 	uint i;
+	// #ifdef _OPENMP
+	// #pragma omp parallel for
+	// #endif
 	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] *= v2->data[i * v2->stride];
 }
@@ -137,6 +158,9 @@ template<typename T>
 void vector_div_(vector_<T> * v1, const vector_<T> * v2)
 {
 	uint i;
+	// #ifdef _OPENMP
+	// #pragma omp parallel for
+	// #endif
 	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] /= v2->data[i * v2->stride];
 }
@@ -145,6 +169,9 @@ template<typename T>
 void vector_add_constant_(vector_<T> * v, const T x)
 {
 	uint i;
+	// #ifdef _OPENMP
+	// #pragma omp parallel for
+	// #endif
 	for (i = 0; i < v->size; ++i)
 		v->data[i * v->stride] += x;
 }
@@ -267,6 +294,9 @@ void vector_add_constant(vector * v, const ok_float x)
 void vector_abs(vector * v)
 {
 	uint i;
+	// #ifdef _OPENMP
+	// #pragma omp parallel for
+	// #endif
 	for (i = 0; i < v->size; ++i)
 		v->data[i * v->stride] = MATH(fabs)(v->data[i * v->stride]);
 }
@@ -274,6 +304,9 @@ void vector_abs(vector * v)
 void vector_recip(vector * v)
 {
 	uint i;
+	// #ifdef _OPENMP
+	// #pragma omp parallel for
+	// #endif
 	for (i = 0; i < v->size; ++i)
 		v->data[i * v->stride] = kOne / v->data[i * v->stride];
 }
@@ -281,15 +314,20 @@ void vector_recip(vector * v)
 void vector_safe_recip(vector * v)
 {
 	uint i;
+	// #ifdef _OPENMP
+	// #pragma omp parallel for
+	// #endif
 	for (i = 0; i < v->size; ++i)
-		v->data[i * v->stride] = ((ok_float)
-			(v->data[i * v->stride] == kZero)) *
-			kOne / v->data[i * v->stride];
+		if (v->data[i * v->stride] > 0)
+			v->data[i * v->stride] = kOne / v->data[i * v->stride];
 }
 
 void vector_sqrt(vector * v)
 {
 	uint i;
+	// #ifdef _OPENMP
+	// #pragma omp parallel for
+	// #endif
 	for (i = 0; i < v->size; ++i)
 		v->data[i * v->stride] = MATH(sqrt)(v->data[i * v->stride]);
 }
@@ -297,6 +335,9 @@ void vector_sqrt(vector * v)
 void vector_pow(vector * v, const ok_float x)
 {
 	uint i;
+	// #ifdef _OPENMP
+	// #pragma omp parallel for
+	// #endif
 	for (i = 0; i < v->size; ++i)
 		v->data[i * v->stride] = MATH(pow)(v->data[i * v->stride], x);
 }
@@ -304,6 +345,9 @@ void vector_pow(vector * v, const ok_float x)
 void vector_exp(vector * v)
 {
 	uint i;
+	// #ifdef _OPENMP
+	// #pragma omp parallel for
+	// #endif
 	for (i = 0; i < v->size; ++i)
 		v->data[i * v->stride] = MATH(exp)(v->data[i * v->stride]);
 }
@@ -315,7 +359,7 @@ ok_float vector_min(const vector * v)
 	{ return vector_min_<ok_float>(v, OK_FLOAT_MAX); }
 
 ok_float vector_max(const vector * v)
-	{ return vector_min_<ok_float>(v, -OK_FLOAT_MAX); }
+	{ return vector_max_<ok_float>(v, -OK_FLOAT_MAX); }
 
 void indvector_alloc(indvector * v, size_t n)
 	{ vector_alloc_<size_t>(v, n); }

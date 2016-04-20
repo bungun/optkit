@@ -13,14 +13,15 @@ const size_t kBlockSize = 128;
  *
  * tally the number of reassignments.
  */
-static void assign_clusters_l2(matrix * A, matrix * C,
+static ok_status assign_clusters_l2(matrix * A, matrix * C,
 	upsamplingvec * a2c, cluster_aid * h)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	size_t i;
 	upsamplingvec * u = &(h->a2c_tentative);
 
 	h->reassigned = 0;
-	#ifdef _openmp
+	#ifdef _OPENMP
 	#pragma omp parallel for
 	#endif
 	for (i = 0; i < A->size1; ++i)
@@ -28,6 +29,7 @@ static void assign_clusters_l2(matrix * A, matrix * C,
 			a2c->indices[i] = u->indices[i];
 			++h->reassigned;
 		}
+	return err;
 }
 
 static ok_float __dist_lInf_A_minus_UC_i(const ok_float * A,
@@ -36,14 +38,16 @@ static ok_float __dist_lInf_A_minus_UC_i(const ok_float * A,
 	ok_float * A_blk, const size_t * strideBlk, const size_t * iterBlk,
 	const size_t * blk, const size_t * i, const int * row_length)
 {
+	ok_float dist;
 	CBLAS(copy)(*row_length, A + (*i) * (*iterA), (*strideA),
 		A_blk + (*i - *blk) * (*iterBlk), (const int) (*strideBlk));
 	CBLAS(axpy)(*row_length, -kOne,
 		C + u->indices[(*i) * u->stride] * (*iterC), (*strideC),
 		A_blk + (*i - *blk) * (*iterBlk), (const int) (*strideBlk));
-	return A_blk[CBLASI(amax)(*row_length, A_blk + (*i - *blk) * (*iterBlk),
+	dist = A_blk[CBLASI(amax)(*row_length, A_blk + (*i - *blk) * (*iterBlk),
 		(const int) (*strideBlk)) * (*strideBlk) +
 		(*i - *blk) * (*iterBlk)];
+	return MATH(fabs)(dist);
 }
 
 /*
@@ -57,9 +61,10 @@ static ok_float __dist_lInf_A_minus_UC_i(const ok_float * A,
  * tally the number of reassignments.
  *
  */
-static void assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
+static ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	upsamplingvec * a2c, cluster_aid * h, ok_float maxdist)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	size_t i, blk, row_stride, idx_stride, row_strideA, row_strideC;
 	int strideA, strideC;
 	matrix * A_blk;
@@ -80,7 +85,7 @@ static void assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 
 	h->reassigned = 0;
 	for (blk = 0; blk < A->size1; blk += kBlockSize)
-		#ifdef _openmp
+		#ifdef _OPENMP
 		#pragma omp parallel for
 		#endif
 		for (i = blk; i < blk + kBlockSize && i < A->size1; ++i)
@@ -95,6 +100,7 @@ static void assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 				a2c->indices[i] = u->indices[i];
 				++h->reassigned;
 			}
+	return err;
 }
 
 #ifdef __cplusplus

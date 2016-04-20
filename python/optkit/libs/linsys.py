@@ -37,6 +37,8 @@ class DenseLinsysLibs(object):
 				CblasRight = c_uint(142).value
 				OkTransformScale = c_uint(0).value
 				OkTransformAdd = c_uint(1).value
+				OkTransformIncrement = c_uint(2).value
+				OkTransformDecrement = c_uint(3).value
 
 			lib.enums = OKEnums()
 
@@ -262,7 +264,8 @@ class DenseLinsysLibs(object):
 			## arguments
 			lib.linalg_cholesky_decomp.argtypes = [c_void_p, matrix_p]
 			lib.linalg_cholesky_svx.argtypes = [c_void_p, matrix_p, vector_p]
-			lib.linalg_diag_gramian.argtypes = [matrix_p, vector_p]
+			lib.linalg_matrix_row_squares.argtypes = [c_uint, matrix_p,
+													  vector_p]
 			lib.linalg_matrix_broadcast_vector.argtypes = [matrix_p, vector_p,
 														   c_uint, c_uint]
 			lib.linalg_matrix_reduce_indmin.argtypes = [indvector_p, vector_p,
@@ -275,7 +278,7 @@ class DenseLinsysLibs(object):
 			## return values
 			lib.linalg_cholesky_decomp.restype = None
 			lib.linalg_cholesky_svx.restype = None
-			lib.linalg_diag_gramian.restype = None
+			lib.linalg_matrix_row_squares.restype = None
 			lib.linalg_matrix_broadcast_vector.restype = None
 			lib.linalg_matrix_reduce_indmin.restype = None
 			lib.linalg_matrix_reduce_min.restype = None

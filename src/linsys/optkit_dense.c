@@ -114,7 +114,7 @@ void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x)
 }
 
 /*
- * if A is skinny, set
+ * if t == CblasTrans, set
  *
  * 	v_i = a_i'a_i,
  *
@@ -125,19 +125,19 @@ void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x)
  * where \tilde a_i is the ith _row_ of A
  *
  */
-void linalg_diag_gramian(const matrix * A, vector * v)
+void linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t, const matrix * A,
+	vector * v)
 {
-	int skinny = (A->size1 >= A->size2);
-	size_t k, nvecs = (skinny) ? A->size2 : A->size1;
-	int vecsize = (skinny) ? (int) A->size1 : (int) A->size2;
-	size_t ptrstride = ((skinny) == (A->order == CblasRowMajor))
+	size_t k, nvecs = (t == CblasTrans) ? A->size2 : A->size1;
+	int vecsize = (t == CblasTrans) ? (int) A->size1 : (int) A->size2;
+	size_t ptrstride = ((t == CblasTrans) == (A->order == CblasRowMajor))
 		? (int) 1 : A->ld;
-	int stride = ((skinny) == (A->order == CblasRowMajor)) ?
+	int stride = ((t == CblasTrans) == (A->order == CblasRowMajor)) ?
 		(int) A->ld : 1;
 
 	/* check size == v->size */
 	if (v->size != nvecs) {
-		printf("%s %s\n", "ERROR: linalg_diag_gramian()",
+		printf("%s %s\n", "ERROR: linalg_matrix_row_squares()",
 			"incompatible dimensions");
 		return;
 	}

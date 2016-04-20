@@ -26,9 +26,10 @@ static __global__ void __assign_clusters_l2(size_t * a2c_curr,
 	}
 }
 
-static void assign_clusters_l2(matrix * A, matrix * C,
+static ok_status assign_clusters_l2(matrix * A, matrix * C,
 	upsamplingvec * a2c, cluster_aid * h)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	size_t i, * reassigned;
 	h->reassigned = 0;
 	ok_alloc_gpu(reassigned, sizeof(size_t));
@@ -46,6 +47,7 @@ static void assign_clusters_l2(matrix * A, matrix * C,
 	CUDA_CHECK_ERR;
 
 	ok_memcpy_gpu(&(h->reassigned), reassigned, sizeof(size_t));
+	return err;
 }
 
 static __global__ void __dist_lInf_A_minus_UC(const ok_float * A,
@@ -122,9 +124,10 @@ static __global__ void __assign_clusters_l2_lInf_cap(size_t * a2c_curr,
  * tally the number of reassignments.
  *
  */
-static void assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
+static ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	upsamplingvec * a2c, cluster_aid * h, ok_float maxdist)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	uint i, j;
 	uint block_size = kTiles2D * kTileSize;
 
@@ -168,6 +171,7 @@ static void assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	CUDA_CHECK_ERR;
 
 	ok_memcpy_gpu(&(h->reassigned), reassigned, sizeof(size_t));
+	return err;
 }
 
 #ifdef __cplusplus

@@ -14,7 +14,10 @@ void denselib_version(int * maj, int * min, int * change, int * status);
 void linalg_cholesky_decomp(void * linalg_handle, matrix * A);
 void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x);
 
-void linalg_diag_gramian(const matrix * A, vector * v);
+/* TODO: consider changing this to matrix_reduce_unary(const enum t, matrix A,
+	vector v, const enum reduction_op, const enum unary_op) */
+void linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t, const matrix * A,
+	vector * v);
 void linalg_matrix_broadcast_vector(matrix * A, const vector * v,
 	const enum OPTKIT_TRANSFORM operation, const enum CBLAS_SIDE side);
 void linalg_matrix_reduce_indmin(indvector * indices, vector * minima,

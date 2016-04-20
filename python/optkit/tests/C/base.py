@@ -8,6 +8,10 @@ class OptkitCTestCase(unittest.TestCase):
 		self.managed_vars[name] = var;
 		self.free_methods[name] = free;
 
+	def unregister_var(self, name):
+		self.managed_vars.pop(name, None)
+		self.free_methods.pop(name, None)
+
 	def free_var(self, name):
 		var = self.managed_vars.pop(name, None)
 		free_method = self.free_methods.pop(name, None)
@@ -16,5 +20,5 @@ class OptkitCTestCase(unittest.TestCase):
 
 	def free_all_vars(self):
 		for varname in self.managed_vars.keys():
-			print '\nreleasing unfreed C var {}'.format(varname)
+			print 'releasing unfreed C variable {}'.format(varname)
 			self.free_var(varname)

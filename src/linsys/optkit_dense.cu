@@ -193,7 +193,7 @@ void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x)
 	blas_trsv(linalg_handle, CblasLower, CblasTrans, CblasNonUnit, L, x);
 }
 
-static __global__ void __block_diag_gramian(const ok_float * A,
+static __global__ void __block_col_squares(const ok_float * A,
 	const size_t size1, const size_t size2, const size_t row_stride,
 	const size_t col_stride, ok_float * v, const size_t stride_v,
 	const size_t i, const size_t j)
@@ -223,7 +223,8 @@ static __global__ void __block_diag_gramian(const ok_float * A,
 	v[global_row * stride_v] = vsub[row];
 }
 
-void linalg_diag_gramian(const matrix * A, vector * v)
+void linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t, const matrix * A,
+	vector * v)
 {
 	uint i, j;
 	uint block_size = kTiles2D * kTileSize;
@@ -231,18 +232,18 @@ void linalg_diag_gramian(const matrix * A, vector * v)
 	dim3 grid_dim(kTileSize, kTileSize);
 	dim3 blk_dim(kTiles2D, kTiles2D);
 
-	int skinny = A->size1 == v->size;
+	int transpose = t == CblasTrans;
 	int rowmajor = A->order == CblasRowMajor;
 
 	/*
-	 * logic for gram matrix:
-	 *	skinny: multiply A^T * A: work with columns of A
-	 *	fat: multiply A * A^T: work with columns of A^T
+	 *	transpose: multiply A^T * A: work with columns of A
+	 *	non-transpose: multiply A * A^T: work with rows of A
+	 *		(columns of A^T)
 	 */
-	size_t size1 = (skinny) ? A->size1 : A->size2;
-	size_t size2 = (skinny) ? A->size2 : A->size1;
-	size_t row_stride = (skinny == rowmajor) ? A->ld : 1;
-	size_t col_stride = (skinny == rowmajor) ? 1 : A->ld;
+	size_t size1 = (transpose) ? A->size1 : A->size2;
+	size_t size2 = (transpose) ? A->size2 : A->size1;
+	size_t row_stride = (transpose == rowmajor) ? A->ld : 1;
+	size_t col_stride = (transpose == rowmajor) ? 1 : A->ld;
 
 	if (!(v && A)) {
 		printf("%s\n", "A and v must both be initialized");
@@ -259,7 +260,7 @@ void linalg_diag_gramian(const matrix * A, vector * v)
 		cudaStream_t s;
 		cudaStreamCreate(&s);
 		for (i = 0; i < size1; i += block_size)
-			__block_diag_gramian<<<grid_dim, blk_dim, 0, s>>>(
+			__block_col_squares<<<grid_dim, blk_dim, 0, s>>>(
 				A->data, size1, size2, row_stride, col_stride,
 				v->data, v->stride, i, j);
 		cudaStreamDestroy(s);
