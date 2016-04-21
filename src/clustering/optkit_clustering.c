@@ -88,7 +88,7 @@ static ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 		#ifdef _OPENMP
 		#pragma omp parallel for
 		#endif
-		for (i = blk; i < blk + kBlockSize && i < A->size1; ++i)
+		for (i = blk; i < blk + kBlockSize && i < A->size1; ++i) {
 			if (a2c->indices[i] == u->indices[i]) {
 				continue;
 			} else if (maxdist >= __dist_lInf_A_minus_UC_i(A->data,
@@ -100,6 +100,7 @@ static ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 				a2c->indices[i] = u->indices[i];
 				++h->reassigned;
 			}
+		}
 	return err;
 }
 

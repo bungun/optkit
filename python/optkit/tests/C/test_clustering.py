@@ -130,7 +130,9 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			for i in xrange(m):
 				if a2c[i] == indmin[i]:
 					continue
-				elif np.abs(A[i, :] - C[indmin[i], :]).max() <= maxdist:
+
+				dist_inf = np.abs(A[i, :] - C[indmin[i], :]).max()
+				if dist_inf <= maxdist:
 					a2c[i] = indmin[i]
 					reassigned += 1
 
@@ -839,6 +841,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			dlib.matrix_memcpy_ma(A, A_ptr, dlib.enums.CblasRowMajor)
 			dlib.matrix_memcpy_ma(C, C_ptr, dlib.enums.CblasRowMajor)
 
+			print "MAX A PY ", A_py.max()
+
 			a2c = lib.upsamplingvec()
 			err = PRINTERR( lib.upsamplingvec_alloc(a2c, m, k) )
 			self.register_var('a2c', a2c, lib.upsamplingvec_free)
@@ -870,11 +874,11 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			h = lib.cluster_aid_p()
 
-			MAXDIST = 10.
+			DIST_RELTOL = 0.1
 			CHANGE_TOL = int(1 + 0.01 * m)
 			MAXITER = 500
 			VERBOSE = 1
-			err = lib.k_means(A, C, a2c, counts, h, MAXDIST, CHANGE_TOL,
+			err = lib.k_means(A, C, a2c, counts, h, DIST_RELTOL, CHANGE_TOL,
 							  MAXITER, VERBOSE)
 
 			self.assertEqual( err, 0 )

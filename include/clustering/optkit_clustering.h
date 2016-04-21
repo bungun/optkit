@@ -138,9 +138,9 @@ static void get_distance_tolerance(ok_float *tol, const ok_float * maxA,
 {
 	if ((*iter) == 0)
 		*tol = OK_INFINITY;
-
-	*tol = (kOne + ((ok_float) (*iter) / (*maxiter)) *
-		(*reltol - kOne)) * (*maxA);
+	else
+		*tol = (kOne + ((ok_float) (*iter) / (*maxiter)) *
+			(*reltol - kOne)) * (*maxA);
 }
 
 static ok_status k_means_finish(cluster_aid * h)
@@ -157,7 +157,7 @@ ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
 	ok_status err = OPTKIT_SUCCESS;
 	size_t iter;
 	vector vA;
-	ok_float tol, maxA;
+	ok_float tol, rowmax, maxA = -OK_FLOAT_MAX;
 	char iterfmt[] =
 		"iteration: %u \t changed: %u \t change tol: %u\n";
 	char exitfmt[] = "quitting k-means after %u iterations, error = %u\n";
@@ -169,19 +169,26 @@ ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
 	if (!valid)
 		return OPTKIT_ERROR_DIMENSION_MISMATCH;
 
-	matrix_cast_vector(&vA, A);
-	maxA = vector_max(&vA);
+
+	for (iter = 0; iter < A->size1; ++iter) {
+		matrix_row(&vA, A, iter);
+		rowmax = vector_max(&vA);
+		maxA = maxA > rowmax ? maxA : rowmax;
+	}
+	printf("MAX A%e\n", maxA);
 
 	if (verbose)
 		printf("\nstarting k-means on %zu vectors and %zu centroids\n",
 			A->size1, C->size1);
 
+	printf("%e\n", OK_INFINITY);
+	printf("%s %e\n", "DIST RELTOL", dist_reltol);
 	for (iter = 0; iter < maxiter && !err; ++iter) {
 		get_distance_tolerance(&tol, &maxA, &dist_reltol, &iter,
 			&maxiter);
+		printf("%s %zu %s %f\n", "ITER", iter, "DISTANCE TOLERANCE", tol);
 		err = cluster(A, C, a2c, &h, tol);
-		if (!err)
-			err = calculate_centroids(A, C, a2c, counts);
+		err = calculate_centroids(A, C, a2c, counts);
 		if (verbose)
 			printf(iterfmt, iter, h->reassigned, change_tol);
 		if (h->reassigned < change_tol)
