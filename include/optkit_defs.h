@@ -31,6 +31,7 @@ extern "C" {
 #endif
 
 #define OK_NULL 0
+#define ok_alloc(x, T, len) x = (T*) malloc(len); memset(x, 0, len);
 #define ok_free(x) free(x); x = OK_NULL
 
 typedef unsigned int uint;

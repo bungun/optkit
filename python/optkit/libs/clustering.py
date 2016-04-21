@@ -79,6 +79,29 @@ class ClusteringLibs(object):
 			lib.cluster_work = cluster_work
 			lib.cluster_work_p = cluster_work_p
 
+			class cluster_settings(Structure):
+				_fields_ = [('dist_reltol', ok_float),
+							('change_abstol', c_size_t),
+							('maxiter', c_size_t),
+							('verbose', c_uint)]
+
+			cluster_settings_p = POINTER(cluster_settings)
+			lib.cluster_settings = cluster_settings
+			lib.cluster_settings_p = cluster_settings_p
+
+			class cluster_io(Structure):
+				_fields_ = [('A', ok_float_p),
+							('C', ok_float_p),
+							('counts', ok_float_p),
+							('a2c', c_size_t_p),
+							('orderA', c_uint),
+							('orderC', c_uint),
+							('stride_a2c', c_uint),
+							('stride_counts', c_size_t)]
+
+			cluster_io_p = POINTER(cluster_io)
+			lib.cluster_io = cluster_io
+			lib.cluster_io_p = cluster_io_p
 
 			# argument types
 			lib.upsamplingvec_alloc.argtypes = [upsamplingvec_p, c_size_t,
@@ -104,6 +127,12 @@ class ClusteringLibs(object):
 			lib.k_means.argtypes = [matrix_p, matrix_p, upsamplingvec_p,
 									vector_p, cluster_aid_p, ok_float,
 									c_size_t, c_size_t, c_uint]
+			lib.k_means_easy_init.argtypes = [c_size_t, c_size_t, c_size_t]
+			lib.k_means_easy_resize.argtypes = [c_void_p, c_size_t, c_size_t,
+												c_size_t]
+			lib.k_means_easy_run.argtypes = [c_void_p, cluster_settings_p,
+											 cluster_io_p]
+			lib.k_means_easy_finish.argtypes = [c_void_p]
 
 			# return types
 			lib.upsamplingvec_alloc.restype = c_uint
@@ -118,6 +147,11 @@ class ClusteringLibs(object):
 			lib.cluster.restype = c_uint
 			lib.calculate_centroids.restype = c_uint
 			lib.k_means.restype = c_uint
+			lib.k_means_easy_init.restype = c_void_p
+			lib.k_means_easy_resize.restype = c_uint
+			lib.k_means_easy_run.restype = c_uint
+			lib.k_means_easy_finish.restype = c_uint
+
 
 			lib.FLOAT = single_precision
 			lib.GPU = gpu
