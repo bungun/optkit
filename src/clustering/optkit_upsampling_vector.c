@@ -56,7 +56,7 @@ ok_status upsamplingvec_update_size(upsamplingvec * u)
 	if (!u || !u->indices)
 		return OPTKIT_ERROR_UNALLOCATED;
 
-	u->size2 = indvector_max(&u->vec);
+	u->size2 = indvector_max(&u->vec) + 1;
 	return OPTKIT_SUCCESS;
 }
 

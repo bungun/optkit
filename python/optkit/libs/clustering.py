@@ -27,6 +27,7 @@ class ClusteringLibs(object):
 			return lib
 		else:
 			ok_float = denselib.ok_float
+			ok_float_p = denselib.ok_float_p
 			c_size_t_p = denselib.c_size_t_p
 			vector = denselib.vector
 			vector_p = denselib.vector_p
@@ -64,7 +65,7 @@ class ClusteringLibs(object):
 			lib.cluster_aid = cluster_aid
 			lib.cluster_aid_p = cluster_aid_p
 
-			class cluster_work(Structure):
+			class kmeans_work(Structure):
 				_fields_ = [('indicator', POINTER(c_int)),
 							('n_vectors', c_size_t),
 							('n_clusters', c_size_t),
@@ -75,21 +76,21 @@ class ClusteringLibs(object):
 							('counts', vector),
 							('h', cluster_aid)]
 
-			cluster_work_p = POINTER(cluster_work)
-			lib.cluster_work = cluster_work
-			lib.cluster_work_p = cluster_work_p
+			kmeans_work_p = POINTER(kmeans_work)
+			lib.kmeans_work = kmeans_work
+			lib.kmeans_work_p = kmeans_work_p
 
-			class cluster_settings(Structure):
+			class kmeans_settings(Structure):
 				_fields_ = [('dist_reltol', ok_float),
 							('change_abstol', c_size_t),
 							('maxiter', c_size_t),
 							('verbose', c_uint)]
 
-			cluster_settings_p = POINTER(cluster_settings)
-			lib.cluster_settings = cluster_settings
-			lib.cluster_settings_p = cluster_settings_p
+			kmeans_settings_p = POINTER(kmeans_settings)
+			lib.kmeans_settings = kmeans_settings
+			lib.kmeans_settings_p = kmeans_settings_p
 
-			class cluster_io(Structure):
+			class kmeans_io(Structure):
 				_fields_ = [('A', ok_float_p),
 							('C', ok_float_p),
 							('counts', ok_float_p),
@@ -99,9 +100,9 @@ class ClusteringLibs(object):
 							('stride_a2c', c_uint),
 							('stride_counts', c_size_t)]
 
-			cluster_io_p = POINTER(cluster_io)
-			lib.cluster_io = cluster_io
-			lib.cluster_io_p = cluster_io_p
+			kmeans_io_p = POINTER(kmeans_io)
+			lib.kmeans_io = kmeans_io
+			lib.kmeans_io_p = kmeans_io_p
 
 			# argument types
 			lib.upsamplingvec_alloc.argtypes = [upsamplingvec_p, c_size_t,
@@ -120,6 +121,19 @@ class ClusteringLibs(object):
 			lib.cluster_aid_alloc.argtypes = [cluster_aid_p, c_size_t,
 											  c_size_t, c_uint]
 			lib.cluster_aid_free.argtypes = [cluster_aid_p]
+			lib.kmeans_work_alloc.argtypes = [kmeans_work_p, c_size_t, 
+											  c_size_t, c_size_t]
+			lib.kmeans_work_free.argtypes = [kmeans_work_p]
+			lib.kmeans_work_subselect.argtypes = [kmeans_work_p, c_size_t, 
+												  c_size_t, c_size_t]
+			lib.kmeans_work_load.argtypes = [kmeans_work_p, ok_float_p, 
+											 c_uint, ok_float_p, c_uint, 
+											 c_size_t_p, c_size_t, ok_float_p, 
+											 c_size_t]
+			lib.kmeans_work_extract.argtypes = [ok_float_p, c_uint, 
+												c_size_t_p, c_size_t, 
+												ok_float_p, c_size_t,
+												kmeans_work_p]
 			lib.cluster.argtypes = [matrix_p, matrix_p, upsamplingvec_p,
 									POINTER(cluster_aid_p), ok_float]
 			lib.calculate_centroids.argtypes = [matrix_p, matrix_p,
@@ -127,30 +141,35 @@ class ClusteringLibs(object):
 			lib.k_means.argtypes = [matrix_p, matrix_p, upsamplingvec_p,
 									vector_p, cluster_aid_p, ok_float,
 									c_size_t, c_size_t, c_uint]
-			lib.k_means_easy_init.argtypes = [c_size_t, c_size_t, c_size_t]
-			lib.k_means_easy_resize.argtypes = [c_void_p, c_size_t, c_size_t,
+			lib.kmeans_easy_init.argtypes = [c_size_t, c_size_t, c_size_t]
+			lib.kmeans_easy_resize.argtypes = [c_void_p, c_size_t, c_size_t,
 												c_size_t]
-			lib.k_means_easy_run.argtypes = [c_void_p, cluster_settings_p,
-											 cluster_io_p]
-			lib.k_means_easy_finish.argtypes = [c_void_p]
+			lib.kmeans_easy_run.argtypes = [c_void_p, kmeans_settings_p,
+											 kmeans_io_p]
+			lib.kmeans_easy_finish.argtypes = [c_void_p]
 
 			# return types
 			lib.upsamplingvec_alloc.restype = c_uint
 			lib.upsamplingvec_free.restype = c_uint
 			lib.upsamplingvec_check_bounds.restype = c_uint
-			lib.upsamplingvec_updates_size.restype = c_uint
+			lib.upsamplingvec_update_size.restype = c_uint
 			lib.upsamplingvec_subvector.restype = c_uint
 			lib.upsamplingvec_mul_matrix.restype = c_uint
 			lib.upsamplingvec_count.restype = c_uint
 			lib.cluster_aid_alloc.restype = c_uint
 			lib.cluster_aid_free.restype = c_uint
+			lib.kmeans_work_alloc.restype = c_uint
+			lib.kmeans_work_free.restype = c_uint
+			lib.kmeans_work_subselect.restype = c_uint
+			lib.kmeans_work_load.restype = c_uint
+			lib.kmeans_work_extract.restype = c_uint
 			lib.cluster.restype = c_uint
 			lib.calculate_centroids.restype = c_uint
 			lib.k_means.restype = c_uint
-			lib.k_means_easy_init.restype = c_void_p
-			lib.k_means_easy_resize.restype = c_uint
-			lib.k_means_easy_run.restype = c_uint
-			lib.k_means_easy_finish.restype = c_uint
+			lib.kmeans_easy_init.restype = c_void_p
+			lib.kmeans_easy_resize.restype = c_uint
+			lib.kmeans_easy_run.restype = c_uint
+			lib.kmeans_easy_finish.restype = c_uint
 
 
 			lib.FLOAT = single_precision

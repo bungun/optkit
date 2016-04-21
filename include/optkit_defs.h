@@ -44,7 +44,7 @@ typedef enum optkit_status {
 	OPTKIT_ERROR_CUSPARSE = 4,
 	OPTKIT_ERROR_LAYOUT_MISMATCH = 10,
 	OPTKIT_ERROR_DIMENSION_MISMATCH = 11,
-	OPTKIT_ERROR_OUT_OF_BOUNDS = 12
+	OPTKIT_ERROR_OUT_OF_BOUNDS = 12,
 	OPTKIT_ERROR_OVERWRITE = 100,
 	OPTKIT_ERROR_UNALLOCATED = 101
 } ok_status;
@@ -67,7 +67,7 @@ typedef enum optkit_status {
 	do { \
 		ok_status err = call; \
 		if (err) \
-			return err;
+			return err; \
 	} while(0)
 
 enum OPTKIT_TRANSFORM {
