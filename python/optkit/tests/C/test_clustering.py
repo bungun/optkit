@@ -197,6 +197,43 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual( err, 0 )
 			self.unregister_var('u')
 
+	def test_upsamplingvec_update_size(self):
+		m, n = self.shape
+		k = self.k
+
+		for (gpu, single_precision) in CONDITIONS:
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			lib = self.cluster_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
+
+			if lib is None:
+				continue
+
+			u_py = np.zeros(m).astype(c_size_t)
+			u_ptr = u_py.ctypes.data_as(dlib.c_size_t_p)
+
+			u = lib.upsamplingvec()
+			err = PRINTERR( lib.upsamplingvec_alloc(u, m, k) )
+			self.register_var('u', u, lib.upsamplingvec_free)
+			self.assertEqual( err, 0 )
+
+			self.assertEqual( lib.upsamplingvec_check_bounds(u), 0 )
+			dlib.indvector_memcpy_va(u.vec, u_ptr, 1)
+			self.assertEqual( lib.upsamplingvec_check_bounds(u), 0 )
+
+			# incorrect size
+			u.size2 = k / 2
+			self.assertNotEqual( lib.upsamplingvec_check_bounds(u), 0 )
+
+			self.assertEqual( lib.upsamplingvec_update_size(u), 0 )
+			self.assertEqual( u.size2, k )
+			self.assertEqual( lib.upsamplingvec_check_bounds(u), 0 )
+
+			err = PRINTERR( lib.upsamplingvec_free(u) )
+			self.assertEqual( err, 0 )
+			self.unregister_var('u')
+
 	def test_upsamplingvec_subvector(self):
 		m, n = self.shape
 		k = self.k
@@ -211,7 +248,6 @@ class ClusterLibsTestCase(OptkitCTestCase):
 				continue
 
 			offset = m / 4
-			k_offset = k / 4
 			msub = m / 2
 			ksub = k / 2
 
@@ -228,15 +264,15 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			u_py += (k * np.random.rand(m)).astype(c_size_t)
 			dlib.indvector_memcpy_va(u.vec, u_ptr, 1)
-			lib.upsamplingvec_subvector(usub, u, offset, 0, msub, k)
+			lib.upsamplingvec_subvector(usub, u, offset, msub, k)
 			dlib.indvector_memcpy_av(usub_ptr, usub.vec, 1)
 			self.assertTrue( usub.size1 == msub )
 			self.assertTrue( usub.size2 == k )
 			self.assertTrue( sum(usub_py - u_py[offset : offset + msub]) == 0 )
 
-			lib.upsamplingvec_subvector(usub, u, offset, k_offset, msub, ksub)
+			lib.upsamplingvec_subvector(usub, u, offset, msub, ksub)
 			self.assertTrue(usub.size1 == msub)
-			self.assertTrue(usub.size2 == ksub - k_offset)
+			self.assertTrue(usub.size2 == ksub)
 
 			err = PRINTERR( lib.upsamplingvec_free(u) )
 			self.assertEqual( err, 0 )

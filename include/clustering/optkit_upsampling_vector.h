@@ -18,6 +18,7 @@ typedef struct upsamplingvec {
 ok_status upsamplingvec_alloc(upsamplingvec * u, size_t size1, size_t size2);
 ok_status upsamplingvec_free(upsamplingvec * u);
 ok_status upsamplingvec_check_bounds(const upsamplingvec * u);
+ok_status upsamplingvec_update_size(upsamplingvec * u);
 ok_status upsamplingvec_subvector(upsamplingvec * usub, upsamplingvec * u,
 	size_t offset1, size_t length1, size_t size2);
 ok_status upsamplingvec_mul_matrix(const enum CBLAS_TRANSPOSE transU,

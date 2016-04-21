@@ -51,13 +51,23 @@ ok_status upsamplingvec_check_bounds(const upsamplingvec * u)
 		return OPTKIT_ERROR_DIMENSION_MISMATCH;
 }
 
+ok_status upsamplingvec_update_size(upsamplingvec * u)
+{
+	if (!u || !u->indices)
+		return OPTKIT_ERROR_UNALLOCATED;
+
+	u->size2 = indvector_max(&u->vec);
+	return OPTKIT_SUCCESS;
+}
+
+
 ok_status upsamplingvec_subvector(upsamplingvec * usub, upsamplingvec * u,
-	size_t offset1, size_t offset2, size_t length1, size_t length2)
+	size_t offset1, size_t length1, size_t size2)
 {
 	indvector_subvector(&usub->vec, &u->vec, offset1, length1);
 	usub->indices = usub->vec.data;
 	usub->size1 = length1;
-	usub->size2 = length2 - offset2;
+	usub->size2 = size2;
 	return OPTKIT_SUCCESS;
 }
 
