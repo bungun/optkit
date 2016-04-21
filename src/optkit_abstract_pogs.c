@@ -619,20 +619,19 @@ ok_status pogs_solve(pogs_solver * solver, FunctionVector * f,
 {
 	ok_status err = OPTKIT_SUCCESS;
 	if (!solver)
-		return OPTKIT_ERROR;
+		return OPTKIT_ERROR_UNALLOCATED;
 
 	OK_TIMER t = tic();
 
 	/* copy settings */
-	err = update_settings(solver->settings, settings);
+	OPTKIT_RETURN_IF_ERROR(update_settings(solver->settings, settings));
 
 	/* copy and scale function vectors */
-	if (!err)
-		err = update_problem(solver, f, g);
+	OPTKIT_RETURN_IF_ERROR(update_problem(solver, f, g));
 
 	/* get warm start variables */
-	if (settings->warmstart && !err)
-		err = initialize_variables(solver);
+	if (settings->warmstart)
+		OPTKIT_RETURN_IF_ERROR(initialize_variables(solver));
 	if ( !(settings->resume) )
 		solver->rho = settings->rho;
 
@@ -641,15 +640,12 @@ ok_status pogs_solve(pogs_solver * solver, FunctionVector * f,
 		info->setup_time += solver->init_time;
 
 	/* run solver */
-	if (!err) {
-		t = tic();
-		err = pogs_solver_loop(solver, info);
-		info->solve_time = toc(t);
-	}
+	t = tic();
+	err = pogs_solver_loop(solver, info);
+	info->solve_time = toc(t);
 
 	/* unscale output */
-	if (!err)
-		err = copy_output(solver, output);
+	OPTKIT_CHECK_ERROR(&err, copy_output(solver, output));
 
 	return err;
 }
@@ -658,9 +654,9 @@ ok_status pogs_finish(pogs_solver * solver, const int reset)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	if (solver)
-		err = pogs_solver_free(solver);
-	if (reset && !err)
-		err = ok_device_reset();
+		OPTKIT_CHECK_ERROR(&err, pogs_solver_free(solver));
+	if (reset)
+		OPTKIT_CHECK_ERROR(&err, ok_device_reset());
 	return err;
 }
 
@@ -671,9 +667,9 @@ ok_status pogs(operator * A, FunctionVector * f, FunctionVector * g,
 	ok_status err = OPTKIT_SUCCESS;
 	pogs_solver * solver = OK_NULL;
 	solver = pogs_init(A, direct, equil_norm);
-	err = pogs_solve(solver, f, g, settings, info, output);
-	if (!err)
-		err = pogs_finish(solver, reset);
+	OPTKIT_CHECK_ERROR(&err,
+		pogs_solve(solver, f, g, settings, info, output));
+	OPTKIT_CHECK_ERROR(&err, pogs_finish(solver, reset));
 	return err;
 }
 

@@ -18,7 +18,7 @@ static ok_status assign_clusters_l2(matrix * A, matrix * C,
 {
 	ok_status err = OPTKIT_SUCCESS;
 	size_t i;
-	upsamplingvec * u = &(h->a2c_tentative);
+	upsamplingvec * u = &h->a2c_tentative;
 
 	h->reassigned = 0;
 	#ifdef _OPENMP
@@ -68,13 +68,12 @@ static ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	size_t i, blk, row_stride, idx_stride, row_strideA, row_strideC;
 	int strideA, strideC;
 	matrix * A_blk;
-	upsamplingvec * u = &(h->a2c_tentative);
+	upsamplingvec * u = &h->a2c_tentative;
 
 	if (!h->A_reducible.data)
-		matrix_alloc(&(h->A_reducible), kBlockSize, A->size2,
-			A->order);
+		matrix_alloc(&h->A_reducible, kBlockSize, A->size2, A->order);
 
-	A_blk = &(h->A_reducible);
+	A_blk = &h->A_reducible;
 	row_stride = (A_blk->order == CblasRowMajor) ? A_blk->ld : 1;
 	idx_stride = (A_blk->order == CblasRowMajor) ? 1 : A_blk->ld;
 
@@ -95,7 +94,7 @@ static ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 				&strideA, &row_strideA, u, C->data, &strideC,
 				&row_strideC, A_blk->data, &idx_stride,
 				&row_stride, &blk, &i,
-				(const int *) &(A->size2))) {
+				(const int *) &A->size2)) {
 
 				a2c->indices[i] = u->indices[i];
 				++h->reassigned;

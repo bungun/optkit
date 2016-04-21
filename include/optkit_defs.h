@@ -41,12 +41,33 @@ typedef enum optkit_status {
 	OPTKIT_ERROR_CUDA = 2,
 	OPTKIT_ERROR_CUBLAS = 3,
 	OPTKIT_ERROR_CUSPARSE = 4,
-	OPTKIT_ERROR_UNALLOCATED = 10,
-	OPTKIT_ERROR_OVERWRITE = 11,
-	OPTKIT_ERROR_OUT_OF_BOUNDS = 100,
-	OPTKIT_ERROR_DIMENSION_MISMATCH = 101,
-	OPTKIT_ERROR_LAYOUT_MISMATCH = 102
+	OPTKIT_ERROR_LAYOUT_MISMATCH = 10,
+	OPTKIT_ERROR_DIMENSION_MISMATCH = 11,
+	OPTKIT_ERROR_OUT_OF_BOUNDS = 12
+	OPTKIT_ERROR_OVERWRITE = 100,
+	OPTKIT_ERROR_UNALLOCATED = 101
 } ok_status;
+
+#define OPTKIT_CHECK_ERROR(errptr, call) \
+	do { \
+		if (!*errptr) \
+			*errptr = call; \
+	} while(0)
+
+#define OPTKIT_MAX_ERROR(errptr, call) \
+	do { \
+		if (!*errptr) { \
+			ok_status new_err = call; \
+			*errptr = new_err > *errptr ? new_err : *errptr; \
+		} \
+	} while(0)
+
+#define OPTKIT_RETURN_IF_ERROR(call) \
+	do { \
+		ok_status err = call; \
+		if (err) \
+			return err;
+	} while(0)
 
 enum OPTKIT_TRANSFORM {
 	OkTransformScale = 0,
@@ -54,6 +75,7 @@ enum OPTKIT_TRANSFORM {
 	OkTransformIncrement = 2,
 	OkTransformDecrement = 3
 };
+
 
 #ifndef FLOAT
 	#define CBLAS(x) cblas_d ## x
@@ -85,7 +107,6 @@ enum OPTKIT_TRANSFORM {
 #else
 #define __DEVICE__
 #endif
-
 
 #ifdef __cplusplus
 }

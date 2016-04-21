@@ -33,7 +33,7 @@ static ok_status assign_clusters_l2(matrix * A, matrix * C,
 	size_t i, * reassigned;
 	h->reassigned = 0;
 	ok_alloc_gpu(reassigned, sizeof(size_t));
-	ok_memcpy_gpu(reassigned, &(h->reassigned), sizeof(size_t));
+	ok_memcpy_gpu(reassigned, &h->reassigned, sizeof(size_t));
 
 	for (i = 0; i < A->size1; i += kBlockSize) {
 		cudaStream_t s;
@@ -46,7 +46,7 @@ static ok_status assign_clusters_l2(matrix * A, matrix * C,
 	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 
-	ok_memcpy_gpu(&(h->reassigned), reassigned, sizeof(size_t));
+	ok_memcpy_gpu(&h->reassigned, reassigned, sizeof(size_t));
 	return err;
 }
 
@@ -141,11 +141,11 @@ static ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 
 	size_t * reassigned;
 
-	vector * dmax = &(h->d_min);
+	vector * dmax = &h->d_min;
 
 	h->reassigned = 0;
 	ok_alloc_gpu(reassigned, sizeof(size_t));
-	ok_memcpy_gpu(reassigned, &(h->reassigned), sizeof(size_t));
+	ok_memcpy_gpu(reassigned, &h->reassigned, sizeof(size_t));
 
 	/* zero out distances */
 	vector_scale(dmax, kZero);
@@ -170,7 +170,7 @@ static ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	cudaDeviceSynchronize();
 	CUDA_CHECK_ERR;
 
-	ok_memcpy_gpu(&(h->reassigned), reassigned, sizeof(size_t));
+	ok_memcpy_gpu(&h->reassigned, reassigned, sizeof(size_t));
 	return err;
 }
 

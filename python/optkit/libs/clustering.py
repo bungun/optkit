@@ -47,7 +47,8 @@ class ClusteringLibs(object):
 			lib.upsamplingvec_p = upsamplingvec_p
 
 			class cluster_aid(Structure):
-				_fields_ = [('hdl', c_void_p),
+				_fields_ = [('indicator', POINTER(c_int)),
+							('hdl', c_void_p),
 							('a2c_tentative_full', upsamplingvec),
 							('a2c_tentative', upsamplingvec),
 							('d_min_full', vector),
@@ -62,6 +63,22 @@ class ClusteringLibs(object):
 			cluster_aid_p = POINTER(cluster_aid)
 			lib.cluster_aid = cluster_aid
 			lib.cluster_aid_p = cluster_aid_p
+
+			class cluster_work(Structure):
+				_fields_ = [('indicator', POINTER(c_int)),
+							('n_vectors', c_size_t),
+							('n_clusters', c_size_t),
+							('vec_length', c_size_t),
+							('A', matrix),
+							('C', matrix),
+							('a2c', upsamplingvec),
+							('counts', vector),
+							('h', cluster_aid)]
+
+			cluster_work_p = POINTER(cluster_work)
+			lib.cluster_work = cluster_work
+			lib.cluster_work_p = cluster_work_p
+
 
 			# argument types
 			lib.upsamplingvec_alloc.argtypes = [upsamplingvec_p, c_size_t,

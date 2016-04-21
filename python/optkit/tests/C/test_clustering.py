@@ -410,13 +410,13 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			# reject: dimension mismatch
 			err = lib.upsamplingvec_mul_matrix(N, N, N, alpha, u, C, beta, B)
-			self.assertEqual( err, 101L )
+			self.assertEqual( err, 11L )
 			err = lib.upsamplingvec_mul_matrix(T, N, N, alpha, u, A, beta, D)
-			self.assertEqual( err, 101L )
+			self.assertEqual( err, 11L )
 
 			# reject: unallocated
 			err = lib.upsamplingvec_mul_matrix(T, N, N, alpha, u, E, beta, C)
-			self.assertEqual( err, 10L )
+			self.assertEqual( err, 101L )
 
 			self.free_var('A')
 			self.free_var('B')
