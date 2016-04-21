@@ -24,7 +24,7 @@ typedef struct cluster_work {
 	upsamplingvec a2c;
 	vector counts;
 	cluster_aid h;
-}
+} cluster_work;
 
 /* CPU/GPU-SPECIFIC IMPLEMENTATION */
 static ok_status assign_clusters_l2(matrix * A, matrix * C,
@@ -138,9 +138,7 @@ ok_status cluster_work_subselect(cluster_work * w, size_t vector_offset,
 	w->a2c.size2 = n_subclusters;
 	w->a2c.vec.size = n_subvectors;
 	w->counts.size = n_subclusters;
-	cluster_aid_subselect(&w->h, 0, 0, n_subvectors, n_subclusters);
-
-	return OPTKIT_SUCCESS;
+	return cluster_aid_subselect(&w->h, 0, 0, n_subvectors, n_subclusters);
 }
 
 ok_status cluster_work_load(cluster_work * w, const ok_float * A,

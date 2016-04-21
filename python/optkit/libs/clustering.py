@@ -94,8 +94,6 @@ class ClusteringLibs(object):
 													 matrix_p, ok_float,
 													 matrix_p]
 			lib.upsamplingvec_count.argtypes = [upsamplingvec_p, vector_p]
-			lib.upsamplingvec_shift.argtypes = [upsamplingvec_p, c_size_t,
-												c_uint]
 			lib.cluster_aid_alloc.argtypes = [cluster_aid_p, c_size_t,
 											  c_size_t, c_uint]
 			lib.cluster_aid_free.argtypes = [cluster_aid_p]
@@ -114,7 +112,6 @@ class ClusteringLibs(object):
 			lib.upsamplingvec_subvector.restype = c_uint
 			lib.upsamplingvec_mul_matrix.restype = c_uint
 			lib.upsamplingvec_count.restype = c_uint
-			lib.upsamplingvec_shift.restype = c_uint
 			lib.cluster_aid_alloc.restype = c_uint
 			lib.cluster_aid_free.restype = c_uint
 			lib.cluster.restype = c_uint

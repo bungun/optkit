@@ -140,30 +140,6 @@ ok_status upsamplingvec_count(const upsamplingvec * u, vector * counts)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status upsamplingvec_shift(upsamplingvec * u, const size_t shift,
-	const enum OPTKIT_TRANSFORM direction)
-{
-	size_t i;
-	if (direction == OkTransformDecrement) {
-		if (shift >= u->size2)
-			return OPTKIT_ERROR_OUT_OF_BOUNDS;
-
-		#ifdef _OPENMP
-		#pragma omp parallel for
-		#endif
-		for (i = 0; i < u->size1; ++i)
-			u->indices[i * u->stride] -= shift;
-	} else {
-		#ifdef _OPENMP
-		#pragma omp parallel for
-		#endif
-		for (i = 0; i < u->size1; ++i)
-			u->indices[i * u->stride] += shift;
-	}
-
-	return OPTKIT_SUCCESS;
-}
-
 #ifdef __cplusplus
 }
 #endif

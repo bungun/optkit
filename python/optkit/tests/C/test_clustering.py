@@ -473,48 +473,6 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.free_var('u')
 			self.free_var('counts')
 
-	def test_upsamplingvec_shift(self):
-		m, n = self.shape
-		k = self.k
-		hdl = c_void_p()
-
-		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
-			if lib is None:
-				continue
-
-			u = lib.upsamplingvec()
-			usub = lib.upsamplingvec()
-			err = PRINTERR( lib.upsamplingvec_alloc(u, m, k) )
-			self.register_var('u', u, lib.upsamplingvec_free)
-			self.assertEqual( err, 0 )
-
-			u_py = self.u_test
-			u_py[-1] = self.k - 1
-			u_ptr = u_py.ctypes.data_as(dlib.c_size_t_p)
-			dlib.indvector_memcpy_va(u.vec, u_ptr, 1)
-
-			u_orig = np.zeros(m).astype(c_size_t)
-			u_orig += u_py
-
-			shift = int(k * np.random.rand())
-
-			u_orig += shift
-			lib.upsamplingvec_shift(u, shift, dlib.enums.OkTransformIncrement)
-			dlib.indvector_memcpy_av(u_ptr, u.vec, 1)
-			self.assertTrue( sum(u_orig - u_py) < 1e-7 * m**0.5 )
-
-			u_orig -= shift
-			lib.upsamplingvec_shift(u, shift, dlib.enums.OkTransformDecrement)
-			dlib.indvector_memcpy_av(u_ptr, u.vec, 1)
-			self.assertTrue( sum(u_orig - u_py) < 1e-7 * m**0.5 )
-
-			self.free_var('u')
-
 	def test_cluster_aid_alloc_free(self):
 		m, n = self.shape
 		k = self.k

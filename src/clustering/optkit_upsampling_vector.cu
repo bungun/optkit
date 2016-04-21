@@ -204,28 +204,6 @@ static __global__ void __upsampling_shift_up(size_t * data, size_t shift,
 		data[i * stride] += shift;
 }
 
-ok_status upsamplingvec_shift(upsamplingvec * u, const size_t shift,
-	const enum OPTKIT_TRANSFORM direction)
-{
-	uint grid_dim = calc_grid_dim(u->size1);
-
-	if (direction == OkTransformDecrement) {
-		if (shift >= u->size2)
-			return OPTKIT_ERROR_OUT_OF_BOUNDS;
-
-		__upsampling_shift_down<<<grid_dim, kBlockSize>>>(u->indices,
-			shift, u->stride, u->size1);
-	} else {
-		__upsampling_shift_up<<<grid_dim, kBlockSize>>>(u->indices,
-			shift, u->stride, u->size1);
-	}
-
-	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
-
-	return OPTKIT_SUCCESS;
-}
-
 #ifdef __cplusplus
 }
 #endif
