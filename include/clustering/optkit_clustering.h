@@ -378,10 +378,10 @@ ok_status kmeans_easy_run(const void * work, const kmeans_settings * const s,
 }
 ok_status kmeans_easy_finish(void * work)
 {
-	return kmeans_work_free((kmeans_work *) work);
+	ok_status err = kmeans_work_free((kmeans_work *) work);
 	ok_free(work);
+	return err;
 }
-
 
 #ifdef __cplusplus
 }

@@ -196,24 +196,6 @@ ok_status upsamplingvec_count(const upsamplingvec * u, vector * counts)
 	return OPTKIT_SUCCESS;
 }
 
-static __global__ void __upsampling_shift_down(size_t * data, size_t shift,
-	size_t stride, size_t size)
-{
-	size_t i;
-	for (i = blockIdx.x * blockDim.x + threadIdx.x; i < size;
-		i += gridDim.x * blockDim.x)
-		data[i * stride] -= shift;
-}
-
-static __global__ void __upsampling_shift_up(size_t * data, size_t shift,
-	size_t stride, size_t size)
-{
-	size_t i;
-	for (i = blockIdx.x * blockDim.x + threadIdx.x; i < size;
-		i += gridDim.x * blockDim.x)
-		data[i * stride] += shift;
-}
-
 #ifdef __cplusplus
 }
 #endif

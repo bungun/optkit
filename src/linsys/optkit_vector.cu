@@ -298,7 +298,7 @@ void indvector_memcpy_av(size_t * x, const indvector * v, size_t stride_x)
 void indvector_print(const indvector * v)
 {
 	uint i;
-	T v_host[v->size];
+	size_t v_host[v->size];
 	indvector_memcpy_av(v_host, v, 1);
 	for (i = 0; i < v->size; ++i)
 		printf("%zu ", v_host[i]);
