@@ -342,6 +342,7 @@ void * kmeans_easy_init(size_t n_vectors, size_t n_clusters, size_t vec_length)
 {
 	kmeans_work * w;
 	ok_alloc(w, kmeans_work, sizeof(*w));
+	kmeans_work_alloc(w, n_vectors, n_clusters, vec_length);
 	return (void * ) w;
 }
 

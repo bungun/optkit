@@ -608,7 +608,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			self.assertEqual( w.n_vectors, 0 )
 			self.assertEqual( w.n_clusters, 0 )
-			self.assertEqual( w.vec_length, 0 )	
+			self.assertEqual( w.vec_length, 0 )
 
 
 
@@ -676,7 +676,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			ATOLMN = RTOL * (m * n)**0.5
 			ATOLKN = RTOL * (k * n)**0.5
 			ATOLM = RTOL * m**0.5
-			ATOLK = RTOL * k**0.5 
+			ATOLK = RTOL * k**0.5
 
 			A = np.random.rand(m, n).astype(dlib.pyfloat)
 			C = np.random.rand(k, n).astype(dlib.pyfloat)
@@ -711,157 +711,156 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual( lib.kmeans_work_alloc(w, m, k, n), 0 )
 			self.register_var('w', w, lib.kmeans_work_free)
 
-			self.assertEqual( 
+			self.assertEqual(
 					lib.kmeans_work_load(
-							w, A_ptr, orderA, C_ptr, orderC, a2c_ptr, 1, 
+							w, A_ptr, orderA, C_ptr, orderC, a2c_ptr, 1,
 							counts_ptr, 1), 0 )
 
 			dlib.matrix_scale(w.C, SCALING)
 			dlib.vector_scale(w.counts, SCALING)
 
-			self.assertEqual( 
+			self.assertEqual(
 					lib.kmeans_work_extract(
 							C_ptr, orderC, a2c_ptr, 1, counts_ptr, 1, w), 0 )
 
-			self.assertTrue( np.linalg.norm(A_orig - A) <= 
+			self.assertTrue( np.linalg.norm(A_orig - A) <=
 							 ATOLKN + RTOL * np.linalg.norm(A) )
-			self.assertTrue( np.linalg.norm(C_orig - C) <= 
+			self.assertTrue( np.linalg.norm(C_orig - C) <=
 							 ATOLKN + RTOL * np.linalg.norm(C) )
-			self.assertTrue( np.linalg.norm(a2c_orig - a2c) <= 
+			self.assertTrue( np.linalg.norm(a2c_orig - a2c) <=
 							 ATOLM + RTOL * np.linalg.norm(a2c) )
-			self.assertTrue( np.linalg.norm(counts_orig - counts) <= 
+			self.assertTrue( np.linalg.norm(counts_orig - counts) <=
 							 ATOLK + RTOL * np.linalg.norm(counts) )
 
 			self.free_var('w')
 
-	# def test_cluster(self):
-	# 	""" cluster
+	def test_cluster(self):
+		""" cluster
 
-	# 		given matrix A, centroid matrix C, upsampling vector a2c,
+			given matrix A, centroid matrix C, upsampling vector a2c,
 
-	# 		update cluster assignments in vector a2c, based on pairwise
-	# 		euclidean distances between rows of A and C
+			update cluster assignments in vector a2c, based on pairwise
+			euclidean distances between rows of A and C
 
-	# 		compare # of reassignments
+			compare # of reassignments
 
-	# 		let D be the matrix of pairwise distances and dmin be the
-	# 		column-wise minima of D:
-	# 			-compare D * xrand in Python vs. C
-	# 			-compare dmin in Python vs. C
+			let D be the matrix of pairwise distances and dmin be the
+			column-wise minima of D:
+				-compare D * xrand in Python vs. C
+				-compare dmin in Python vs. C
 
-	# 	"""
-	# 	m, n = self.shape
-	# 	k = self.k
+		"""
+		m, n = self.shape
+		k = self.k
 
-	# 	for (gpu, single_precision) in CONDITIONS:
-	# 		dlib = self.dense_libs.get(
-	# 				single_precision=single_precision, gpu=gpu)
-	# 		lib = self.cluster_libs.get(
-	# 				dlib, single_precision=single_precision, gpu=gpu)
+		for (gpu, single_precision) in CONDITIONS:
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			lib = self.cluster_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
 
-	# 		if lib is None:
-	# 			continue
+			if lib is None:
+				continue
 
-	# 		for MAXDIST in [1e3, 0.2]:
+			for MAXDIST in [1e3, 0.2]:
 
-	# 			hdl = c_void_p()
-	# 			err = dlib.blas_make_handle(byref(hdl))
-	# 			self.register_var('hdl', hdl, dlib.blas_destroy_handle)
-	# 			self.assertEqual( err, 0 )
+				hdl = c_void_p()
+				err = dlib.blas_make_handle(byref(hdl))
+				self.register_var('hdl', hdl, dlib.blas_destroy_handle)
+				self.assertEqual( err, 0 )
 
-	# 			DIGITS = 7 - 2 * single_precision - 1 * gpu
-	# 			RTOL = 10**(-DIGITS)
-	# 			ATOLM = RTOL * m**0.5
-	# 			ATOLN = RTOL * n**0.5
-	# 			ATOLK = RTOL * k**0.5
+				DIGITS = 7 - 2 * single_precision - 1 * gpu
+				RTOL = 10**(-DIGITS)
+				ATOLM = RTOL * m**0.5
+				ATOLN = RTOL * n**0.5
+				ATOLK = RTOL * k**0.5
 
-	# 			A = dlib.matrix(0, 0, 0, None, 0)
-	# 			C = dlib.matrix(0, 0, 0, None, 0)
-	# 			dlib.matrix_calloc(A, m, n, dlib.enums.CblasRowMajor)
-	# 			dlib.matrix_calloc(C, k, n, dlib.enums.CblasRowMajor)
-	# 			self.register_var('A', A, dlib.matrix_free)
-	# 			self.register_var('C', C, dlib.matrix_free)
+				A = dlib.matrix(0, 0, 0, None, 0)
+				C = dlib.matrix(0, 0, 0, None, 0)
+				dlib.matrix_calloc(A, m, n, dlib.enums.CblasRowMajor)
+				dlib.matrix_calloc(C, k, n, dlib.enums.CblasRowMajor)
+				self.register_var('A', A, dlib.matrix_free)
+				self.register_var('C', C, dlib.matrix_free)
 
-	# 			A_py = np.random.rand(m, n).astype(dlib.pyfloat)
-	# 			C_py = np.random.rand(k, n).astype(dlib.pyfloat)
-	# 			A_ptr = A_py.ctypes.data_as(dlib.ok_float_p)
-	# 			C_ptr = C_py.ctypes.data_as(dlib.ok_float_p)
-	# 			dlib.matrix_memcpy_ma(A, A_ptr, dlib.enums.CblasRowMajor)
-	# 			dlib.matrix_memcpy_ma(C, C_ptr, dlib.enums.CblasRowMajor)
+				A_py = np.random.rand(m, n).astype(dlib.pyfloat)
+				C_py = np.random.rand(k, n).astype(dlib.pyfloat)
+				A_ptr = A_py.ctypes.data_as(dlib.ok_float_p)
+				C_ptr = C_py.ctypes.data_as(dlib.ok_float_p)
+				dlib.matrix_memcpy_ma(A, A_ptr, dlib.enums.CblasRowMajor)
+				dlib.matrix_memcpy_ma(C, C_ptr, dlib.enums.CblasRowMajor)
 
-	# 			a2c = lib.upsamplingvec()
-	# 			err = PRINTERR( lib.upsamplingvec_alloc(a2c, m, k) )
-	# 			self.register_var('a2c', a2c, lib.upsamplingvec_free)
-	# 			self.assertEqual( err, 0 )
+				a2c = lib.upsamplingvec()
+				err = PRINTERR( lib.upsamplingvec_alloc(a2c, m, k) )
+				self.register_var('a2c', a2c, lib.upsamplingvec_free)
+				self.assertEqual( err, 0 )
 
-	# 			a2c_py = np.zeros(m).astype(c_size_t)
-	# 			a2c_ptr = a2c_py.ctypes.data_as(dlib.c_size_t_p)
+				a2c_py = np.zeros(m).astype(c_size_t)
+				a2c_ptr = a2c_py.ctypes.data_as(dlib.c_size_t_p)
 
-	# 			a2c_py += self.u_test
-	# 			dlib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1)
+				a2c_py += self.u_test
+				dlib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1)
 
-	# 			h = lib.cluster_aid_p()
+				h = lib.cluster_aid_p()
 
-	# 			D, dmin, reassigned = self.cluster(A_py, C_py, a2c_py, MAXDIST)
+				D, dmin, reassigned = self.cluster(A_py, C_py, a2c_py, MAXDIST)
 
-	# 			err = PRINTERR( lib.cluster(A, C, a2c, byref(h), MAXDIST) )
-	# 			self.register_var('h', h, lib.cluster_aid_free)
-	# 			self.assertEqual( err, 0 )
+				err = PRINTERR( lib.cluster(A, C, a2c, byref(h), MAXDIST) )
+				self.register_var('h', h, lib.cluster_aid_free)
+				self.assertEqual( err, 0 )
 
-	# 			# compare number of reassignments, C vs Py
-	# 			ATOL_REASSIGN = int(1 + 0.1 * k)
-	# 			RTOL_REASSIGN = int(1 + 0.1 * reassigned)
-	# 			self.assertTrue( abs(h.contents.reassigned - reassigned) <=
-	# 							 ATOL_REASSIGN + RTOL_REASSIGN )
+				# compare number of reassignments, C vs Py
+				ATOL_REASSIGN = int(1 + 0.1 * k)
+				RTOL_REASSIGN = int(1 + 0.1 * reassigned)
+				self.assertTrue( abs(h.contents.reassigned - reassigned) <=
+								 ATOL_REASSIGN + RTOL_REASSIGN )
 
-	# 			# verify number reassigned
-	# 			dlib.indvector_memcpy_av(a2c_ptr, a2c.vec, 1)
-	# 			self.assertEqual( h.contents.reassigned,
-	# 				sum(a2c_py != self.u_test) )
+				# verify number reassigned
+				dlib.indvector_memcpy_av(a2c_ptr, a2c.vec, 1)
+				self.assertEqual( h.contents.reassigned,
+					sum(a2c_py != self.u_test) )
 
-	# 			# verify all distances
-	# 			kvec = dlib.vector()
-	# 			dlib.vector_calloc(kvec, k)
-	# 			self.register_var('kvec', kvec, dlib.vector_free)
+				# verify all distances
+				kvec = dlib.vector()
+				dlib.vector_calloc(kvec, k)
+				self.register_var('kvec', kvec, dlib.vector_free)
 
-	# 			mvec = dlib.vector()
-	# 			dlib.vector_calloc(mvec, m)
-	# 			self.register_var('mvec', mvec, dlib.vector_free)
+				mvec = dlib.vector()
+				dlib.vector_calloc(mvec, m)
+				self.register_var('mvec', mvec, dlib.vector_free)
 
-	# 			kvec_py = np.zeros(k).astype(dlib.pyfloat)
-	# 			kvec_ptr = kvec_py.ctypes.data_as(dlib.ok_float_p)
+				kvec_py = np.zeros(k).astype(dlib.pyfloat)
+				kvec_ptr = kvec_py.ctypes.data_as(dlib.ok_float_p)
 
-	# 			mvec_py = np.random.rand(m).astype(dlib.pyfloat)
-	# 			mvec_ptr = mvec_py.ctypes.data_as(dlib.ok_float_p)
+				mvec_py = np.random.rand(m).astype(dlib.pyfloat)
+				mvec_ptr = mvec_py.ctypes.data_as(dlib.ok_float_p)
 
-	# 			dlib.vector_memcpy_va(mvec, mvec_ptr, 1)
-	# 			dlib.blas_gemv(hdl, dlib.enums.CblasNoTrans, 1,
-	# 						   h.contents.D_full, mvec, 0, kvec)
-	# 			dlib.vector_memcpy_av(kvec_ptr, kvec, 1)
+				dlib.vector_memcpy_va(mvec, mvec_ptr, 1)
+				dlib.blas_gemv(hdl, dlib.enums.CblasNoTrans, 1,
+							   h.contents.D_full, mvec, 0, kvec)
+				dlib.vector_memcpy_av(kvec_ptr, kvec, 1)
 
-	# 			Dmvec = D.dot(mvec_py)
-	# 			self.assertTrue( np.linalg.norm(Dmvec - kvec_py) <=
-	# 							 ATOLK + RTOL * np.linalg.norm(Dmvec) )
+				Dmvec = D.dot(mvec_py)
+				self.assertTrue( np.linalg.norm(Dmvec - kvec_py) <=
+								 ATOLK + RTOL * np.linalg.norm(Dmvec) )
 
-	# 			# verify min distances
-	# 			dmin_py = np.zeros(m).astype(dlib.pyfloat)
-	# 			dmin_ptr = dmin_py.ctypes.data_as(dlib.ok_float_p)
-	# 			dlib.vector_memcpy_av(dmin_ptr, h.contents.d_min_full, 1)
-	# 			self.assertTrue( np.linalg.norm(dmin_py - dmin) <=
-	# 							 ATOLM + RTOL * np.linalg.norm(dmin) )
+				# verify min distances
+				dmin_py = np.zeros(m).astype(dlib.pyfloat)
+				dmin_ptr = dmin_py.ctypes.data_as(dlib.ok_float_p)
+				dlib.vector_memcpy_av(dmin_ptr, h.contents.d_min_full, 1)
+				self.assertTrue( np.linalg.norm(dmin_py - dmin) <=
+								 ATOLM + RTOL * np.linalg.norm(dmin) )
 
-	# 			err = PRINTERR( lib.cluster_aid_free(h) )
-	# 			self.unregister_var('h')
+				err = PRINTERR( lib.cluster_aid_free(h) )
+				self.unregister_var('h')
 
-	# 			self.free_var('A')
-	# 			self.free_var('C')
-	# 			self.free_var('a2c')
-	# 			self.free_var('mvec')
-	# 			self.free_var('kvec')
-	# 			self.free_var('hdl')
+				self.free_var('A')
+				self.free_var('C')
+				self.free_var('a2c')
+				self.free_var('mvec')
+				self.free_var('kvec')
+				self.free_var('hdl')
 
-
-	# 			self.assertEqual( dlib.ok_device_reset(), 0 )
+				self.assertEqual( dlib.ok_device_reset(), 0 )
 
 	def test_calculate_centroids(self):
 		""" calculate centroids
@@ -972,93 +971,93 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			self.assertEqual( dlib.ok_device_reset(), 0 )
 
-	# def test_kmeans(self):
-	# 	""" k-means
+	def test_kmeans(self):
+		""" k-means
 
-	# 		given matrix A, cluster # k
+			given matrix A, cluster # k
 
-	# 		cluster A by kmeans algorithm. compare Python vs. C
-	# 	"""
-	# 	m, n = self.shape
-	# 	k = self.k
+			cluster A by kmeans algorithm. compare Python vs. C
+		"""
+		m, n = self.shape
+		k = self.k
 
-	# 	for (gpu, single_precision) in CONDITIONS:
-	# 		dlib = self.dense_libs.get(
-	# 				single_precision=single_precision, gpu=gpu)
-	# 		lib = self.cluster_libs.get(
-	# 				dlib, single_precision=single_precision, gpu=gpu)
+		for (gpu, single_precision) in CONDITIONS:
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			lib = self.cluster_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
 
-	# 		if lib is None:
-	# 			continue
+			if lib is None:
+				continue
 
-	# 		hdl = c_void_p()
-	# 		err = dlib.blas_make_handle(byref(hdl))
-	# 		self.register_var('hdl', hdl, dlib.blas_destroy_handle)
-	# 		self.assertEqual( err, 0 )
+			hdl = c_void_p()
+			err = dlib.blas_make_handle(byref(hdl))
+			self.register_var('hdl', hdl, dlib.blas_destroy_handle)
+			self.assertEqual( err, 0 )
 
-	# 		A = dlib.matrix(0, 0, 0, None, 0)
-	# 		C = dlib.matrix(0, 0, 0, None, 0)
-	# 		dlib.matrix_calloc(A, m, n, dlib.enums.CblasRowMajor)
-	# 		dlib.matrix_calloc(C, k, n, dlib.enums.CblasRowMajor)
-	# 		self.register_var('A', A, dlib.matrix_free)
-	# 		self.register_var('C', C, dlib.matrix_free)
+			A = dlib.matrix(0, 0, 0, None, 0)
+			C = dlib.matrix(0, 0, 0, None, 0)
+			dlib.matrix_calloc(A, m, n, dlib.enums.CblasRowMajor)
+			dlib.matrix_calloc(C, k, n, dlib.enums.CblasRowMajor)
+			self.register_var('A', A, dlib.matrix_free)
+			self.register_var('C', C, dlib.matrix_free)
 
-	# 		A_py = np.random.rand(m, n).astype(dlib.pyfloat)
-	# 		C_py = np.random.rand(k, n).astype(dlib.pyfloat)
-	# 		A_ptr = A_py.ctypes.data_as(dlib.ok_float_p)
-	# 		C_ptr = C_py.ctypes.data_as(dlib.ok_float_p)
-	# 		dlib.matrix_memcpy_ma(A, A_ptr, dlib.enums.CblasRowMajor)
-	# 		dlib.matrix_memcpy_ma(C, C_ptr, dlib.enums.CblasRowMajor)
+			A_py = np.random.rand(m, n).astype(dlib.pyfloat)
+			C_py = np.random.rand(k, n).astype(dlib.pyfloat)
+			A_ptr = A_py.ctypes.data_as(dlib.ok_float_p)
+			C_ptr = C_py.ctypes.data_as(dlib.ok_float_p)
+			dlib.matrix_memcpy_ma(A, A_ptr, dlib.enums.CblasRowMajor)
+			dlib.matrix_memcpy_ma(C, C_ptr, dlib.enums.CblasRowMajor)
 
-	# 		a2c = lib.upsamplingvec()
-	# 		err = PRINTERR( lib.upsamplingvec_alloc(a2c, m, k) )
-	# 		self.register_var('a2c', a2c, lib.upsamplingvec_free)
-	# 		self.assertEqual( err, 0 )
+			a2c = lib.upsamplingvec()
+			err = PRINTERR( lib.upsamplingvec_alloc(a2c, m, k) )
+			self.register_var('a2c', a2c, lib.upsamplingvec_free)
+			self.assertEqual( err, 0 )
 
-	# 		a2c_py = np.zeros(m).astype(c_size_t)
-	# 		a2c_ptr = a2c_py.ctypes.data_as(dlib.c_size_t_p)
+			a2c_py = np.zeros(m).astype(c_size_t)
+			a2c_ptr = a2c_py.ctypes.data_as(dlib.c_size_t_p)
 
-	# 		a2c_py += self.u_test
-	# 		dlib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1)
+			a2c_py += self.u_test
+			dlib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1)
 
-	# 		counts = dlib.vector()
-	# 		dlib.vector_calloc(counts, k)
-	# 		self.register_var('counts', counts, dlib.vector_free)
+			counts = dlib.vector()
+			dlib.vector_calloc(counts, k)
+			self.register_var('counts', counts, dlib.vector_free)
 
-	# 		kvec = dlib.vector()
-	# 		dlib.vector_calloc(kvec, k)
-	# 		self.register_var('kvec', kvec, dlib.vector_free)
+			kvec = dlib.vector()
+			dlib.vector_calloc(kvec, k)
+			self.register_var('kvec', kvec, dlib.vector_free)
 
-	# 		nvec = dlib.vector()
-	# 		dlib.vector_calloc(nvec, n)
-	# 		self.register_var('nvec', nvec, dlib.vector_free)
+			nvec = dlib.vector()
+			dlib.vector_calloc(nvec, n)
+			self.register_var('nvec', nvec, dlib.vector_free)
 
-	# 		kvec_py = np.zeros(k).astype(dlib.pyfloat)
-	# 		kvec_ptr = kvec_py.ctypes.data_as(dlib.ok_float_p)
+			kvec_py = np.zeros(k).astype(dlib.pyfloat)
+			kvec_ptr = kvec_py.ctypes.data_as(dlib.ok_float_p)
 
-	# 		nvec_py = np.random.rand(n).astype(dlib.pyfloat)
-	# 		nvec_ptr = nvec_py.ctypes.data_as(dlib.ok_float_p)
+			nvec_py = np.random.rand(n).astype(dlib.pyfloat)
+			nvec_ptr = nvec_py.ctypes.data_as(dlib.ok_float_p)
 
-	# 		h = lib.cluster_aid_p()
+			h = lib.cluster_aid_p()
 
-	# 		DIST_RELTOL = 0.1
-	# 		CHANGE_TOL = int(1 + 0.01 * m)
-	# 		MAXITER = 500
-	# 		VERBOSE = 1
-	# 		err = lib.k_means(A, C, a2c, counts, h, DIST_RELTOL, CHANGE_TOL,
-	# 						  MAXITER, VERBOSE)
+			DIST_RELTOL = 0.1
+			CHANGE_TOL = int(1 + 0.01 * m)
+			MAXITER = 500
+			VERBOSE = 1
+			err = lib.k_means(A, C, a2c, counts, h, DIST_RELTOL, CHANGE_TOL,
+							  MAXITER, VERBOSE)
 
-	# 		self.assertEqual( err, 0 )
+			self.assertEqual( err, 0 )
 
-	# 		self.free_var('A')
-	# 		self.free_var('C')
-	# 		self.free_var('a2c')
-	# 		self.free_var('counts')
-	# 		self.free_var('nvec')
-	# 		self.free_var('kvec')
-	# 		self.free_var('hdl')
+			self.free_var('A')
+			self.free_var('C')
+			self.free_var('a2c')
+			self.free_var('counts')
+			self.free_var('nvec')
+			self.free_var('kvec')
+			self.free_var('hdl')
 
-	# 		self.assertEqual( dlib.ok_device_reset(), 0 )
+			self.assertEqual( dlib.ok_device_reset(), 0 )
 
 	def test_kmeans_easy_init_free(self):
 		m, n = self.shape
@@ -1082,76 +1081,79 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual(cwork.contents.vec_length, n)
 			self.assertEqual( lib.kmeans_easy_finish(work), 0 )
 
-	# def test_kmeans_easy_resize(self):
-	# 	m, n = self.shape
-	# 	k = self.k
+	def test_kmeans_easy_resize(self):
+		m, n = self.shape
+		k = self.k
 
-	# 	for (gpu, single_precision) in CONDITIONS:
-	# 		dlib = self.dense_libs.get(
-	# 				single_precision=single_precision, gpu=gpu)
-	# 		lib = self.cluster_libs.get(
-	# 				dlib, single_precision=single_precision, gpu=gpu)
+		for (gpu, single_precision) in CONDITIONS:
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			lib = self.cluster_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
 
-	# 		if lib is None:
-	# 			continue
+			if lib is None:
+				continue
 
-	# 		work = lib.kmeans_easy_init(m, k, n)
-	# 		self.register_var('work', work, lib.kmeans_easy_finish)
+			work = lib.kmeans_easy_init(m, k, n)
+			self.register_var('work', work, lib.kmeans_easy_finish)
 
-	# 		cwork = cast(work, lib.kmeans_work_p)
-	# 		self.assertEqual(cwork.contents.n_vectors, m / 2)
-	# 		self.assertEqual(cwork.contents.n_clusters, k / 2)
-	# 		self.assertEqual(cwork.contents.vec_length, n / 2)
+			err = PRINTERR( lib.kmeans_easy_resize(work, m / 2, k / 2, n / 2) )
+			self.assertEqual( err, 0 )
 
-	# 		self.free_var('work')
+			cwork = cast(work, lib.kmeans_work_p)
+			self.assertEqual(cwork.contents.A.size1, m / 2)
+			self.assertEqual(cwork.contents.C.size1, k / 2)
+			self.assertEqual(cwork.contents.A.size2, n / 2)
 
-	# def test_kmeans_easy_run(self):
-	# 	""" k-means
+			self.free_var('work')
 
-	# 		given matrix A, cluster # k
+	def test_kmeans_easy_run(self):
+		""" k-means
 
-	# 		cluster A by kmeans algorithm. compare Python vs. C
-	# 	"""
-	# 	m, n = self.shape
-	# 	k = self.k
+			given matrix A, cluster # k
 
-	# 	for (gpu, single_precision) in CONDITIONS:
-	# 		dlib = self.dense_libs.get(
-	# 				single_precision=single_precision, gpu=gpu)
-	# 		lib = self.cluster_libs.get(
-	# 				dlib, single_precision=single_precision, gpu=gpu)
+			cluster A by kmeans algorithm. compare Python vs. C
+		"""
+		m, n = self.shape
+		k = self.k
 
-	# 		if lib is None:
-	# 			continue
+		for (gpu, single_precision) in CONDITIONS:
+			dlib = self.dense_libs.get(
+					single_precision=single_precision, gpu=gpu)
+			lib = self.cluster_libs.get(
+					dlib, single_precision=single_precision, gpu=gpu)
 
-	# 		A = np.random.rand(m, n).astype(dlib.pyfloat)
-	# 		C = np.random.rand(k, n).astype(dlib.pyfloat)
-	# 		A_ptr = A.ctypes.data_as(dlib.ok_float_p)
-	# 		C_ptr = C.ctypes.data_as(dlib.ok_float_p)
-	# 		orderA = dlib.enums.CblasRowMajor if A.flags.c_contiguous else \
-	# 				 dlib.enums.CblasColMajor
-	# 		orderC = dlib.enums.CblasRowMajor if C.flags.c_contiguous else \
-	# 				 dlib.enums.CblasColMajor
+			if lib is None:
+				continue
 
-	# 		a2c = np.zeros(m).astype(c_size_t)
-	# 		a2c_ptr = a2c.ctypes.data_as(dlib.c_size_t_p)
-	# 		a2c += self.u_test
+			A = np.random.rand(m, n).astype(dlib.pyfloat)
+			C = np.random.rand(k, n).astype(dlib.pyfloat)
+			A_ptr = A.ctypes.data_as(dlib.ok_float_p)
+			C_ptr = C.ctypes.data_as(dlib.ok_float_p)
+			orderA = dlib.enums.CblasRowMajor if A.flags.c_contiguous else \
+					 dlib.enums.CblasColMajor
+			orderC = dlib.enums.CblasRowMajor if C.flags.c_contiguous else \
+					 dlib.enums.CblasColMajor
 
-	# 		counts = np.zeros(k).astype(dlib.pyfloat)
-	# 		counts_ptr = counts.ctypes.data_as(dlib.ok_float_p)
+			a2c = np.zeros(m).astype(c_size_t)
+			a2c_ptr = a2c.ctypes.data_as(dlib.c_size_t_p)
+			a2c += self.u_test
 
-	# 		work = lib.kmeans_easy_init(m, k, n)
-	# 		self.register_var('work', work, lib.kmeans_easy_finish)
+			counts = np.zeros(k).astype(dlib.pyfloat)
+			counts_ptr = counts.ctypes.data_as(dlib.ok_float_p)
 
-	# 		io = lib.kmeans_io(A_ptr, C_ptr, counts_ptr, a2c_ptr, orderA, orderC, 1, 1)
+			work = lib.kmeans_easy_init(m, k, n)
+			self.register_var('work', work, lib.kmeans_easy_finish)
 
-	# 		DIST_RELTOL = 0.1
-	# 		CHANGE_TOL = int(1 + 0.01 * m)
-	# 		MAXITER = 500
-	# 		VERBOSE = 1			 
-	# 		settings = lib.kmeans_settings(DIST_RELTOL, CHANGE_TOL, MAXITER, 
-	# 										VERBOSE)
+			io = lib.kmeans_io(A_ptr, C_ptr, counts_ptr, a2c_ptr, orderA, orderC, 1, 1)
 
-	# 		self.assertEqual( lib.kmeans_easy_run(work, settings, io), 0 )
+			DIST_RELTOL = 0.1
+			CHANGE_TOL = int(1 + 0.01 * m)
+			MAXITER = 500
+			VERBOSE = 1
+			settings = lib.kmeans_settings(DIST_RELTOL, CHANGE_TOL, MAXITER,
+											VERBOSE)
 
-	# 		self.free_var('work')
+			self.assertEqual( lib.kmeans_easy_run(work, settings, io), 0 )
+
+			self.free_var('work')
