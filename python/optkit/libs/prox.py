@@ -4,7 +4,7 @@ from site import getsitepackages
 from optkit.libs.loader import OptkitLibs
 from optkit.libs.enums import OKFunctionEnums
 from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\
-	attach_sparse_linsys_ctypes, attach_vector_ccalls, \
+	attach_sparse_linsys_ctypes, attach_base_ccalls, attach_vector_ccalls, \
 	attach_dense_linsys_ccalls, attach_sparse_linsys_ccalls
 
 class ProxLibs(OptkitLibs):
@@ -12,6 +12,7 @@ class ProxLibs(OptkitLibs):
 		OptkitLibs.__init__(self, 'libprox_')
 		self.attach_calls.append(attach_base_ctypes)
 		self.attach_calls.append(attach_dense_linsys_ctypes)
+		self.attach_calls.append(attach_base_ccalls)
 		self.attach_calls.append(attach_vector_ccalls)
 		self.attach_calls.append(attach_prox_ctypes)
 		self.attach_calls.append(attach_prox_ccalls)

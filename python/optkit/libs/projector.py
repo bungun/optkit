@@ -2,7 +2,7 @@ from ctypes import Structure, CFUNCTYPE, POINTER, c_int, c_uint, c_size_t, \
 				   c_void_p
 from optkit.libs.loader import OptkitLibs
 from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\
-	attach_sparse_linsys_ctypes, attach_vector_ccalls, \
+	attach_sparse_linsys_ctypes, attach_base_ccalls, attach_vector_ccalls, \
 	attach_dense_linsys_ccalls, attach_sparse_linsys_ccalls
 from optkit.libs.operator import attach_operator_ctypes, attach_operator_ccalls
 from optkit.libs.cg import attach_cg_ctypes, attach_cg_ccalls
@@ -13,6 +13,7 @@ class ProjectorLibs(object):
 		self.attach_calls.append(attach_base_ctypes)
 		self.attach_calls.append(attach_dense_linsys_ctypes)
 		self.attach_calls.append(attach_sparse_linsys_ctypes)
+		self.attach_calls.append(attach_base_ccalls)
 		self.attach_calls.append(attach_vector_ccalls)
 		self.attach_calls.append(attach_dense_linsys_ccalls)
 		self.attach_calls.append(attach_sparse_linsys_ccalls)

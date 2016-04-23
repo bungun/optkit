@@ -8,6 +8,7 @@ class DenseLinsysLibs(OptkitLibs):
 		OptkitLibs.__init__(self, 'libok_dense_')
 		self.attach_calls.append(attach_base_ctypes)
 		self.attach_calls.append(attach_dense_linsys_ctypes)
+		self.attach_calls.append(attach_base_ccalls)
 		self.attach_calls.append(attach_vector_ccalls)
 		self.attach_calls.append(attach_dense_linsys_ccalls)
 
@@ -17,6 +18,7 @@ class SparseLinsysLibs(OptkitLibs):
 		self.attach_calls.append(attach_base_ctypes)
 		self.attach_calls.append(attach_dense_linsys_ctypes)
 		self.attach_calls.append(attach_sparse_linsys_ctypes)
+		self.attach_calls.append(attach_base_ccalls)
 		self.attach_calls.append(attach_vector_ccalls)
 		self.attach_calls.append(attach_sparse_linsys_ccalls)
 
@@ -29,12 +31,16 @@ def attach_base_ctypes(lib, single_precision=False):
 	# pointers to C types
 	lib.c_int_p = POINTER(c_int)
 	lib.c_size_t_p = POINTER(c_size_t)
-	lib.ok_float_p = POINTER(ok_float)
-	lib.ok_int_p = POINTER(ok_int)
+	lib.ok_float_p = POINTER(lib.ok_float)
+	lib.ok_int_p = POINTER(lib.ok_int)
 
 def attach_dense_linsys_ctypes(lib, single_precision=False):
 	if not 'ok_float' in lib.__dict__:
 		attach_base_ctypes(lib, single_precision)
+
+	ok_float = lib.ok_float
+	ok_float_p = lib.ok_float_p
+	c_size_t_p = lib.c_size_t_p
 
 	# vector struct
 	class ok_vector(Structure):
@@ -83,6 +89,16 @@ def attach_sparse_linsys_ctypes(lib, single_precision=False):
 	lib.sparse_matrix = ok_sparse_matrix
 	lib.sparse_matrix_p = POINTER(lib.sparse_matrix)
 
+
+def attach_base_ccalls(lib, single_precision=False):
+	if not 'c_int_p' in lib.__dict__:
+		attach_base_ctypes(lib, single_precision)
+
+	lib.optkit_version.argtypes = [c_int_p, c_int_p, c_int_p, c_int_p]
+	lib.optkit_version.restype = c_uint
+
+	lib.ok_device_reset.argtypes = []
+	lib.ok_device_reset.restype = c_uint
 
 def attach_vector_ccalls(lib, single_precision=False):
 	if not 'vector_p' in lib.__dict__:
@@ -183,8 +199,9 @@ def attach_dense_linsys_ccalls(lib, single_precision=False):
 		attach_dense_linsys_ctypes(lib, single_precision)
 
 	ok_float = lib.ok_float
-	ok_float = lib.ok_float_p
+	ok_float_p = lib.ok_float_p
 	vector_p = lib.vector_p
+	indvector_p = lib.indvector_p
 	matrix_p = lib.matrix_p
 
 	# Matrix
@@ -294,11 +311,6 @@ def attach_dense_linsys_ccalls(lib, single_precision=False):
 	lib.linalg_matrix_reduce_indmin.restype = None
 	lib.linalg_matrix_reduce_min.restype = None
 	lib.linalg_matrix_reduce_max.restype = None
-
-	# DEVICE
-	# ------
-	lib.ok_device_reset.argtypes = []
-	lib.ok_device_reset.restype = c_uint
 
 def attach_sparse_linsys_ccalls(lib, single_precision=False):
 	if not 'vector_p' in lib.__dict__:

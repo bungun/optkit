@@ -1,9 +1,8 @@
 from ctypes import c_int, c_uint, c_size_t, c_void_p, CFUNCTYPE, POINTER, \
 				   Structure
-from optkit.libs.loader import retrieve_libs, validate_lib
 from optkit.libs.loader import OptkitLibs
 from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\
-	attach_sparse_linsys_ctypes, attach_vector_ccalls, \
+	attach_sparse_linsys_ctypes, attach_base_ccalls, attach_vector_ccalls, \
 	attach_dense_linsys_ccalls, attach_sparse_linsys_ccalls
 
 class ClusteringLibs(OptkitLibs):
@@ -11,6 +10,7 @@ class ClusteringLibs(OptkitLibs):
 		OptkitLibs.__init__(self, 'libcluster_')
 		self.attach_calls.append(attach_base_ctypes)
 		self.attach_calls.append(attach_dense_linsys_ctypes)
+		self.attach_calls.append(attach_base_ccalls)
 		self.attach_calls.append(attach_vector_ccalls)
 		self.attach_calls.append(attach_dense_linsys_ccalls)
 		self.attach_calls.append(attach_clustering_ctypes)
