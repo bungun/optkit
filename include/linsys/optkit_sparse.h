@@ -7,8 +7,6 @@
 extern "C" {
 #endif
 
-void sparselib_version(int * maj, int * min, int * change, int * status);
-
 /* transpose data from forward->adjoint or adjoint->forward */
 typedef enum SparseTransposeDirection {
 	Forward2Adjoint,

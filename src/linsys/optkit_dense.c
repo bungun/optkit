@@ -4,14 +4,6 @@
 extern "C" {
 #endif
 
-void denselib_version(int * maj, int * min, int * change, int * status)
-{
-	* maj = OPTKIT_VERSION_MAJOR;
-	* min = OPTKIT_VERSION_MINOR;
-	* change = OPTKIT_VERSION_CHANGE;
-	* status = (int) OPTKIT_VERSION_STATUS;
-}
-
 inline ok_float __matrix_get_colmajor(const matrix * A, size_t i, size_t j)
 {
 	return A->data[i + j * A->ld];
@@ -254,12 +246,6 @@ void linalg_matrix_reduce_max(vector * maxima, matrix * A,
 	const enum CBLAS_SIDE side)
 {
 	__matrix_extrema(maxima, A, side, 0);
-}
-
-/* device reset */
-ok_status ok_device_reset()
-{
-	return OPTKIT_SUCCESS;
 }
 
 #ifdef __cplusplus

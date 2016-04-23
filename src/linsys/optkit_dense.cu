@@ -524,14 +524,6 @@ void linalg_matrix_reduce_max(vector * maxima, matrix * A,
 	__matrix_reduce_binary(maxima, A, side, -OK_FLOAT_MAX, MATH(fmax));
 }
 
-/* device reset */
-ok_status ok_device_reset()
-{
-	cudaDeviceReset();
-	CUDA_CHECK_ERR;
-	return OPTKIT_SUCCESS;
-}
-
 #ifdef __cplusplus
 }
 #endif

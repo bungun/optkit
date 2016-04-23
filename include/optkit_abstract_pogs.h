@@ -14,8 +14,6 @@
 extern "C" {
 #endif
 
-void pogslib_version(int * maj, int * min, int * change, int * status);
-
 #ifdef OK_DEBUG_PYTHON
 #define POGS_PRIVATE
 #else

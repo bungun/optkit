@@ -6,14 +6,6 @@ extern "C" {
 
 const ok_float kProjectorTolInitial = (ok_float) 1e-6;
 
-void pogslib_version(int * maj, int * min, int * change, int * status)
-{
-	* maj = OPTKIT_VERSION_MAJOR;
-	* min = OPTKIT_VERSION_MINOR;
-	* change = OPTKIT_VERSION_CHANGE;
-	* status = (int) OPTKIT_VERSION_STATUS;
-}
-
 POGS_PRIVATE ok_status pogs_work_alloc(pogs_work ** W, operator * A, int direct)
 {
 	int dense_or_sparse = (A->kind == OkOperatorDense ||

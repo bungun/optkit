@@ -9,8 +9,6 @@
 extern "C" {
 #endif
 
-void denselib_version(int * maj, int * min, int * change, int * status);
-
 void linalg_cholesky_decomp(void * linalg_handle, matrix * A);
 void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x);
 
@@ -26,9 +24,6 @@ void linalg_matrix_reduce_min(vector * minima, matrix * A,
 	const enum CBLAS_SIDE side);
 void linalg_matrix_reduce_max(vector * maxima, matrix * A,
 	const enum CBLAS_SIDE side);
-
-/* device reset */
-ok_status ok_device_reset(void);
 
 #ifdef __cplusplus
 }

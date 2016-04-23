@@ -6,14 +6,6 @@
 extern "C" {
 #endif
 
-void sparselib_version(int * maj, int * min, int * change, int * status)
-{
-	* maj = OPTKIT_VERSION_MAJOR;
-	* min = OPTKIT_VERSION_MINOR;
-	* change = OPTKIT_VERSION_CHANGE;
-	* status = (int) OPTKIT_VERSION_STATUS;
-}
-
 /* struct for cusparse handle and cusparse matrix description*/
 typedef struct ok_sparse_handle{
 	cusparseHandle_t * hdl;

@@ -10,8 +10,6 @@
 extern "C" {
 #endif
 
-void proxlib_version(int * maj, int * min, int * change, int * status);
-
 /* List of functions supported by the proximal operator library. */
 typedef enum ScalarFunction {
 	FnZero, /* f(x) = 0 */

@@ -11,8 +11,6 @@
 extern "C" {
 #endif
 
-void pogslib_version(int * maj, int * min, int * change, int * status);
-
 #ifndef OPTKIT_INDIRECT
 typedef direct_projector projector_;
 #define PROJECTOR(x) direct_projector_ ## x

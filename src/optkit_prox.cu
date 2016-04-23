@@ -2,14 +2,6 @@
 #include "optkit_defs_gpu.h"
 #include "optkit_thrust.hpp"
 
-void proxlib_version(int * maj, int * min, int * change, int * status)
-{
-	* maj = OPTKIT_VERSION_MAJOR;
-	* min = OPTKIT_VERSION_MINOR;
-	* change = OPTKIT_VERSION_CHANGE;
-	* status = (int) OPTKIT_VERSION_STATUS;
-}
-
 /* CUDA helper kernels */
 __global__ void __set_fn_vector(FunctionObj * objs, const ok_float a,
 	const ok_float b, const ok_float c, const ok_float d, const ok_float e,

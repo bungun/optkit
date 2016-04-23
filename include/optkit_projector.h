@@ -9,8 +9,6 @@
 extern "C" {
 #endif
 
-void projectorlib_version(int * maj, int * min, int * change, int * status);
-
 typedef enum OPTKIT_PROJECTOR {
 	OkProjectorDenseDirect = 101,
 	OkProjectorSparseDirect = 102,

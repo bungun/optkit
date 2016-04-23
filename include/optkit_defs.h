@@ -109,6 +109,9 @@ enum OPTKIT_TRANSFORM {
 #define __DEVICE__
 #endif
 
+void optkit_version(int * maj, int * min, int * change, int * status);
+ok_status ok_device_reset(void);
+
 #ifdef __cplusplus
 }
 #endif

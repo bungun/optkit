@@ -10,8 +10,6 @@
 extern "C" {
 #endif
 
-void equillib_version(int * maj, int * min, int * change, int * status);
-
 void sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out,
 	vector * d, vector *e, enum CBLAS_ORDER ord);
 void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,

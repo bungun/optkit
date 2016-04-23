@@ -7,14 +7,6 @@ extern "C" {
 const uint kQuietCG = 1;
 const uint kItersCG = 100;
 
-void projectorlib_version(int * maj, int * min, int * change, int * status)
-{
-	* maj = OPTKIT_VERSION_MAJOR;
-	* min = OPTKIT_VERSION_MINOR;
-	* change = OPTKIT_VERSION_CHANGE;
-	* status = (int) OPTKIT_VERSION_STATUS;
-}
-
 int projector_normalization(projector * P)
 {
 	dense_direct_projector * Pdd = OK_NULL;
