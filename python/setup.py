@@ -5,16 +5,14 @@ from distutils.command.build import build
 from subprocess import call
 from multiprocessing import cpu_count
 
-USE_OPENMP=False
-COMPILE_CPU_SPARSE=False
-COMPILE_GPU_SPARSE=False
+USE_OPENMP = False
+SPARSE_POGS = False
+ABSTRACT_POGS = False
 BASEPATH = path.abspath(path.join(path.dirname(path.abspath(__file__)),'..'))
 LIBPATH = path.join(BASEPATH, 'build')
 LONG_DESC='`optkit` provides a Python interface for CPU and GPU \
 (dense/sparse) linear algebra, enabling the composition of C- or \
 CUDA C-based optimization routines in a Python environment.'
-
-
 
 class OptkitBuild(build):
   def run(self):
@@ -31,16 +29,12 @@ class OptkitBuild(build):
     devices = ['cpu', 'gpu'] if NVCC else ['cpu']
     precisions = ['32', '64']
 
-
     for prec in precisions:
         for dev in devices:
-            sparse = COMPILE_GPU_SPARSE if dev=='gpu' else COMPILE_CPU_SPARSE
             cmd = [ 'make', 'all' ]
             cmd.extend([ 'FLOAT={}'.format(int(prec=='32')) ])
             cmd.extend([ 'GPU={}'.format(int(dev=='gpu')) ])
-            cmd.extend([ 'SPARSE={}'.format(int(sparse)) ])
             if USE_OPENMP: cmd.extend([ 'USE_OPENMP=1' ])
-
 
             # run Make for each condition (make CPU/GPU, 32/64)
             def compile():
@@ -48,7 +42,11 @@ class OptkitBuild(build):
 
             self.execute(compile, [], message)
 
-
+    pogs_matrices = ['dense']
+    if SPARSE_POGS:
+        pogs_matrices.append('sparse')
+    if ABSTRACT_POGS:
+        pogs_matrices.append('abstract')
 
     CPU_LIBS = []
     GPU_LIBS = []
@@ -57,7 +55,6 @@ class OptkitBuild(build):
         for precision in precisions:
             sparse = COMPILE_GPU_SPARSE if dev=='gpu' else COMPILE_CPU_SPARSE
             linsys_matrices = ['dense', 'sparse']
-            pogs_matrices = ['dense', 'sparse'] if sparse else ['dense']
             print('making linsys libraries for:'
                 '\n\tDEVICE: {}\n\tPRECISION: {}\n\t MATRICES {}'.format(
                 device, precision, linsys_matrices))

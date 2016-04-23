@@ -282,8 +282,14 @@ class VectorTestCase(OptkitCTestCase):
 			self.assertTrue(w_py[wargmin] - w_py.min() <=
 				ATOL + RTOL * np.linalg.norm(w_py))
 
+
 			# vector min
 			wmin = lib.vector_min(w)
+
+
+			print wmin
+			print w_py.min()
+
 			self.assertTrue(wmin - w_py.min() <=
 				ATOL + RTOL * np.linalg.norm(w_py))
 

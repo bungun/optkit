@@ -2,8 +2,7 @@ import unittest
 import os
 import numpy as np
 from ctypes import c_void_p, byref
-from optkit.libs import DenseLinsysLibs, SparseLinsysLibs, EquilibrationLibs, \
-						ProjectorLibs, OperatorLibs
+from optkit.libs import ProjectorLibs
 from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
 import optkit.tests.C.operator_helper as op_helper
 from optkit.tests.C.base import OptkitCTestCase
@@ -12,41 +11,32 @@ class ProjectorLibsTestCase(unittest.TestCase):
 	"""
 	TODO: docstring
 	"""
-
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.dense_libs = DenseLinsysLibs()
-		self.equil_libs = ProjectorLibs()
+		self.libs = ProjectorLibs()
 
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def test_libs_exist(self):
-		dlibs = []
-		plibs = []
+		libs = []
 		for (gpu, single_precision) in CONDITIONS:
-			dlibs.append(self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu))
-			plibs.append(self.equil_libs.get(
-					dlibs[-1], single_precision=single_precision, gpu=gpu))
-		self.assertTrue(any(dlibs))
-		self.assertTrue(any(plibs))
+			libs.append(self.libs.get(single_precision=single_precision,
+									  gpu=gpu))
+		self.assertTrue(any(libs))
 
 class DirectProjectorTestCase(unittest.TestCase):
 	"""
 	TODO: docstring
 	"""
-
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.dense_libs = DenseLinsysLibs()
-		self.equil_libs = EquilibrationLibs()
-		self.proj_libs = ProjectorLibs()
+		self.libs = ProjectorLibs()
 
 	@classmethod
 	def tearDownClass(self):
@@ -68,8 +58,7 @@ class DirectProjectorTestCase(unittest.TestCase):
 		self.y_test = np.random.rand(self.shape[0])
 
 	@staticmethod
-	def project(projectorlib, denselib, order, A, x, y,
-				normalize=False):
+	def project(lib, order, A, x, y, normalize=False):
 		"""Direct projection
 
 			Given matrix A \in R^{m x n}, and input vectors y \in R^m
@@ -96,140 +85,136 @@ class DirectProjectorTestCase(unittest.TestCase):
 			should hold elementwise to float/double precision
 		"""
 		hdl = c_void_p()
-		denselib.blas_make_handle(byref(hdl))
+		lib.blas_make_handle(byref(hdl))
 
 		m, n = A.shape
 		skinny = 1 if m >= n else 0
 		normalize_flag = 1 if normalize else 0
 
-		x = x.astype(denselib.pyfloat)
-		x_in_ptr = x.ctypes.data_as(denselib.ok_float_p)
-		x_out = np.zeros(n).astype(denselib.pyfloat)
-		x_out_ptr = x_out.ctypes.data_as(denselib.ok_float_p)
+		x = x.astype(lib.pyfloat)
+		x_in_ptr = x.ctypes.data_as(lib.ok_float_p)
+		x_out = np.zeros(n).astype(lib.pyfloat)
+		x_out_ptr = x_out.ctypes.data_as(lib.ok_float_p)
 
-		y = y.astype(denselib.pyfloat)
-		y_in_ptr = y.ctypes.data_as(denselib.ok_float_p)
-		y_out = np.zeros(m).astype(denselib.pyfloat)
-		y_out_ptr = y_out.ctypes.data_as(denselib.ok_float_p)
+		y = y.astype(lib.pyfloat)
+		y_in_ptr = y.ctypes.data_as(lib.ok_float_p)
+		y_out = np.zeros(m).astype(lib.pyfloat)
+		y_out_ptr = y_out.ctypes.data_as(lib.ok_float_p)
 
-		A = A.astype(denselib.pyfloat)
-		A_ptr = A.ctypes.data_as(denselib.ok_float_p)
-		order_in = denselib.enums.CblasRowMajor if A.flags.c_contiguous else \
-				   denselib.enums.CblasColMajor
-
+		A = A.astype(lib.pyfloat)
+		A_ptr = A.ctypes.data_as(lib.ok_float_p)
+		order_in = lib.enums.CblasRowMajor if A.flags.c_contiguous else \
+				   lib.enums.CblasColMajor
 
 		# build C inputs
-		x_in_c = denselib.vector(0, 0, None)
-		denselib.vector_calloc(x_in_c, n)
-		denselib.vector_memcpy_va(x_in_c, x_in_ptr, 1)
+		x_in_c = lib.vector(0, 0, None)
+		lib.vector_calloc(x_in_c, n)
+		lib.vector_memcpy_va(x_in_c, x_in_ptr, 1)
 
-		y_in_c = denselib.vector(0, 0, None)
-		denselib.vector_calloc(y_in_c, m)
-		denselib.vector_memcpy_va(y_in_c, y_in_ptr, 1)
+		y_in_c = lib.vector(0, 0, None)
+		lib.vector_calloc(y_in_c, m)
+		lib.vector_memcpy_va(y_in_c, y_in_ptr, 1)
 
-		A_c = denselib.matrix(0, 0, 0, None, order)
-		denselib.matrix_calloc(A_c, m, n, order)
-		denselib.matrix_memcpy_ma(A_c, A_ptr, order_in)
+		A_c = lib.matrix(0, 0, 0, None, order)
+		lib.matrix_calloc(A_c, m, n, order)
+		lib.matrix_memcpy_ma(A_c, A_ptr, order_in)
 
-		x_out_c = denselib.vector(0, 0, None)
-		denselib.vector_calloc(x_out_c, n)
+		x_out_c = lib.vector(0, 0, None)
+		lib.vector_calloc(x_out_c, n)
 
-		y_out_c = denselib.vector(0, 0, None)
-		denselib.vector_calloc(y_out_c, m)
+		y_out_c = lib.vector(0, 0, None)
+		lib.vector_calloc(y_out_c, m)
 
 		# make projector, project
-		P = projectorlib.direct_projector(None, None, 0, skinny,
-										  normalize_flag)
+		P = lib.direct_projector(None, None, 0, skinny, normalize_flag)
 
-		projectorlib.direct_projector_alloc(P, A_c)
-		projectorlib.direct_projector_initialize(hdl, P, 0)
-		projectorlib.direct_projector_project(hdl, P, x_in_c, y_in_c, x_out_c,
-											  y_out_c)
-
+		lib.direct_projector_alloc(P, A_c)
+		lib.direct_projector_initialize(hdl, P, 0)
+		lib.direct_projector_project(hdl, P, x_in_c, y_in_c, x_out_c, y_out_c)
 
 		# copy results
-		denselib.vector_memcpy_av(x_out_ptr, x_out_c, 1)
-		denselib.vector_memcpy_av(y_out_ptr, y_out_c, 1)
+		lib.vector_memcpy_av(x_out_ptr, x_out_c, 1)
+		lib.vector_memcpy_av(y_out_ptr, y_out_c, 1)
 
 		# free memory
 		projectorlib.direct_projector_free(P)
-		denselib.matrix_free(A_c)
-		denselib.vector_free(x_in_c)
-		denselib.vector_free(x_out_c)
-		denselib.vector_free(y_in_c)
-		denselib.vector_free(y_out_c)
+		lib.matrix_free(A_c)
+		lib.vector_free(x_in_c)
+		lib.vector_free(x_out_c)
+		lib.vector_free(y_in_c)
+		lib.vector_free(y_out_c)
 
-		denselib.blas_destroy_handle(hdl)
-		denselib.ok_device_reset()
+		lib.blas_destroy_handle(hdl)
+		lib.ok_device_reset()
 
 		return x_out, y_out
 
-	@staticmethod
-	def equil_project(projectorlib, denselib, equilibration_method, proj_test,
-					  order, A, x, y, normalize=False):
-		"""Equilibrated direct projection
+	# @staticmethod
+	# def equil_project(lib, equilibration_method, proj_test, order, A, x, y,
+	# 				  normalize=False):
+	# 	"""Equilibrated direct projection
 
-			Given matrix A \in R^{m x n}, and input vectors y \in R^m
-			and x \in R^n:
+	# 		Given matrix A \in R^{m x n}, and input vectors y \in R^m
+	# 		and x \in R^n:
 
-			(1) equilibrate A, such that
+	# 		(1) equilibrate A, such that
 
-					A_{equil} = D * A * E,
+	# 				A_{equil} = D * A * E,
 
-			(2) project (x, y) onto the graph y = A_{equil} * x
+	# 		(2) project (x, y) onto the graph y = A_{equil} * x
 
-			The equality
+	# 		The equality
 
-				D^{-1} * y_out == A * E * x_out
+	# 			D^{-1} * y_out == A * E * x_out
 
-			should hold elementwise to float/double precision
-		"""
-		hdl = c_void_p()
-		denselib.blas_make_handle(byref(hdl))
+	# 		should hold elementwise to float/double precision
+	# 	"""
+	# 	hdl = c_void_p()
+	# 	lib.blas_make_handle(byref(hdl))
 
-		A = A.astype(denselib.pyfloat)
-		m, n = A.shape
-		pyorder = 'C' if order == denselib.enums.CblasRowMajor else 'F'
+	# 	A = A.astype(lib.pyfloat)
+	# 	m, n = A.shape
+	# 	pyorder = 'C' if order == lib.enums.CblasRowMajor else 'F'
 
-		A_in_ptr = A.ctypes.data_as(denselib.ok_float_p)
-		order_in = denselib.enums.CblasRowMajor if A.flags.c_contiguous else \
-				   denselib.enums.CblasColMajor
+	# 	A_in_ptr = A.ctypes.data_as(lib.ok_float_p)
+	# 	order_in = lib.enums.CblasRowMajor if A.flags.c_contiguous else \
+	# 			   lib.enums.CblasColMajor
 
-		# Python matrix + vectors for equilibration output
-		A_equil_py = np.zeros((m, n), dtype=denselib.pyfloat, order=pyorder)
-		d_py = np.zeros(m, dtype=denselib.pyfloat)
-		e_py = np.zeros(n, dtype=denselib.pyfloat)
+	# 	# Python matrix + vectors for equilibration output
+	# 	A_equil_py = np.zeros((m, n), dtype=lib.pyfloat, order=pyorder)
+	# 	d_py = np.zeros(m, dtype=lib.pyfloat)
+	# 	e_py = np.zeros(n, dtype=lib.pyfloat)
 
-		A_equil_ptr = A_equil_py.ctypes.data_as(denselib.ok_float_p)
-		d_ptr = d_py.ctypes.data_as(denselib.ok_float_p)
-		e_ptr = e_py.ctypes.data_as(denselib.ok_float_p)
+	# 	A_equil_ptr = A_equil_py.ctypes.data_as(lib.ok_float_p)
+	# 	d_ptr = d_py.ctypes.data_as(lib.ok_float_p)
+	# 	e_ptr = e_py.ctypes.data_as(lib.ok_float_p)
 
-		# C matrix + vectors for equilibration output
-		A_equil = denselib.matrix(0, 0, 0, None, order)
-		d = denselib.vector(0, 0, None)
-		e = denselib.vector(0, 0, None)
+	# 	# C matrix + vectors for equilibration output
+	# 	A_equil = lib.matrix(0, 0, 0, None, order)
+	# 	d = lib.vector(0, 0, None)
+	# 	e = lib.vector(0, 0, None)
 
-		denselib.matrix_calloc(A_equil, m, n, order)
-		denselib.vector_calloc(d, m)
-		denselib.vector_calloc(e, n)
+	# 	lib.matrix_calloc(A_equil, m, n, order)
+	# 	lib.vector_calloc(d, m)
+	# 	lib.vector_calloc(e, n)
 
-		# equilibrate in C, copy equilibration output back to Python
-		equilibration_method(hdl, A_in_ptr, A_equil, d, e, order_in)
-		denselib.matrix_memcpy_am(A_equil_ptr, A_equil, order)
-		denselib.vector_memcpy_av(d_ptr, d, 1)
-		denselib.vector_memcpy_av(e_ptr, e, 1)
+	# 	# equilibrate in C, copy equilibration output back to Python
+	# 	equilibration_method(hdl, A_in_ptr, A_equil, d, e, order_in)
+	# 	lib.matrix_memcpy_am(A_equil_ptr, A_equil, order)
+	# 	lib.vector_memcpy_av(d_ptr, d, 1)
+	# 	lib.vector_memcpy_av(e_ptr, e, 1)
 
-		denselib.matrix_free(A_equil)
-		denselib.vector_free(d)
-		denselib.vector_free(e)
+	# 	lib.matrix_free(A_equil)
+	# 	lib.vector_free(d)
+	# 	lib.vector_free(e)
 
-		denselib.blas_destroy_handle(hdl)
-		denselib.ok_device_reset()
+	# 	lib.blas_destroy_handle(hdl)
+	# 	lib.ok_device_reset()
 
-		x_p, y_p = proj_test(projectorlib, denselib, order, A_equil_py, x, y,
-							 normalize=normalize)
+	# 	x_p, y_p = proj_test(projectorlib, lib, order, A_equil_py, x, y,
+	# 						 normalize=normalize)
 
-		return x_p * e_py, y_p / d_py
+	# 	return x_p * e_py, y_p / d_py
 
 	def test_projection(self):
 		"""projection test
@@ -239,68 +224,49 @@ class DirectProjectorTestCase(unittest.TestCase):
 			(2) project (x, y) onto graph y = Ax
 		"""
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			plib = self.proj_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-			if plib is None:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+			if lib is None:
 				continue
 
-			DIGITS = 3 if plib.FLOAT else 5
+			DIGITS = 5 - 2 * single_precision
 
-
-			for rowmajor in (True, False):
-				order = dlib.enums.CblasRowMajor if rowmajor else \
-						dlib.enums.CblasColMajor
-
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
 				for normalize in (False, True):
-					x_proj, y_proj = self.project(plib, dlib, order,
-												  self.A_test, self.x_test,
-												  self.y_test,
+					x_proj, y_proj = self.project(lib, order, self.A_test,
+												  self.x_test, self.y_test,
 												  normalize=normalize)
 
 					self.assertTrue(np.allclose(self.A_test.dot(x_proj),
 												y_proj, DIGITS))
 
+	# def test_equilibrated_projection(self):
+	# 	"""equlibrated projection test
 
+	# 		(1) generate random A, x, y
+	# 		(2) equilibrate A
+	# 		(2b) optionally, normalize equilibrated A:
+	# 		(3) project (x, y) onto graph y = Ax
+	# 	"""
+	# 	for (gpu, single_precision) in CONDITIONS:
+	# 		lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+	# 		if lib is None:
+	# 			continue
 
-	def test_equilibrated_projection(self):
-		"""equlibrated projection test
+	# 		DIGITS = 6 - 2 * single_precision
 
-			(1) generate random A, x, y
-			(2) equilibrate A
-			(2b) optionally, normalize equilibrated A:
-			(3) project (x, y) onto graph y = Ax
-		"""
-		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			elib = self.equil_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-			plib = self.proj_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-			if plib is None:
-				continue
+	# 		for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+	# 			for normalize in (False, True):
+	# 				x_proj, y_proj = self.equil_project(lib,
+	# 													lib.sinkhorn_knopp,
+	# 											  		self.project, order,
+	# 											  		self.A_test, self.x_test,
+	# 											 		self.y_test,
+	# 											  		normalize=normalize)
 
-			DIGITS = 4 if plib.FLOAT else 6
+	# 				self.assertTrue(np.allclose(self.A_test.dot(x_proj),
+	# 											y_proj, DIGITS))
 
-
-			for rowmajor in (True, False):
-				order = dlib.enums.CblasRowMajor if rowmajor else \
-						dlib.enums.CblasColMajor
-
-				for normalize in (False, True):
-					x_proj, y_proj = self.equil_project(plib, dlib,
-												  elib.sinkhorn_knopp,
-												  self.project, order,
-												  self.A_test, self.x_test,
-												  self.y_test,
-												  normalize=normalize)
-
-					self.assertTrue(np.allclose(self.A_test.dot(x_proj),
-												y_proj, DIGITS))
-
-class IndirectProjectorTestCase(OptktiCTestCase):
+class IndirectProjectorTestCase(OptkitCTestCase):
 	"""
 	TODO: docstring
 	"""
@@ -308,11 +274,7 @@ class IndirectProjectorTestCase(OptktiCTestCase):
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.dense_libs = DenseLinsysLibs()
-		self.sparse_libs = SparseLinsysLibs()
-		self.op_libs = OperatorLibs()
-		self.equil_libs = EquilibrationLibs()
-		self.proj_libs = ProjectorLibs()
+		self.libs = ProjectorLibs()
 
 	@classmethod
 	def tearDownClass(self):
@@ -348,15 +310,15 @@ class IndirectProjectorTestCase(OptktiCTestCase):
 	def op_keys(self):
 		return ['dense', 'sparse']
 
-	def get_opmethods(self, opkey, denselib, sparselib, operatorlib):
+	def get_opmethods(self, opkey, lib, sparselib, operatorlib):
 		if opkey == 'dense':
 			A = self.A_test
 			gen = op_helper.gen_dense_operator
-			arg_gen = [denselib, operatorlib, A]
+			arg_gen = [lib, operatorlib, A]
 		elif opkey == 'sparse':
 			A = self.A_test_sparse
 			gen = op_helper.gen_sparse_operator
-			arg_gen = [denselib, sparselib, operatorlib, A]
+			arg_gen = [lib, sparselib, operatorlib, A]
 		else:
 			raise ValueError('invalid operator type')
 
@@ -364,15 +326,8 @@ class IndirectProjectorTestCase(OptktiCTestCase):
 
 	def test_alloc_free(self):
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			slib = self.sparse_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-			olib = self.op_libs.get(
-					dlib, slib, single_precision=single_precision, gpu=gpu)
-			plib = self.proj_libs.get(
-					dlib, olib, single_precision=single_precision, gpu=gpu)
-			if plib is None:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+			if lib is None:
 				continue
 
 			# -----------------------------------------
@@ -380,17 +335,17 @@ class IndirectProjectorTestCase(OptktiCTestCase):
 			# self.op_keys
 			for op_ in self.op_keys:
 				print "test indirect projector alloc, operator type:", op_
-				A_, gen_operator, gen_args = self.get_opmethods(op_, dlib,
+				A_, gen_operator, gen_args = self.get_opmethods(op_, lib,
 																slib, olib)
 
 				A, o, freeA = gen_operator(*gen_args)
 				self.register_var('A', A, freeA)
 				self.register_var('o', o, o.contents.free)
 
-				p = plib.indirect_projector(None, None)
+				p = lib.indirect_projector(None, None)
 
-				plib.indirect_projector_alloc(p, o)
-				self.register_var('p', p, plib.indirect_projector_free)
+				lib.indirect_projector_alloc(p, o)
+				self.register_var('p', p, lib.indirect_projector_free)
 
 				self.assertNotEqual(p.A, 0)
 				self.assertNotEqual(p.cgls_work, 0)
@@ -401,81 +356,73 @@ class IndirectProjectorTestCase(OptktiCTestCase):
 
 	def test_projection(self):
 		m, n = self.shape
-
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			slib = self.sparse_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-			olib = self.op_libs.get(
-					dlib, slib, single_precision=single_precision, gpu=gpu)
-			plib = self.proj_libs.get(
-					dlib, olib, single_precision=single_precision, gpu=gpu)
-			if plib is None:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+			if lib is None:
 				continue
 
-			DIGITS = 7 - 2 * plib.FLOAT - 1 * plib.GPU
+			DIGITS = 7 - 2 * lib.FLOAT - 1 * lib.GPU
 			RTOL = 10**(-DIGITS)
 			ATOLM = RTOL * m**0.5
 
 			hdl = c_void_p()
-			dlib.blas_make_handle(byref(hdl))
+			lib.blas_make_handle(byref(hdl))
 
 			# -----------------------------------------
 			# allocate x, y in python & C
 
 			# inputs
-			x = dlib.vector(0, 0, None)
-			dlib.vector_calloc(x, n)
-			self.register_var('x', x, dlib.vector_free)
-			x_ = np.zeros(n).astype(dlib.pyfloat)
-			x_ptr = x_.ctypes.data_as(dlib.ok_float_p)
+			x = lib.vector(0, 0, None)
+			lib.vector_calloc(x, n)
+			self.register_var('x', x, lib.vector_free)
+			x_ = np.zeros(n).astype(lib.pyfloat)
+			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
 
-			y = dlib.vector(0, 0, None)
-			dlib.vector_calloc(y, m)
-			self.register_var('y', y, dlib.vector_free)
-			y_ = np.zeros(m).astype(dlib.pyfloat)
-			y_ptr = y_.ctypes.data_as(dlib.ok_float_p)
+			y = lib.vector(0, 0, None)
+			lib.vector_calloc(y, m)
+			self.register_var('y', y, lib.vector_free)
+			y_ = np.zeros(m).astype(lib.pyfloat)
+			y_ptr = y_.ctypes.data_as(lib.ok_float_p)
 
 			x_ += self.x_test
-			dlib.vector_memcpy_va(x, x_ptr, 1)
+			lib.vector_memcpy_va(x, x_ptr, 1)
 
 			y_ += self.y_test
-			dlib.vector_memcpy_va(y, y_ptr, 1)
+			lib.vector_memcpy_va(y, y_ptr, 1)
 
 			# outputs
-			x_out = dlib.vector(0, 0, None)
-			dlib.vector_calloc(x_out, n)
-			self.register_var('x_out', x_out, dlib.vector_free)
-			x_proj = np.zeros(n).astype(dlib.pyfloat)
-			x_p_ptr = x_proj.ctypes.data_as(dlib.ok_float_p)
+			x_out = lib.vector(0, 0, None)
+			lib.vector_calloc(x_out, n)
+			self.register_var('x_out', x_out, lib.vector_free)
+			x_proj = np.zeros(n).astype(lib.pyfloat)
+			x_p_ptr = x_proj.ctypes.data_as(lib.ok_float_p)
 
-			y_out = dlib.vector(0, 0, None)
-			dlib.vector_calloc(y_out, m)
-			self.register_var('y_out', y_out, dlib.vector_free)
-			y_proj = np.zeros(m).astype(dlib.pyfloat)
-			y_p_ptr = y_proj.ctypes.data_as(dlib.ok_float_p)
+			y_out = lib.vector(0, 0, None)
+			lib.vector_calloc(y_out, m)
+			self.register_var('y_out', y_out, lib.vector_free)
+			y_proj = np.zeros(m).astype(lib.pyfloat)
+			y_p_ptr = y_proj.ctypes.data_as(lib.ok_float_p)
 
 			# -----------------------------------------
 			# test projection for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "indirect projection, operator type:", op_
-				A_, gen_operator, gen_args = self.get_opmethods(op_, dlib,
+				A_, gen_operator, gen_args = self.get_opmethods(op_, lib,
 																slib, olib)
 
 				A, o, freeA = gen_operator(*gen_args)
 				self.register_var('A', A, freeA)
 				self.register_var('o', o, o.contents.free)
 
-				p = plib.indirect_projector(None, None)
+				p = lib.indirect_projector(None, None)
 
-				plib.indirect_projector_alloc(p, o)
-				self.register_var('p', p, plib.indrect_projector_free)
-				plib.indirect_projector_project(hdl, p, x, y, x_out, y_out)
+				lib.indirect_projector_alloc(p, o)
+				self.register_var('p', p, lib.indrect_projector_free)
+				lib.indirect_projector_project(hdl, p, x, y, x_out, y_out)
 				self.free_var('p')
 
-				dlib.vector_memcpy_av(x_p_ptr, x_out, 1)
-				dlib.vector_memcpy_av(y_p_ptr, y_out, 1)
+				lib.vector_memcpy_av(x_p_ptr, x_out, 1)
+				lib.vector_memcpy_av(y_p_ptr, y_out, 1)
 
 				self.assertTrue(
 						np.linalg.norm(A_.dot(x_proj) - y_proj) <=
@@ -491,7 +438,7 @@ class IndirectProjectorTestCase(OptktiCTestCase):
 			self.free_var('x_out')
 			self.free_var('y_out')
 
-			dlib.blas_destroy_handle(byref(hdl))
+			lib.blas_destroy_handle(byref(hdl))
 
 class DenseDirectProjectorTestCase(OptkitCTestCase):
 	"""
@@ -530,31 +477,31 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 		m, n = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
+			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
-			plib = self.proj_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-			if plib is None:
+			lib = self.proj_libs.get(
+					lib, single_precision=single_precision, gpu=gpu)
+			if lib is None:
 				continue
 
 			for rowmajor in (True, False):
-				order = dlib.enums.CblasRowMajor if rowmajor else \
-						dlib.enums.CblasColMajor
+				order = lib.enums.CblasRowMajor if rowmajor else \
+						lib.enums.CblasColMajor
 				pyorder = 'C' if rowmajor else 'F'
 
-				A_ = np.zeros(self.shape, order=pyorder).astype(dlib.pyfloat)
-				A_ptr = A_.ctypes.data_as(dlib.ok_float_p)
-				A = dlib.matrix(0, 0, 0, None, order)
+				A_ = np.zeros(self.shape, order=pyorder).astype(lib.pyfloat)
+				A_ptr = A_.ctypes.data_as(lib.ok_float_p)
+				A = lib.matrix(0, 0, 0, None, order)
 
-				dlib.matrix_calloc(A, m, n, order)
-				self.register_var('A', A, dlib.matrix_free)
+				lib.matrix_calloc(A, m, n, order)
+				self.register_var('A', A, lib.matrix_free)
 
 				A_ += self.A_test
-				dlib.matrix_memcpy_ma(A, A_ptr, order)
+				lib.matrix_memcpy_ma(A, A_ptr, order)
 
-				p = plib.dense_direct_projector_alloc(A)
-				self.register_var('p', p, plib.projector_free)
-				self.assertEqual(p.contents.kind, plib.enums.DENSE_DIRECT)
+				p = lib.dense_direct_projector_alloc(A)
+				self.register_var('p', p, lib.projector_free)
+				self.assertEqual(p.contents.kind, lib.enums.DENSE_DIRECT)
 				self.assertEqual(p.contents.size1, m)
 				self.assertEqual(p.contents.size2, n)
 				self.assertNotEqual(p.contents.data, 0)
@@ -565,83 +512,78 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 				self.free_var('p')
 				self.free_var('A')
 
-			dlib.ok_device_reset()
-
+			lib.ok_device_reset()
 
 	def test_projection(self):
 		m, n = self.shape
-
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			plib = self.proj_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-			if plib is None:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+			if lib is None:
 				continue
 
 			TOL_PLACEHOLDER = 1e-8
-			DIGITS = 7 - 2 * plib.FLOAT - 1 * plib.GPU
+			DIGITS = 7 - 2 * lib.FLOAT - 1 * lib.GPU
 			RTOL = 10**(-DIGITS)
 			ATOLM = RTOL * m**0.5
 
 			hdl = c_void_p()
-			dlib.blas_make_handle(byref(hdl))
+			lib.blas_make_handle(byref(hdl))
 
 			# -----------------------------------------
 			# allocate x, y in python & C
 
 			# inputs
-			x = dlib.vector(0, 0, None)
-			dlib.vector_calloc(x, n)
-			self.register_var('x', x, dlib.vector_free)
-			x_ = np.zeros(n).astype(dlib.pyfloat)
-			x_ptr = x_.ctypes.data_as(dlib.ok_float_p)
+			x = lib.vector(0, 0, None)
+			lib.vector_calloc(x, n)
+			self.register_var('x', x, lib.vector_free)
+			x_ = np.zeros(n).astype(lib.pyfloat)
+			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
 
-			y = dlib.vector(0, 0, None)
-			dlib.vector_calloc(y, m)
-			self.register_var('y', y, dlib.vector_free)
-			y_ = np.zeros(m).astype(dlib.pyfloat)
-			y_ptr = y_.ctypes.data_as(dlib.ok_float_p)
+			y = lib.vector(0, 0, None)
+			lib.vector_calloc(y, m)
+			self.register_var('y', y, lib.vector_free)
+			y_ = np.zeros(m).astype(lib.pyfloat)
+			y_ptr = y_.ctypes.data_as(lib.ok_float_p)
 
 			x_ += self.x_test
-			dlib.vector_memcpy_va(x, x_ptr, 1)
+			lib.vector_memcpy_va(x, x_ptr, 1)
 
 			y_ += self.y_test
-			dlib.vector_memcpy_va(y, y_ptr, 1)
+			lib.vector_memcpy_va(y, y_ptr, 1)
 
 			# outputs
-			x_out = dlib.vector(0, 0, None)
-			dlib.vector_calloc(x_out, n)
-			self.register_var('x_out', x_out, dlib.vector_free)
+			x_out = lib.vector(0, 0, None)
+			lib.vector_calloc(x_out, n)
+			self.register_var('x_out', x_out, lib.vector_free)
 
-			x_proj = np.zeros(n).astype(dlib.pyfloat)
-			x_p_ptr = x_proj.ctypes.data_as(dlib.ok_float_p)
+			x_proj = np.zeros(n).astype(lib.pyfloat)
+			x_p_ptr = x_proj.ctypes.data_as(lib.ok_float_p)
 
-			y_out = dlib.vector(0, 0, None)
-			dlib.vector_calloc(y_out, m)
-			self.register_var('y_out', y_out, dlib.vector_free)
+			y_out = lib.vector(0, 0, None)
+			lib.vector_calloc(y_out, m)
+			self.register_var('y_out', y_out, lib.vector_free)
 
-			y_proj = np.zeros(m).astype(dlib.pyfloat)
-			y_p_ptr = y_proj.ctypes.data_as(dlib.ok_float_p)
+			y_proj = np.zeros(m).astype(lib.pyfloat)
+			y_p_ptr = y_proj.ctypes.data_as(lib.ok_float_p)
 
 			# -----------------------------------------
 			# test projection for each matrix layout
 			for rowmajor in (True, False):
-				order = dlib.enums.CblasRowMajor if rowmajor else \
-						dlib.enums.CblasColMajor
+				order = lib.enums.CblasRowMajor if rowmajor else \
+						lib.enums.CblasColMajor
 				pyorder = 'C' if rowmajor else 'F'
 
-				A_ = np.zeros(self.shape, order=pyorder).astype(dlib.pyfloat)
-				A_ptr = A_.ctypes.data_as(dlib.ok_float_p)
-				A = dlib.matrix(0, 0, 0, None, order)
-				dlib.matrix_calloc(A, m, n, order)
-				self.register_var('A', A, dlib.matrix_free)
+				A_ = np.zeros(self.shape, order=pyorder).astype(lib.pyfloat)
+				A_ptr = A_.ctypes.data_as(lib.ok_float_p)
+				A = lib.matrix(0, 0, 0, None, order)
+				lib.matrix_calloc(A, m, n, order)
+				self.register_var('A', A, lib.matrix_free)
 
 				A_ += self.A_test
-				dlib.matrix_memcpy_ma(A, A_ptr, order)
+				lib.matrix_memcpy_ma(A, A_ptr, order)
 
-				p = plib.dense_direct_projector_alloc(A)
-				self.register_var('p', p, plib.projector_free)
+				p = lib.dense_direct_projector_alloc(A)
+				self.register_var('p', p, lib.projector_free)
 				p.contents.initialize(p.contents.data, 0)
 
 				p.contents.project(p.contents.data, x, y, x_out, y_out,
@@ -649,8 +591,8 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 
 				self.free_var('p')
 
-				dlib.vector_memcpy_av(x_p_ptr, x_out, 1)
-				dlib.vector_memcpy_av(y_p_ptr, y_out, 1)
+				lib.vector_memcpy_av(x_p_ptr, x_out, 1)
+				lib.vector_memcpy_av(y_p_ptr, y_out, 1)
 
 				self.assertTrue(
 						np.linalg.norm(A_.dot(x_proj) - y_proj) <=
@@ -664,8 +606,8 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 			self.free_var('y')
 			self.free_var('x_out')
 			self.free_var('y_out')
-			dlib.blas_destroy_handle(byref(hdl))
-			dlib.ok_device_reset()
+			lib.blas_destroy_handle(byref(hdl))
+			lib.ok_device_reset()
 
 class GenericIndirectProjectorTestCase(OptkitCTestCase):
 	"""
@@ -675,11 +617,7 @@ class GenericIndirectProjectorTestCase(OptkitCTestCase):
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.dense_libs = DenseLinsysLibs()
-		self.sparse_libs = SparseLinsysLibs()
-		self.op_libs = OperatorLibs()
-		self.equil_libs = EquilibrationLibs()
-		self.proj_libs = ProjectorLibs()
+		self.libs = ProjectorLibs()
 
 	@classmethod
 	def tearDownClass(self):
@@ -715,53 +653,34 @@ class GenericIndirectProjectorTestCase(OptkitCTestCase):
 	def op_keys(self):
 		return ['dense', 'sparse']
 
-	def get_opmethods(self, opkey, denselib, sparselib, operatorlib):
+	def get_opmethods(self, opkey, lib):
 		if opkey == 'dense':
-			A = self.A_test
-			gen = op_helper.gen_dense_operator
-			arg_gen = [denselib, operatorlib, A]
-			release = op_helper.release_dense_operator
-			arg_release = [denselib, operatorlib]
+			return op_helper.gen_dense_operator(lib, self.A_test)
 		elif opkey == 'sparse':
-			A = self.A_test_sparse
-			gen = op_helper.gen_sparse_operator
-			arg_gen = [denselib, sparselib, operatorlib, A]
-			release = op_helper.release_sparse_operator
-			arg_release = [sparselib, operatorlib]
+			return op_helper.gen_sparse_operator(lib, self.A_test_sparse)
 		else:
 			raise ValueError('invalid operator type')
 
-		return (A, gen, arg_gen, release, arg_release)
-
 	def test_alloc_free(self):
 		m, n = self.shape
-
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			slib = self.sparse_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-			olib = self.op_libs.get(
-					dlib, slib, single_precision=single_precision, gpu=gpu)
-			plib = self.proj_libs.get(
-					dlib, olib, single_precision=single_precision, gpu=gpu)
-			if plib is None:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+			if lib is None:
 				continue
 
 			# -----------------------------------------
 			# test projection for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "test indirect projector alloc, operator type:", op_
-				A_, gen_operator, gen_args = self.get_opmethods(op_, dlib,
-																slib, olib)
+				A_, gen_operator, gen_args = self.get_opmethods(op_, lib)
 
 				A, o, freeA = gen_operator(*gen_args)
 				self.register_var('A', A, freeA)
 				self.register_var('o', o, o.contents.free)
 
-				p = plib.indirect_projector_generic_alloc(o)
-				self.register_var('p', p, plib.projector_free)
-				self.assertEqual(p.contents.kind, plib.enums.INDIRECT)
+				p = lib.indirect_projector_generic_alloc(o)
+				self.register_var('p', p, lib.projector_free)
+				self.assertEqual(p.contents.kind, lib.enums.INDIRECT)
 				self.assertEqual(p.contents.size1, m)
 				self.assertEqual(p.contents.size2, n)
 				self.assertNotEqual(p.contents.data, 0)
@@ -773,84 +692,75 @@ class GenericIndirectProjectorTestCase(OptkitCTestCase):
 				self.free_var('A')
 				self.free_var('o')
 
-			dlib.ok_device_reset()
+			lib.ok_device_reset()
 
 	def test_projection(self):
 		m, n = self.shape
-
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			slib = self.sparse_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-			olib = self.op_libs.get(
-					dlib, slib, single_precision=single_precision, gpu=gpu)
-			plib = self.proj_libs.get(
-					dlib, olib, single_precision=single_precision, gpu=gpu)
-			if plib is None:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+			if lib is None:
 				continue
 
 			TOL_CG = 1e-12
-			DIGITS = 7 - 2 * plib.FLOAT - 1 * plib.GPU
+			DIGITS = 7 - 2 * lib.FLOAT - 1 * lib.GPU
 			RTOL = 10**(-DIGITS)
 			ATOLM = RTOL * m**0.5
 
 			hdl = c_void_p()
-			dlib.blas_make_handle(byref(hdl))
+			lib.blas_make_handle(byref(hdl))
 
 			# -----------------------------------------
 			# allocate x, y in python & C
 
 			# inputs
-			x = dlib.vector(0, 0, None)
-			dlib.vector_calloc(x, n)
-			self.register_var('x', x, dlib.vector_free)
-			x_ = np.zeros(n).astype(dlib.pyfloat)
-			x_ptr = x_.ctypes.data_as(dlib.ok_float_p)
+			x = lib.vector(0, 0, None)
+			lib.vector_calloc(x, n)
+			self.register_var('x', x, lib.vector_free)
+			x_ = np.zeros(n).astype(lib.pyfloat)
+			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
 
-			y = dlib.vector(0, 0, None)
-			dlib.vector_calloc(y, m)
-			self.register_var('y', y, dlib.vector_free)
-			y_ = np.zeros(m).astype(dlib.pyfloat)
-			y_ptr = y_.ctypes.data_as(dlib.ok_float_p)
+			y = lib.vector(0, 0, None)
+			lib.vector_calloc(y, m)
+			self.register_var('y', y, lib.vector_free)
+			y_ = np.zeros(m).astype(lib.pyfloat)
+			y_ptr = y_.ctypes.data_as(lib.ok_float_p)
 
 			x_ += self.x_test
-			dlib.vector_memcpy_va(x, x_ptr, 1)
+			lib.vector_memcpy_va(x, x_ptr, 1)
 
 			y_ += self.y_test
-			dlib.vector_memcpy_va(y, y_ptr, 1)
+			lib.vector_memcpy_va(y, y_ptr, 1)
 
 			# outputs
-			x_out = dlib.vector(0, 0, None)
-			dlib.vector_calloc(x_out, n)
-			self.register_var('x_out', x_out, dlib.vector_free)
-			x_proj = np.zeros(n).astype(dlib.pyfloat)
-			x_p_ptr = x_proj.ctypes.data_as(dlib.ok_float_p)
+			x_out = lib.vector(0, 0, None)
+			lib.vector_calloc(x_out, n)
+			self.register_var('x_out', x_out, lib.vector_free)
+			x_proj = np.zeros(n).astype(lib.pyfloat)
+			x_p_ptr = x_proj.ctypes.data_as(lib.ok_float_p)
 
-			y_out = dlib.vector(0, 0, None)
-			dlib.vector_calloc(y_out, m)
-			self.register_var('y_out', y_out, dlib.vector_free)
-			y_proj = np.zeros(m).astype(dlib.pyfloat)
-			y_p_ptr = y_proj.ctypes.data_as(dlib.ok_float_p)
+			y_out = lib.vector(0, 0, None)
+			lib.vector_calloc(y_out, m)
+			self.register_var('y_out', y_out, lib.vector_free)
+			y_proj = np.zeros(m).astype(lib.pyfloat)
+			y_p_ptr = y_proj.ctypes.data_as(lib.ok_float_p)
 
 			# -----------------------------------------
 			# test projection for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "indirect projection, operator type:", op_
-				A_, gen_operator, gen_args = self.get_opmethods(op_, dlib,
-																slib, olib)
+				A_, gen_operator, gen_args = self.get_opmethods(op_, lib)
 
 				A, o, freeA = gen_operator(*gen_args)
 				self.register_var('A', A, freeA)
 				self.register_var('o', o, o.contents.free)
 
-				p = plib.indirect_projector_generic_alloc(o)
-				self.register_var('p', p, plib.projector_free)
+				p = lib.indirect_projector_generic_alloc(o)
+				self.register_var('p', p, lib.projector_free)
 				p.contents.project(p.contents.data, x, y, x_out, y_out, TOL_CG)
 				self.free_var('p')
 
-				dlib.vector_memcpy_av(x_p_ptr, x_out, 1)
-				dlib.vector_memcpy_av(y_p_ptr, y_out, 1)
+				lib.vector_memcpy_av(x_p_ptr, x_out, 1)
+				lib.vector_memcpy_av(y_p_ptr, y_out, 1)
 
 				self.assertTrue(
 						np.linalg.norm(A_.dot(x_proj) - y_proj) <=
@@ -865,5 +775,5 @@ class GenericIndirectProjectorTestCase(OptkitCTestCase):
 			self.free_var('y')
 			self.free_var('x_out')
 			self.free_var('y_out')
-			dlib.blas_destroy_handle(byref(hdl))
-			dlib.ok_device_reset()
+			lib.blas_destroy_handle(byref(hdl))
+			lib.ok_device_reset()

@@ -3,7 +3,6 @@ import os
 import numpy as np
 from numpy import ndarray
 from ctypes import c_void_p, c_size_t, byref, cast
-from optkit.libs import DenseLinsysLibs
 from optkit.libs.clustering import ClusteringLibs
 from optkit.libs.error import optkit_print_error as PRINTERR
 from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
@@ -30,8 +29,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.dense_libs = DenseLinsysLibs()
-		self.cluster_libs = ClusteringLibs()
+		self.libs = ClusteringLibs()
 
 		self.shape = None
 		if DEFAULT_MATRIX_PATH is not None:
@@ -59,16 +57,12 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		self.free_all_vars()
 
 	def test_libs_exist(self):
-		dlibs = []
-		cluslibs = []
+		libs = []
 		for (gpu, single_precision) in CONDITIONS:
-			dlibs.append(self.dense_libs.get(
-					gpu=gpu, single_precision=single_precision))
-			cluslibs.append(self.cluster_libs.get(
-					dlibs[-1], gpu=gpu, single_precision=single_precision))
+			libs.append(self.libs.get(single_precision=single_precision,
+									  gpu=gpu))
 
-		self.assertTrue(any(dlibs))
-		self.assertTrue(any(cluslibs))
+		self.assertTrue(any(libs))
 
 	@staticmethod
 	def upsamplingvec_mul(tU, tA, tB, alpha, u, A, beta, B):
@@ -143,11 +137,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		k = self.k
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -170,16 +160,12 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		k = self.k
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			u_py = np.zeros(m).astype(c_size_t)
-			u_ptr = u_py.ctypes.data_as(dlib.c_size_t_p)
+			u_ptr = u_py.ctypes.data_as(lib.c_size_t_p)
 
 			u = lib.upsamplingvec()
 			err = PRINTERR( lib.upsamplingvec_alloc(u, m, k) )
@@ -187,10 +173,10 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual( err, 0 )
 
 			self.assertEqual( lib.upsamplingvec_check_bounds(u), 0 )
-			dlib.indvector_memcpy_va(u.vec, u_ptr, 1)
+			lib.indvector_memcpy_va(u.vec, u_ptr, 1)
 			self.assertEqual( lib.upsamplingvec_check_bounds(u), 0 )
 			u_py += 2 * k
-			dlib.indvector_memcpy_va(u.vec, u_ptr, 1)
+			lib.indvector_memcpy_va(u.vec, u_ptr, 1)
 			self.assertNotEqual( lib.upsamplingvec_check_bounds(u), 0 )
 
 			err = PRINTERR( lib.upsamplingvec_free(u) )
@@ -202,16 +188,12 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		k = self.k
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			u_py = np.random.rand(m).astype(c_size_t)
-			u_ptr = u_py.ctypes.data_as(dlib.c_size_t_p)
+			u_ptr = u_py.ctypes.data_as(lib.c_size_t_p)
 			u_py += self.u_test
 			u_py[-1] = k - 1
 
@@ -221,7 +203,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual( err, 0 )
 
 			self.assertEqual( lib.upsamplingvec_check_bounds(u), 0 )
-			dlib.indvector_memcpy_va(u.vec, u_ptr, 1)
+			lib.indvector_memcpy_va(u.vec, u_ptr, 1)
 			self.assertEqual( lib.upsamplingvec_check_bounds(u), 0 )
 
 			# incorrect size
@@ -241,11 +223,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		k = self.k
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -254,9 +232,9 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			ksub = k / 2
 
 			u_py = np.zeros(m).astype(c_size_t)
-			u_ptr = u_py.ctypes.data_as(dlib.c_size_t_p)
+			u_ptr = u_py.ctypes.data_as(lib.c_size_t_p)
 			usub_py = np.zeros(m / 2).astype(c_size_t)
-			usub_ptr = usub_py.ctypes.data_as(dlib.c_size_t_p)
+			usub_ptr = usub_py.ctypes.data_as(lib.c_size_t_p)
 
 			u = lib.upsamplingvec()
 			usub = lib.upsamplingvec()
@@ -265,9 +243,9 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual( err, 0 )
 
 			u_py += (k * np.random.rand(m)).astype(c_size_t)
-			dlib.indvector_memcpy_va(u.vec, u_ptr, 1)
+			lib.indvector_memcpy_va(u.vec, u_ptr, 1)
 			lib.upsamplingvec_subvector(usub, u, offset, msub, k)
-			dlib.indvector_memcpy_av(usub_ptr, usub.vec, 1)
+			lib.indvector_memcpy_av(usub_ptr, usub.vec, 1)
 			self.assertTrue( usub.size1 == msub )
 			self.assertTrue( usub.size2 == k )
 			self.assertTrue( sum(usub_py - u_py[offset : offset + msub]) == 0 )
@@ -286,16 +264,12 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		hdl = c_void_p()
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			err = dlib.blas_make_handle(byref(hdl))
-			self.register_var('hdl', hdl, dlib.blas_destroy_handle)
+			err = lib.blas_make_handle(byref(hdl))
+			self.register_var('hdl', hdl, lib.blas_destroy_handle)
 			self.assertEqual( err, 0 )
 
 			DIGITS = 7 - 2 * single_precision - 1 * gpu
@@ -304,52 +278,52 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			ATOLN = RTOL * n**0.5
 			ATOLK = RTOL * k**0.5
 
-			A = dlib.matrix(0, 0, 0, None, 0)
-			B = dlib.matrix(0, 0, 0, None, 0)
-			C = dlib.matrix(0, 0, 0, None, 0)
-			D = dlib.matrix(0, 0, 0, None, 0)
-			E = dlib.matrix(0, 0, 0, None, 0)
-			dlib.matrix_calloc(A, m, n, dlib.enums.CblasRowMajor)
-			dlib.matrix_calloc(B, n, m, dlib.enums.CblasRowMajor)
-			dlib.matrix_calloc(C, k, n, dlib.enums.CblasRowMajor)
-			dlib.matrix_calloc(D, n, k, dlib.enums.CblasRowMajor)
-			self.register_var('A', A, dlib.matrix_free)
-			self.register_var('B', B, dlib.matrix_free)
-			self.register_var('C', C, dlib.matrix_free)
-			self.register_var('D', D, dlib.matrix_free)
+			A = lib.matrix(0, 0, 0, None, 0)
+			B = lib.matrix(0, 0, 0, None, 0)
+			C = lib.matrix(0, 0, 0, None, 0)
+			D = lib.matrix(0, 0, 0, None, 0)
+			E = lib.matrix(0, 0, 0, None, 0)
+			lib.matrix_calloc(A, m, n, lib.enums.CblasRowMajor)
+			lib.matrix_calloc(B, n, m, lib.enums.CblasRowMajor)
+			lib.matrix_calloc(C, k, n, lib.enums.CblasRowMajor)
+			lib.matrix_calloc(D, n, k, lib.enums.CblasRowMajor)
+			self.register_var('A', A, lib.matrix_free)
+			self.register_var('B', B, lib.matrix_free)
+			self.register_var('C', C, lib.matrix_free)
+			self.register_var('D', D, lib.matrix_free)
 
-			A_py = np.random.rand(m, n).astype(dlib.pyfloat)
-			B_py = np.random.rand(n, m).astype(dlib.pyfloat)
-			C_py = np.random.rand(k, n).astype(dlib.pyfloat)
-			D_py = np.random.rand(n, k).astype(dlib.pyfloat)
-			A_ptr = A_py.ctypes.data_as(dlib.ok_float_p)
-			B_ptr = B_py.ctypes.data_as(dlib.ok_float_p)
-			C_ptr = C_py.ctypes.data_as(dlib.ok_float_p)
-			D_ptr = D_py.ctypes.data_as(dlib.ok_float_p)
-			dlib.matrix_memcpy_ma(A, A_ptr, dlib.enums.CblasRowMajor)
-			dlib.matrix_memcpy_ma(B, B_ptr, dlib.enums.CblasRowMajor)
-			dlib.matrix_memcpy_ma(C, C_ptr, dlib.enums.CblasRowMajor)
-			dlib.matrix_memcpy_ma(D, D_ptr, dlib.enums.CblasRowMajor)
+			A_py = np.random.rand(m, n).astype(lib.pyfloat)
+			B_py = np.random.rand(n, m).astype(lib.pyfloat)
+			C_py = np.random.rand(k, n).astype(lib.pyfloat)
+			D_py = np.random.rand(n, k).astype(lib.pyfloat)
+			A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
+			B_ptr = B_py.ctypes.data_as(lib.ok_float_p)
+			C_ptr = C_py.ctypes.data_as(lib.ok_float_p)
+			D_ptr = D_py.ctypes.data_as(lib.ok_float_p)
+			lib.matrix_memcpy_ma(A, A_ptr, lib.enums.CblasRowMajor)
+			lib.matrix_memcpy_ma(B, B_ptr, lib.enums.CblasRowMajor)
+			lib.matrix_memcpy_ma(C, C_ptr, lib.enums.CblasRowMajor)
+			lib.matrix_memcpy_ma(D, D_ptr, lib.enums.CblasRowMajor)
 
-			mvec = dlib.vector()
-			nvec = dlib.vector()
-			kvec = dlib.vector()
-			dlib.vector_calloc(mvec, m)
-			dlib.vector_calloc(nvec, n)
-			dlib.vector_calloc(kvec, k)
-			self.register_var('mvec', mvec, dlib.vector_free)
-			self.register_var('nvec', nvec, dlib.vector_free)
-			self.register_var('kvec', kvec, dlib.vector_free)
+			mvec = lib.vector()
+			nvec = lib.vector()
+			kvec = lib.vector()
+			lib.vector_calloc(mvec, m)
+			lib.vector_calloc(nvec, n)
+			lib.vector_calloc(kvec, k)
+			self.register_var('mvec', mvec, lib.vector_free)
+			self.register_var('nvec', nvec, lib.vector_free)
+			self.register_var('kvec', kvec, lib.vector_free)
 
-			mvec_py = np.random.rand(m).astype(dlib.pyfloat)
-			nvec_py = np.random.rand(n).astype(dlib.pyfloat)
-			kvec_py = np.random.rand(k).astype(dlib.pyfloat)
-			mvec_ptr = mvec_py.ctypes.data_as(dlib.ok_float_p)
-			nvec_ptr = nvec_py.ctypes.data_as(dlib.ok_float_p)
-			kvec_ptr = kvec_py.ctypes.data_as(dlib.ok_float_p)
-			dlib.vector_memcpy_va(mvec, mvec_ptr, 1)
-			dlib.vector_memcpy_va(nvec, nvec_ptr, 1)
-			dlib.vector_memcpy_va(kvec, kvec_ptr, 1)
+			mvec_py = np.random.rand(m).astype(lib.pyfloat)
+			nvec_py = np.random.rand(n).astype(lib.pyfloat)
+			kvec_py = np.random.rand(k).astype(lib.pyfloat)
+			mvec_ptr = mvec_py.ctypes.data_as(lib.ok_float_p)
+			nvec_ptr = nvec_py.ctypes.data_as(lib.ok_float_p)
+			kvec_ptr = kvec_py.ctypes.data_as(lib.ok_float_p)
+			lib.vector_memcpy_va(mvec, mvec_ptr, 1)
+			lib.vector_memcpy_va(nvec, nvec_ptr, 1)
+			lib.vector_memcpy_va(kvec, kvec_ptr, 1)
 
 			u = lib.upsamplingvec()
 			usub = lib.upsamplingvec()
@@ -359,11 +333,11 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			u_py = self.u_test
 			u_py[-1] = self.k - 1
-			u_ptr = u_py.ctypes.data_as(dlib.c_size_t_p)
-			dlib.indvector_memcpy_va(u.vec, u_ptr, 1)
+			u_ptr = u_py.ctypes.data_as(lib.c_size_t_p)
+			lib.indvector_memcpy_va(u.vec, u_ptr, 1)
 
-			T = dlib.enums.CblasTrans
-			N = dlib.enums.CblasNoTrans
+			T = lib.enums.CblasTrans
+			N = lib.enums.CblasNoTrans
 			alpha = np.random.rand()
 			# beta = np.random.rand()
 			beta = 0
@@ -374,8 +348,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			result_py = A_py.dot(nvec_py)
 			err = lib.upsamplingvec_mul_matrix(N, N, N, alpha, u, C, beta, A)
 			self.assertEqual( PRINTERR(err), 0 )
-			dlib.blas_gemv(hdl, N, 1, A, nvec, 0, mvec)
-			dlib.vector_memcpy_av(mvec_ptr, mvec, 1)
+			lib.blas_gemv(hdl, N, 1, A, nvec, 0, mvec)
+			lib.vector_memcpy_av(mvec_ptr, mvec, 1)
 			self.assertTrue( np.linalg.norm(mvec_py - result_py) <=
 							 ATOLM + RTOL * np.linalg.norm(result_py))
 
@@ -384,8 +358,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			result_py = C_py.dot(nvec_py)
 			err = lib.upsamplingvec_mul_matrix(T, N, N, alpha, u, A, beta, C)
 			self.assertEqual( PRINTERR(err), 0 )
-			dlib.blas_gemv(hdl, N, 1, C, nvec, 0, kvec)
-			dlib.vector_memcpy_av(kvec_ptr, kvec, 1)
+			lib.blas_gemv(hdl, N, 1, C, nvec, 0, kvec)
+			lib.vector_memcpy_av(kvec_ptr, kvec, 1)
 			self.assertTrue( np.linalg.norm(kvec_py - result_py) <=
 							 ATOLK + RTOL * np.linalg.norm(result_py))
 
@@ -394,8 +368,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			result_py = B_py.dot(mvec_py)
 			err = lib.upsamplingvec_mul_matrix(N, N, T, alpha, u, C, beta, B)
 			self.assertEqual( PRINTERR(err), 0 )
-			dlib.blas_gemv(hdl, N, 1, B, mvec, 0, nvec)
-			dlib.vector_memcpy_av(nvec_ptr, nvec, 1)
+			lib.blas_gemv(hdl, N, 1, B, mvec, 0, nvec)
+			lib.vector_memcpy_av(nvec_ptr, nvec, 1)
 			self.assertTrue( np.linalg.norm(nvec_py - result_py) <=
 							 ATOLN + RTOL * np.linalg.norm(result_py))
 
@@ -403,8 +377,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			result_py = D_py.dot(kvec_py)
 			err = lib.upsamplingvec_mul_matrix(T, N, T, alpha, u, A, beta, D)
 			self.assertEqual( PRINTERR(err), 0 )
-			dlib.blas_gemv(hdl, N, 1, D, kvec, 0, nvec)
-			dlib.vector_memcpy_av(nvec_ptr, nvec, 1)
+			lib.blas_gemv(hdl, N, 1, D, kvec, 0, nvec)
+			lib.vector_memcpy_av(nvec_ptr, nvec, 1)
 			self.assertTrue( np.linalg.norm(nvec_py - result_py) <=
 							 ATOLN + RTOL * np.linalg.norm(result_py))
 
@@ -413,8 +387,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			result_py = A_py.dot(nvec_py)
 			err = lib.upsamplingvec_mul_matrix(N, T, N, alpha, u, D, beta, A)
 			self.assertEqual( PRINTERR(err), 0 )
-			dlib.blas_gemv(hdl, N, 1, A, nvec, 0, mvec)
-			dlib.vector_memcpy_av(mvec_ptr, mvec, 1)
+			lib.blas_gemv(hdl, N, 1, A, nvec, 0, mvec)
+			lib.vector_memcpy_av(mvec_ptr, mvec, 1)
 			self.assertTrue( np.linalg.norm(mvec_py - result_py) <=
 							 ATOLM + RTOL * np.linalg.norm(result_py))
 
@@ -423,8 +397,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			result_py = C_py.dot(nvec_py)
 			err = lib.upsamplingvec_mul_matrix(T, T, N, alpha, u, B, beta, C)
 			self.assertEqual( PRINTERR(err), 0 )
-			dlib.blas_gemv(hdl, N, 1, C, nvec, 0, kvec)
-			dlib.vector_memcpy_av(kvec_ptr, kvec, 1)
+			lib.blas_gemv(hdl, N, 1, C, nvec, 0, kvec)
+			lib.vector_memcpy_av(kvec_ptr, kvec, 1)
 			self.assertTrue( np.linalg.norm(kvec_py - result_py) <=
 							 ATOLK + RTOL * np.linalg.norm(result_py))
 
@@ -432,8 +406,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			result_py = B_py.dot(mvec_py)
 			err = lib.upsamplingvec_mul_matrix(N, T, T, alpha, u, D, beta, B)
 			self.assertEqual( PRINTERR(err), 0 )
-			dlib.blas_gemv(hdl, N, 1, B, mvec, 0, nvec)
-			dlib.vector_memcpy_av(nvec_ptr, nvec, 1)
+			lib.blas_gemv(hdl, N, 1, B, mvec, 0, nvec)
+			lib.vector_memcpy_av(nvec_ptr, nvec, 1)
 			self.assertTrue( np.linalg.norm(nvec_py - result_py) <=
 							 ATOLN + RTOL * np.linalg.norm(result_py))
 
@@ -441,8 +415,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			result_py = D_py.dot(kvec_py)
 			err = lib.upsamplingvec_mul_matrix(T, T, T, alpha, u, B, beta, D)
 			self.assertEqual( PRINTERR(err), 0 )
-			dlib.blas_gemv(hdl, N, 1, D, kvec, 0, nvec)
-			dlib.vector_memcpy_av(nvec_ptr, nvec, 1)
+			lib.blas_gemv(hdl, N, 1, D, kvec, 0, nvec)
+			lib.vector_memcpy_av(nvec_ptr, nvec, 1)
 			self.assertTrue( np.linalg.norm(nvec_py - result_py) <=
 							 ATOLN + RTOL * np.linalg.norm(result_py))
 
@@ -466,7 +440,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.free_var('u')
 			self.free_var('hdl')
 
-			self.assertEqual( dlib.ok_device_reset(), 0 )
+			self.assertEqual( lib.ok_device_reset(), 0 )
 
 	def test_upsamplingvec_count(self):
 		m, n = self.shape
@@ -474,11 +448,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		hdl = c_void_p()
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -488,19 +458,19 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.register_var('u', u, lib.upsamplingvec_free)
 			self.assertEqual( err, 0 )
 
-			counts = dlib.vector()
-			dlib.vector_calloc(counts, k)
-			self.register_var('counts', counts, dlib.vector_free)
-			counts_py = np.zeros(k).astype(dlib.pyfloat)
-			counts_ptr = counts_py.ctypes.data_as(dlib.ok_float_p)
+			counts = lib.vector()
+			lib.vector_calloc(counts, k)
+			self.register_var('counts', counts, lib.vector_free)
+			counts_py = np.zeros(k).astype(lib.pyfloat)
+			counts_ptr = counts_py.ctypes.data_as(lib.ok_float_p)
 
 			u_py = self.u_test
 			u_py[-1] = self.k - 1
-			u_ptr = u_py.ctypes.data_as(dlib.c_size_t_p)
-			dlib.indvector_memcpy_va(u.vec, u_ptr, 1)
+			u_ptr = u_py.ctypes.data_as(lib.c_size_t_p)
+			lib.indvector_memcpy_va(u.vec, u_ptr, 1)
 
 			lib.upsamplingvec_count(u, counts)
-			dlib.vector_memcpy_av(counts_ptr, counts, 1)
+			lib.vector_memcpy_av(counts_ptr, counts, 1)
 
 			counts_host = np.zeros(k)
 			for idx in u_py:
@@ -516,18 +486,14 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		k = self.k
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			h = lib.cluster_aid()
 
 			err = PRINTERR( lib.cluster_aid_alloc(h, m, k,
-				dlib.enums.CblasRowMajor) )
+				lib.enums.CblasRowMajor) )
 			self.register_var('h', h, lib.cluster_aid_free)
 
 			self.assertEqual( err, 0 )
@@ -561,11 +527,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 	# 	k = self.k
 
 	# 	for (gpu, single_precision) in CONDITIONS:
-	# 		dlib = self.dense_libs.get(
-	# 				single_precision=single_precision, gpu=gpu)
-	# 		lib = self.cluster_libs.get(
-	# 				dlib, single_precision=single_precision, gpu=gpu)
-
+	# 		lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 	# 		if lib is None:
 	# 			continue
 
@@ -574,11 +536,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		k = self.k
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -617,11 +575,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		k = self.k
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -663,11 +617,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		k = self.k
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -678,21 +628,21 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			ATOLM = RTOL * m**0.5
 			ATOLK = RTOL * k**0.5
 
-			A = np.random.rand(m, n).astype(dlib.pyfloat)
-			C = np.random.rand(k, n).astype(dlib.pyfloat)
-			A_ptr = A.ctypes.data_as(dlib.ok_float_p)
-			C_ptr = C.ctypes.data_as(dlib.ok_float_p)
-			orderA = dlib.enums.CblasRowMajor if A.flags.c_contiguous else \
-					 dlib.enums.CblasColMajor
-			orderC = dlib.enums.CblasRowMajor if C.flags.c_contiguous else \
-					 dlib.enums.CblasColMajor
+			A = np.random.rand(m, n).astype(lib.pyfloat)
+			C = np.random.rand(k, n).astype(lib.pyfloat)
+			A_ptr = A.ctypes.data_as(lib.ok_float_p)
+			C_ptr = C.ctypes.data_as(lib.ok_float_p)
+			orderA = lib.enums.CblasRowMajor if A.flags.c_contiguous else \
+					 lib.enums.CblasColMajor
+			orderC = lib.enums.CblasRowMajor if C.flags.c_contiguous else \
+					 lib.enums.CblasColMajor
 
 			a2c = np.zeros(m).astype(c_size_t)
-			a2c_ptr = a2c.ctypes.data_as(dlib.c_size_t_p)
+			a2c_ptr = a2c.ctypes.data_as(lib.c_size_t_p)
 			a2c += self.u_test
 
-			counts = np.random.rand(k).astype(dlib.pyfloat)
-			counts_ptr = counts.ctypes.data_as(dlib.ok_float_p)
+			counts = np.random.rand(k).astype(lib.pyfloat)
+			counts_ptr = counts.ctypes.data_as(lib.ok_float_p)
 
 			A_orig = np.zeros((m, n))
 			A_orig += A
@@ -716,8 +666,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 							w, A_ptr, orderA, C_ptr, orderC, a2c_ptr, 1,
 							counts_ptr, 1), 0 )
 
-			dlib.matrix_scale(w.C, SCALING)
-			dlib.vector_scale(w.counts, SCALING)
+			lib.matrix_scale(w.C, SCALING)
+			lib.vector_scale(w.counts, SCALING)
 
 			self.assertEqual(
 					lib.kmeans_work_extract(
@@ -754,19 +704,15 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		k = self.k
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			for MAXDIST in [1e3, 0.2]:
 
 				hdl = c_void_p()
-				err = dlib.blas_make_handle(byref(hdl))
-				self.register_var('hdl', hdl, dlib.blas_destroy_handle)
+				err = lib.blas_make_handle(byref(hdl))
+				self.register_var('hdl', hdl, lib.blas_destroy_handle)
 				self.assertEqual( err, 0 )
 
 				DIGITS = 7 - 2 * single_precision - 1 * gpu
@@ -775,19 +721,19 @@ class ClusterLibsTestCase(OptkitCTestCase):
 				ATOLN = RTOL * n**0.5
 				ATOLK = RTOL * k**0.5
 
-				A = dlib.matrix(0, 0, 0, None, 0)
-				C = dlib.matrix(0, 0, 0, None, 0)
-				dlib.matrix_calloc(A, m, n, dlib.enums.CblasRowMajor)
-				dlib.matrix_calloc(C, k, n, dlib.enums.CblasRowMajor)
-				self.register_var('A', A, dlib.matrix_free)
-				self.register_var('C', C, dlib.matrix_free)
+				A = lib.matrix(0, 0, 0, None, 0)
+				C = lib.matrix(0, 0, 0, None, 0)
+				lib.matrix_calloc(A, m, n, lib.enums.CblasRowMajor)
+				lib.matrix_calloc(C, k, n, lib.enums.CblasRowMajor)
+				self.register_var('A', A, lib.matrix_free)
+				self.register_var('C', C, lib.matrix_free)
 
-				A_py = np.random.rand(m, n).astype(dlib.pyfloat)
-				C_py = np.random.rand(k, n).astype(dlib.pyfloat)
-				A_ptr = A_py.ctypes.data_as(dlib.ok_float_p)
-				C_ptr = C_py.ctypes.data_as(dlib.ok_float_p)
-				dlib.matrix_memcpy_ma(A, A_ptr, dlib.enums.CblasRowMajor)
-				dlib.matrix_memcpy_ma(C, C_ptr, dlib.enums.CblasRowMajor)
+				A_py = np.random.rand(m, n).astype(lib.pyfloat)
+				C_py = np.random.rand(k, n).astype(lib.pyfloat)
+				A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
+				C_ptr = C_py.ctypes.data_as(lib.ok_float_p)
+				lib.matrix_memcpy_ma(A, A_ptr, lib.enums.CblasRowMajor)
+				lib.matrix_memcpy_ma(C, C_ptr, lib.enums.CblasRowMajor)
 
 				a2c = lib.upsamplingvec()
 				err = PRINTERR( lib.upsamplingvec_alloc(a2c, m, k) )
@@ -795,10 +741,10 @@ class ClusterLibsTestCase(OptkitCTestCase):
 				self.assertEqual( err, 0 )
 
 				a2c_py = np.zeros(m).astype(c_size_t)
-				a2c_ptr = a2c_py.ctypes.data_as(dlib.c_size_t_p)
+				a2c_ptr = a2c_py.ctypes.data_as(lib.c_size_t_p)
 
 				a2c_py += self.u_test
-				dlib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1)
+				lib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1)
 
 				h = lib.cluster_aid_p()
 
@@ -815,38 +761,38 @@ class ClusterLibsTestCase(OptkitCTestCase):
 								 ATOL_REASSIGN + RTOL_REASSIGN )
 
 				# verify number reassigned
-				dlib.indvector_memcpy_av(a2c_ptr, a2c.vec, 1)
+				lib.indvector_memcpy_av(a2c_ptr, a2c.vec, 1)
 				self.assertEqual( h.contents.reassigned,
 					sum(a2c_py != self.u_test) )
 
 				# verify all distances
-				kvec = dlib.vector()
-				dlib.vector_calloc(kvec, k)
-				self.register_var('kvec', kvec, dlib.vector_free)
+				kvec = lib.vector()
+				lib.vector_calloc(kvec, k)
+				self.register_var('kvec', kvec, lib.vector_free)
 
-				mvec = dlib.vector()
-				dlib.vector_calloc(mvec, m)
-				self.register_var('mvec', mvec, dlib.vector_free)
+				mvec = lib.vector()
+				lib.vector_calloc(mvec, m)
+				self.register_var('mvec', mvec, lib.vector_free)
 
-				kvec_py = np.zeros(k).astype(dlib.pyfloat)
-				kvec_ptr = kvec_py.ctypes.data_as(dlib.ok_float_p)
+				kvec_py = np.zeros(k).astype(lib.pyfloat)
+				kvec_ptr = kvec_py.ctypes.data_as(lib.ok_float_p)
 
-				mvec_py = np.random.rand(m).astype(dlib.pyfloat)
-				mvec_ptr = mvec_py.ctypes.data_as(dlib.ok_float_p)
+				mvec_py = np.random.rand(m).astype(lib.pyfloat)
+				mvec_ptr = mvec_py.ctypes.data_as(lib.ok_float_p)
 
-				dlib.vector_memcpy_va(mvec, mvec_ptr, 1)
-				dlib.blas_gemv(hdl, dlib.enums.CblasNoTrans, 1,
+				lib.vector_memcpy_va(mvec, mvec_ptr, 1)
+				lib.blas_gemv(hdl, lib.enums.CblasNoTrans, 1,
 							   h.contents.D_full, mvec, 0, kvec)
-				dlib.vector_memcpy_av(kvec_ptr, kvec, 1)
+				lib.vector_memcpy_av(kvec_ptr, kvec, 1)
 
 				Dmvec = D.dot(mvec_py)
 				self.assertTrue( np.linalg.norm(Dmvec - kvec_py) <=
 								 ATOLK + RTOL * np.linalg.norm(Dmvec) )
 
 				# verify min distances
-				dmin_py = np.zeros(m).astype(dlib.pyfloat)
-				dmin_ptr = dmin_py.ctypes.data_as(dlib.ok_float_p)
-				dlib.vector_memcpy_av(dmin_ptr, h.contents.d_min_full, 1)
+				dmin_py = np.zeros(m).astype(lib.pyfloat)
+				dmin_ptr = dmin_py.ctypes.data_as(lib.ok_float_p)
+				lib.vector_memcpy_av(dmin_ptr, h.contents.d_min_full, 1)
 				self.assertTrue( np.linalg.norm(dmin_py - dmin) <=
 								 ATOLM + RTOL * np.linalg.norm(dmin) )
 
@@ -860,7 +806,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 				self.free_var('kvec')
 				self.free_var('hdl')
 
-				self.assertEqual( dlib.ok_device_reset(), 0 )
+				self.assertEqual( lib.ok_device_reset(), 0 )
 
 	def test_calculate_centroids(self):
 		""" calculate centroids
@@ -874,17 +820,13 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		k = self.k
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			hdl = c_void_p()
-			err = dlib.blas_make_handle(byref(hdl))
-			self.register_var('hdl', hdl, dlib.blas_destroy_handle)
+			err = lib.blas_make_handle(byref(hdl))
+			self.register_var('hdl', hdl, lib.blas_destroy_handle)
 			self.assertEqual( err, 0 )
 
 			DIGITS = 7 - 2 * single_precision - 1 * gpu
@@ -893,19 +835,19 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			ATOLN = RTOL * n**0.5
 			ATOLK = RTOL * k**0.5
 
-			A = dlib.matrix(0, 0, 0, None, 0)
-			C = dlib.matrix(0, 0, 0, None, 0)
-			dlib.matrix_calloc(A, m, n, dlib.enums.CblasRowMajor)
-			dlib.matrix_calloc(C, k, n, dlib.enums.CblasRowMajor)
-			self.register_var('A', A, dlib.matrix_free)
-			self.register_var('C', C, dlib.matrix_free)
+			A = lib.matrix(0, 0, 0, None, 0)
+			C = lib.matrix(0, 0, 0, None, 0)
+			lib.matrix_calloc(A, m, n, lib.enums.CblasRowMajor)
+			lib.matrix_calloc(C, k, n, lib.enums.CblasRowMajor)
+			self.register_var('A', A, lib.matrix_free)
+			self.register_var('C', C, lib.matrix_free)
 
-			A_py = np.random.rand(m, n).astype(dlib.pyfloat)
-			C_py = np.random.rand(k, n).astype(dlib.pyfloat)
-			A_ptr = A_py.ctypes.data_as(dlib.ok_float_p)
-			C_ptr = C_py.ctypes.data_as(dlib.ok_float_p)
-			dlib.matrix_memcpy_ma(A, A_ptr, dlib.enums.CblasRowMajor)
-			dlib.matrix_memcpy_ma(C, C_ptr, dlib.enums.CblasRowMajor)
+			A_py = np.random.rand(m, n).astype(lib.pyfloat)
+			C_py = np.random.rand(k, n).astype(lib.pyfloat)
+			A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
+			C_ptr = C_py.ctypes.data_as(lib.ok_float_p)
+			lib.matrix_memcpy_ma(A, A_ptr, lib.enums.CblasRowMajor)
+			lib.matrix_memcpy_ma(C, C_ptr, lib.enums.CblasRowMajor)
 
 			a2c = lib.upsamplingvec()
 			err = PRINTERR( lib.upsamplingvec_alloc(a2c, m, k) )
@@ -913,28 +855,28 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual( err, 0 )
 
 			a2c_py = np.zeros(m).astype(c_size_t)
-			a2c_ptr = a2c_py.ctypes.data_as(dlib.c_size_t_p)
+			a2c_ptr = a2c_py.ctypes.data_as(lib.c_size_t_p)
 
 			a2c_py += self.u_test
-			dlib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1)
+			lib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1)
 
-			counts = dlib.vector()
-			dlib.vector_calloc(counts, k)
-			self.register_var('counts', counts, dlib.vector_free)
+			counts = lib.vector()
+			lib.vector_calloc(counts, k)
+			self.register_var('counts', counts, lib.vector_free)
 
-			kvec = dlib.vector()
-			dlib.vector_calloc(kvec, k)
-			self.register_var('kvec', kvec, dlib.vector_free)
+			kvec = lib.vector()
+			lib.vector_calloc(kvec, k)
+			self.register_var('kvec', kvec, lib.vector_free)
 
-			nvec = dlib.vector()
-			dlib.vector_calloc(nvec, n)
-			self.register_var('nvec', nvec, dlib.vector_free)
+			nvec = lib.vector()
+			lib.vector_calloc(nvec, n)
+			self.register_var('nvec', nvec, lib.vector_free)
 
-			kvec_py = np.zeros(k).astype(dlib.pyfloat)
-			kvec_ptr = kvec_py.ctypes.data_as(dlib.ok_float_p)
+			kvec_py = np.zeros(k).astype(lib.pyfloat)
+			kvec_ptr = kvec_py.ctypes.data_as(lib.ok_float_p)
 
-			nvec_py = np.random.rand(n).astype(dlib.pyfloat)
-			nvec_ptr = nvec_py.ctypes.data_as(dlib.ok_float_p)
+			nvec_py = np.random.rand(n).astype(lib.pyfloat)
+			nvec_ptr = nvec_py.ctypes.data_as(lib.ok_float_p)
 
 			# C: build centroids
 			lib.calculate_centroids(A, C, a2c, counts)
@@ -949,10 +891,10 @@ class ClusterLibsTestCase(OptkitCTestCase):
 				C_py[idx, :] *= counts_local[idx]
 
 			# C: kvec = C * nvec
-			dlib.vector_memcpy_va(nvec, nvec_ptr, 1)
-			dlib.blas_gemv(hdl, dlib.enums.CblasNoTrans, 1, C, nvec, 0,
+			lib.vector_memcpy_va(nvec, nvec_ptr, 1)
+			lib.blas_gemv(hdl, lib.enums.CblasNoTrans, 1, C, nvec, 0,
 						   kvec)
-			dlib.vector_memcpy_av(kvec_ptr, kvec, 1)
+			lib.vector_memcpy_av(kvec_ptr, kvec, 1)
 
 			# Py: kvec = C * nvec
 			Cnvec = C_py.dot(nvec_py)
@@ -969,7 +911,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.free_var('kvec')
 			self.free_var('hdl')
 
-			self.assertEqual( dlib.ok_device_reset(), 0 )
+			self.assertEqual( lib.ok_device_reset(), 0 )
 
 	def test_kmeans(self):
 		""" k-means
@@ -982,32 +924,28 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		k = self.k
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			hdl = c_void_p()
-			err = dlib.blas_make_handle(byref(hdl))
-			self.register_var('hdl', hdl, dlib.blas_destroy_handle)
+			err = lib.blas_make_handle(byref(hdl))
+			self.register_var('hdl', hdl, lib.blas_destroy_handle)
 			self.assertEqual( err, 0 )
 
-			A = dlib.matrix(0, 0, 0, None, 0)
-			C = dlib.matrix(0, 0, 0, None, 0)
-			dlib.matrix_calloc(A, m, n, dlib.enums.CblasRowMajor)
-			dlib.matrix_calloc(C, k, n, dlib.enums.CblasRowMajor)
-			self.register_var('A', A, dlib.matrix_free)
-			self.register_var('C', C, dlib.matrix_free)
+			A = lib.matrix(0, 0, 0, None, 0)
+			C = lib.matrix(0, 0, 0, None, 0)
+			lib.matrix_calloc(A, m, n, lib.enums.CblasRowMajor)
+			lib.matrix_calloc(C, k, n, lib.enums.CblasRowMajor)
+			self.register_var('A', A, lib.matrix_free)
+			self.register_var('C', C, lib.matrix_free)
 
-			A_py = np.random.rand(m, n).astype(dlib.pyfloat)
-			C_py = np.random.rand(k, n).astype(dlib.pyfloat)
-			A_ptr = A_py.ctypes.data_as(dlib.ok_float_p)
-			C_ptr = C_py.ctypes.data_as(dlib.ok_float_p)
-			dlib.matrix_memcpy_ma(A, A_ptr, dlib.enums.CblasRowMajor)
-			dlib.matrix_memcpy_ma(C, C_ptr, dlib.enums.CblasRowMajor)
+			A_py = np.random.rand(m, n).astype(lib.pyfloat)
+			C_py = np.random.rand(k, n).astype(lib.pyfloat)
+			A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
+			C_ptr = C_py.ctypes.data_as(lib.ok_float_p)
+			lib.matrix_memcpy_ma(A, A_ptr, lib.enums.CblasRowMajor)
+			lib.matrix_memcpy_ma(C, C_ptr, lib.enums.CblasRowMajor)
 
 			a2c = lib.upsamplingvec()
 			err = PRINTERR( lib.upsamplingvec_alloc(a2c, m, k) )
@@ -1015,28 +953,28 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual( err, 0 )
 
 			a2c_py = np.zeros(m).astype(c_size_t)
-			a2c_ptr = a2c_py.ctypes.data_as(dlib.c_size_t_p)
+			a2c_ptr = a2c_py.ctypes.data_as(lib.c_size_t_p)
 
 			a2c_py += self.u_test
-			dlib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1)
+			lib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1)
 
-			counts = dlib.vector()
-			dlib.vector_calloc(counts, k)
-			self.register_var('counts', counts, dlib.vector_free)
+			counts = lib.vector()
+			lib.vector_calloc(counts, k)
+			self.register_var('counts', counts, lib.vector_free)
 
-			kvec = dlib.vector()
-			dlib.vector_calloc(kvec, k)
-			self.register_var('kvec', kvec, dlib.vector_free)
+			kvec = lib.vector()
+			lib.vector_calloc(kvec, k)
+			self.register_var('kvec', kvec, lib.vector_free)
 
-			nvec = dlib.vector()
-			dlib.vector_calloc(nvec, n)
-			self.register_var('nvec', nvec, dlib.vector_free)
+			nvec = lib.vector()
+			lib.vector_calloc(nvec, n)
+			self.register_var('nvec', nvec, lib.vector_free)
 
-			kvec_py = np.zeros(k).astype(dlib.pyfloat)
-			kvec_ptr = kvec_py.ctypes.data_as(dlib.ok_float_p)
+			kvec_py = np.zeros(k).astype(lib.pyfloat)
+			kvec_ptr = kvec_py.ctypes.data_as(lib.ok_float_p)
 
-			nvec_py = np.random.rand(n).astype(dlib.pyfloat)
-			nvec_ptr = nvec_py.ctypes.data_as(dlib.ok_float_p)
+			nvec_py = np.random.rand(n).astype(lib.pyfloat)
+			nvec_ptr = nvec_py.ctypes.data_as(lib.ok_float_p)
 
 			h = lib.cluster_aid_p()
 
@@ -1057,18 +995,14 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.free_var('kvec')
 			self.free_var('hdl')
 
-			self.assertEqual( dlib.ok_device_reset(), 0 )
+			self.assertEqual( lib.ok_device_reset(), 0 )
 
 	def test_kmeans_easy_init_free(self):
 		m, n = self.shape
 		k = self.k
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -1086,11 +1020,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		k = self.k
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -1118,29 +1048,25 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		k = self.k
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.cluster_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
-
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			A = np.random.rand(m, n).astype(dlib.pyfloat)
-			C = np.random.rand(k, n).astype(dlib.pyfloat)
-			A_ptr = A.ctypes.data_as(dlib.ok_float_p)
-			C_ptr = C.ctypes.data_as(dlib.ok_float_p)
-			orderA = dlib.enums.CblasRowMajor if A.flags.c_contiguous else \
-					 dlib.enums.CblasColMajor
-			orderC = dlib.enums.CblasRowMajor if C.flags.c_contiguous else \
-					 dlib.enums.CblasColMajor
+			A = np.random.rand(m, n).astype(lib.pyfloat)
+			C = np.random.rand(k, n).astype(lib.pyfloat)
+			A_ptr = A.ctypes.data_as(lib.ok_float_p)
+			C_ptr = C.ctypes.data_as(lib.ok_float_p)
+			orderA = lib.enums.CblasRowMajor if A.flags.c_contiguous else \
+					 lib.enums.CblasColMajor
+			orderC = lib.enums.CblasRowMajor if C.flags.c_contiguous else \
+					 lib.enums.CblasColMajor
 
 			a2c = np.zeros(m).astype(c_size_t)
-			a2c_ptr = a2c.ctypes.data_as(dlib.c_size_t_p)
+			a2c_ptr = a2c.ctypes.data_as(lib.c_size_t_p)
 			a2c += self.u_test
 
-			counts = np.zeros(k).astype(dlib.pyfloat)
-			counts_ptr = counts.ctypes.data_as(dlib.ok_float_p)
+			counts = np.zeros(k).astype(lib.pyfloat)
+			counts_ptr = counts.ctypes.data_as(lib.ok_float_p)
 
 			work = lib.kmeans_easy_init(m, k, n)
 			self.register_var('work', work, lib.kmeans_easy_finish)

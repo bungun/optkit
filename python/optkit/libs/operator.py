@@ -1,79 +1,62 @@
 from ctypes import c_uint, c_size_t, c_void_p, CFUNCTYPE, POINTER, Structure
-from optkit.libs.loader import retrieve_libs, validate_lib
+from optkit.libs.loader import OptkitLibs
+from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\
+	attach_sparse_linsys_ctypes, attach_vector_ccalls, \
+	attach_dense_linsys_ccalls, attach_sparse_linsys_ccalls
 
-class OperatorLibs(object):
+class OperatorLibs(OptkitLibs):
 	def __init__(self):
-		self.libs, search_results = retrieve_libs('liboperator_')
-		if all([self.libs[k] is None for k in self.libs]):
-			raise ValueError('No backend libraries were located:\n{}'.format(
-				search_results))
+		OptkitLibs.__init__(self, 'liboperator_')
+		self.attach_calls.append(attach_base_ctypes)
+		self.attach_calls.append(attach_dense_linsys_ctypes)
+		self.attach_calls.append(attach_sparse_linsys_ctypes)
+		self.attach_calls.append(attach_vector_ccalls)
+		self.attach_calls.append(attach_dense_linsys_ccalls)
+		self.attach_calls.append(attach_sparse_linsys_ccalls)
+		self.attach_calls.append(attach_operator_ctypes)
+		self.attach_calls.append(attach_operator_ccalls)
 
-	def get(self, denselib, sparselib, single_precision=False, gpu=False):
-		device = 'gpu' if gpu else 'cpu'
-		precision = '32' if single_precision else '64'
-		lib_key = '{}{}'.format(device, precision)
+def attach_operator_ctypes(lib, single_precision=False):
+	if not 'vector_p' in lib.__dict__:
+		attach_dense_linsys_ctypes(lib, single_precision)
 
-		if lib_key not in self.libs:
-			return None
-		elif self.libs[lib_key] is None:
-			return None
+	ok_float = lib.ok_float
+	vector_p = lib.vector_p
 
-		validate_lib(denselib, 'denselib', 'vector_calloc', type(self),
-			single_precision, gpu)
+	class ok_operator(Structure):
+		_fields_ = [('size1', c_size_t),
+					('size2', c_size_t),
+					('data', c_void_p),
+					('apply', CFUNCTYPE(None, c_void_p, vector_p, vector_p)),
+					('adjoint', CFUNCTYPE(None, c_void_p,vector_p, vector_p)),
+					('fused_apply', CFUNCTYPE(None, c_void_p, ok_float,
+											  vector_p, ok_float, vector_p)),
+					('fused_adjoint', CFUNCTYPE(None, c_void_p, ok_float,
+												vector_p, ok_float, vector_p)),
+					('free', CFUNCTYPE(None, c_void_p)),
+					('kind', c_uint)]
 
-		lib = self.libs[lib_key]
-		if lib.INITIALIZED:
-			return lib
-		else:
-			ok_float = denselib.ok_float
-			vector_p = denselib.vector_p
-			matrix_p = denselib.matrix_p
-			sparse_matrix_p = sparselib.sparse_matrix_p
+	lib.operator = ok_operator
+	lib.operator_p = POINTER(lib.operator)
 
-			class OperatorEnums(object):
-				NULL = 0
-				IDENTITY = 101
-				DENSE = 201
-				SPARSE_CSR = 301
-				SPARSE_CSC = 302
-				SPARSE_COO = 303
-				DIAGONAL = 401
+def attach_operator_ccalls(lib, single_precision=False):
+	if not 'sparse_matrix_p' in lib.__dict__:
+		attach_sparse_linsys_ctypes(lib, single_precision)
+	if not 'operator_p' in lib.__dict__:
+		attach_operator_ctypes(lib, single_precision)
 
-			lib.enums = OperatorEnums()
+	# check VECTORP, MATRIXP, SPARSEMATRIXP, OPERATORP exist
+	vector_p = lib.vector_p
+	matrix_p = lib.matrix_p
+	sparse_matrix_p = lib.sparse_matrix_p
+	operator_p = lib.operator_p
 
-			class operator(Structure):
-				_fields_ = [('size1', c_size_t),
-							('size2', c_size_t),
-							('data', c_void_p),
-							('apply', CFUNCTYPE(None, c_void_p, vector_p,
-												vector_p)),
-							('adjoint', CFUNCTYPE(None, c_void_p,vector_p,
-												  vector_p)),
-							('fused_apply', CFUNCTYPE(None, c_void_p, ok_float,
-													  vector_p, ok_float,
-													  vector_p)),
-							('fused_adjoint', CFUNCTYPE(None, c_void_p,
-														ok_float, vector_p,
-														ok_float, vector_p)),
-							('free', CFUNCTYPE(None, c_void_p)),
-							('kind', c_uint)]
+	# argument types
+	lib.dense_operator_alloc.argtypes = [matrix_p]
+	lib.sparse_operator_alloc.argtypes = [sparse_matrix_p]
+	lib.diagonal_operator_alloc.argtypes = [vector_p]
 
-			lib.operator = operator
-			lib.operator_p = operator_p = POINTER(operator)
-
-			# argument types
-			lib.operator_free.argtypes = [operator_p]
-			lib.dense_operator_alloc.argtypes = [matrix_p]
-			lib.sparse_operator_alloc.argtypes = [sparse_matrix_p]
-			lib.diagonal_operator_alloc.argtypes = [vector_p]
-
-			# return types
-			lib.operator_free.restype = None
-			lib.dense_operator_alloc.restype = operator_p
-			lib.sparse_operator_alloc.restype = operator_p
-			lib.diagonal_operator_alloc.restype = operator_p
-
-			lib.FLOAT = single_precision
-			lib.GPU = gpu
-			lib.INITIALIZED = True
-			return lib
+	# return types
+	lib.dense_operator_alloc.restype = operator_p
+	lib.sparse_operator_alloc.restype = operator_p
+	lib.diagonal_operator_alloc.restype = operator_p

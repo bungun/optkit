@@ -45,13 +45,13 @@ class PogsVariablesLocal():
 		return self.zt12[:self.m]
 
 class PogsOutputLocal():
-	def __init__(self, denselib, pogslib, m, n):
-		self.x = zeros(n).astype(denselib.pyfloat)
-		self.y = zeros(m).astype(denselib.pyfloat)
-		self.mu = zeros(n).astype(denselib.pyfloat)
-		self.nu = zeros(m).astype(denselib.pyfloat)
-		self.ptr = pogslib.pogs_output(
-				self.x.ctypes.data_as(denselib.ok_float_p),
-				self.y.ctypes.data_as(denselib.ok_float_p),
-				self.mu.ctypes.data_as(denselib.ok_float_p),
-				self.nu.ctypes.data_as(denselib.ok_float_p))
+	def __init__(self, lib, m, n):
+		self.x = zeros(n).astype(lib.pyfloat)
+		self.y = zeros(m).astype(lib.pyfloat)
+		self.mu = zeros(n).astype(lib.pyfloat)
+		self.nu = zeros(m).astype(lib.pyfloat)
+		self.ptr = lib.pogs_output(
+				self.x.ctypes.data_as(lib.ok_float_p),
+				self.y.ctypes.data_as(lib.ok_float_p),
+				self.mu.ctypes.data_as(lib.ok_float_p),
+				self.nu.ctypes.data_as(lib.ok_float_p))

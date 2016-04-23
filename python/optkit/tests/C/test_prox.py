@@ -2,7 +2,7 @@ import unittest
 import os
 import numpy as np
 from ctypes import c_int, byref, c_void_p
-from optkit.libs import DenseLinsysLibs, ProxLibs
+from optkit.libs import ProxLibs
 from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string, \
 							  DEFAULT_SHAPE, significant_digits
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
@@ -13,30 +13,22 @@ class ProxLibsTestCase(unittest.TestCase):
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.dense_libs = DenseLinsysLibs()
-		self.prox_libs = ProxLibs()
+		self.libs = ProxLibs()
 
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def test_libs_exist(self):
-		dlibs = []
-		pxlibs = []
+		libs = []
 		for (gpu, single_precision) in CONDITIONS:
-			dlibs.append(self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu))
-			pxlibs.append(self.prox_libs.get(
-					dlibs[-1], single_precision=single_precision, gpu=gpu))
-		self.assertTrue(any(dlibs))
-		self.assertTrue(any(pxlibs))
+			libs.append(self.libs.get(single_precision=single_precision,
+									  gpu=gpu))
+		self.assertTrue(any(libs))
 
 	def test_lib_types(self):
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.prox_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -47,10 +39,7 @@ class ProxLibsTestCase(unittest.TestCase):
 
 	def test_version(self):
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.prox_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -59,7 +48,7 @@ class ProxLibsTestCase(unittest.TestCase):
 			change = c_int()
 			status = c_int()
 
-			dlib.denselib_version(byref(major), byref(minor), byref(change),
+			lib.denselib_version(byref(major), byref(minor), byref(change),
 								  byref(status))
 
 			dversion = version_string(major.value, minor.value, change.value,
@@ -83,8 +72,7 @@ class ProxTestCase(OptkitCTestCase):
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.dense_libs = DenseLinsysLibs()
-		self.prox_libs = ProxLibs()
+		self.libs = ProxLibs()
 
 	@classmethod
 	def tearDownClass(self):
@@ -106,10 +94,7 @@ class ProxTestCase(OptkitCTestCase):
 		m, n = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.prox_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -125,7 +110,7 @@ class ProxTestCase(OptkitCTestCase):
 			self.free_var('f')
 			self.assertEqual(f.size, 0)
 
-			self.assertEqual(dlib.ok_device_reset(), 0)
+			self.assertEqual(lib.ok_device_reset(), 0)
 
 	def test_io(self):
 		m, n = self.shape
@@ -137,10 +122,7 @@ class ProxTestCase(OptkitCTestCase):
 		e = np.random.rand()
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.prox_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -157,7 +139,7 @@ class ProxTestCase(OptkitCTestCase):
 			dlast = 0.
 			elast = 0.
 
-			for hkey, hval in lib.enums.dict.items():
+			for hkey, hval in lib.function_enums.dict.items():
 				if VERBOSE_TEST:
 					print hkey
 
@@ -221,10 +203,7 @@ class ProxTestCase(OptkitCTestCase):
 		hval = 0
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.prox_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -233,18 +212,18 @@ class ProxTestCase(OptkitCTestCase):
 			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
 			self.register_var('f', f, lib.function_vector_free)
 
-			v = dlib.vector(0, 0, None)
-			dlib.vector_calloc(v, m)
+			v = lib.vector(0, 0, None)
+			lib.vector_calloc(v, m)
 			self.register_var('v', v, lib.vector_free)
 
-			v_py = np.zeros(m).astype(dlib.pyfloat)
-			v_ptr = v_py.ctypes.data_as(dlib.ok_float_p)
+			v_py = np.zeros(m).astype(lib.pyfloat)
+			v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
 
 			for i in xrange(m):
 				f_py[i] = lib.function(hval, a[i], b[i], c[i], d[i], e[i])
 			lib.function_vector_memcpy_va(f, f_ptr)
 			v_py[:] = np.random.rand(m)
-			dlib.vector_memcpy_va(v, v_ptr, 1)
+			lib.vector_memcpy_va(v, v_ptr, 1)
 
 			# mul
 			lib.function_vector_mul(f, v)
@@ -302,10 +281,7 @@ class ProxTestCase(OptkitCTestCase):
 		x_rand = np.random.rand(m)
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.prox_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -314,23 +290,23 @@ class ProxTestCase(OptkitCTestCase):
 			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
 			self.register_var('f', f, lib.function_vector_free)
 
-			x = dlib.vector(0, 0, None)
-			x_py = np.zeros(m).astype(dlib.pyfloat)
-			x_ptr = x_py.ctypes.data_as(dlib.ok_float_p)
-			dlib.vector_calloc(x, m)
+			x = lib.vector(0, 0, None)
+			x_py = np.zeros(m).astype(lib.pyfloat)
+			x_ptr = x_py.ctypes.data_as(lib.ok_float_p)
+			lib.vector_calloc(x, m)
 			self.register_var('x', x, lib.vector_free)
 
-			xout = dlib.vector(0, 0, None)
-			xout_py = np.zeros(m).astype(dlib.pyfloat)
-			xout_ptr = xout_py.ctypes.data_as(dlib.ok_float_p)
-			dlib.vector_calloc(xout, m)
+			xout = lib.vector(0, 0, None)
+			xout_py = np.zeros(m).astype(lib.pyfloat)
+			xout_ptr = xout_py.ctypes.data_as(lib.ok_float_p)
+			lib.vector_calloc(xout, m)
 			self.register_var('xout', xout, lib.vector_free)
 
 			# populate
 			x_py += x_rand
-			dlib.vector_memcpy_va(x, x_ptr, 1)
+			lib.vector_memcpy_va(x, x_ptr, 1)
 
-			for hkey, hval in lib.enums.dict.items():
+			for hkey, hval in lib.function_enums.dict.items():
 				if VERBOSE_TEST:
 					print hkey
 
@@ -357,7 +333,7 @@ class ProxTestCase(OptkitCTestCase):
 				rho = 5 * np.random.rand()
 				prox_py = prox_eval_python(f_list, rho, x_rand)
 				lib.ProxEvalVector(f, rho, x, xout)
-				dlib.vector_memcpy_av(xout_ptr, xout, 1)
+				lib.vector_memcpy_av(xout_ptr, xout, 1)
 				if not np.allclose(xout_py, prox_py, 2):
 					self.assertTrue(np.allclose(xout_py, prox_py, 1))
 				else:

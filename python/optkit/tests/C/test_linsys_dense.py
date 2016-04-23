@@ -2,7 +2,7 @@ import unittest
 import os
 import numpy as np
 from ctypes import c_float, c_int, c_size_t, c_void_p, Structure, byref
-from optkit.libs import DenseLinsysLibs, SparseLinsysLibs
+from optkit.libs import DenseLinsysLibs
 from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string, \
 							  DEFAULT_SHAPE, DEFAULT_MATRIX_PATH, \
 							  significant_digits

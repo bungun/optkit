@@ -1,6 +1,7 @@
 from os import path, uname, getenv
 from site import getsitepackages
 from ctypes import CDLL
+from optkit.libs.enums import OKEnums
 
 def retrieve_libs(lib_prefix):
 	libs = {}
@@ -31,26 +32,34 @@ def retrieve_libs(lib_prefix):
 
 	return libs, search_results
 
-def validate_lib(lib, libname, expected_call, requestor, single_precision, gpu):
-		if not isinstance(lib, CDLL):
-			TypeError('argument "{}" must be of type {}'.format(libname, CDLL))
-		elif expected_call not in dir(lib):
-			ValueError('argument "{}" does not appear to correspond'
-				'to the expected library ("{} is missing)'.format(libname,
-					expected_call))
-		elif 'FLOAT' not in dir(lib):
-			ValueError('argument "{}" is missing specification field "FLOAT" '
-				'and is consquently unusable'.format(libname))
-		elif 'GPU' not in dir(lib):
-			ValueError('argument "{}" is missing specification field "GPU" '
-				'and is consquently unusable'.format(libname))
-		elif lib.FLOAT != single_precision:
-			ValueError('floating point precision of library given by '
-				'argument "denselib" specifies single_precision = {} '
-				'current {}.get() call specifes single_precision = {}'.format(
-					lib.FLOAT, requestor, single_precision))
-		elif lib.GPU != gpu:
-			ValueError('floating point precision of library given by '
-				'argument "denselib" specifies gpu = {} '
-				'current {}.get() call specifes gpu = {}'.format(lib.GPU,
-					requestor, gpu))
+class OptkitLibs(object):
+	def __init__(self, lib_prefix):
+		self.libs, search_results = retrieve_libs(lib_prefix)
+		if all([self.libs[k] is None for k in self.libs]):
+			raise ValueError('No backend libraries were located:\n{}'.format(
+				search_results))
+
+		self.attach_calls = []
+
+	def get(self, single_precision=False, gpu=False):
+		device = 'gpu' if gpu else 'cpu'
+		precision = '32' if single_precision else '64'
+		lib_key = '{}{}'.format(device, precision)
+		if lib_key not in self.libs:
+			return None
+		elif self.libs[lib_key] is None:
+			return None
+
+		lib = self.libs[lib_key]
+		if lib.INITIALIZED:
+			return lib
+		else:
+			lib.enums = OKEnums()
+
+			for attach_call in self.attach_calls:
+				attach_call(lib, single_precision)
+
+			lib.FLOAT = single_precision
+			lib.GPU = gpu
+			lib.INITIALIZED = True
+			return lib

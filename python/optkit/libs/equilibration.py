@@ -1,75 +1,64 @@
-from ctypes import c_uint, c_size_t, c_void_p
+from ctypes import c_uint, c_void_p
 from optkit.libs.loader import retrieve_libs, validate_lib
+from optkit.libs.loader import OptkitLibs
+from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\
+	attach_sparse_linsys_ctypes, attach_vector_ccalls, \
+	attach_dense_linsys_ccalls, attach_sparse_linsys_ccalls
+from optkit.libs.operator import attach_operator_ctypes, attach_operator_ccalls
 
-class EquilibrationLibs(object):
+class EquilibrationLibs(OptkitLibs):
 	def __init__(self):
-		self.libs, search_results = retrieve_libs('libequil_')
-		if all([self.libs[k] is None for k in self.libs]):
-			raise ValueError('No backend libraries were located:\n{}'.format(
-				search_results))
+		OptkitLibs.__init__(self, 'libequil_')
+		self.attach_calls.append(attach_base_ctypes)
+		self.attach_calls.append(attach_dense_linsys_ctypes)
+		self.attach_calls.append(attach_sparse_linsys_ctypes)
+		self.attach_calls.append(attach_vector_ccalls)
+		self.attach_calls.append(attach_dense_linsys_ccalls)
+		self.attach_calls.append(attach_sparse_linsys_ccalls)
+		self.attach_calls.append(attach_operator_ctypes)
+		self.attach_calls.append(attach_operator_ccalls)
+		self.attach_calls.append(attach_equilibration_ccalls)
+		self.attach_calls.append(attach_operator_equilibration_ccalls)
 
-	def get(self, denselib, operatorlib=None, single_precision=False,
-			gpu=False):
-		device = 'gpu' if gpu else 'cpu'
-		precision = '32' if single_precision else '64'
-		lib_key = '{}{}'.format(device, precision)
+def attach_equilibration_ccalls(lib, single_precision=False):
+	if not 'matrix_p' in lib.__dict__:
+		attach_dense_linsys_ctypes(lib, single_precision)
 
-		if lib_key not in self.libs:
-			return None
-		elif self.libs[lib_key] is None:
-			return None
+	ok_float_p = lib.ok_float_p
+	vector_p = lib.vector_p
+	matrix_p = lib.matrix_p
 
-		validate_lib(denselib, 'denselib', 'vector_calloc', type(self),
-			single_precision, gpu)
+	# argument types
+	lib.sinkhorn_knopp.argtypes = [c_void_p, ok_float_p, matrix_p, vector_p,
+								   vector_p, c_uint]
+	lib.regularized_sinkhorn_knopp.argtypes = [c_void_p, ok_float_p, matrix_p,
+											   vector_p, vector_p, c_uint]
+	lib.dense_l2.argtypes = [c_void_p, ok_float_p, matrix_p, vector_p,
+							 vector_p, c_uint]
 
-		lib = self.libs[lib_key]
-		if lib.INITIALIZED:
-			return lib
-		else:
-			ok_float = denselib.ok_float
-			ok_float_p = denselib.ok_float_p
-			vector_p = denselib.vector_p
-			matrix_p = denselib.matrix_p
+	# return types
+	lib.sinkhorn_knopp.restype = None
+	lib.regularized_sinkhorn_knopp.restype = None
+	lib.dense_l2.restype = None
 
-			# argument types
-			lib.sinkhorn_knopp.argtypes = [c_void_p, ok_float_p, matrix_p,
-												vector_p, vector_p, c_uint]
-			lib.regularized_sinkhorn_knopp.argtypes = [c_void_p, ok_float_p,
-													   matrix_p, vector_p,
-													   vector_p, c_uint]
-			lib.dense_l2.argtypes = [c_void_p, ok_float_p, matrix_p,
-												vector_p, vector_p, c_uint]
+def attach_operator_equilibration_ccalls(lib, single_precision=False):
+	if not 'vector_p' in lib.__dict__:
+		attach_dense_linsys_ctypes(lib, single_precision)
+	if not 'operator_p' in lib.__dict__:
+		attach_operator_ctypes(lib, single_precision)
 
-			# return types
-			lib.sinkhorn_knopp.restype = None
-			lib.regularized_sinkhorn_knopp.restype = None
-			lib.dense_l2.restype = None
+	ok_float = lib.ok_float
+	vector_p = lib.vector_p
+	operator_p = lib.operator_p
 
-			lib.FLOAT = single_precision
-			lib.GPU = gpu
-			lib.INITIALIZED = True
+	# argument types
+	lib.operator_regularized_sinkhorn.argtypes = [c_void_p, operator_p,
+												  vector_p, vector_p, ok_float]
+	lib.operator_equilibrate.argtypes = [c_void_p, operator_p, vector_p,
+										 vector_p, ok_float]
+	lib.operator_estimate_norm.argtypes = [c_void_p, operator_p]
 
-			if operatorlib is not None:
-				operator_p = operatorlib.operator_p
-
-				# argument types
-				lib.operator_regularized_sinkhorn.argtypes = [
-						c_void_p, operator_p, vector_p, vector_p, ok_float]
-				lib.operator_equilibrate.argtypes = [
-						c_void_p, operator_p, vector_p, vector_p, ok_float]
-				lib.operator_estimate_norm.argtypes = [c_void_p, operator_p]
-
-				# return types
-				lib.operator_regularized_sinkhorn.restype = c_uint
-				lib.operator_equilibrate.restype = c_uint
-				lib.operator_estimate_norm.restype = ok_float
-
-			else:
-				lib.operator_regularized_sinkhorn = AttributeError()
-				lib.operator_equilibrate = AttributeError()
-				lib.operator_estimate_norm = AttributeError()
-
-			lib.FLOAT = single_precision
-			lib.GPU = gpu
-			lib.INITIALIZED = True
-			return lib
+	# return types
+	lib.operator_regularized_sinkhorn.restype = c_uint
+	lib.operator_equilibrate.restype = c_uint
+	lib.operator_estimate_norm.restype = ok_float

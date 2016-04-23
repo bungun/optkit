@@ -3,7 +3,7 @@ import os
 import numpy as np
 import scipy.sparse as sp
 from ctypes import c_int, c_uint, Structure, byref, c_void_p
-from optkit.libs import DenseLinsysLibs, SparseLinsysLibs
+from optkit.libs import SparseLinsysLibs
 from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string, \
 							  DEFAULT_SHAPE
 from optkit.tests.C.base import OptkitCTestCase
@@ -13,30 +13,22 @@ class SparseLibsTestCase(unittest.TestCase):
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.dense_libs = DenseLinsysLibs()
-		self.sparse_libs = SparseLinsysLibs()
+		self.libs = SparseLinsysLibs()
 
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def test_libs_exist(self):
-		dlibs = []
-		slibs = []
+		libs = []
 		for (gpu, single_precision) in CONDITIONS:
-			dlibs.append(self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu))
-			slibs.append(self.sparse_libs.get(
-					dlibs[-1], single_precision=single_precision, gpu=gpu))
-		self.assertTrue(any(dlibs))
-		self.assertTrue(any(slibs))
+			libs.append(self.libs.get(single_precision=single_precision,
+									  gpu=gpu))
+		self.assertTrue(any(libs))
 
 	def test_lib_types(self):
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.sparse_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -47,10 +39,7 @@ class SparseLibsTestCase(unittest.TestCase):
 
 	def test_sparse_handle(self):
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.sparse_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -60,10 +49,7 @@ class SparseLibsTestCase(unittest.TestCase):
 
 	def test_version(self):
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.sparse_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -72,7 +58,7 @@ class SparseLibsTestCase(unittest.TestCase):
 			change = c_int()
 			status = c_int()
 
-			dlib.denselib_version(byref(major), byref(minor), byref(change),
+			lib.denselib_version(byref(major), byref(minor), byref(change),
 								  byref(status))
 
 			dversion = version_string(major.value, minor.value, change.value,
@@ -96,8 +82,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.dense_libs = DenseLinsysLibs()
-		self.sparse_libs = SparseLinsysLibs()
+		self.libs = SparseLinsysLibs()
 
 	@classmethod
 	def tearDownClass(self):
@@ -138,17 +123,14 @@ class SparseMatrixTestCase(OptkitCTestCase):
 		nnz = int(0.05 * m * n)
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.sparse_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			A = lib.sparse_matrix(0, 0, 0, 0, None, None, None, 101)
 
 			# rowmajor: calloc, free
-			lib.sp_matrix_calloc(A, m, n, nnz, dlib.enums.CblasRowMajor)
+			lib.sp_matrix_calloc(A, m, n, nnz, lib.enums.CblasRowMajor)
 			self.register_var('A', A, lib.sp_matrix_free)
 
 			self.assertEqual(A.size1, m)
@@ -168,7 +150,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 			self.assertEqual(A.ptrlen, 0)
 
 			# colmajor: calloc, free
-			lib.sp_matrix_calloc(A, m, n, nnz, dlib.enums.CblasColMajor)
+			lib.sp_matrix_calloc(A, m, n, nnz, lib.enums.CblasColMajor)
 			self.assertEqual(A.size1, m)
 			self.assertEqual(A.size2, n)
 			self.assertEqual(A.nnz, nnz)
@@ -186,23 +168,19 @@ class SparseMatrixTestCase(OptkitCTestCase):
 			self.assertEqual(A.nnz, 0)
 			self.assertEqual(A.ptrlen, 0)
 
-			self.assertEqual(dlib.ok_device_reset(), 0)
+			self.assertEqual(lib.ok_device_reset(), 0)
 
 
 	def test_io(self):
 		shape = (m, n) = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.sparse_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
-			FEWER_DIGITS = 3 if single_precision else 5
-
+			DIGITS = 7 - 2 * single_precision
+			FEWER_DIGITS = 5 - 2 * single_precision
 
 			for rowmajor in (True, False):
 				# sparse handle
@@ -219,7 +197,6 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				x_rand = np.random.rand(n)
 				A_copy = A_py.toarray()
 				B_copy = B_py.toarray()
-
 
 				# Acopy * x == A_py * x (initalized to rand)
 				self.assertTrue(np.allclose(A_copy.dot(x_rand), A_py * x_rand,
@@ -279,16 +256,13 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				self.free_var('B')
 
 				self.assertEqual(lib.sp_destroy_handle(hdl), 0)
-				self.assertEqual(dlib.ok_device_reset(), 0)
+				self.assertEqual(lib.ok_device_reset(), 0)
 
 	def test_multiply(self):
 		shape = (m, n) = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.sparse_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -301,11 +275,11 @@ class SparseMatrixTestCase(OptkitCTestCase):
 
 				A, A_py, A_ptr_p, A_ind_p, A_val_p = self.make_spmat_quintet(
 						lib, shape, rowmajor=rowmajor)
-				x, x_py, x_ptr = self.make_vec_triplet(dlib, n)
-				y, y_py, y_ptr = self.make_vec_triplet(dlib, m)
+				x, x_py, x_ptr = self.make_vec_triplet(lib, n)
+				y, y_py, y_ptr = self.make_vec_triplet(lib, m)
 				self.register_var('A', A, lib.sp_matrix_free)
-				self.register_var('x', x, dlib.vector_free)
-				self.register_var('y', y, dlib.vector_free)
+				self.register_var('x', x, lib.vector_free)
+				self.register_var('y', y, lib.vector_free)
 
 				x_rand = np.random.rand(n)
 				x_py[:] = x_rand[:]
@@ -314,14 +288,14 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				lib.sp_matrix_memcpy_ma(hdl, A, A_val_p, A_ind_p, A_ptr_p)
 
 				# y = Ax, Py vs. C
-				dlib.vector_memcpy_va(x, x_ptr, 1)
-				lib.sp_blas_gemv(hdl, dlib.enums.CblasNoTrans, 1, A, x, 0, y)
-				dlib.vector_memcpy_av(y_ptr, y, 1)
+				lib.vector_memcpy_va(x, x_ptr, 1)
+				lib.sp_blas_gemv(hdl, lib.enums.CblasNoTrans, 1, A, x, 0, y)
+				lib.vector_memcpy_av(y_ptr, y, 1)
 				self.assertTrue(np.allclose(A_py * x_rand, y_py, DIGITS))
 
 				# x = A'y, Py vs. C
-				lib.sp_blas_gemv(hdl, dlib.enums.CblasTrans, 1, A, y, 0, x)
-				dlib.vector_memcpy_av(x_ptr, x, 1)
+				lib.sp_blas_gemv(hdl, lib.enums.CblasTrans, 1, A, y, 0, x)
+				lib.vector_memcpy_av(x_ptr, x, 1)
 				self.assertTrue(np.allclose(A_py.T * A_py * x_rand, x_py,
 											DIGITS))
 
@@ -330,9 +304,9 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				beta = np.random.rand()
 
 				result = alpha * A_py * x_py + beta * y_py
-				lib.sp_blas_gemv(hdl, dlib.enums.CblasNoTrans, alpha, A, x,
+				lib.sp_blas_gemv(hdl, lib.enums.CblasNoTrans, alpha, A, x,
 								 beta, y)
-				dlib.vector_memcpy_av(y_ptr, y, 1)
+				lib.vector_memcpy_av(y_ptr, y, 1)
 				self.assertTrue(np.allclose(result, y_py, DIGITS))
 
 				self.free_var('x')
@@ -340,16 +314,13 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				self.free_var('A')
 
 				self.assertEqual(lib.sp_destroy_handle(hdl), 0)
-				self.assertEqual(dlib.ok_device_reset(), 0)
+				self.assertEqual(lib.ok_device_reset(), 0)
 
 	def test_elementwise_transformations(self):
 		shape = (m, n) = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.sparse_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -362,16 +333,16 @@ class SparseMatrixTestCase(OptkitCTestCase):
 
 				A, A_py, A_ptr_p, A_ind_p, A_val_p = self.make_spmat_quintet(
 						lib, shape, rowmajor=rowmajor)
-				x, x_py, x_ptr = self.make_vec_triplet(dlib, n)
-				y, y_py, y_ptr = self.make_vec_triplet(dlib, m)
+				x, x_py, x_ptr = self.make_vec_triplet(lib, n)
+				y, y_py, y_ptr = self.make_vec_triplet(lib, m)
 				self.register_var('A', A, lib.sp_matrix_free)
-				self.register_var('x', x, dlib.vector_free)
-				self.register_var('y', y, dlib.vector_free)
+				self.register_var('x', x, lib.vector_free)
+				self.register_var('y', y, lib.vector_free)
 
 				amax = A_py.data.max()
 				x_rand = np.random.rand(n)
 				x_py[:] = x_rand[:]
-				dlib.vector_memcpy_va(x, x_ptr, 1)
+				lib.vector_memcpy_va(x, x_ptr, 1)
 
 				# abs
 				# make A_py mixed sign, load to A_c. then, A = abs(A)
@@ -380,8 +351,8 @@ class SparseMatrixTestCase(OptkitCTestCase):
 
 				lib.sp_matrix_memcpy_ma(hdl, A, A_val_p, A_ind_p, A_ptr_p)
 				lib.sp_matrix_abs(A)
-				lib.sp_blas_gemv(hdl, dlib.enums.CblasNoTrans, 1, A, x, 0, y)
-				dlib.vector_memcpy_av(y_ptr, y, 1)
+				lib.sp_blas_gemv(hdl, lib.enums.CblasNoTrans, 1, A, x, 0, y)
+				lib.vector_memcpy_av(y_ptr, y, 1)
 				self.assertTrue(np.allclose(y_py, A_copy.dot(x_rand), DIGITS))
 
 				# pow
@@ -389,8 +360,8 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				p = 3 * np.random.rand()
 				A_copy **= p
 				lib.sp_matrix_pow(A, p)
-				lib.sp_blas_gemv(hdl, dlib.enums.CblasNoTrans, 1, A, x, 0, y)
-				dlib.vector_memcpy_av(y_ptr, y, 1)
+				lib.sp_blas_gemv(hdl, lib.enums.CblasNoTrans, 1, A, x, 0, y)
+				lib.vector_memcpy_av(y_ptr, y, 1)
 				self.assertTrue(np.allclose(y_py, A_copy.dot(x_rand), DIGITS))
 
 				# scale
@@ -398,8 +369,8 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				alpha = -1 + 2 * np.random.rand()
 				A_copy *= alpha
 				lib.sp_matrix_scale(A, alpha)
-				lib.sp_blas_gemv(hdl, dlib.enums.CblasNoTrans, 1, A, x, 0, y)
-				dlib.vector_memcpy_av(y_ptr, y, 1)
+				lib.sp_blas_gemv(hdl, lib.enums.CblasNoTrans, 1, A, x, 0, y)
+				lib.vector_memcpy_av(y_ptr, y, 1)
 				self.assertTrue(np.allclose(y_py, A_copy.dot(x_rand), DIGITS))
 
 				self.free_var('x')
@@ -407,16 +378,13 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				self.free_var('A')
 
 				self.assertEqual(lib.sp_destroy_handle(hdl), 0)
-				self.assertEqual(dlib.ok_device_reset(), 0)
+				self.assertEqual(lib.ok_device_reset(), 0)
 
 	def test_diagonal_scaling(self):
 		shape = (m, n) = self.shape
 
 		for (gpu, single_precision) in CONDITIONS:
-			dlib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
-			lib = self.sparse_libs.get(
-					dlib, single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -429,15 +397,15 @@ class SparseMatrixTestCase(OptkitCTestCase):
 
 				A, A_py, A_ptr_p, A_ind_p, A_val_p = self.make_spmat_quintet(
 						lib, shape, rowmajor=rowmajor)
-				x, x_py, x_ptr = self.make_vec_triplet(dlib, n)
-				y, y_py, y_ptr = self.make_vec_triplet(dlib, m)
-				d, d_py, d_ptr = self.make_vec_triplet(dlib, m)
-				e, e_py, e_ptr = self.make_vec_triplet(dlib, n)
+				x, x_py, x_ptr = self.make_vec_triplet(lib, n)
+				y, y_py, y_ptr = self.make_vec_triplet(lib, m)
+				d, d_py, d_ptr = self.make_vec_triplet(lib, m)
+				e, e_py, e_ptr = self.make_vec_triplet(lib, n)
 				self.register_var('A', A, lib.sp_matrix_free)
-				self.register_var('x', x, dlib.vector_free)
-				self.register_var('y', y, dlib.vector_free)
-				self.register_var('d', d, dlib.vector_free)
-				self.register_var('e', e, dlib.vector_free)
+				self.register_var('x', x, lib.vector_free)
+				self.register_var('y', y, lib.vector_free)
+				self.register_var('d', d, lib.vector_free)
+				self.register_var('e', e, lib.vector_free)
 
 				amax = A_py.data.max()
 				x_rand = np.random.rand(n)
@@ -446,24 +414,24 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				e_py[:] = np.random.rand(n)
 
 				# load x_py -> x, A_py -> A, d_py -> d, e_py -> e
-				dlib.vector_memcpy_va(x, x_ptr, 1)
+				lib.vector_memcpy_va(x, x_ptr, 1)
 				lib.sp_matrix_memcpy_ma(hdl, A, A_val_p, A_ind_p, A_ptr_p)
-				dlib.vector_memcpy_va(d, d_ptr, 1)
-				dlib.vector_memcpy_va(e, e_ptr, 1)
+				lib.vector_memcpy_va(d, d_ptr, 1)
+				lib.vector_memcpy_va(e, e_ptr, 1)
 
 				# scale_left: A = diag(d) * A
 				# (form diag (d) * A * x, compare Py vs. C)
 				lib.sp_matrix_scale_left(hdl, A, d)
-				lib.sp_blas_gemv(hdl, dlib.enums.CblasNoTrans, 1, A, x, 0, y)
-				dlib.vector_memcpy_av(y_ptr, y, 1)
+				lib.sp_blas_gemv(hdl, lib.enums.CblasNoTrans, 1, A, x, 0, y)
+				lib.vector_memcpy_av(y_ptr, y, 1)
 				result = (np.diag(d_py) * A_py).dot(x_py)
 				self.assertTrue(np.allclose(y_py, result, DIGITS))
 
 				# scale_right: A = A * diag(e)
 				# (form diag (d) * A * diag(e) * x, compare Py vs. C)
 				lib.sp_matrix_scale_right(hdl, A, e)
-				lib.sp_blas_gemv(hdl, dlib.enums.CblasNoTrans, 1, A, x, 0, y)
-				dlib.vector_memcpy_av(y_ptr, y, 1)
+				lib.sp_blas_gemv(hdl, lib.enums.CblasNoTrans, 1, A, x, 0, y)
+				lib.vector_memcpy_av(y_ptr, y, 1)
 				result = (np.diag(d_py) * A_py).dot(e_py * x_py)
 				self.assertTrue(np.allclose(y_py,  result, DIGITS))
 
@@ -474,4 +442,4 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				self.free_var('A')
 
 				self.assertEqual(lib.sp_destroy_handle(hdl), 0)
-				self.assertEqual(dlib.ok_device_reset(), 0)
+				self.assertEqual(lib.ok_device_reset(), 0)
