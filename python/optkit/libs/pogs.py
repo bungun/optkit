@@ -89,9 +89,6 @@ def attach_pogs_common_ctypes(lib, single_precision=False):
 	lib.private_api_accessible.restype = c_int
 	lib.full_api_accessible = lib.private_api_accessible()
 
-	lib.is_direct.restype = c_int
-	lib.direct = lib.is_direct()
-
 	# Public API
 	class PogsSettings(Structure):
 		_fields_ = [('alpha', ok_float),
@@ -212,9 +209,7 @@ def attach_pogs_ctypes(lib, single_precision=False):
 	pogs_variables_p = lib.pogs_variables_p
 
 	# lib properties
-	lib.private_api_accessible.restype = c_int
-	lib.full_api_accessible = lib.private_api_accessible()
-
+	full_api_accessible = lib.full_api_accessible
 	lib.is_direct.restype = c_int
 	lib.direct = lib.is_direct()
 
@@ -363,6 +358,9 @@ def attach_pogs_abstract_ctypes(lib, single_precision=False):
 	vector_p = lib.vector_p
 	function_vector_p = lib.function_vector_p
 	operator_p = lib.operator_p
+	projector_p = lib.projector_p
+	pogs_settings_p = lib.pogs_settings_p
+	pogs_variables_p = lib.pogs_variables_p
 
 	# lib properties
 	lib.private_api_accessible.restype = c_int
@@ -386,7 +384,7 @@ def attach_pogs_abstract_ctypes(lib, single_precision=False):
 	lib.pogs_work_p = POINTER(lib.pogs_work)
 
 	class PogsSolver(Structure):
-		_fields_ = [('W', pogs_work_p),
+		_fields_ = [('W', lib.pogs_work_p),
 					('z', pogs_variables_p),
 					('f', function_vector_p),
 					('g', function_vector_p),
@@ -410,6 +408,8 @@ def attach_pogs_abstract_ccalls(lib, single_precision=False):
 	function_vector_p = lib.function_vector_p
 	operator_p = lib.operator_p
 	pogs_settings_p = lib.pogs_settings_p
+	pogs_info_p = lib.pogs_info_p
+	pogs_output_p = lib.pogs_output_p
 	pogs_variables_p = lib.pogs_variables_p
 
 	## arguments

@@ -118,7 +118,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				print "test cgls (nonallocating), operator type:", op_
 				A_, A, o, freeA = self.gen_operator(op_, lib)
 				self.register_var('A', A, freeA)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 
 				h = lib.cgls_helper_alloc(m, n)
 				self.register_var('h', h, lib.cgls_helper_free)
@@ -179,7 +179,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				print "test cgls (allocating), operator type:", op_
 				A_, A, o, freeA = self.gen_operator(op_, lib)
 				self.register_var('A', A, freeA)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 
 				flag = lib.cgls(o, b, x, rho, tol, maxiter, CG_QUIET)
 				lib.vector_memcpy_av(x_ptr, x, 1)
@@ -235,7 +235,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				print "test cgls (easy), operator type:", op_
 				A_, A, o, freeA = self.gen_operator(op_, lib)
 				self.register_var('A', A, freeA)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 
 				cgls_work = lib.cgls_init(m, n)
 				self.register_var('work', cgls_work, lib.cgls_finish)
@@ -300,7 +300,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				print "test pcg (nonallocating), operator type:", op_
 				A_, A, o, freeA = self.gen_operator(op_, lib)
 				self.register_var('A', A, freeA)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 
 				T = rho * np.eye(n)
 				T += A_.T.dot(A_)
@@ -379,7 +379,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				print "test pcg (nonallocating), operator type:", op_
 				A_, A, o, freeA = self.gen_operator(op_, lib)
 				self.register_var('A', A, freeA)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 
 				h = lib.pcg_helper_alloc(m, n)
 				self.register_var('h', h, lib.pcg_helper_free)
@@ -450,7 +450,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				print "test pcg (nonallocating) warmstart, operator type:", op_
 				A_, A, o, freeA = self.gen_operator(op_, lib)
 				self.register_var('A', A, freeA)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 
 				h = lib.pcg_helper_alloc(m, n)
 				self.register_var('h', h, lib.pcg_helper_free)
@@ -530,7 +530,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				print "test pcg (allocating), operator type:", op_
 				A_, A, o, freeA = self.gen_operator(op_, lib)
 				self.register_var('A', A, freeA)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 
 				T = rho * np.eye(n)
 				T += A_.T.dot(A_)
@@ -595,7 +595,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				print "test pcg (easy), operator type:", op_
 				A_, A, o, freeA = self.gen_operator(op_, lib)
 				self.register_var('A', A, freeA)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 
 				T = rho * np.eye(n)
 				T += A_.T.dot(A_)

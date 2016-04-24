@@ -194,7 +194,7 @@ void * dense_direct_projector_data_alloc(matrix * A)
 	dense_direct_projector * P;
 	P = malloc(sizeof(*P));
 	P->A = A;
-	P->L = malloc(sizeof(matrix));
+	P->L = (matrix *) malloc(sizeof(*P->L));
 	matrix_calloc(P->L, mindim, mindim, A->order);
 	P->normA = kOne;
 	P->skinny = (uint) mindim == A->size2;

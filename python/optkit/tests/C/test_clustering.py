@@ -28,13 +28,13 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
 		self.libs = ClusteringLibs()
 		self.A_test = self.A_test_gen
-		self.k = self.shape[0] / 3
 
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
+		self.k = self.shape[0] / 3
 		self.x_test = np.random.rand(self.shape[1])
 		self.u_test = (self.k * np.random.rand(self.shape[0])).astype(c_size_t)
 
@@ -990,7 +990,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			if lib is None:
 				continue
 
-			work = lib.kmeans_easy_init(m, k, n)
+			work = c_void_p(lib.kmeans_easy_init(m, k, n))
 			self.register_var('work', work, lib.kmeans_easy_finish)
 			self.assertNotEqual( work, 0 )
 			cwork = cast(work, lib.kmeans_work_p)
@@ -998,6 +998,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual(cwork.contents.n_clusters, k)
 			self.assertEqual(cwork.contents.vec_length, n)
 			self.assertEqual( lib.kmeans_easy_finish(work), 0 )
+			self.unregister_var('work')
 
 	def test_kmeans_easy_resize(self):
 		m, n = self.shape

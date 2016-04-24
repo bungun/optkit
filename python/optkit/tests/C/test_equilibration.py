@@ -245,7 +245,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 				print "operator sinkhorn, operator type:", op_
 				A_, A, o, freeA = self.gen_operator(op_, lib)
 				self.register_var('A', A, freeA)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 
 				# equilibrate operator
 				status = lib.operator_regularized_sinkhorn(hdl, o, d, e, 1.)
@@ -332,7 +332,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 				print "opeartor sinkhorn, operator type:", op_
 				A_, A, o, freeA = self.gen_operator(op_, lib)
 				self.register_var('A', A, freeA)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 
 				# equilibrate operator
 				status = lib.operator_equilibrate(hdl, o, d, e, 1.)
@@ -390,7 +390,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 				print "indirect projection, operator type:", op_
 				A_, A, o, freeA = self.gen_operator(op_, lib)
 				self.register_var('A', A, freeA)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 
 				# estimate operator norm
 				pynorm = np.linalg.norm(A_)

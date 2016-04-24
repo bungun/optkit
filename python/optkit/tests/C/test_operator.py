@@ -122,7 +122,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				self.register_var('A', A, lib.matrix_free)
 
 				o = lib.dense_operator_alloc(A)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 				self.validate_operator(o.contents, m, n, lib.enums.DENSE)
 
 				self.free_var('o')
@@ -156,7 +156,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				lib.matrix_memcpy_ma(A, A_ptr, order)
 
 				o = lib.dense_operator_alloc(A)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 
 				self.exercise_operator(lib, o.contents, A_, TOL)
 
@@ -185,7 +185,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				self.register_var('A', A, lib.sp_matrix_free)
 
 				o = lib.sparse_operator_alloc(A)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 				self.validate_operator(o.contents, m, n, enum)
 
 				self.free_var('o')
@@ -226,7 +226,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				lib.sp_matrix_memcpy_ma(hdl, A, A_val, A_ind, A_ptr, order)
 
 				o = lib.sparse_operator_alloc(A)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 
 				self.exercise_operator(lib, o.contents, A_, TOL)
 
@@ -250,7 +250,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				self.register_var('d', d, lib.vector_free)
 
 				o = lib.diagonal_operator_alloc(d)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 
 				self.validate_operator(o.contents, n, n, lib.enums.DIAGONAL)
 
@@ -281,7 +281,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				lib.vector_memcpy_va(d, d_ptr, 1)
 
 				o = lib.diagonal_operator_alloc(d)
-				self.register_var('o', o, o.contents.free)
+				self.register_var('o', o.contents.data, o.contents.free)
 
 				self.exercise_operator(lib, o.contents, np.diag(d_), TOL)
 

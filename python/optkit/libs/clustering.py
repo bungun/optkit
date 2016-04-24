@@ -91,7 +91,7 @@ def attach_clustering_ctypes(lib, single_precision=False):
 	lib.kmeans_io = kmeans_io
 	lib.kmeans_io_p = POINTER(lib.kmeans_io)
 
-def attach_clustering_ctypes(lib, single_precision=False):
+def attach_clustering_ccalls(lib, single_precision=False):
 	if not 'matrix_p' in lib.__dict__:
 		attach_dense_linsys_ctypes(lib, single_precision)
 	if not 'kmeans_work_p' in lib.__dict__:
@@ -101,6 +101,7 @@ def attach_clustering_ctypes(lib, single_precision=False):
 	ok_float_p = lib.ok_float_p
 	c_size_t_p = lib.c_size_t_p
 	indvector = lib.indvector
+	vector_p = lib.vector_p
 	matrix_p = lib.matrix_p
 	upsamplingvec_p = lib.upsamplingvec_p
 	cluster_aid_p = lib.cluster_aid_p

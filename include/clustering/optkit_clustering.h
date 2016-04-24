@@ -340,7 +340,7 @@ ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
 
 void * kmeans_easy_init(size_t n_vectors, size_t n_clusters, size_t vec_length)
 {
-	kmeans_work * w;
+	kmeans_work * w = OK_NULL;
 	ok_alloc(w, kmeans_work, sizeof(*w));
 	kmeans_work_alloc(w, n_vectors, n_clusters, vec_length);
 	return (void * ) w;
@@ -378,8 +378,10 @@ ok_status kmeans_easy_run(const void * work, const kmeans_settings * const s,
 }
 ok_status kmeans_easy_finish(void * work)
 {
+
 	ok_status err = kmeans_work_free((kmeans_work *) work);
-	ok_free(work);
+	if (work)
+		ok_free(work);
 	return err;
 }
 

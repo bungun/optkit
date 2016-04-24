@@ -5,7 +5,7 @@ from ctypes import c_void_p, byref, cast, addressof
 from optkit.libs import PogsAbstractLibs
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
 from optkit.tests.defs import OptkitTestCase
-from optkit.tests.C.base import OptkitCPogsTestCase
+from optkit.tests.C.base import OptkitCPogsTestCase, OptkitCOperatorTestCase
 
 ALPHA_DEFAULT = 1.7
 RHO_DEFAULT = 1
@@ -39,7 +39,7 @@ class PogsAbstractLibsTestCase(OptkitTestCase):
 									  gpu=gpu))
 		self.assertTrue(any(libs))
 
-class PogsAbstractTestCases(OptkitCPogsTestCase):
+class PogsAbstractTestCases(OptkitCPogsTestCase, OptkitCOperatorTestCase):
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
@@ -575,11 +575,6 @@ class PogsAbstractTestCases(OptkitCPogsTestCase):
 		self.assertTrue(np.allclose(-rho * localvars.yt12 * localvars.d,
 									output.nu, DIGITS))
 
-
-	@property
-	def optypes(self):
-	    return ['dense', 'sparse']
-
 	def gen_prox(self, lib):
 		m, n = self.shape
 
@@ -593,10 +588,10 @@ class PogsAbstractTestCases(OptkitCPogsTestCase):
 		g_ptr = g_py.ctypes.data_as(lib.function_p)
 
 		for i in xrange(m):
-			f_py[i] = lib.function(lib.enums.Abs, 1, 1, 1, 0, 0)
+			f_py[i] = lib.function(lib.function_enums.Abs, 1, 1, 1, 0, 0)
 
 		for j in xrange(n):
-			g_py[j] = lib.function(lib.enums.IndGe0, 1, 0, 1, 0, 0)
+			g_py[j] = lib.function(lib.function_enums.IndGe0, 1, 0, 1, 0, 0)
 
 		lib.function_vector_memcpy_va(f, f_ptr)
 		lib.function_vector_memcpy_va(g, g_ptr)
@@ -606,17 +601,16 @@ class PogsAbstractTestCases(OptkitCPogsTestCase):
 	def gen_pogs_operator(self, lib, type_='dense'):
 		m, n = self.shape
 
-		if type_ not in self.optypes:
+		if type_ not in self.op_keys:
 			raise ValueError('argument "type" must be one of {}'.format(
-							 self.optypes))
+							 self.op_keys))
 
 		if type_ == 'dense':
 			A_ = self.A_test.astype(lib.pyfloat)
 			A_ptr = A_.ctypes.data_as(lib.ok_float_p)
 			order = lib.enums.CblasRowMajor if A_.flags.c_contiguous \
 					else lib.enums.CblasColMajor
-			o = lib.pogs_dense_operator_gen(A_ptr, m, n, order),
-				   lib.pogs_dense_operator_free
+			o = lib.pogs_dense_operator_gen(A_ptr, m, n, order)
 			free_o = lib.pogs_dense_operator_free
 		elif type_ == 'sparse':
 			A_ = self.A_test_sparse
@@ -674,10 +668,10 @@ class PogsAbstractTestCases(OptkitCPogsTestCase):
 			if lib is None:
 				continue
 
-			for optype in self.optypes:
+			for optype in self.op_keys:
 				_, o, free_o = self.gen_pogs_operator(lib, optype)
 				self.register_var('o', o, free_o)
-				self.assertEqual(type(o), olib.operator_p)
+				self.assertEqual(type(o), lib.operator_p)
 				self.free_var('o')
 
 	def test_pogs_init_finish(self):
@@ -688,7 +682,7 @@ class PogsAbstractTestCases(OptkitCPogsTestCase):
 
 			NO_DEVICE_RESET = 0
 
-			for optype in self.optypes:
+			for optype in self.op_keys:
 				for DIRECT in [0, 1]:
 					for EQUILNORM in [1., 2.]:
 						_, o, free_o = self.gen_pogs_operator(lib, optype)
@@ -696,7 +690,6 @@ class PogsAbstractTestCases(OptkitCPogsTestCase):
 						solver = lib.pogs_init(o, DIRECT, EQUILNORM)
 						self.assertNotEqual(solver, 0)
 						lib.pogs_finish(solver, NO_DEVICE_RESET)
-						self.del_pogs_operator(lib, o, optype)
 
 				# now reset device (once operator is freed)
 				self.assertEqual(lib.ok_device_reset(), 0)
@@ -710,7 +703,7 @@ class PogsAbstractTestCases(OptkitCPogsTestCase):
 				continue
 
 			NO_DEVICE_RESET = 0
-			for optype in self.optypes:
+			for optype in self.op_keys:
 				self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 				f, g, f_py, g_py = self.gen_prox(lib)
@@ -786,7 +779,7 @@ class PogsAbstractTestCases(OptkitCPogsTestCase):
 				continue
 
 			NO_DEVICE_RESET = 0
-			for optype in self.optypes:
+			for optype in self.op_keys:
 				self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 				f, g, f_py, g_py = self.gen_prox(lib)
@@ -854,7 +847,7 @@ class PogsAbstractTestCases(OptkitCPogsTestCase):
 				continue
 
 			NO_DEVICE_RESET = 0
-			for optype in self.optypes:
+			for optype in self.op_keys:
 				self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 				f, g, f_py, g_py = self.gen_prox(lib)
@@ -918,7 +911,7 @@ class PogsAbstractTestCases(OptkitCPogsTestCase):
 			ATOLN = RTOL * n**0.5
 			ATOLM = RTOL * m**0.5
 
-			for optype in self.optypes:
+			for optype in self.op_keys:
 				self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
 				f, g, f_py, g_py = self.gen_prox(lib)
