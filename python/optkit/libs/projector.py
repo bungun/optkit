@@ -7,7 +7,7 @@ from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\
 from optkit.libs.operator import attach_operator_ctypes, attach_operator_ccalls
 from optkit.libs.cg import attach_cg_ctypes, attach_cg_ccalls
 
-class ProjectorLibs(object):
+class ProjectorLibs(OptkitLibs):
 	def __init__(self):
 		OptkitLibs.__init__(self, 'libprojector_')
 		self.attach_calls.append(attach_base_ctypes)
@@ -44,13 +44,6 @@ def attach_projector_ctypes(lib, single_precision=False):
 	lib.direct_projector = direct_projector
 	lib.direct_projector_p = POINTER(lib.direct_projector)
 
-	class indirect_projector(Structure):
-		_fields_ = [('A', operator_p),
-					('cgls_work', c_void_p)]
-
-	lib.indirect_projector = indirect_projector
-	lib.indirect_projector_p = POINTER(lib.indirect_projector)
-
 	class projector(Structure):
 		_fields_ = [('kind', c_uint),
 					('size1', c_size_t),
@@ -86,7 +79,6 @@ def attach_projector_ccalls(lib, single_precision=False):
 	vector_p = lib.vector_p
 	matrix_p = lib.matrix_p
 	direct_projector_p = lib.direct_projector_p
-	indirect_projector_p = lib.indirect_projector_p
 	projector_p = lib.projector_p
 
 	# args:
@@ -99,18 +91,6 @@ def attach_projector_ccalls(lib, single_precision=False):
 	lib.direct_projector_free.argtypes = [direct_projector_p]
 	lib.dense_direct_projector_alloc.argtypes = [matrix_p]
 
-	# -indirect
-	lib.indirect_projector_alloc.argtypes = [indirect_projector_p, operator_p]
-	lib.indirect_projector_initialize.argtypes = [c_void_p,
-												  indirect_projector_p, c_int]
-	lib.indirect_projector_project.argtypes = [c_void_p, indirect_projector_p,
-											   vector_p, vector_p, vector_p,
-											   vector_p]
-	lib.indirect_projector_free.argtypes = [indirect_projector_p]
-
-	# -generic
-	lib.projector_free.argtypes = [projector_p]
-
 	# returns:
 	# -direct
 	lib.direct_projector_alloc.restype = None
@@ -118,15 +98,6 @@ def attach_projector_ccalls(lib, single_precision=False):
 	lib.direct_projector_project.restype = None
 	lib.direct_projector_free.restype = None
 	lib.dense_direct_projector_alloc.restype = projector_p
-
-	# -indirect
-	lib.indirect_projector_alloc.restype = None
-	lib.indirect_projector_initialize.restype = None
-	lib.indirect_projector_project.restype = None
-	lib.indirect_projector_free.restype = None
-
-	# -generic
-	lib.projector_free.restypes = None
 
 def attach_operator_projector_ctypes_ccalls(lib, single_precision=False):
 	if 'ok_float' not in lib.__dict__:
@@ -136,6 +107,19 @@ def attach_operator_projector_ctypes_ccalls(lib, single_precision=False):
 	if 'projector_p' not in lib.__dict__:
 		attach_projector_ctypes(lib, single_precision)
 
+	ok_float = lib.ok_float
+	vector_p = lib.vector_p
+	operator_p = lib.operator_p
+	projector_p = lib.projector_p
+
+	# types
+	class indirect_projector(Structure):
+		_fields_ = [('A', operator_p),
+					('cgls_work', c_void_p)]
+
+	lib.indirect_projector = indirect_projector
+	lib.indirect_projector_p = POINTER(lib.indirect_projector)
+	indirect_projector_p = lib.indirect_projector_p
 
 	class indirect_projector_generic(Structure):
 		_fields_ = [('A', operator_p),
@@ -147,5 +131,19 @@ def attach_operator_projector_ctypes_ccalls(lib, single_precision=False):
 	lib.indirect_projector_generic = indirect_projector_generic
 	lib.indirect_projector_generic_p = POINTER(lib.indirect_projector_generic)
 
+
+	# calls
+	lib.indirect_projector_alloc.argtypes = [indirect_projector_p, operator_p]
+	lib.indirect_projector_initialize.argtypes = [c_void_p,
+												  indirect_projector_p, c_int]
+	lib.indirect_projector_project.argtypes = [c_void_p, indirect_projector_p,
+											   vector_p, vector_p, vector_p,
+											   vector_p]
+	lib.indirect_projector_free.argtypes = [indirect_projector_p]
 	lib.indirect_projector_generic_alloc.argtypes = [operator_p]
+
+	lib.indirect_projector_alloc.restype = None
+	lib.indirect_projector_initialize.restype = None
+	lib.indirect_projector_project.restype = None
+	lib.indirect_projector_free.restype = None
 	lib.indirect_projector_generic_alloc.restype = projector_p

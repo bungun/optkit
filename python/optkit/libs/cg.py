@@ -16,6 +16,8 @@ class ConjugateGradientLibs(OptkitLibs):
 		self.attach_calls.append(attach_vector_ccalls)
 		self.attach_calls.append(attach_dense_linsys_ccalls)
 		self.attach_calls.append(attach_sparse_linsys_ccalls)
+		self.attach_calls.append(attach_operator_ctypes)
+		self.attach_calls.append(attach_operator_ccalls)
 		self.attach_calls.append(attach_cg_ctypes)
 		self.attach_calls.append(attach_cg_ccalls)
 

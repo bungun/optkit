@@ -94,6 +94,8 @@ def attach_base_ccalls(lib, single_precision=False):
 	if not 'c_int_p' in lib.__dict__:
 		attach_base_ctypes(lib, single_precision)
 
+	c_int_p = lib.c_int_p
+
 	lib.optkit_version.argtypes = [c_int_p, c_int_p, c_int_p, c_int_p]
 	lib.optkit_version.restype = c_uint
 

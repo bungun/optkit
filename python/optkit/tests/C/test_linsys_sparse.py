@@ -1,14 +1,12 @@
-import unittest
 import os
 import numpy as np
 import scipy.sparse as sp
 from ctypes import c_int, c_uint, Structure, byref, c_void_p
 from optkit.libs import SparseLinsysLibs
-from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string, \
-							  DEFAULT_SHAPE
+from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.base import OptkitCTestCase
 
-class SparseLibsTestCase(unittest.TestCase):
+class SparseLibsTestCase(OptkitTestCase):
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
@@ -21,13 +19,13 @@ class SparseLibsTestCase(unittest.TestCase):
 
 	def test_libs_exist(self):
 		libs = []
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			libs.append(self.libs.get(single_precision=single_precision,
 									  gpu=gpu))
 		self.assertTrue(any(libs))
 
 	def test_lib_types(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -38,7 +36,7 @@ class SparseLibsTestCase(unittest.TestCase):
 			self.assertTrue('sparse_matrix_p' in dir(lib))
 
 	def test_sparse_handle(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -48,7 +46,7 @@ class SparseLibsTestCase(unittest.TestCase):
 			self.assertEqual(lib.sp_destroy_handle(hdl), 0)
 
 	def test_version(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -58,23 +56,14 @@ class SparseLibsTestCase(unittest.TestCase):
 			change = c_int()
 			status = c_int()
 
-			lib.denselib_version(byref(major), byref(minor), byref(change),
+			lib.optkit_version(byref(major), byref(minor), byref(change),
 								  byref(status))
 
-			dversion = version_string(major.value, minor.value, change.value,
-									  status.value)
+			version = self.version_string(major.value, minor.value,
+										 change.value, status.value)
 
-			self.assertNotEqual(dversion, '0.0.0')
-
-			lib.sparselib_version(byref(major), byref(minor), byref(change),
-								  byref(status))
-
-			sversion = version_string(major.value, minor.value, change.value,
-									  status.value)
-
-			self.assertNotEqual(sversion, '0.0.0')
-			self.assertEqual(sversion, dversion)
-			if VERBOSE_TEST:
+			self.assertNotEqual(version, '0.0.0')
+			if self.VERBOSE_TEST:
 				print("sparselib version", sversion)
 
 class SparseMatrixTestCase(OptkitCTestCase):
@@ -89,7 +78,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		self.shape = DEFAULT_SHAPE
+		pass
 
 	def tearDown(self):
 		self.free_all_vars()
@@ -122,7 +111,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 		shape = (m, n) = self.shape
 		nnz = int(0.05 * m * n)
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -174,7 +163,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 	def test_io(self):
 		shape = (m, n) = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -261,7 +250,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 	def test_multiply(self):
 		shape = (m, n) = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -319,7 +308,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 	def test_elementwise_transformations(self):
 		shape = (m, n) = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -383,7 +372,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 	def test_diagonal_scaling(self):
 		shape = (m, n) = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue

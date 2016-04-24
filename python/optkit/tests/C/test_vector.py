@@ -1,9 +1,7 @@
-import unittest
 import os
 import numpy as np
 from ctypes import c_size_t
 from optkit.libs import DenseLinsysLibs
-from optkit.tests.defs import CONDITIONS, significant_digits, approx_compare
 from optkit.tests.C.base import OptkitCTestCase
 
 class VectorTestCase(OptkitCTestCase):
@@ -29,7 +27,7 @@ class VectorTestCase(OptkitCTestCase):
 			return a, a_py, a_ptr
 
 	def test_alloc(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
@@ -58,7 +56,7 @@ class VectorTestCase(OptkitCTestCase):
 			self.assertEqual(v.stride, 0)
 
 	def test_io(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 
@@ -66,6 +64,9 @@ class VectorTestCase(OptkitCTestCase):
 				continue
 
 			len_v = 10 + int(1000 * np.random.rand())
+			DIGITS = 7 - 2 * single_precision
+			RTOL = 10**(-DIGITS)
+			ATOL = RTOL * len_v**0.5
 
 			v, v_py, v_ptr = self.make_vec_triplet(lib, len_v)
 			w, w_py, w_ptr = self.make_vec_triplet(lib, len_v)
@@ -88,14 +89,14 @@ class VectorTestCase(OptkitCTestCase):
 			lib.vector_memcpy_va(w, w_ptr, 1)
 			w_py *= 0
 			lib.vector_memcpy_av(w_ptr, w, 1)
-			for i in xrange(len_v):
-				self.assertTrue(approx_compare(w_py[i], w_rand[i], 3))
+			self.assertTrue( np.linalg.norm(w_py - w_rand) <=
+							 ATOL + RTOL * np.linalg.norm(w_rand) )
 
 			# memcpy_vv
 			lib.vector_memcpy_vv(v, w)
 			lib.vector_memcpy_av(v_ptr, v, 1)
-			for i in xrange(len_v):
-				self.assertTrue(approx_compare(v_py[i], w_rand[i], 3))
+			self.assertTrue( np.linalg.norm(v_py - w_rand) <=
+							 ATOL + RTOL * np.linalg.norm(w_rand) )
 
 			# view_array
 			if not gpu:
@@ -103,15 +104,17 @@ class VectorTestCase(OptkitCTestCase):
 				u_ptr = u_rand.ctypes.data_as(lib.ok_float_p)
 				u = lib.vector(0, 0, None)
 				lib.vector_view_array(u, u_ptr, u_rand.size)
-				for i in xrange(len_v):
-					self.assertTrue(approx_compare(u_rand[i], u.data[i], 3))
+				lib.vector_memcpy_av(v_ptr, u, 1)
+	 			self.assertTrue( np.linalg.norm(v_py - u_rand) <=
+								 ATOL + RTOL * np.linalg.norm(u_rand) )
+
 				# DON'T FREE u, DATA OWNED BY PYTHON
 
 			self.free_var('v')
 			self.free_var('w')
 
 	def test_subvector(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
@@ -138,7 +141,7 @@ class VectorTestCase(OptkitCTestCase):
 			self.free_var('v')
 
 	def test_math(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
@@ -282,13 +285,8 @@ class VectorTestCase(OptkitCTestCase):
 			self.assertTrue(w_py[wargmin] - w_py.min() <=
 				ATOL + RTOL * np.linalg.norm(w_py))
 
-
 			# vector min
 			wmin = lib.vector_min(w)
-
-
-			print wmin
-			print w_py.min()
 
 			self.assertTrue(wmin - w_py.min() <=
 				ATOL + RTOL * np.linalg.norm(w_py))
@@ -302,7 +300,7 @@ class VectorTestCase(OptkitCTestCase):
 			self.free_var('w')
 
 	def test_indvector_math(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:

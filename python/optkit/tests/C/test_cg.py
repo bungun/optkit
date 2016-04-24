@@ -1,16 +1,13 @@
-import unittest
 import os
 import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix
 from ctypes import c_void_p, byref, CFUNCTYPE
 from optkit.libs.cg import ConjugateGradientLibs
-from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
-import optkit.tests.C.operator_helper as op_helper
-from optkit.tests.C.base import OptkitCTestCase
+from optkit.tests.C.base import OptkitCTestCase, OptkitCOperatorTestCase
 
 CG_QUIET = 0
 
-class ConjugateGradientLibsTestCase(OptkitCTestCase):
+class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 	"""TODO: docstring"""
 
 	@classmethod
@@ -23,31 +20,15 @@ class ConjugateGradientLibsTestCase(OptkitCTestCase):
 		self.rho_cg = 1e-4
 		self.maxiter_cg = 1000
 
+		self.A_test = self.A_test_gen
+		self.A_test_sparse = self.A_test_sparse_gen
+
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		self.shape = None
-		if DEFAULT_MATRIX_PATH is not None:
-			try:
-				self.A_test = np.load(DEFAULT_MATRIX_PATH)
-				self.A_test_sparse = self.A_test
-				self.shape = A.shape
-			except:
-				pass
-		if self.shape is None:
-			self.shape = DEFAULT_SHAPE
-			self.A_test = np.random.rand(*self.shape)
-			self.A_test_sparse = np.zeros(self.shape)
-			self.A_test_sparse += self.A_test
-			for i in xrange(self.shape[0]):
-				for j in xrange(self.shape[1]):
-					if np.random.rand() > 0.4:
-						self.A_test_sparse[i, j] *= 0
-
 		self.x_test = np.random.rand(self.shape[1])
-		self.nnz = sum(sum(self.A_test_sparse > 0))
 
 	def tearDown(self):
 		self.free_all_vars()
@@ -68,21 +49,9 @@ class ConjugateGradientLibsTestCase(OptkitCTestCase):
 		p = lib.diagonal_operator_alloc(p_vec)
 		return p_, p_vec, p, lib.vector_free
 
-	@property
-	def op_keys(self):
-		return ['dense', 'sparse']
-
-	def gen_operator(self, opkey, lib):
-		if opkey == 'dense':
-			return op_helper.gen_dense_operator(lib, self.A_test)
-		elif opkey == 'sparse':
-			return op_helper.gen_dense_operator(lib, self.A_test_sparse)
-		else:
-			raise ValueError('invalid operator type')
-
 	def test_libs_exist(self):
 		libs = []
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			libs.append(self.libs.get(single_precision=single_precision,
 									  gpu=gpu))
 		self.assertTrue(any(libs))
@@ -90,8 +59,9 @@ class ConjugateGradientLibsTestCase(OptkitCTestCase):
 	def test_cgls_helper_alloc_free(self):
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
-			lib = self.libs.get(single_precision=single_precision, gpu=gpu)			if lib is None:
+		for (gpu, single_precision) in self.CONDITIONS:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+			if lib is None:
 				continue
 
 			h = lib.cgls_helper_alloc(self.shape[0], self.shape[1])
@@ -119,8 +89,482 @@ class ConjugateGradientLibsTestCase(OptkitCTestCase):
 
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+
+			if lib is None:
+				continue
+
+			# -----------------------------------------
+			# allocate x, b in python & C
+			b = lib.vector(0, 0, None)
+			lib.vector_calloc(b, m)
+			self.register_var('b', b, lib.vector_free)
+			b_ = np.zeros(m).astype(lib.pyfloat)
+			b_ptr = b_.ctypes.data_as(lib.ok_float_p)
+
+			x = lib.vector(0, 0, None)
+			lib.vector_calloc(x, n)
+			self.register_var('x', x, lib.vector_free)
+			x_ = np.zeros(n).astype(lib.pyfloat)
+			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
+
+			b_ += np.random.rand(m)
+			lib.vector_memcpy_va(b, b_ptr, 1)
+
+			# -----------------------------------------
+			# test cgls for each operator type defined in self.op_keys
+			for op_ in self.op_keys:
+				print "test cgls (nonallocating), operator type:", op_
+				A_, A, o, freeA = self.gen_operator(op_, lib)
+				self.register_var('A', A, freeA)
+				self.register_var('o', o, o.contents.free)
+
+				h = lib.cgls_helper_alloc(m, n)
+				self.register_var('h', h, lib.cgls_helper_free)
+
+				flag = lib.cgls_nonallocating(h, o, b, x, rho, tol, maxiter,
+											  CG_QUIET)
+				lib.vector_memcpy_av(x_ptr, x, 1)
+
+				# checks:
+				# 1. exit flag == 0
+				# 2. KKT condition A'(Ax - b) + rho (x) == 0 (within tol)
+				self.assertEqual(flag, 0)
+				KKT = A_.T.dot(A_.dot(x_) - b_) + rho * x_
+				self.assertTrue(np.linalg.norm(KKT) <= (tol * n)**0.5)
+
+				self.free_var('o')
+				self.free_var('A')
+				self.free_var('h')
+
+			# -----------------------------------------
+			# free x, b
+			self.free_var('x')
+			self.free_var('b')
+
+	def test_cgls_allocating(self):
+		tol = self.tol_cg
+		rho = self.rho_cg
+		maxiter = self.maxiter_cg
+
+		m, n = self.shape
+
+		for (gpu, single_precision) in self.CONDITIONS:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+
+			if lib is None:
+				continue
+
+			# -----------------------------------------
+			# allocate x, b in python & C
+			b = lib.vector(0, 0, None)
+			lib.vector_calloc(b, m)
+			self.register_var('b', b, lib.vector_free)
+			b_ = np.zeros(m).astype(lib.pyfloat)
+			b_ptr = b_.ctypes.data_as(lib.ok_float_p)
+
+			x = lib.vector(0, 0, None)
+			lib.vector_calloc(x, n)
+			self.register_var('x', x, lib.vector_free)
+			x_ = np.zeros(n).astype(lib.pyfloat)
+			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
+
+			b_ += np.random.rand(m)
+			lib.vector_memcpy_va(b, b_ptr, 1)
+
+			# -----------------------------------------
+			# test cgls for each operator type defined in self.op_keys
+			for op_ in self.op_keys:
+				print "test cgls (allocating), operator type:", op_
+				A_, A, o, freeA = self.gen_operator(op_, lib)
+				self.register_var('A', A, freeA)
+				self.register_var('o', o, o.contents.free)
+
+				flag = lib.cgls(o, b, x, rho, tol, maxiter, CG_QUIET)
+				lib.vector_memcpy_av(x_ptr, x, 1)
+
+				# checks:
+				# 1. exit flag == 0
+				# 2. KKT condition A'(Ax - b) + rho (x) == 0 (within tol)
+				self.assertEqual(flag, 0)
+				KKT = A_.T.dot(A_.dot(x_) - b_) + rho * x_
+				self.assertTrue(np.linalg.norm(KKT) <= (tol * n)**0.5)
+
+				self.free_var('o')
+				self.free_var('A')
+
+			# -----------------------------------------
+			# free x, b
+			self.free_var('x')
+			self.free_var('b')
+
+	def test_cgls_easy(self):
+		tol = self.tol_cg
+		rho = self.rho_cg
+		maxiter = self.maxiter_cg
+
+		m, n = self.shape
+
+		for (gpu, single_precision) in self.CONDITIONS:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+
+			if lib is None:
+				continue
+
+			# -----------------------------------------
+			# allocate x, b in python & C
+			b = lib.vector(0, 0, None)
+			lib.vector_calloc(b, m)
+			self.register_var('b', b, lib.vector_free)
+			b_ = np.zeros(m).astype(lib.pyfloat)
+			b_ptr = b_.ctypes.data_as(lib.ok_float_p)
+
+			x = lib.vector(0, 0, None)
+			lib.vector_calloc(x, n)
+			self.register_var('x', x, lib.vector_free)
+			x_ = np.zeros(n).astype(lib.pyfloat)
+			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
+
+			b_ += np.random.rand(m)
+			lib.vector_memcpy_va(b, b_ptr, 1)
+
+			# -----------------------------------------
+			# test cgls for each operator type defined in self.op_keys
+			for op_ in self.op_keys:
+				print "test cgls (easy), operator type:", op_
+				A_, A, o, freeA = self.gen_operator(op_, lib)
+				self.register_var('A', A, freeA)
+				self.register_var('o', o, o.contents.free)
+
+				cgls_work = lib.cgls_init(m, n)
+				self.register_var('work', cgls_work, lib.cgls_finish)
+				flag = lib.cgls_solve(cgls_work, o, b, x, rho, tol,
+										   maxiter, CG_QUIET)
+
+				self.free_var('work')
+				lib.vector_memcpy_av(x_ptr, x, 1)
+
+				# checks:
+				# 1. exit flag == 0
+				# 2. KKT condition A'(Ax - b) + rho (x) == 0 (within tol)
+				self.assertEqual(flag, 0)
+				KKT = A_.T.dot(A_.dot(x_) - b_) + rho * x_
+				self.assertTrue(np.linalg.norm(KKT) <= (tol * n)**0.5)
+
+				self.free_var('o')
+				self.free_var('A')
+
+			# -----------------------------------------
+			# free x, b
+			self.free_var('x')
+			self.free_var('b')
+
+	def test_pcg_helper_alloc_free(self):
+		m, n = self.shape
+
+		for (gpu, single_precision) in self.CONDITIONS:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+
+			if lib is None:
+				continue
+
+			h = lib.pcg_helper_alloc(self.shape[0], self.shape[1])
+			self.register_var('h', h, lib.pcg_helper_free)
+			self.assertTrue(isinstance(h.contents.p, lib.vector_p))
+			self.assertTrue(isinstance(h.contents.q, lib.vector_p))
+			self.assertTrue(isinstance(h.contents.r, lib.vector_p))
+			self.assertTrue(isinstance(h.contents.z, lib.vector_p))
+			self.assertTrue(isinstance(h.contents.temp, lib.vector_p))
+			self.free_var('h')
+
+	def test_diagonal_preconditioner(self):
+		tol = self.tol_cg
+		rho = 1e-2
+		# rho = self.rho_cg
+		maxiter = self.maxiter_cg
+
+		m, n = self.shape
+
+		for (gpu, single_precision) in self.CONDITIONS:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+			if lib is None:
+				continue
+
+			RTOL = 2e-2
+			ATOLN = RTOL * n**0.5
+
+			# -----------------------------------------
+			# test pcg for each operator type defined in self.op_keys
+			for op_ in self.op_keys:
+				print "test pcg (nonallocating), operator type:", op_
+				A_, A, o, freeA = self.gen_operator(op_, lib)
+				self.register_var('A', A, freeA)
+				self.register_var('o', o, o.contents.free)
+
+				T = rho * np.eye(n)
+				T += A_.T.dot(A_)
+
+				p_vec = lib.vector(0, 0, None)
+				lib.vector_calloc(p_vec, n)
+				self.register_var('p_vec', p_vec, lib.vector_free)
+
+				p_ = np.zeros(n).astype(lib.pyfloat)
+				p_py = np.zeros(n).astype(lib.pyfloat)
+				p_ptr = p_.ctypes.data_as(lib.ok_float_p)
+
+				# calculate diagonal preconditioner
+				for j in xrange(n):
+					p_py[j] = 1. / (rho +  np.linalg.norm(T[:, j])**2)
+
+				lib.diagonal_preconditioner(o, p_vec, rho)
+				lib.vector_memcpy_av(p_ptr, p_vec, 1)
+				self.assertTrue(np.linalg.norm(p_py - p_) <=
+								ATOLN + RTOL * np.linalg.norm(p_py))
+
+				self.free_var('o')
+				self.free_var('A')
+				self.free_var('p_vec')
+
+	def test_pcg_nonallocating(self):
+		"""
+		pcg_nonallocating test
+
+		given operator A, vector b, preconditioner M and scalar rho,
+		pcg method attemps to solve
+
+			(rho * I + A'A)x = b
+
+		to specified tolerance _tol_ by performing at most _maxiter_
+		CG iterations on the system
+
+			M(rho * I + A'A)x = b
+		"""
+		tol = self.tol_cg
+		rho = self.rho_cg
+		maxiter = self.maxiter_cg
+
+		m, n = self.shape
+
+		for (gpu, single_precision) in self.CONDITIONS:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+
+			if lib is None:
+				continue
+
+			DIGITS = 7 - 2 * single_precision - 1 * gpu
+			RTOL = 10**(-DIGITS)
+			ATOLN = RTOL * n**0.5
+
+			# -----------------------------------------
+			# allocate x, b in python & C
+			b = lib.vector(0, 0, None)
+			lib.vector_calloc(b, n)
+			self.register_var('b', b, lib.vector_free)
+			b_ = np.zeros(n).astype(lib.pyfloat)
+			b_ptr = b_.ctypes.data_as(lib.ok_float_p)
+
+			x = lib.vector(0, 0, None)
+			lib.vector_calloc(x, n)
+			self.register_var('x', x, lib.vector_free)
+			x_ = np.zeros(n).astype(lib.pyfloat)
+			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
+
+			b_ += self.x_test
+			lib.vector_memcpy_va(b, b_ptr, 1)
+
+			# -----------------------------------------
+			# test pcg for each operator type defined in self.op_keys
+			for op_ in self.op_keys:
+				print "test pcg (nonallocating), operator type:", op_
+				A_, A, o, freeA = self.gen_operator(op_, lib)
+				self.register_var('A', A, freeA)
+				self.register_var('o', o, o.contents.free)
+
+				h = lib.pcg_helper_alloc(m, n)
+				self.register_var('h', h, lib.pcg_helper_free)
+
+				T = rho * np.eye(n)
+				T += A_.T.dot(A_)
+
+				p_py, p_vec, p, free_p = self.gen_preconditioning_operator(
+						lib, T, rho)
+				self.register_var('p_vec', p_vec, free_p)
+				self.register_var('p', p, p.contents.free)
+
+				lib.pcg_nonallocating(h, o, p, b, x, rho, tol, maxiter,
+									  CG_QUIET)
+				lib.vector_memcpy_av(x_ptr, x, 1)
+				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
+								ATOLN + RTOL * np.linalg.norm(b_))
+
+				self.free_var('p')
+				self.free_var('p_vec')
+				self.free_var('o')
+				self.free_var('A')
+				self.free_var('h')
+
+			# -----------------------------------------
+			# free x, b
+			self.free_var('x')
+			self.free_var('b')
+
+	def test_pcg_nonallocating_warmstart(self):
+		"""TODO: DOCSTRING"""
+		tol = self.tol_cg
+		rho = self.rho_cg
+		maxiter = self.maxiter_cg
+
+		m, n = self.shape
+
+		for (gpu, single_precision) in self.CONDITIONS:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+
+			if lib is None:
+				continue
+
+			DIGITS = 7 - 2 * single_precision - 1 * gpu
+			RTOL = 10**(-DIGITS)
+			ATOLN = RTOL * n**0.5
+
+			# -----------------------------------------
+			# allocate x, b in python & C
+			b = lib.vector(0, 0, None)
+			lib.vector_calloc(b, n)
+			self.register_var('b', b, lib.vector_free)
+			b_ = np.zeros(n).astype(lib.pyfloat)
+			b_ptr = b_.ctypes.data_as(lib.ok_float_p)
+
+			x = lib.vector(0, 0, None)
+			lib.vector_calloc(x, n)
+			self.register_var('x', x, lib.vector_free)
+			x_ = np.zeros(n).astype(lib.pyfloat)
+			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
+
+			b_ += self.x_test
+			lib.vector_memcpy_va(b, b_ptr, 1)
+
+			# -----------------------------------------
+			# test pcg for each operator type defined in self.op_keys
+			for op_ in self.op_keys:
+				print "test pcg (nonallocating) warmstart, operator type:", op_
+				A_, A, o, freeA = self.gen_operator(op_, lib)
+				self.register_var('A', A, freeA)
+				self.register_var('o', o, o.contents.free)
+
+				h = lib.pcg_helper_alloc(m, n)
+				self.register_var('h', h, lib.pcg_helper_free)
+
+				T = rho * np.eye(n)
+				T += A_.T.dot(A_)
+
+				p_py, p_vec, p, free_p = self.gen_preconditioning_operator(
+						lib, T, rho)
+				self.register_var('p_vec', p_vec, free_p)
+				self.register_var('p', p, p.contents.free)
+
+				iters1 = lib.pcg_nonallocating(h, o, p, b, x, rho, tol,
+											   maxiter, CG_QUIET)
+				lib.vector_memcpy_av(x_ptr, x, 1)
+				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
+								ATOLN + RTOL * np.linalg.norm(b_))
+
+				iters2 = lib.pcg_nonallocating(h, o, p, b, x, rho, tol,
+											   maxiter, CG_QUIET)
+				lib.vector_memcpy_av(x_ptr, x, 1)
+				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
+								ATOLN + RTOL * np.linalg.norm(b_))
+
+				print 'cold start iters:', iters1
+				print 'warm start iters:', iters2
+				self.assertTrue(iters2 <= iters1)
+
+				self.free_var('p')
+				self.free_var('p_vec')
+				self.free_var('o')
+				self.free_var('A')
+				self.free_var('h')
+
+			# -----------------------------------------
+			# free x, b
+			self.free_var('x')
+			self.free_var('b')
+
+	def test_pcg_allocating(self):
+		tol = self.tol_cg
+		rho = self.rho_cg
+		maxiter = self.maxiter_cg
+
+		m, n = self.shape
+
+		for (gpu, single_precision) in self.CONDITIONS:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+
+			if lib is None:
+				continue
+
+			DIGITS = 7 - 2 * single_precision - 1 * gpu
+			RTOL = 10**(-DIGITS)
+			ATOLN = RTOL * n**0.5
+
+			# -----------------------------------------
+			# allocate x, b in python & C
+			b = lib.vector(0, 0, None)
+			lib.vector_calloc(b, n)
+			self.register_var('b', b, lib.vector_free)
+			b_ = np.zeros(n).astype(lib.pyfloat)
+			b_ptr = b_.ctypes.data_as(lib.ok_float_p)
+
+			x = lib.vector(0, 0, None)
+			lib.vector_calloc(x, n)
+			self.register_var('x', x, lib.vector_free)
+			x_ = np.zeros(n).astype(lib.pyfloat)
+			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
+
+			b_ += self.x_test
+			lib.vector_memcpy_va(b, b_ptr, 1)
+
+			# -----------------------------------------
+			# test pcg for each operator type defined in self.op_keys
+			for op_ in self.op_keys:
+				print "test pcg (allocating), operator type:", op_
+				A_, A, o, freeA = self.gen_operator(op_, lib)
+				self.register_var('A', A, freeA)
+				self.register_var('o', o, o.contents.free)
+
+				T = rho * np.eye(n)
+				T += A_.T.dot(A_)
+
+				p_py, p_vec, p, free_p = self.gen_preconditioning_operator(
+						lib, T, rho)
+				self.register_var('p_vec', p_vec, free_p)
+				self.register_var('p', p, p.contents.free)
+
+				lib.pcg(o, p, b, x, rho, tol, maxiter, CG_QUIET)
+				lib.vector_memcpy_av(x_ptr, x, 1)
+				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
+								ATOLN + RTOL * np.linalg.norm(b_))
+
+				self.free_var('p')
+				self.free_var('p_vec')
+				self.free_var('o')
+				self.free_var('A')
+
+			# -----------------------------------------
+			# free x, b
+			self.free_var('x')
+			self.free_var('b')
+
+	def test_pcg_easy(self):
+		tol = self.tol_cg
+		rho = self.rho_cg
+		maxiter = self.maxiter_cg
+
+		m, n = self.shape
+
+		for (gpu, single_precision) in self.CONDITIONS:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+
 			if lib is None:
 				continue
 
@@ -149,7 +593,7 @@ class ConjugateGradientLibsTestCase(OptkitCTestCase):
 			# test pcg for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "test pcg (easy), operator type:", op_
-				A, o, freeA = self.gen_operator(op_, lib)
+				A_, A, o, freeA = self.gen_operator(op_, lib)
 				self.register_var('A', A, freeA)
 				self.register_var('o', o, o.contents.free)
 

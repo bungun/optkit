@@ -1,10 +1,8 @@
-import unittest
 import os
 import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix
 from ctypes import c_void_p, byref, CFUNCTYPE
 from optkit.libs import OperatorLibs
-from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
 from optkit.tests.C.base import OptkitCTestCase
 
 class OperatorLibsTestCase(OptkitCTestCase):
@@ -15,37 +13,15 @@ class OperatorLibsTestCase(OptkitCTestCase):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
 		self.libs = OperatorLibs()
-
-		self.shape = None
-		if DEFAULT_MATRIX_PATH is not None:
-			try:
-				self.A_test = np.load(DEFAULT_MATRIX_PATH)
-				self.A_test_sparse = self.A_test
-				self.shape = A.shape
-			except:
-				pass
-		if self.shape is None:
-			self.shape = DEFAULT_SHAPE
-			self.A_test = np.random.rand(*self.shape)
-			self.A_test_sparse = np.zeros(self.shape)
-			self.A_test_sparse += self.A_test
-			for i in xrange(self.shape[0]):
-				if np.random.rand() > 0.4:
-					self.A_test_sparse[i, :] *= 0
-			for j in xrange(self.shape[1]):
-				if np.random.rand() > 0.4:
-					self.A_test_sparse[:, j] *= 0
-
-		self.nnz = sum(sum(self.A_test_sparse > 0))
-
-		self.x_test = np.random.rand(self.shape[1])
+		self.A_test = self.A_test_gen
+		self.A_test_sparse = self.A_test_sparse_gen
 
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		pass
+		self.x_test = np.random.rand(self.shape[1])
 
 	def tearDown(self):
 		self.free_all_vars()
@@ -124,7 +100,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 
 	def test_libs_exist(self):
 		libs = []
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			libs.append(self. libs.get(single_precision=single_precision,
 									   gpu=gpu))
 		self.assertTrue(any(libs))
@@ -132,7 +108,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 	def test_dense_alloc_free(self):
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -157,7 +133,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 	def test_dense_operator(self):
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -192,7 +168,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 	def test_sparse_alloc_free(self):
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -204,9 +180,9 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				enum = lib.enums.SPARSE_CSR if rowmajor else \
 					   lib.enums.SPARSE_CSC
 
-				A = slib.sparse_matrix(0, 0, 0, 0, None, None, None, order)
-				slib.sp_matrix_calloc(A, m, n, self.nnz, order)
-				self.register_var('A', A, slib.sp_matrix_free)
+				A = lib.sparse_matrix(0, 0, 0, 0, None, None, None, order)
+				lib.sp_matrix_calloc(A, m, n, self.nnz, order)
+				self.register_var('A', A, lib.sp_matrix_free)
 
 				o = lib.sparse_operator_alloc(A)
 				self.register_var('o', o, o.contents.free)
@@ -220,7 +196,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 	def test_sparse_operator(self):
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -234,20 +210,20 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				spmat = csr_matrix if rowmajor else csc_matrix
 
 				hdl = c_void_p()
-				self.assertEqual(slib.sp_make_handle(byref(hdl)), 0)
+				self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
 
 				A_ = np.zeros(self.shape).astype(lib.pyfloat)
 				A_ += self.A_test_sparse
 				A_sp = spmat(A_)
 				A_val = A_sp.data.ctypes.data_as(lib.ok_float_p)
-				A_ind = A_sp.indices.ctypes.data_as(slib.ok_int_p)
-				A_ptr = A_sp.indptr.ctypes.data_as(slib.ok_int_p)
+				A_ind = A_sp.indices.ctypes.data_as(lib.ok_int_p)
+				A_ptr = A_sp.indptr.ctypes.data_as(lib.ok_int_p)
 
-				A = slib.sparse_matrix(0, 0, 0, 0, None, None, None, order)
-				slib.sp_matrix_calloc(A, m, n, A_sp.nnz, order)
-				self.register_var('A', A, slib.sp_matrix_free)
+				A = lib.sparse_matrix(0, 0, 0, 0, None, None, None, order)
+				lib.sp_matrix_calloc(A, m, n, A_sp.nnz, order)
+				self.register_var('A', A, lib.sp_matrix_free)
 
-				slib.sp_matrix_memcpy_ma(hdl, A, A_val, A_ind, A_ptr, order)
+				lib.sp_matrix_memcpy_ma(hdl, A, A_val, A_ind, A_ptr, order)
 
 				o = lib.sparse_operator_alloc(A)
 				self.register_var('o', o, o.contents.free)
@@ -257,13 +233,13 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				self.free_var('o')
 				self.free_var('A')
 
-				self.assertEqual(slib.sp_destroy_handle(hdl), 0)
+				self.assertEqual(lib.sp_destroy_handle(hdl), 0)
 				self.assertEqual(lib.ok_device_reset(), 0)
 
 	def test_diagonal_alloc_free(self):
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -286,7 +262,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 	def test_diagonal_operator(self):
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue

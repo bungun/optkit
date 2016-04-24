@@ -26,6 +26,7 @@ class PogsLibs(OptkitLibs):
 		self.attach_calls.append(attach_projector_ctypes)
 		self.attach_calls.append(attach_projector_ccalls)
 		self.attach_calls.append(attach_equilibration_ccalls)
+		self.attach_calls.append(attach_pogs_common_ctypes)
 		self.attach_calls.append(attach_pogs_ctypes)
 		self.attach_calls.append(attach_pogs_ccalls)
 
@@ -48,6 +49,7 @@ class PogsIndirectLibs(OptkitLibs):
 		self.attach_calls.append(attach_projector_ccalls)
 		self.attach_calls.append(attach_equilibration_ccalls)
 		self.attach_calls.append(attach_operator_equilibration_ccalls)
+		self.attach_calls.append(attach_pogs_common_ctypes)
 		self.attach_calls.append(attach_pogs_ctypes)
 		self.attach_calls.append(attach_pogs_ccalls)
 
@@ -71,6 +73,7 @@ class PogsAbstractLibs(OptkitLibs):
 		self.attach_calls.append(attach_operator_projector_ctypes_ccalls)
 		self.attach_calls.append(attach_equilibration_ccalls)
 		self.attach_calls.append(attach_operator_equilibration_ccalls)
+		self.attach_calls.append(attach_pogs_common_ctypes)
 		self.attach_calls.append(attach_pogs_abstract_ctypes)
 		self.attach_calls.append(attach_pogs_abstract_ccalls)
 
@@ -148,6 +151,7 @@ def attach_pogs_common_ctypes(lib, single_precision=False):
 
 	lib.block_vector = PogsBlockVector
 	lib.block_vector_p = POINTER(lib.block_vector)
+	block_vector_p = lib.block_vector_p
 
 	class PogsResiduals(Structure):
 		_fields_ = [('primal', ok_float),
@@ -197,11 +201,15 @@ def attach_pogs_ctypes(lib, single_precision=False):
 	if not 'function_vector_p' in lib.__dict__:
 		attach_prox_ctypes(lib, single_precision)
 	if not 'pogs_settings_p' in lib.__dict__:
+		print "HERE"
 		attach_pogs_common_ctypes(lib, single_precision)
 
 	ok_float = lib.ok_float
+	vector_p = lib.vector_p
 	matrix_p = lib.matrix_p
 	function_vector_p = lib.function_vector_p
+	pogs_settings_p = lib.pogs_settings_p
+	pogs_variables_p = lib.pogs_variables_p
 
 	# lib properties
 	lib.private_api_accessible.restype = c_int
@@ -222,6 +230,7 @@ def attach_pogs_ctypes(lib, single_precision=False):
 
 	lib.pogs_matrix = PogsMatrix
 	lib.pogs_matrix_p = POINTER(lib.pogs_matrix)
+	pogs_matrix_p = lib.pogs_matrix_p
 
 	class PogsSolver(Structure):
 		_fields_ = [('M', pogs_matrix_p),
@@ -234,7 +243,7 @@ def attach_pogs_ctypes(lib, single_precision=False):
 					('init_time', ok_float)]
 
 	lib.pogs_solver = PogsSolver
-	lib.pogs_solver_p = POINTER(lib.pogs_solver_p)
+	lib.pogs_solver_p = POINTER(lib.pogs_solver)
 
 def attach_pogs_ccalls(lib, single_precision=False):
 	if not 'vector_p' in lib.__dict__:
@@ -255,6 +264,7 @@ def attach_pogs_ccalls(lib, single_precision=False):
 	adapt_params_p = lib.adapt_params_p
 	block_vector_p = lib.block_vector_p
 	pogs_residuals_p = lib.pogs_residuals_p
+	pogs_tolerances = lib.pogs_tolerances
 	pogs_tolerances_p = lib.pogs_tolerances_p
 	pogs_objectives_p = lib.pogs_objectives_p
 	pogs_matrix_p = lib.pogs_matrix_p
@@ -313,7 +323,7 @@ def attach_pogs_ccalls(lib, single_precision=False):
 		lib.update_problem.restype = None
 		lib.initialize_variables.restype = None
 		lib.pogs_solver_loop.restype = None
-		lib.make_tolerances.restype = PogsTolerances
+		lib.make_tolerances.restype = pogs_tolerances
 		lib.set_prev.restype = None
 		lib.prox.restype = None
 		lib.project_primal.restype = None
@@ -399,6 +409,8 @@ def attach_pogs_abstract_ccalls(lib, single_precision=False):
 	vector_p = lib.vector_p
 	function_vector_p = lib.function_vector_p
 	operator_p = lib.operator_p
+	pogs_settings_p = lib.pogs_settings_p
+	pogs_variables_p = lib.pogs_variables_p
 
 	## arguments
 	lib.set_default_settings.argtypes = [pogs_settings_p]

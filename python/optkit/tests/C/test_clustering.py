@@ -1,11 +1,9 @@
-import unittest
 import os
 import numpy as np
 from numpy import ndarray
 from ctypes import c_void_p, c_size_t, byref, cast
 from optkit.libs.clustering import ClusteringLibs
 from optkit.libs.error import optkit_print_error as PRINTERR
-from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
 from optkit.tests.C.base import OptkitCTestCase
 
 class ClusterLibsTestCase(OptkitCTestCase):
@@ -24,44 +22,30 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			D^-1 * A_in * E^-1 == A_equil.
 	"""
-
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
 		self.libs = ClusteringLibs()
-
-		self.shape = None
-		if DEFAULT_MATRIX_PATH is not None:
-			try:
-				self.A_test = np.load(DEFAULT_MATRIX_PATH)
-				self.shape = A.shape
-			except:
-				pass
-		if self.shape is None:
-			self.shape = DEFAULT_SHAPE
-			self.A_test = np.random.rand(*self.shape)
-
-		self.x_test = np.random.rand(self.shape[1])
+		self.A_test = self.A_test_gen
 		self.k = self.shape[0] / 3
-		self.u_test = (self.k * np.random.rand(self.shape[0])).astype(c_size_t)
 
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		pass
+		self.x_test = np.random.rand(self.shape[1])
+		self.u_test = (self.k * np.random.rand(self.shape[0])).astype(c_size_t)
 
 	def tearDown(self):
 		self.free_all_vars()
 
 	def test_libs_exist(self):
 		libs = []
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			libs.append(self.libs.get(single_precision=single_precision,
 									  gpu=gpu))
-
 		self.assertTrue(any(libs))
 
 	@staticmethod
@@ -136,7 +120,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		m, n = self.shape
 		k = self.k
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -159,7 +143,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		m, n = self.shape
 		k = self.k
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -187,7 +171,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		m, n = self.shape
 		k = self.k
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -222,7 +206,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		m, n = self.shape
 		k = self.k
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -263,7 +247,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		k = self.k
 		hdl = c_void_p()
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -447,7 +431,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		k = self.k
 		hdl = c_void_p()
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -485,7 +469,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		m, n = self.shape
 		k = self.k
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -526,7 +510,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 	# 	m, n = self.shape
 	# 	k = self.k
 
-	# 	for (gpu, single_precision) in CONDITIONS:
+	# 	for (gpu, single_precision) in self.CONDITIONS:
 	# 		lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 	# 		if lib is None:
 	# 			continue
@@ -535,7 +519,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		m, n = self.shape
 		k = self.k
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -574,7 +558,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		m, n = self.shape
 		k = self.k
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -616,7 +600,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		m, n = self.shape
 		k = self.k
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -703,7 +687,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		m, n = self.shape
 		k = self.k
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -819,7 +803,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		m, n = self.shape
 		k = self.k
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -923,7 +907,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		m, n = self.shape
 		k = self.k
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -1001,7 +985,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		m, n = self.shape
 		k = self.k
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -1019,7 +1003,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		m, n = self.shape
 		k = self.k
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -1047,7 +1031,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		m, n = self.shape
 		k = self.k
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -1071,7 +1055,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			work = lib.kmeans_easy_init(m, k, n)
 			self.register_var('work', work, lib.kmeans_easy_finish)
 
-			io = lib.kmeans_io(A_ptr, C_ptr, counts_ptr, a2c_ptr, orderA, orderC, 1, 1)
+			io = lib.kmeans_io(A_ptr, C_ptr, counts_ptr, a2c_ptr, orderA,
+							   orderC, 1, 1)
 
 			DIST_RELTOL = 0.1
 			CHANGE_TOL = int(1 + 0.01 * m)

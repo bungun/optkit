@@ -1,13 +1,11 @@
-import unittest
 import os
 import numpy as np
 from scipy.sparse import csc_matrix, csr_matrix
 from ctypes import c_void_p, byref, cast, addressof
 from optkit.libs import PogsAbstractLibs
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
-from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
-from optkit.tests.C.pogs_helper import PogsVariablesLocal, PogsOutputLocal
-from optkit.tests.C.base import OptkitCTestCase
+from optkit.tests.defs import OptkitTestCase
+from optkit.tests.C.base import OptkitCPogsTestCase
 
 ALPHA_DEFAULT = 1.7
 RHO_DEFAULT = 1
@@ -21,7 +19,7 @@ VERBOSE_DEFAULT = 2
 SUPPRESS_DEFAULT = 0
 RESUME_DEFAULT = 0
 
-class PogsAbstractLibsTestCase(unittest.TestCase):
+class PogsAbstractLibsTestCase(OptkitTestCase):
 	"""TODO: docstring"""
 
 	@classmethod
@@ -36,40 +34,21 @@ class PogsAbstractLibsTestCase(unittest.TestCase):
 
 	def test_libs_exist(self):
 		libs = []
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			libs.append(self.libs.get(single_precision=single_precision,
 									  gpu=gpu))
 		self.assertTrue(any(libs))
 
-class PogsAbstractTestCases(OptkitCTestCase):
+class PogsAbstractTestCases(OptkitCPogsTestCase):
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
 		self.libs = PogsAbstractLibs()
+		self.A_test = self.A_test_gen
+		self.A_test_sparse = self.A_test_sparse_gen
 
-		self.shape = None
-		if DEFAULT_MATRIX_PATH is not None:
-			try:
-				self.A_test = np.load(DEFAULT_MATRIX_PATH)
-				self.A_test_sparse = self.A_test
-				self.shape = A.shape
-			except:
-				pass
-		if self.shape is None:
-			self.shape = DEFAULT_SHAPE
-			self.A_test = np.random.rand(*self.shape)
-			self.A_test_sparse = np.zeros(self.shape)
-			self.A_test_sparse += self.A_test
-			for i in xrange(self.shape[0]):
-				if np.random.rand() > 0.4:
-					self.A_test_sparse[i, :] *= 0
-			for j in xrange(self.shape[1]):
-				if np.random.rand() > 0.4:
-					self.A_test_sparse[:, j] *= 0
-
-		self.nnz = sum(sum(self.A_test_sparse > 0))
-
+	def setUp(self):
 		self.x_test = np.random.rand(self.shape[1])
 
 	@classmethod
@@ -82,9 +61,9 @@ class PogsAbstractTestCases(OptkitCTestCase):
 				py_vector.ctypes.data_as(lib.ok_float_p), c_vector, 1)
 
 	def load_all_local(self, lib, py_vars, solver):
-		if not isinstance(py_vars, PogsVariablesLocal):
+		if not isinstance(py_vars, self.PogsVariablesLocal):
 			raise TypeError('argument "py_vars" must be of type {}'.format(
-							PogsVariablesLocal))
+							self.PogsVariablesLocal))
 
 		self.load_to_local(lib, py_vars.z,
 						   solver.contents.z.contents.primal.contents.vec)
@@ -575,13 +554,13 @@ class PogsAbstractTestCases(OptkitCTestCase):
 			raise TypeError('argument "solver" must be of type {}'.format(
 							lib.pogs_solver_p))
 
-		if not isinstance(output, PogsOutputLocal):
+		if not isinstance(output, self.PogsOutputLocal):
 			raise TypeError('argument "output" must be of type {}'.format(
-							PogsOutputLocal))
+							self.PogsOutputLocal))
 
-		if not isinstance(localvars, PogsVariablesLocal):
+		if not isinstance(localvars, self.PogsVariablesLocal):
 			raise TypeError('argument "localvars" must be of type {}'.format(
-							PogsVariablesLocal))
+							self.PogsVariablesLocal))
 
 		self.load_all_local(lib, localvars, solver)
 		lib.copy_output(solver, output.ptr)
@@ -655,8 +634,8 @@ class PogsAbstractTestCases(OptkitCTestCase):
 
 		return A_, o, free_o
 
-	def test_default_settings(self)
-		for (gpu, single_precision) in CONDITIONS:
+	def test_default_settings(self):
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -689,8 +668,8 @@ class PogsAbstractTestCases(OptkitCTestCase):
 			self.assertTrue(abs(settings.resume - RESUME_DEFAULT) <=
 							TOL * RESUME_DEFAULT)
 
-	def test_operator_gen_free(self)
-		for (gpu, single_precision) in CONDITIONS:
+	def test_operator_gen_free(self):
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -701,8 +680,8 @@ class PogsAbstractTestCases(OptkitCTestCase):
 				self.assertEqual(type(o), olib.operator_p)
 				self.free_var('o')
 
-	def test_pogs_init_finish(self)
-		for (gpu, single_precision) in CONDITIONS:
+	def test_pogs_init_finish(self):
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -725,7 +704,7 @@ class PogsAbstractTestCases(OptkitCTestCase):
 	def test_pogs_private_api(self):
 		hdl = c_void_p()
 		m, n = self.shape
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -750,14 +729,14 @@ class PogsAbstractTestCases(OptkitCTestCase):
 						solver = lib.pogs_init(o, DIRECT, EQUILNORM)
 						self.assertNotEqual(solver, 0)
 
-						output = PogsOutputLocal(lib, lib, m, n)
+						output = self.PogsOutputLocal(lib, m, n)
 						info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan,
 											 np.nan)
 						settings = lib.pogs_settings(0, 0, 0, 0, 0, 0, 0, 0, 0,
 													 0, 0, None, None)
 						lib.set_default_settings(settings)
 
-						localvars = PogsVariablesLocal(m, n, lib.pyfloat)
+						localvars = self.PogsVariablesLocal(m, n, lib.pyfloat)
 
 						if lib.full_api_accessible:
 							slvr = cast(solver, lib.pogs_solver_p)
@@ -768,24 +747,24 @@ class PogsAbstractTestCases(OptkitCTestCase):
 
 							self.pogs_equilibration(lib, slvr, A, o,
 													localvars)
-							self.pogs_projector(lib, lib, hdl, slvr, o)
-							self.pogs_scaling(lib, lib, lib, slvr, f,
+							self.pogs_projector(lib, hdl, slvr, o)
+							self.pogs_scaling(lib, lib, slvr, f,
 											  f_py, g, g_py, localvars)
-							self.pogs_primal_update(lib, lib, slvr,
+							self.pogs_primal_update(lib, slvr,
 													localvars)
-							self.pogs_prox(lib, lib, lib, hdl, slvr, f,
+							self.pogs_prox(lib, lib, hdl, slvr, f,
 										   f_py, g, g_py, localvars)
-							self.pogs_primal_project(lib, lib, hdl, slvr,
+							self.pogs_primal_project(lib, hdl, slvr,
 													 settings, o, localvars)
-							self.pogs_dual_update(lib, lib, hdl, slvr,
+							self.pogs_dual_update(lib, hdl, slvr,
 												  settings, localvars)
-							self.pogs_check_convergence(lib, lib, hdl, slvr,
+							self.pogs_check_convergence(lib, hdl, slvr,
 														f_list, g_list, obj,
 														res, tols, settings,
 														o, A, localvars)
-							self.pogs_adapt_rho(lib, lib, slvr, settings, res,
+							self.pogs_adapt_rho(lib, slvr, settings, res,
 												tols, localvars)
-							self.pogs_unscaling(lib, lib, slvr, output,
+							self.pogs_unscaling(lib, slvr, output,
 												localvars)
 
 						lib.pogs_finish(solver, NO_DEVICE_RESET)
@@ -801,7 +780,7 @@ class PogsAbstractTestCases(OptkitCTestCase):
 	def test_pogs_call(self):
 		hdl = c_void_p()
 		m, n = self.shape
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -825,7 +804,7 @@ class PogsAbstractTestCases(OptkitCTestCase):
 						solver = lib.pogs_init(o, DIRECT, EQUILNORM)
 						self.assertNotEqual(solver, 0)
 
-						output = PogsOutputLocal(lib, lib, m, n)
+						output = self.PogsOutputLocal(lib, m, n)
 						info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan,
 											 np.nan)
 						settings = lib.pogs_settings(0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -833,7 +812,7 @@ class PogsAbstractTestCases(OptkitCTestCase):
 						lib.set_default_settings(settings)
 						settings.verbose = 0
 
-						localvars = PogsVariablesLocal(m, n, lib.pyfloat)
+						localvars = self.PogsVariablesLocal(m, n, lib.pyfloat)
 
 						err = lib.pogs_solve(solver, f, g, settings, info,
 									   output.ptr)
@@ -869,7 +848,7 @@ class PogsAbstractTestCases(OptkitCTestCase):
 	def test_pogs_call_unified(self):
 		hdl = c_void_p()
 		m, n = self.shape
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -889,13 +868,13 @@ class PogsAbstractTestCases(OptkitCTestCase):
 						A, o, free_o = self.gen_pogs_operator(lib, optype)
 						self.register_var('o', o, free_o)
 
-						output = PogsOutputLocal(lib, lib, m, n)
+						output = self.PogsOutputLocal(lib, m, n)
 						info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan,
 											 np.nan)
 						settings = lib.pogs_settings(0, 0, 0, 0, 0, 0, 0, 0, 0,
 													 0, 0, None, None)
 						lib.set_default_settings(settings)
-						localvars = PogsVariablesLocal(m, n, lib.pyfloat)
+						localvars = self.PogsVariablesLocal(m, n, lib.pyfloat)
 
 						err = lib.pogs(o, f, g, settings, info, output.ptr,
 									   DIRECT, EQUILNORM, NO_DEVICE_RESET)
@@ -928,7 +907,7 @@ class PogsAbstractTestCases(OptkitCTestCase):
 	def test_pogs_warmstart(self):
 		hdl = c_void_p()
 		m, n = self.shape
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -954,13 +933,13 @@ class PogsAbstractTestCases(OptkitCTestCase):
 				x_rand = np.random.rand(n).astype(lib.pyfloat)
 				nu_rand = np.random.rand(m).astype(lib.pyfloat)
 
-				A, o, free_o = self.gen_pogs_operator(lib, lib, optype)
+				A, o, free_o = self.gen_pogs_operator(lib, optype)
 				self.register_var('o', o, free_o)
 
 				solver = lib.pogs_init(o, DIRECT, EQUILNORM)
 				self.assertNotEqual(solver, 0)
 
-				output = PogsOutputLocal(lib, lib, m, n)
+				output = self.PogsOutputLocal(lib, m, n)
 				info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan,
 									 np.nan)
 				settings = lib.pogs_settings(0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -979,7 +958,7 @@ class PogsAbstractTestCases(OptkitCTestCase):
 
 				if lib.full_api_accessible:
 					# test warmstart feed
-					localvars = PogsVariablesLocal(m, n, lib.pyfloat)
+					localvars = self.PogsVariablesLocal(m, n, lib.pyfloat)
 					slvr = cast(solver, lib.pogs_solver_p)
 					rho = slvr.contents.rho
 					self.load_all_local(lib, localvars, slvr)
@@ -1075,13 +1054,13 @@ class PogsAbstractTestCases(OptkitCTestCase):
 		hdl = c_void_p()
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			lib = self.prox_libs.get(
 					lib, single_precision=single_precision, gpu=gpu)
 			lib = self.libs.get(
-					lib, lib, single_precision=single_precision, gpu=gpu)
+					lib, single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -1121,7 +1100,7 @@ class PogsAbstractTestCases(OptkitCTestCase):
 				solver = lib.pogs_init(A_ptr, m, n, order,
 									   lib.enums.EquilSinkhorn)
 
-				output = PogsOutputLocal(lib, lib, m, n)
+				output = self.PogsOutputLocal(lib, m, n)
 
 				info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan, np.nan)
 				settings = lib.pogs_settings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

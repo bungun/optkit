@@ -1,13 +1,10 @@
-import unittest
 import os
 import numpy as np
 from ctypes import c_void_p, byref
 from optkit.libs import EquilibrationLibs
-from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
-import optkit.tests.C.operator_helper as op_helper
-from optkit.tests.C.base import OptkitCTestCase
+from optkit.tests.C.base import OptkitCOperatorTestCase
 
-class EquilLibsTestCase(OptkitCTestCase):
+class EquilLibsTestCase(OptkitCOperatorTestCase):
 	"""
 		Equilibrate input A_in as
 
@@ -28,65 +25,25 @@ class EquilLibsTestCase(OptkitCTestCase):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
 		self.libs = EquilibrationLibs()
-
-		self.shape = None
-		if DEFAULT_MATRIX_PATH is not None:
-			try:
-				self.A_test = np.load(DEFAULT_MATRIX_PATH)
-				self.A_test_sparse = self.A_test
-				self.shape = A.shape
-			except:
-				pass
-		if self.shape is None:
-			self.shape = DEFAULT_SHAPE
-			self.A_test = np.random.rand(*self.shape)
-			self.A_test_sparse = np.zeros(self.shape)
-			self.A_test_sparse += self.A_test
-			for i in xrange(self.shape[0]):
-				if np.random.rand() > 0.4:
-					self.A_test_sparse[i, :] *= 0
-			for j in xrange(self.shape[1]):
-				if np.random.rand() > 0.4:
-					self.A_test_sparse[:, j] *= 0
-
-		self.nnz = sum(sum(self.A_test_sparse > 0))
-
-		self.x_test = np.random.rand(self.shape[1])
+		self.A_test = self.A_test_gen
+		self.A_test_sparse = self.A_test_sparse_gen
 
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		pass
+		self.x_test = np.random.rand(self.shape[1])
 
 	def tearDown(self):
 		self.free_all_vars()
 
-	@property
-	def op_keys(self):
-		return ['dense', 'sparse']
-
-	def gen_operator(self, opkey, lib):
-		if opkey == 'dense':
-			A = self.A_test
-			gen = op_helper.gen_dense_operator
-		elif opkey == 'sparse':
-			A = self.A_test_sparse
-			gen = op_helper.gen_sparse_operator
-		else:
-			raise ValueError('invalid operator type')
-
-		Ac, o, freeA = gen(*arg_gen)
-		return A, Ac, o, freeA
-
 	def test_libs_exist(self):
 		libs = []
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			libs.append(self.libs.get(single_precision=single_precision,
 									  gpu=gpu))
 		self.assertTrue(any(libs))
-
 
 	@staticmethod
 	def equilibrate(lib, equilibration_method, order, pyorder, A_test,
@@ -137,7 +94,7 @@ class EquilLibsTestCase(OptkitCTestCase):
 		return A_eqx, DAEx
 
 	def test_densel2(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			# TODO: figure out why dense_l2 segfaults on GPU
 			if gpu:
 				continue
@@ -164,7 +121,7 @@ class EquilLibsTestCase(OptkitCTestCase):
 								ATOLN + RTOL * np.linalg.norm(DAEx))
 
 	def test_sinkhorn_knopp(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -186,7 +143,7 @@ class EquilLibsTestCase(OptkitCTestCase):
 								ATOLN + RTOL * np.linalg.norm(DAEx))
 
 	def test_regularized_sinkhorn_knopp(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -237,7 +194,7 @@ class EquilLibsTestCase(OptkitCTestCase):
 	def test_operator_sinkhorn_knopp(self):
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
@@ -324,7 +281,7 @@ class EquilLibsTestCase(OptkitCTestCase):
 	def test_operator_equil(self):
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
@@ -415,13 +372,13 @@ class EquilLibsTestCase(OptkitCTestCase):
 	def test_operator_norm(self):
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			RTOL = 0.1
-			ATOL = 0.05 * (m * n)**0.5
+			RTOL = 0.05
+			ATOL = 0.005 * (m * n)**0.5
 
 			hdl = c_void_p()
 			lib.blas_make_handle(byref(hdl))
@@ -439,8 +396,11 @@ class EquilLibsTestCase(OptkitCTestCase):
 				pynorm = np.linalg.norm(A_)
 				cnorm = lib.operator_estimate_norm(hdl, o)
 
-				self.assertTrue(np.abs(pynorm - cnorm) <=
-								ATOL + RTOL * pynorm)
+				print pynorm
+				print cnorm
+				self.assertTrue(
+					cnorm >= ATOL + RTOL * pynorm or
+					pynorm >= ATOL + RTOL * cnorm )
 
 				self.free_var('A')
 				self.free_var('o')

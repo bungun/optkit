@@ -17,8 +17,6 @@ class ProxLibs(OptkitLibs):
 		self.attach_calls.append(attach_prox_ctypes)
 		self.attach_calls.append(attach_prox_ccalls)
 
-		self.function_enums = OKFunctionEnums()
-
 def attach_prox_ctypes(lib, single_precision=False):
 	if 'ok_float' not in lib.__dict__:
 		attach_base_ctypes(lib, single_precision)
@@ -39,9 +37,11 @@ def attach_prox_ctypes(lib, single_precision=False):
 	# function vector struct
 	class ok_function_vector(Structure):
 		_fields_ = [('size', c_size_t),
-					('objectives', function_p)]
+					('objectives', lib.function_p)]
 	lib.function_vector = ok_function_vector
 	lib.function_vector_p = POINTER(lib.function_vector)
+
+	lib.function_enums = OKFunctionEnums()
 
 def attach_prox_ccalls(lib, single_precision=False):
 	if not 'vector_p' in lib.__dict__:
@@ -49,6 +49,7 @@ def attach_prox_ccalls(lib, single_precision=False):
 	if not 'function_vector_p' in lib.__dict__:
 		attach_prox_ctypes(lib, single_precision)
 
+	ok_float = lib.ok_float
 	vector_p = lib.vector_p
 	function_p = lib.function_p
 	function_vector_p = lib.function_vector_p

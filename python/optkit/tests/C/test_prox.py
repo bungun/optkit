@@ -73,14 +73,18 @@ class ProxTestCase(OptkitCTestCase):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
 		self.libs = ProxLibs()
+		self.shape = DEFAULT_SHAPE
+		self.scalefactor = 5
 
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		self.shape = DEFAULT_SHAPE
-		self.scalefactor = 5
+		pass
+
+	def tearDown(self):
+		self.free_all_vars()
 
 	@staticmethod
 	def make_prox_triplet(lib, size_):

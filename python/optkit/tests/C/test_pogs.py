@@ -1,13 +1,10 @@
-import unittest
 import os
 import numpy as np
 from ctypes import c_void_p, byref, cast, addressof
 from optkit.libs import PogsLibs
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
-from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH, \
-							  significant_digits
-from optkit.tests.C.pogs_helper import PogsVariablesLocal, PogsOutputLocal
-from optkit.tests.C.base import OptkitCTestCase
+from optkit.tests.defs import OptkitTestCase
+from optkit.tests.C.base import OptkitCPogsTestCase
 
 ALPHA_DEFAULT = 1.7
 RHO_DEFAULT = 1
@@ -21,7 +18,7 @@ VERBOSE_DEFAULT = 2
 SUPPRESS_DEFAULT = 0
 RESUME_DEFAULT = 0
 
-class PogsLibsTestCase(unittest.TestCase):
+class PogsLibsTestCase(OptkitTestCase):
 	"""TODO: docstring"""
 
 	@classmethod
@@ -36,12 +33,12 @@ class PogsLibsTestCase(unittest.TestCase):
 
 	def test_libs_exist(self):
 		libs = []
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			libs.append(self.libs.get(single_precision=single_precision,
 									  gpu=gpu))
 		self.assertTrue(any(libs))
 
-class PogsTestCase(OptkitCTestCase):
+class PogsTestCase(OptkitCPogsTestCase):
 	"""TODO: docstring"""
 
 	@classmethod
@@ -49,26 +46,14 @@ class PogsTestCase(OptkitCTestCase):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
 		self.libs = PogsLibs()
-
-		self.shape = None
-		if DEFAULT_MATRIX_PATH is not None:
-			try:
-				self.A_test = np.load(DEFAULT_MATRIX_PATH)
-				self.shape = A.shape
-			except:
-				pass
-		if self.shape is None:
-			self.shape = DEFAULT_SHAPE
-			self.A_test = np.random.rand(*self.shape)
-
-		self.x_test = np.random.rand(self.shape[1])
+		self.A_test = self.A_test_gen
 
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		pass
+		self.x_test = np.random.rand(self.shape[1])
 
 	def tearDown(self):
 		self.free_all_vars()
@@ -80,9 +65,9 @@ class PogsTestCase(OptkitCTestCase):
 
 	@staticmethod
 	def load_all_local(lib, py_vars, solver):
-		if not isinstance(py_vars, PogsVariablesLocal):
+		if not isinstance(py_vars, self.PogsVariablesLocal):
 			raise TypeError('argument "py_vars" must be of type {}'.format(
-							PogsVariablesLocal))
+							self.PogsVariablesLocal))
 
 		self.load_to_local(lib, py_vars.z,
 						   solver.contents.z.contents.primal.contents.vec)
@@ -463,13 +448,13 @@ class PogsTestCase(OptkitCTestCase):
 			raise TypeError('argument "solver" must be of type {}'.format(
 							lib.pogs_solver_p))
 
-		if not isinstance(output, PogsOutputLocal):
+		if not isinstance(output, self.PogsOutputLocal):
 			raise TypeError('argument "output" must be of type {}'.format(
-							PogsOutputLocal))
+							self.PogsOutputLocal))
 
-		if not isinstance(localvars, PogsVariablesLocal):
+		if not isinstance(localvars, self.PogsVariablesLocal):
 			raise TypeError('argument "localvars" must be of type {}'.format(
-							PogsVariablesLocal))
+							self.PogsVariablesLocal))
 
 		self.load_all_local(lib, localvars, solver)
 		lib.copy_output(solver, output.ptr)
@@ -487,7 +472,7 @@ class PogsTestCase(OptkitCTestCase):
 
 
 	def test_default_settings(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -510,7 +495,7 @@ class PogsTestCase(OptkitCTestCase):
 			self.assertAlmostEqual(settings.resume, RESUME_DEFAULT, 3)
 
 	def test_pogs_init_finish(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -528,7 +513,7 @@ class PogsTestCase(OptkitCTestCase):
 		hdl = c_void_p()
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -544,10 +529,10 @@ class PogsTestCase(OptkitCTestCase):
 			f_py = np.zeros(m).astype(lib.function)
 			g_py = np.zeros(n).astype(lib.function)
 			for i in xrange(m):
-				f_py[i] = lib.function(lib.enums.Abs, 1, 1, 1, 0, 0)
+				f_py[i] = lib.function(lib.function_enums.Abs, 1, 1, 1, 0, 0)
 
 			for j in xrange(n):
-				g_py[j] = lib.function(lib.enums.IndGe0, 1, 0, 1, 0, 0)
+				g_py[j] = lib.function(lib.function_enums.IndGe0, 1, 0, 1, 0, 0)
 			f_list = [lib.function(*f_) for f_ in f_py]
 			g_list = [lib.function(*g_) for g_ in g_py]
 
@@ -564,7 +549,7 @@ class PogsTestCase(OptkitCTestCase):
 				solver = lib.pogs_init(A_ptr, m, n, order,
 									   lib.enums.EquilSinkhorn)
 
-				output = PogsOutputLocal(lib, m, n)
+				output = self.PogsOutputLocal(lib, m, n)
 
 				info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan, np.nan)
 				settings = lib.pogs_settings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -572,7 +557,7 @@ class PogsTestCase(OptkitCTestCase):
 				lib.set_default_settings(settings)
 
 
-				localvars = PogsVariablesLocal(m, n, lib.pyfloat)
+				localvars = self.PogsVariablesLocal(m, n, lib.pyfloat)
 
 				if lib.full_api_accessible:
 					localA = np.zeros(
@@ -615,7 +600,7 @@ class PogsTestCase(OptkitCTestCase):
 		hdl = c_void_p()
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -634,10 +619,10 @@ class PogsTestCase(OptkitCTestCase):
 			f_ptr = f_py.ctypes.data_as(lib.function_p)
 			g_ptr = g_py.ctypes.data_as(lib.function_p)
 			for i in xrange(m):
-				f_py[i] = lib.function(lib.enums.Abs, 1, 1, 1, 0, 0)
+				f_py[i] = lib.function(lib.function_enums.Abs, 1, 1, 1, 0, 0)
 
 			for j in xrange(n):
-				g_py[j] = lib.function(lib.enums.IndGe0, 1, 0, 1, 0, 0)
+				g_py[j] = lib.function(lib.function_enums.IndGe0, 1, 0, 1, 0, 0)
 
 			lib.function_vector_memcpy_va(f, f_ptr)
 			lib.function_vector_memcpy_va(g, g_ptr)
@@ -655,7 +640,7 @@ class PogsTestCase(OptkitCTestCase):
 				solver = lib.pogs_init(A_ptr, m, n, order,
 									   lib.enums.EquilSinkhorn)
 
-				output = PogsOutputLocal(lib, m, n)
+				output = self.PogsOutputLocal(lib, m, n)
 
 				info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan, np.nan)
 				settings = lib.pogs_settings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -688,7 +673,7 @@ class PogsTestCase(OptkitCTestCase):
 		hdl = c_void_p()
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -707,10 +692,10 @@ class PogsTestCase(OptkitCTestCase):
 			f_ptr = f_py.ctypes.data_as(lib.function_p)
 			g_ptr = g_py.ctypes.data_as(lib.function_p)
 			for i in xrange(m):
-				f_py[i] = lib.function(lib.enums.Abs, 1, 1, 1, 0, 0)
+				f_py[i] = lib.function(lib.function_enums.Abs, 1, 1, 1, 0, 0)
 
 			for j in xrange(n):
-				g_py[j] = lib.function(lib.enums.IndGe0, 1, 0, 1, 0, 0)
+				g_py[j] = lib.function(lib.function_enums.IndGe0, 1, 0, 1, 0, 0)
 
 			lib.function_vector_memcpy_va(f, f_ptr)
 			lib.function_vector_memcpy_va(g, g_ptr)
@@ -725,7 +710,7 @@ class PogsTestCase(OptkitCTestCase):
 				A += self.A_test
 				A_ptr = A.ctypes.data_as(lib.ok_float_p)
 				m, n = A.shape
-				output = PogsOutputLocal(lib, m, n)
+				output = self.PogsOutputLocal(lib, m, n)
 
 				info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan, np.nan)
 				settings = lib.pogs_settings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -757,7 +742,7 @@ class PogsTestCase(OptkitCTestCase):
 		hdl = c_void_p()
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -781,10 +766,10 @@ class PogsTestCase(OptkitCTestCase):
 			f_ptr = f_py.ctypes.data_as(lib.function_p)
 			g_ptr = g_py.ctypes.data_as(lib.function_p)
 			for i in xrange(m):
-				f_py[i] = lib.function(lib.enums.Abs, 1, 1, 1, 0, 0)
+				f_py[i] = lib.function(lib.function_enums.Abs, 1, 1, 1, 0, 0)
 
 			for j in xrange(n):
-				g_py[j] = lib.function(lib.enums.IndGe0, 1, 0, 1, 0, 0)
+				g_py[j] = lib.function(lib.function_enums.IndGe0, 1, 0, 1, 0, 0)
 
 			lib.function_vector_memcpy_va(f, f_ptr)
 			lib.function_vector_memcpy_va(g, g_ptr)
@@ -802,7 +787,7 @@ class PogsTestCase(OptkitCTestCase):
 				solver = lib.pogs_init(A_ptr, m, n, order,
 									   lib.enums.EquilSinkhorn)
 
-				output = PogsOutputLocal(lib, m, n)
+				output = self.PogsOutputLocal(lib, m, n)
 
 				info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan, np.nan)
 				settings = lib.pogs_settings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -827,7 +812,7 @@ class PogsTestCase(OptkitCTestCase):
 					localA_ptr = localA.ctypes.data_as(lib.ok_float_p)
 					lib.matrix_memcpy_am(
 							localA_ptr, solver.contents.M.contents.A, order)
-					localvars = PogsVariablesLocal(m, n, lib.pyfloat)
+					localvars = self.PogsVariablesLocal(m, n, lib.pyfloat)
 					self.load_all_local(lib, localvars, solver)
 					self.assertTrue(np.allclose(x_rand,
 												localvars.e * localvars.x,
@@ -915,7 +900,7 @@ class PogsTestCase(OptkitCTestCase):
 		hdl = c_void_p()
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -937,10 +922,10 @@ class PogsTestCase(OptkitCTestCase):
 			f_ptr = f_py.ctypes.data_as(lib.function_p)
 			g_ptr = g_py.ctypes.data_as(lib.function_p)
 			for i in xrange(m):
-				f_py[i] = lib.function(lib.enums.Abs, 1, 1, 1, 0, 0)
+				f_py[i] = lib.function(lib.function_enums.Abs, 1, 1, 1, 0, 0)
 
 			for j in xrange(n):
-				g_py[j] = lib.function(lib.enums.IndGe0, 1, 0, 1, 0, 0)
+				g_py[j] = lib.function(lib.function_enums.IndGe0, 1, 0, 1, 0, 0)
 
 			lib.function_vector_memcpy_va(f, f_ptr)
 			lib.function_vector_memcpy_va(g, g_ptr)
@@ -958,7 +943,7 @@ class PogsTestCase(OptkitCTestCase):
 				solver = lib.pogs_init(A_ptr, m, n, order,
 									   lib.enums.EquilSinkhorn)
 
-				output = PogsOutputLocal(lib, m, n)
+				output = self.PogsOutputLocal(lib, m, n)
 
 				info = lib.pogs_info(0, 0, 0, np.nan, np.nan, np.nan, np.nan)
 				settings = lib.pogs_settings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

@@ -3,12 +3,10 @@ import os
 import numpy as np
 from ctypes import c_float, c_int, c_size_t, c_void_p, Structure, byref
 from optkit.libs import DenseLinsysLibs
-from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string, \
-							  DEFAULT_SHAPE, DEFAULT_MATRIX_PATH, \
-							  significant_digits
+from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.base import OptkitCTestCase
 
-class DenseLibsTestCase(unittest.TestCase):
+class DenseLibsTestCase(OptkitTestCase):
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
@@ -21,13 +19,13 @@ class DenseLibsTestCase(unittest.TestCase):
 
 	def test_libs_exist(self):
 		libs = []
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			libs.append(self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu))
 		self.assertTrue(any(libs))
 
 	def test_lib_types(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
@@ -46,7 +44,7 @@ class DenseLibsTestCase(unittest.TestCase):
 			self.assertTrue(lib.ok_int == c_int)
 
 	def test_blas_handle(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
@@ -59,7 +57,7 @@ class DenseLibsTestCase(unittest.TestCase):
 			self.assertEqual(lib.blas_destroy_handle(handle), 0)
 
 	def test_device_reset(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
@@ -76,7 +74,7 @@ class DenseLibsTestCase(unittest.TestCase):
 
 
 	def test_version(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
@@ -87,14 +85,14 @@ class DenseLibsTestCase(unittest.TestCase):
 			change = c_int()
 			status = c_int()
 
-			lib.denselib_version(byref(major), byref(minor), byref(change),
-								 byref(status))
+			lib.optkit_version(byref(major), byref(minor), byref(change),
+							   byref(status))
 
-			version = version_string(major.value, minor.value, change.value,
-									 status.value)
+			version = self.version_string(major.value, minor.value,
+										  change.value, status.value)
 
 			self.assertNotEqual(version, '0.0.0')
-			if VERBOSE_TEST:
+			if self.VERBOSE_TEST:
 				print("denselib version", version)
 
 class DenseBLASTestCase(OptkitCTestCase):
@@ -103,22 +101,14 @@ class DenseBLASTestCase(OptkitCTestCase):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
 		self.dense_libs = DenseLinsysLibs()
+		self.A_test = self.A_test_gen
 
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		self.shape = None
-		if DEFAULT_MATRIX_PATH is not None:
-			try:
-				self.A_test = np.load(DEFAULT_MATRIX_PATH)
-				self.shape = A.shape
-			except:
-				pass
-		if self.shape is None:
-			self.shape = DEFAULT_SHAPE
-			self.A_test = np.random.rand(*self.shape)
+		pass
 
 	def tearDown(self):
 		self.free_all_vars()
@@ -145,13 +135,14 @@ class DenseBLASTestCase(OptkitCTestCase):
 		(m, n) = self.shape
 		hdl = c_void_p()
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * single_precision
+			TOL = 10**(-DIGITS)
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -166,8 +157,8 @@ class DenseBLASTestCase(OptkitCTestCase):
 			lib.vector_memcpy_va(w, w_ptr, 1)
 			answer = lib.blas_dot(hdl, v, w)
 
-			self.assertAlmostEqual(significant_digits(answer),
-								   significant_digits(v_py.dot(w_py)), DIGITS)
+			self.assertTrue( np.abs(answer - v_py.dot(w_py)) <=
+							 TOL + TOL * answer )
 
 			self.free_var('v')
 			self.free_var('w')
@@ -179,13 +170,14 @@ class DenseBLASTestCase(OptkitCTestCase):
 		(m, n) = self.shape
 		hdl = c_void_p()
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * single_precision
+			TOL = 10**(-DIGITS)
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -195,9 +187,9 @@ class DenseBLASTestCase(OptkitCTestCase):
 			v_py += np.random.rand(m)
 			lib.vector_memcpy_va(v, v_ptr, 1)
 			answer = lib.blas_nrm2(hdl, v)
-			self.assertAlmostEqual(significant_digits(answer),
-								   significant_digits(np.linalg.norm(v_py)),
-								   DIGITS)
+
+			self.assertTrue( np.abs(answer - np.linalg.norm(v_py)) <=
+							 TOL + TOL * answer )
 
 			self.free_var('v')
 
@@ -208,13 +200,14 @@ class DenseBLASTestCase(OptkitCTestCase):
 		(m, n) = self.shape
 		hdl = c_void_p()
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * single_precision
+			TOL = 10**(-DIGITS)
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -224,9 +217,9 @@ class DenseBLASTestCase(OptkitCTestCase):
 			v_py += np.random.rand(m)
 			lib.vector_memcpy_va(v, v_ptr, 1)
 			answer = lib.blas_asum(hdl, v)
-			self.assertAlmostEqual(significant_digits(answer),
-								   significant_digits(np.linalg.norm(v_py, 1)),
-								   DIGITS)
+
+			self.assertTrue( np.abs(answer - np.linalg.norm(v_py, 1)) <=
+							 TOL + TOL * answer )
 
 			self.free_var('v')
 
@@ -239,13 +232,14 @@ class DenseBLASTestCase(OptkitCTestCase):
 		hdl = c_void_p()
 		v_rand= np.random.rand(m)
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * single_precision
+			TOL = 10**(-DIGITS)
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -257,6 +251,10 @@ class DenseBLASTestCase(OptkitCTestCase):
 			alpha = np.random.rand()
 			lib.blas_scal(hdl, alpha, v)
 			lib.vector_memcpy_av(v_ptr, v, 1)
+
+			self.assertTrue( np.linalg.norm(v_py - alpha * v_rand) <=
+							 TOL * m**0.5 + TOL * np.linalg.norm(v_py) )
+
 			self.assertTrue(np.allclose(v_py, alpha * v_rand, DIGITS))
 
 			self.free_var('v')
@@ -269,13 +267,14 @@ class DenseBLASTestCase(OptkitCTestCase):
 		(m, n) = self.shape
 		hdl = c_void_p()
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * single_precision
+			TOL = 10**(-DIGITS)
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -292,7 +291,8 @@ class DenseBLASTestCase(OptkitCTestCase):
 			lib.vector_memcpy_va(w, w_ptr, 1)
 			lib.blas_axpy(hdl, alpha, v, w)
 			lib.vector_memcpy_av(w_ptr, w, 1)
-			self.assertTrue(np.allclose(w_py, pyresult, DIGITS))
+			self.assertTrue( np.linalg.norm(w_py - pyresult) <=
+							 TOL * m**0.5 + TOL * np.linalg.norm(w_py) )
 
 			self.free_var('v')
 			self.free_var('w')
@@ -304,13 +304,14 @@ class DenseBLASTestCase(OptkitCTestCase):
 		(m, n) = self.shape
 		hdl = c_void_p()
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * single_precision
+			TOL = 10**(-DIGITS)
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -343,14 +344,17 @@ class DenseBLASTestCase(OptkitCTestCase):
 				lib.blas_gemv(hdl, lib.enums.CblasNoTrans, alpha, A, x, beta,
 							  y)
 				lib.vector_memcpy_av(y_ptr, y, 1)
-				self.assertTrue(np.allclose(y_py, pyresult, DIGITS))
+				self.assertTrue( np.linalg.norm(y_py - pyresult) <=
+							 	 TOL * m**0.5 + TOL * np.linalg.norm(y_py) )
+
 
 				# perform x = alpha * A' * y + beta * x
 				y_py[:] = pyresult[:]
 				pyresult = alpha * A_py.T.dot(y_py) + beta * x_py
 				lib.blas_gemv(hdl, lib.enums.CblasTrans, alpha, A, y, beta, x)
 				lib.vector_memcpy_av(x_ptr, x, 1)
-				self.assertTrue(np.allclose(x_py, pyresult, DIGITS))
+				self.assertTrue( np.linalg.norm(x_py - pyresult) <=
+							 	 TOL * n**0.5 + TOL * np.linalg.norm(x_py) )
 
 				self.free_var('A')
 				self.free_var('x')
@@ -380,13 +384,14 @@ class DenseBLASTestCase(OptkitCTestCase):
 
 		x_rand = np.random.rand(n)
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * single_precision
+			TOL = 10**(-DIGITS)
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -414,7 +419,8 @@ class DenseBLASTestCase(OptkitCTestCase):
 							  L, x)
 				lib.vector_memcpy_av(x_ptr, x, 1)
 
-				self.assertTrue(np.allclose(x_py, pyresult, DIGITS))
+				self.assertTrue( np.linalg.norm(x_py - pyresult) <=
+							 	 TOL * n**0.5 + TOL * np.linalg.norm(x_py) )
 
 				self.free_var('L')
 				self.free_var('x')
@@ -433,13 +439,14 @@ class DenseBLASTestCase(OptkitCTestCase):
 
 		hdl = c_void_p()
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * single_precision
+			TOL = 10**(-DIGITS)
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -476,8 +483,8 @@ class DenseBLASTestCase(OptkitCTestCase):
 						  diags - 1, alpha, s, x, beta, y)
 			lib.vector_memcpy_av(y_ptr, y, 1)
 
-
-			self.assertTrue(np.allclose(y_py, pyresult, DIGITS))
+			self.assertTrue( np.linalg.norm(y_py - pyresult) <=
+						 	 TOL * m**0.5 + TOL * np.linalg.norm(y_py) )
 
 			self.free_var('x')
 			self.free_var('y')
@@ -496,13 +503,14 @@ class DenseBLASTestCase(OptkitCTestCase):
 
 		hdl = c_void_p()
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * single_precision
+			TOL = 10**(-DIGITS)
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -530,7 +538,8 @@ class DenseBLASTestCase(OptkitCTestCase):
 			lib.blas_diagmv(hdl, alpha, d, x, beta, y)
 			lib.vector_memcpy_av(y_ptr, y, 1)
 
-			self.assertTrue(np.allclose(y_py, pyresult, DIGITS))
+			self.assertTrue( np.linalg.norm(y_py - pyresult) <=
+						 	 TOL * m**0.5 + TOL * np.linalg.norm(y_py) )
 
 			self.free_var('x')
 			self.free_var('y')
@@ -547,13 +556,15 @@ class DenseBLASTestCase(OptkitCTestCase):
 		B_test = np.random.rand(m, n)
 		C_test = np.random.rand(n, n)
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			DIGITS = 7 - 2 * single_precision - 1 * gpu
+			RTOL = 10**(-DIGITS)
+			ATOLMN = RTOL * (m * n)**0.5
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -589,6 +600,9 @@ class DenseBLASTestCase(OptkitCTestCase):
 							  lib.enums.CblasNoTrans, alpha, B, A, beta, C)
 				lib.matrix_memcpy_am(C_ptr, C, order)
 				self.assertTrue(np.allclose(pyresult, C_py, DIGITS))
+				self.assertTrue( np.linalg.norm(C_py - pyresult) <=
+						 	 	 ATOLMN + RTOL * np.linalg.norm(C_py) )
+
 
 				self.free_var('A')
 				self.free_var('B')
@@ -607,13 +621,14 @@ class DenseBLASTestCase(OptkitCTestCase):
 		# make B symmetric
 		B_test = B_test.T.dot(B_test)
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * single_precision
+			TOL = 10**(-DIGITS)
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -651,7 +666,9 @@ class DenseBLASTestCase(OptkitCTestCase):
 						if j > i:
 							pyresult[i, j] *= 0
 							B_py[i, j] *= 0
-				self.assertTrue(np.allclose(pyresult, B_py, DIGITS))
+				self.assertTrue( np.linalg.norm(B_py - pyresult) <=
+						 	 	 TOL * n + TOL * np.linalg.norm(B_py) )
+
 
 				self.free_var('A')
 				self.free_var('B')
@@ -673,7 +690,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 				if j > i:
 					L_test[i, j]*= 0
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			if gpu:
 				continue
 
@@ -682,7 +699,9 @@ class DenseBLASTestCase(OptkitCTestCase):
 			if lib is None:
 				continue
 
-			DIGITS = 5 if single_precision else 7
+			DIGITS = 7 - 2 * single_precision
+			RTOL = 10**(-DIGITS)
+			ATOLMN = RTOL * (m * n)**0.5
 
 			self.assertEqual(lib.blas_make_handle(byref(hdl)), 0)
 
@@ -711,7 +730,8 @@ class DenseBLASTestCase(OptkitCTestCase):
 						      1., L, A)
 				lib.matrix_memcpy_am(A_ptr, A, order)
 
-				self.assertTrue(np.allclose(pyresult, A_py, DIGITS))
+				self.assertTrue( np.linalg.norm(A_py - pyresult) <=
+						 	 	 ATOLMN + RTOL * np.linalg.norm(A_py) )
 
 				self.free_var('A')
 				self.free_var('L')
@@ -725,22 +745,14 @@ class DenseLinalgTestCase(OptkitCTestCase):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
 		self.dense_libs = DenseLinsysLibs()
+		self.A_test = self.A_test_gen
 
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		self.shape = None
-		if DEFAULT_MATRIX_PATH is not None:
-			try:
-				self.A_test = np.load(DEFAULT_MATRIX_PATH)
-				self.shape = A.shape
-			except:
-				pass
-		if self.shape is None:
-			self.shape = DEFAULT_SHAPE
-			self.A_test = np.random.rand(*self.shape)
+		pass
 
 	def tearDown(self):
 		self.free_all_vars()
@@ -768,7 +780,7 @@ class DenseLinalgTestCase(OptkitCTestCase):
 		pysol = np.linalg.solve(AA_test, x_rand)
 		pychol = np.linalg.cholesky(AA_test)
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 					single_precision=single_precision, gpu=gpu)
 			if lib is None:
@@ -838,14 +850,7 @@ class DenseLinalgTestCase(OptkitCTestCase):
 	def test_row_squares(self):
 		m, n = self.shape
 
-		py_rows = np.zeros(m)
-		py_cols = np.zeros(n)
-		for i in xrange(m):
-			py_rows[i] = self.A_test[i, :].dot(self.A_test[i, :])
-		for j in xrange(n):
-			py_cols[j] = self.A_test[:, j].dot(self.A_test[:, j])
-
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 				single_precision=single_precision, gpu=gpu)
 			if lib is None:
@@ -869,6 +874,9 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				A_py += self.A_test
 				A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
 				lib.matrix_memcpy_ma(A, A_ptr, order)
+
+				py_rows = [A_py[i, :].dot(A_py[i, :]) for i in xrange(m)]
+				py_cols = [A_py[:, j].dot(A_py[:, j]) for j in xrange(n)]
 
 				r = lib.vector(0, 0, None)
 				lib.vector_calloc(r, m, order)
@@ -909,7 +917,7 @@ class DenseLinalgTestCase(OptkitCTestCase):
 		(m, n) = self.shape
 		hdl = c_void_p()
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 				single_precision=single_precision, gpu=gpu)
 			if lib is None:
@@ -960,7 +968,8 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				y_ptr = y_py.ctypes.data_as(lib.ok_float_p)
 
 				d_py += np.random.rand(m)
-				e_py += np.random.rand(n)
+				# e_py += np.random.rand(n)
+				e_py += [i for i in xrange(n)]
 				x_py += np.random.rand(n)
 				lib.vector_memcpy_va(d, d_ptr, 1)
 				lib.vector_memcpy_va(e, e_ptr, 1)
@@ -973,7 +982,8 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				lib.blas_gemv(hdl, lib.enums.CblasNoTrans, 1, A, x, 0, y)
 				lib.vector_memcpy_av(y_ptr, y, 1)
 				Ax = y_py
-				AEx = self.A_test.dot(e_py * x_py)
+				AEx = A_py.dot(e_py * x_py)
+
 				self.assertTrue(np.linalg.norm(Ax - AEx) <=
 								ATOLM + RTOL * np.linalg.norm(AEx))
 
@@ -1021,7 +1031,7 @@ class DenseLinalgTestCase(OptkitCTestCase):
 		(m, n) = self.shape
 		hdl = c_void_p()
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.dense_libs.get(
 				single_precision=single_precision, gpu=gpu)
 			if lib is None:
