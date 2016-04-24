@@ -137,73 +137,6 @@ class DirectProjectorTestCase(OptkitCTestCase):
 
 		return x_out, y_out
 
-	# @staticmethod
-	# def equil_project(lib, equilibration_method, proj_test, order, A, x, y,
-	# 				  normalize=False):
-	# 	"""Equilibrated direct projection
-
-	# 		Given matrix A \in R^{m x n}, and input vectors y \in R^m
-	# 		and x \in R^n:
-
-	# 		(1) equilibrate A, such that
-
-	# 				A_{equil} = D * A * E,
-
-	# 		(2) project (x, y) onto the graph y = A_{equil} * x
-
-	# 		The equality
-
-	# 			D^{-1} * y_out == A * E * x_out
-
-	# 		should hold elementwise to float/double precision
-	# 	"""
-	# 	hdl = c_void_p()
-	# 	lib.blas_make_handle(byref(hdl))
-
-	# 	A = A.astype(lib.pyfloat)
-	# 	m, n = A.shape
-	# 	pyorder = 'C' if order == lib.enums.CblasRowMajor else 'F'
-
-	# 	A_in_ptr = A.ctypes.data_as(lib.ok_float_p)
-	# 	order_in = lib.enums.CblasRowMajor if A.flags.c_contiguous else \
-	# 			   lib.enums.CblasColMajor
-
-	# 	# Python matrix + vectors for equilibration output
-	# 	A_equil_py = np.zeros((m, n), dtype=lib.pyfloat, order=pyorder)
-	# 	d_py = np.zeros(m, dtype=lib.pyfloat)
-	# 	e_py = np.zeros(n, dtype=lib.pyfloat)
-
-	# 	A_equil_ptr = A_equil_py.ctypes.data_as(lib.ok_float_p)
-	# 	d_ptr = d_py.ctypes.data_as(lib.ok_float_p)
-	# 	e_ptr = e_py.ctypes.data_as(lib.ok_float_p)
-
-	# 	# C matrix + vectors for equilibration output
-	# 	A_equil = lib.matrix(0, 0, 0, None, order)
-	# 	d = lib.vector(0, 0, None)
-	# 	e = lib.vector(0, 0, None)
-
-	# 	lib.matrix_calloc(A_equil, m, n, order)
-	# 	lib.vector_calloc(d, m)
-	# 	lib.vector_calloc(e, n)
-
-	# 	# equilibrate in C, copy equilibration output back to Python
-	# 	equilibration_method(hdl, A_in_ptr, A_equil, d, e, order_in)
-	# 	lib.matrix_memcpy_am(A_equil_ptr, A_equil, order)
-	# 	lib.vector_memcpy_av(d_ptr, d, 1)
-	# 	lib.vector_memcpy_av(e_ptr, e, 1)
-
-	# 	lib.matrix_free(A_equil)
-	# 	lib.vector_free(d)
-	# 	lib.vector_free(e)
-
-	# 	lib.blas_destroy_handle(hdl)
-	# 	lib.ok_device_reset()
-
-	# 	x_p, y_p = proj_test(lib, lib, order, A_equil_py, x, y,
-	# 						 normalize=normalize)
-
-	# 	return x_p * e_py, y_p / d_py
-
 	def test_projection(self):
 		"""projection test
 
@@ -232,33 +165,6 @@ class DirectProjectorTestCase(OptkitCTestCase):
 
 					self.assertTrue( np.linalg.norm(Ax_proj - y_proj) <=
 									 ATOLM + RTOL * np.linalg.norm(y_proj) )
-
-	# def test_equilibrated_projection(self):
-	# 	"""equlibrated projection test
-
-	# 		(1) generate random A, x, y
-	# 		(2) equilibrate A
-	# 		(2b) optionally, normalize equilibrated A:
-	# 		(3) project (x, y) onto graph y = Ax
-	# 	"""
-	# 	for (gpu, single_precision) in self.CONDITIONS:
-	# 		lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-	# 		if lib is None:
-	# 			continue
-
-	# 		DIGITS = 6 - 2 * single_precision
-
-	# 		for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
-	# 			for normalize in (False, True):
-	# 				x_proj, y_proj = self.equil_project(lib,
-	# 													lib.sinkhorn_knopp,
-	# 											  		self.project, order,
-	# 											  		self.A_test, self.x_test,
-	# 											 		self.y_test,
-	# 											  		normalize=normalize)
-
-	# 				self.assertTrue(np.allclose(self.A_test.dot(x_proj),
-	# 											y_proj, DIGITS))
 
 class IndirectProjectorTestCase(OptkitCOperatorTestCase):
 	"""
