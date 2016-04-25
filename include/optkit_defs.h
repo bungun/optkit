@@ -55,6 +55,12 @@ typedef enum optkit_status {
 			err = call; \
 	} while(0)
 
+#define OK_MAX_ERR(err, call) \
+	do { \
+		ok_status newerr = call; \
+		err = err > newerr ? err : newerr; \
+	} while(0)
+
 #define OK_RETURNIF_ERR(call) \
 	do { \
 		ok_status err = call; \

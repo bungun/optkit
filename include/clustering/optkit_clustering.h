@@ -55,7 +55,7 @@ static ok_status cluster_aid_subselect(cluster_aid * h, size_t offset_A,
 
 	h->reassigned = 0;
 
-	OPTKIT_RETURN_IF_ERROR(upsamplingvec_subvector(&h->a2c_tentative,
+	OK_RETURNIF_ERR(upsamplingvec_subvector(&h->a2c_tentative,
 		&h->a2c_tentative_full, offset_A, sub_size_A, sub_size_C));
 
 	vector_subvector(&h->c_squared, &h->c_squared_full, offset_C,
@@ -79,13 +79,13 @@ ok_status cluster_aid_alloc(cluster_aid * h, size_t size_A, size_t size_C,
 	memset(h, 0, sizeof(*h));
 
 	h->indicator = (int *) malloc(sizeof(int));
-	OPTKIT_RETURN_IF_ERROR(upsamplingvec_alloc(&h->a2c_tentative_full,
-		size_A, size_C));
+	OK_RETURNIF_ERR(upsamplingvec_alloc(&h->a2c_tentative_full, size_A,
+		size_C));
 	vector_calloc(&h->c_squared_full, size_C);
 	vector_calloc(&h->d_min_full, size_A);
 	matrix_calloc(&h->D_full, size_C, size_A, order);
-	OPTKIT_CHECK_ERROR(&err, blas_make_handle(&h->hdl));
-	OPTKIT_CHECK_ERROR(&err, cluster_aid_subselect(h, 0, 0, size_A, size_C));
+	OK_CHECK_ERR(&err, blas_make_handle(&h->hdl));
+	OK_CHECK_ERR(&err, cluster_aid_subselect(h, 0, 0, size_A, size_C));
 	return err;
 }
 
@@ -101,7 +101,7 @@ ok_status cluster_aid_free(cluster_aid * h)
 	matrix_free(&h->D_full);
 	vector_free(&h->d_min_full);
 	vector_free(&h->c_squared_full);
-	OPTKIT_CHECK_ERROR(&err, upsamplingvec_free(&h->a2c_tentative_full));
+	OK_CHECK_ERR(&err, upsamplingvec_free(&h->a2c_tentative_full));
 	ok_free(h->indicator);
 
 	/* clear h */
@@ -206,7 +206,7 @@ ok_status cluster(matrix * A, matrix * C, upsamplingvec * a2c,
 		h = *helper;
 	} else {
 		h = (cluster_aid *) malloc(sizeof(*h));
-		OPTKIT_RETURN_IF_ERROR(
+		OK_RETURNIF_ERR(
 			cluster_aid_alloc(h, A->size1, C->size1, A->order));
 		*helper = h;
 	}
@@ -230,9 +230,9 @@ ok_status cluster(matrix * A, matrix * C, upsamplingvec * a2c,
 
 	/* finalize cluster assignements */
 	if (maxdist == OK_INFINITY)
-		OPTKIT_CHECK_ERROR(&err, assign_clusters_l2(A, C, a2c, h));
+		OK_CHECK_ERR(&err, assign_clusters_l2(A, C, a2c, h));
 	else
-		OPTKIT_CHECK_ERROR(&err, assign_clusters_l2_lInf_cap(A, C, a2c,
+		OK_CHECK_ERR(&err, assign_clusters_l2_lInf_cap(A, C, a2c,
 			h, maxdist));
 	return err;
 }
@@ -246,9 +246,9 @@ ok_status calculate_centroids(matrix * A, matrix * C, upsamplingvec * a2c,
 	vector * counts)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	OPTKIT_CHECK_ERROR(&err, upsamplingvec_mul_matrix(CblasTrans,
+	OK_CHECK_ERR(&err, upsamplingvec_mul_matrix(CblasTrans,
 		CblasNoTrans, CblasNoTrans, kOne, a2c, A, kZero, C));
-	OPTKIT_CHECK_ERROR(&err, upsamplingvec_count(a2c, counts));
+	OK_CHECK_ERR(&err, upsamplingvec_count(a2c, counts));
 	vector_safe_recip(counts);
 	linalg_matrix_broadcast_vector(C, counts, OkTransformScale, CblasLeft);
 	return err;
@@ -296,7 +296,7 @@ ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
 	int valid;
 
 	/* bounds/dimension checks */
-	OPTKIT_RETURN_IF_ERROR(upsamplingvec_check_bounds(a2c));
+	OK_RETURNIF_ERR(upsamplingvec_check_bounds(a2c));
 	valid = (counts->size == C->size1) && (A->size2 == C->size2);
 	valid &= (A->size1 == a2c->size1) && (C->size2 >= a2c->size2);
 	if (!valid)
@@ -310,7 +310,7 @@ ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
 	}
 
 	/* ensure C is initialized */
-	OPTKIT_CHECK_ERROR(&err, calculate_centroids(A, C, a2c, counts));
+	OK_CHECK_ERR(&err, calculate_centroids(A, C, a2c, counts));
 
 	if (!err && verbose)
 		printf("\nstarting k-means on %zu vectors and %zu centroids\n",
@@ -321,8 +321,8 @@ ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
 			&maxiter);
 		printf("%s %zu %s %f\n", "ITER", iter, "DISTANCE TOLERANCE",
 			tol);
-		OPTKIT_CHECK_ERROR(&err, cluster(A, C, a2c, &h, tol));
-		OPTKIT_CHECK_ERROR(&err, calculate_centroids(A, C, a2c,
+		OK_CHECK_ERR(&err, cluster(A, C, a2c, &h, tol));
+		OK_CHECK_ERR(&err, calculate_centroids(A, C, a2c,
 			counts));
 		if (verbose)
 			printf(iterfmt, iter, h->reassigned, change_abstol);
@@ -333,7 +333,7 @@ ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
 		printf(exitfmt, iter + 1, err);
 
 	if (!cluster_aid_provided)
-		OPTKIT_MAX_ERROR(&err, k_means_finish(h));
+		OK_MAX_ERR(&err, k_means_finish(h));
 
 	return err;
 }
@@ -363,15 +363,15 @@ ok_status kmeans_easy_run(const void * work, const kmeans_settings * const s,
 	if (!w || !w->indicator)
 		return OPTKIT_ERROR_UNALLOCATED;
 
-	OPTKIT_CHECK_ERROR(&err, kmeans_work_load(w, io->A, io->orderA, io->C,
+	OK_CHECK_ERR(&err, kmeans_work_load(w, io->A, io->orderA, io->C,
 		io->orderC, io->a2c, io->stride_a2c, io->counts,
 		io->stride_counts));
 
-	OPTKIT_CHECK_ERROR(&err, k_means(&w->A, &w->C, &w->a2c, &w->counts,
+	OK_CHECK_ERR(&err, k_means(&w->A, &w->C, &w->a2c, &w->counts,
 		&w->h, s->dist_reltol, s->change_abstol, s->maxiter,
 		s->verbose));
 
-	OPTKIT_CHECK_ERROR(&err, kmeans_work_extract(io->C, io->orderC,
+	OK_CHECK_ERR(&err, kmeans_work_extract(io->C, io->orderC,
 		io->a2c, io->stride_a2c, io->counts, io->stride_counts, w));
 
 	return err;

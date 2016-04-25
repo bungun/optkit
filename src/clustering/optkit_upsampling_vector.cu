@@ -33,7 +33,7 @@ ok_status upsamplingvec_alloc(upsamplingvec * u, size_t size1, size_t size2)
 	memset(u, 0, sizeof(*u));
 	u->size1 = size1;
 	u->size2 = size2;
-	indvector_calloc(&u->vec, size1);
+	OK_RETURNIF_ERR( indvector_calloc(&u->vec, size1) );
 	u->indices = u->vec.data;
 	u->stride = u->vec.stride;
 	return OPTKIT_SUCCESS;
@@ -50,10 +50,14 @@ ok_status upsamplingvec_free(upsamplingvec * u)
 
 ok_status upsamplingvec_check_bounds(const upsamplingvec * u)
 {
-	if (indvector_max(&u->vec) < u->size2)
-		return OPTKIT_SUCCESS;
-	else
-		return OPTKIT_ERROR_DIMENSION_MISMATCH;
+	size_t idx;
+	ok_status err = OPTKIT_SUCCESS;
+
+	err = indvector_max(&u->vec, &idx);
+	if (idx >= u->size2)
+		OK_MAX_ERR( err, OPTKIT_ERROR_DIMENSION_MISMATCH )
+
+	return err;
 }
 
 ok_status upsamplingvec_update_size(upsamplingvec * u)
@@ -61,15 +65,18 @@ ok_status upsamplingvec_update_size(upsamplingvec * u)
 	if (!u || !u->indices)
 		return OPTKIT_ERROR_UNALLOCATED;
 
-	u->size2 = indvector_max(&u->vec);
-	return OPTKIT_SUCCESS;
+	return indvector_max(&u->vec, &u->size2);
 }
 
 
 ok_status upsamplingvec_subvector(upsamplingvec * usub, upsamplingvec * u,
 	size_t offset1, size_t length1, size_t size2)
 {
-	indvector_subvector(&usub->vec, &u->vec, offset1, length1);
+	if (!u || !u->indices || !usub)
+		return OPTKIT_ERROR_UNALLOCATED;
+
+	OK_RETURNIF_ERR( indvector_subvector(&usub->vec, &u->vec, offset1,
+		length1) );
 	usub->indices = usub->vec.data;
 	usub->size1 = length1;
 	usub->size2 = size2;
@@ -146,7 +153,7 @@ ok_status upsamplingvec_mul_matrix(const enum CBLAS_TRANSPOSE transU,
 	col_stride_in = (row_stride_in == 1) ? (uint) M_in->ld : 1;
 	col_stride_out = (row_stride_out == 1) ? (uint) M_out->ld : 1;
 
-	matrix_scale(M_out, beta);
+	OK_RETURNIF_ERR( matrix_scale(M_out, beta) );
 
 	if (transU == CblasNoTrans)
 		__uvec_mul_matrix<<<grid_dim, block_dim>>>(alpha, M_in->data,
@@ -161,9 +168,7 @@ ok_status upsamplingvec_mul_matrix(const enum CBLAS_TRANSPOSE transU,
 			M_in->size2);
 
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
-
-	return OPTKIT_SUCCESS;
+	return OK_STATUS_CUDA;
 }
 
 static __global__ void __upsampling_count(size_t * indices,
@@ -185,15 +190,13 @@ ok_status upsamplingvec_count(const upsamplingvec * u, vector * counts)
 	if (u->size2 > counts->size)
 		return OPTKIT_ERROR_DIMENSION_MISMATCH;
 
-	vector_scale(counts, kZero);
+	OK_RETURNIF_ERR( err, vector_scale(counts, kZero) );
 
 	__upsampling_count<<<grid_dim, kBlockSize>>>(u->indices, counts->data,
 		u->stride, counts->stride, u->size1);
 
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
-
-	return OPTKIT_SUCCESS;
+	return OK_STATUS_CUDA;
 }
 
 #ifdef __cplusplus
