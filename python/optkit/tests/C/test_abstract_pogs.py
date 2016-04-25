@@ -876,9 +876,10 @@ class PogsAbstractTestCases(OptkitCPogsTestCase, OptkitCOperatorTestCase):
 						self.assertEqual(err, 0)
 
 						if info.converged:
-							rtol = settings.reltol
-							atolm = settings.abstol * (m**0.5)
-							atoln = settings.abstol * (n**0.5)
+							FP_FACTOR = 10 * single_precision
+							rtol = settings.reltol * FP_FACTOR
+							atolm = settings.abstol * (m**0.5) * FP_FACTOR
+							atoln = settings.abstol * (n**0.5) * FP_FACTOR
 							y_norm = np.linalg.norm(output.y)
 							mu_norm = np.linalg.norm(output.mu)
 

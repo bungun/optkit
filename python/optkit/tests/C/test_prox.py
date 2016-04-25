@@ -4,7 +4,7 @@ import numpy as np
 from ctypes import c_int, byref, c_void_p
 from optkit.libs import ProxLibs
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
-from optkit.tests.defs OptkitTestCase
+from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.base import OptkitCTestCase
 
 class ProxLibsTestCase(OptkitTestCase):
@@ -54,7 +54,7 @@ class ProxLibsTestCase(OptkitTestCase):
 										  change.value, status.value)
 
 			self.assertNotEqual(version, '0.0.0')
-			if VERBOSE_TEST:
+			if self.VERBOSE_TEST:
 				print("proxlib version", version)
 
 class ProxTestCase(OptkitCTestCase):
@@ -63,7 +63,6 @@ class ProxTestCase(OptkitCTestCase):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
 		self.libs = ProxLibs()
-		self.shape = DEFAULT_SHAPE
 		self.scalefactor = 5
 
 	@classmethod
@@ -137,7 +136,7 @@ class ProxTestCase(OptkitCTestCase):
 			elast = 0.
 
 			for hkey, hval in lib.function_enums.dict.items():
-				if VERBOSE_TEST:
+				if self.VERBOSE_TEST:
 					print hkey
 
 				for i in xrange(m):
@@ -337,7 +336,7 @@ class ProxTestCase(OptkitCTestCase):
 			lib.vector_memcpy_va(x, x_ptr, 1)
 
 			for hkey, hval in lib.function_enums.dict.items():
-				if VERBOSE_TEST:
+				if self.VERBOSE_TEST:
 					print hkey
 
 				# avoid domain errors with randomly generated data

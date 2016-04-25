@@ -722,9 +722,9 @@ class PogsTestCase(OptkitCPogsTestCase):
 					lib.enums.EquilSinkhorn, 0)
 
 				if info.converged:
-					rtol = settings.reltol
-					atolm = settings.abstol * (m**0.5)
-					atoln = settings.abstol * (n**0.5)
+					rtol = settings.reltol * 10 * single_precision
+					atolm = settings.abstol * (m**0.5) * 10 * single_precision
+					atoln = settings.abstol * (n**0.5) * 10 * single_precision
 					y_norm = np.linalg.norm(output.y)
 					mu_norm = np.linalg.norm(output.mu)
 
