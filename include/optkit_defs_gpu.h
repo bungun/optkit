@@ -18,6 +18,8 @@ const unsigned int kMaxGridSize = 65535u;
  * http://stackoverflow.com/questions/14038589/what-is-the-canonical-way-to-
  * check-for-errors-using-the-cuda-runtime-api
  */
+
+
 #define OK_CHECK_CUDA(err, expr) \
 	do { \
 		if (!err) \
@@ -43,15 +45,14 @@ const unsigned int kMaxGridSize = 65535u;
 				__FILE__, __LINE__, __func__); \
 	} while (0)
 
-#define ok_alloc_gpu(x, n) cudaMalloc((void **) &x, n); \
+#define ok_alloc_gpu(x, n) ok_cuda_status( cudaMalloc((void **) &x, n) )
 
-#define ok_memcpy_gpu(x, y, n) cudaMemcpy(x, y, n, cudaMemcpyDefault);
+#define ok_memcpy_gpu(x, y, n) ok_cuda_status( cudaMemcpy( x, y, n, \
+		cudaMemcpyDefault) )
 
-#define ok_free_gpu(x) \
-	do { \
-		cudaFree(x); \
-		x = OK_NULL; \
-	} while(0)
+#define ok_memset_gpu(x, val, n) ok_cuda_status( cudaMemset( x, y, n) )
+
+#define ok_free_gpu(x) ok_cuda_free(x)
 
 
 #ifndef FLOAT
@@ -158,6 +159,14 @@ inline ok_status ok_cusparse_status(cusparseStatus_t code, const char *file,
 		return OPTKIT_SUCCESS;
 	}
 }
+
+inline ok_status ok_cuda_free(void * x)
+{
+	ok_status err = ok_cuda_status( cudaFree(x) );
+	x = OK_NULL;
+	return err;
+}
+
 
 #ifdef __cplusplus
 }

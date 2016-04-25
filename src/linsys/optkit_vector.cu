@@ -39,28 +39,23 @@ ok_status vector_alloc_(vector_<T> * v, size_t n)
 		return OPTKT_ERROR_OVERWRITE;
 	v->size = n;
 	v->stride = 1;
-	ok_alloc_gpu(v->data, n * sizeof(T));
-	return OK_STATUS_CUDA;
+	return ok_alloc_gpu(v->data, n * sizeof(T));
 }
 
 template<typename T>
 ok_status vector_calloc_(vector_<T> * v, size_t n)
 {
-	ok_status err = vector_alloc_<T>(v, n);
-	OK_CHECK_ERR( err, __vector_set_all<T>(v, static_cast<T>(0)) );
-	return err;
+	OK_RETURNIF_ERR( vector_alloc_<T>(v, n) );
+	return __vector_set_all<T>(v, static_cast<T>(0));
 }
 
 template<typename T>
 ok_status vector_free_(vector_<T> * v)
 {
-	if (v && v->data != OK_NULL)
-		ok_free_gpu(v->data);
-	else
-		return OPTKIT_ERROR_UNALLOCATED;
+	OK_CHECK_VECTOR(v);
 	v->size = (size_t) 0;
 	v->stride = (size_t) 0;
-	return OK_STATUS_CUDA;
+	return ok_free_gpu(v->data);
 }
 
 template<typename T>
@@ -99,14 +94,14 @@ ok_status vector_memcpy_vv_(vector_<T> * v1, const vector_<T> * v2)
 	OK_CHECK_VECTOR(v1);
 	OK_CHECK_VECTOR(v2);
 	if ( v1->stride == 1 && v2->stride == 1) {
-		ok_memcpy_gpu(v1->data, v2->data, v1->size * sizeof(T));
+		return ok_memcpy_gpu(v1->data, v2->data, v1->size * sizeof(T));
 	} else {
 		grid_dim = calc_grid_dim(v1->size);
 		__strided_memcpy<T><<<grid_dim, kBlockSize>>>(v1->data,
 			v1->stride, v2->data, v2->stride, v1->size);
 		cudaDeviceSynchronize();
+		return OK_STATUS_CUDA;
 	}
-	return OK_STATUS_CUDA;
 }
 
 template<typename T>
@@ -120,13 +115,11 @@ ok_status vector_memcpy_va_(vector_<T> * v, const T *y, size_t stride_y)
 
 
 	if (v->stride == 1 && stride_y == 1)
-		OK_CHECK_CUDA( err, ok_memcpy_gpu(v->data, y,
-			v->size * sizeof(T)) );
+		return ok_memcpy_gpu(v->data, y, v->size * sizeof(T));
 	else
 		for (i = 0; i < v->size && !err; ++i)
-			OK_CHECK_CUDA( err, ok_memcpy_gpu(
-				v->data + i * v->stride, y + i * stride_y,
-				sizeof(T)) );
+			err = ok_memcpy_gpu(v->data + i * v->stride,
+				y + i * stride_y, sizeof(T));
 	return err;
 }
 
@@ -140,12 +133,11 @@ ok_status vector_memcpy_av_(T *x, const vector_<T> *v, size_t stride_x)
 		return OPTKIT_ERROR_UNALLOCATED;
 
 	if (v->stride == 1 && stride_x == 1)
-		OK_CHECK_CUDA( err, ok_memcpy_gpu(x, v->data,
-			v->size * sizeof(T)) );
+		return ok_memcpy_gpu(x, v->data, v->size * sizeof(T));
 	else
 		for (i = 0; i < v->size && !err; ++i)
-			OK_CHECK_CUDA( err, ok_memcpy_gpu(x + i * stride_x,
-				v->data + i * v->stride, sizeof(T)) );
+			err = ok_memcpy_gpu(x + i * stride_x,
+				v->data + i * v->stride, sizeof(T));
 	return err;
 }
 
