@@ -264,6 +264,9 @@ inline void __thrust_vector_exp(vector * v)
 template<typename T>
 inline size_t __thrust_vector_indmin(const vector_<T> * v)
 {
+	if (!v || !v->data)
+		return INT_MAX;
+
 	strided_range<thrust::device_ptr<T> > r =
 		__make_const_strided_range<T>(v);
 	T * res = thrust::raw_pointer_cast(
@@ -274,6 +277,9 @@ inline size_t __thrust_vector_indmin(const vector_<T> * v)
 template<typename T>
 inline T __thrust_vector_min(const vector_<T> * v)
 {
+	if (!v || !v->data)
+		return static_cast<T>(OK_NAN);
+
 	strided_range<thrust::device_ptr<T> > r =
 		__make_const_strided_range<T>(v);
 	return thrust::min_element(r.begin(), r.end())[0];
@@ -282,6 +288,9 @@ inline T __thrust_vector_min(const vector_<T> * v)
 template<typename T>
 inline T __thrust_vector_max(const vector_<T> * v)
 {
+	if (!v || !v->data)
+		return static_cast<T>(OK_NAN);
+
 	strided_range<thrust::device_ptr<T> > r =
 		__make_const_strided_range<T>(v);
 	return thrust::max_element(r.begin(), r.end())[0];

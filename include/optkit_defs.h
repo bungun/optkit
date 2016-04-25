@@ -49,26 +49,20 @@ typedef enum optkit_status {
 	OPTKIT_ERROR_UNALLOCATED = 101
 } ok_status;
 
-#define OPTKIT_CHECK_ERROR(errptr, call) \
+#define OK_CHECK_ERR(err, call) \
 	do { \
-		if (!*errptr) \
-			*errptr = call; \
+		if (!err) \
+			err = call; \
 	} while(0)
 
-#define OPTKIT_MAX_ERROR(errptr, call) \
-	do { \
-		if (!*errptr) { \
-			ok_status new_err = call; \
-			*errptr = new_err > *errptr ? new_err : *errptr; \
-		} \
-	} while(0)
-
-#define OPTKIT_RETURN_IF_ERROR(call) \
+#define OK_RETURNIF_ERR(call) \
 	do { \
 		ok_status err = call; \
 		if (err) \
 			return err; \
 	} while(0)
+
+#define OK_CHECK_PTR(ptr) if (!ptr) return OPTKIT_ERROR_UNALLOCATED
 
 enum OPTKIT_TRANSFORM {
 	OkTransformScale = 0,

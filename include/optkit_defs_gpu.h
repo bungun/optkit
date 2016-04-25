@@ -14,60 +14,44 @@ const unsigned int kBlockSize2D = 32u;
 const unsigned int kTiles2D = 8u;
 const unsigned int kMaxGridSize = 65535u;
 
-#ifndef CUDA_CHECK_ERR
-#define CUDA_CHECK_ERR \
-	do { \
-		cudaError_t err = cudaGetLastError(); \
-		if (err != cudaSuccess) { \
-			printf("%s:%d:%s\n ERROR_CUDA: %s\n", \
-				__FILE__, __LINE__, __func__, \
-				cudaGetErrorString(err)); \
-		} \
-	} while (0)
-#endif
-
 /*
  * http://stackoverflow.com/questions/14038589/what-is-the-canonical-way-to-
  * check-for-errors-using-the-cuda-runtime-api
  */
-// #define CUDA_CHECK_ERR(ans) \
-// 	do { \
-// 		ok_cuda_status((ans), __FILE__, __LINE__, __func__); \
-// 	} while (0)
-
-#define CUBLAS_CHECK_ERR(ans) \
+#define OK_CHECK_CUDA(err, expr) \
 	do { \
-		ok_cublas_status((ans), __FILE__, __LINE__, __func__); \
+		if (!err) \
+			expr;
+			err = ok_cuda_status(cudaGetLastError(), \
+				__FILE__, __LINE__, __func__); \
 	} while (0)
 
-#define CUSPARSE_CHECK_ERR(ans) \
+#define OK_STATUS_CUDA ok_cuda_status(cudaGetLastError(), __FILE__, __LINE__, \
+		__func__)
+
+#define OK_CHECK_CUBLAS(err, expr) \
 	do { \
-		ok_cusparse_status((ans), __FILE__, __LINE__, __func__); \
+		if (!err) \
+			err = ok_cublas_status(expr, \
+				__FILE__, __LINE__, __func__); \
 	} while (0)
 
-#define ok_alloc_gpu(x, n) \
+#define OK_CHECK_CUSPARSE(err, expr) \
 	do { \
-		cudaMalloc((void **) &x, n); \
-		CUDA_CHECK_ERR; \
+		if (err) \
+			err = ok_cusparse_status(expr, \
+				__FILE__, __LINE__, __func__); \
 	} while (0)
-// #define ok_alloc_gpu(x, n) OK_CHECK_CUDA( cudaMalloc((void **) &x, n) )
 
+#define ok_alloc_gpu(x, n) cudaMalloc((void **) &x, n); \
 
-#define ok_memcpy_gpu(x, y, n) \
-	do { \
-		cudaMemcpy(x, y, n, cudaMemcpyDefault); \
-		CUDA_CHECK_ERR; \
-	} while (0)
-// #define ok_memcpy_gpu(x, y, n) OK_CHECK_CUDA( cudaMemcpy(x, y, n, cudaMemcpyDefault); )
-
+#define ok_memcpy_gpu(x, y, n) cudaMemcpy(x, y, n, cudaMemcpyDefault);
 
 #define ok_free_gpu(x) \
 	do { \
 		cudaFree(x); \
-		CUDA_CHECK_ERR; \
 		x = OK_NULL; \
 	} while(0)
-// #define ok_free_gpu(x, y, n) do { OK_CHECK_CUDA( cudaFree(x); ); x = OK_NULL; } while(0)
 
 
 #ifndef FLOAT
