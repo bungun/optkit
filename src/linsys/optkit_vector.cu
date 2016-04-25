@@ -32,7 +32,7 @@ static __global__ void __strided_memcpy(T * x, size_t stride_x, const T * y,
 template<typename T>
 void vector_alloc_(vector_<T> * v, size_t n)
 {
-	if (!v || !v->data)
+	if (!v || v->data)
 		return;
 	v->size = n;
 	v->stride = 1;
@@ -42,6 +42,8 @@ void vector_alloc_(vector_<T> * v, size_t n)
 template<typename T>
 void vector_calloc_(vector_<T> * v, size_t n)
 {
+	if (!v || v->data)
+		return;
 	vector_alloc_<T>(v, n);
 	__vector_set_all<T>(v, static_cast<T>(0));
 }

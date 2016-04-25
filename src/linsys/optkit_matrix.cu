@@ -74,6 +74,8 @@ static __global__ void __matrix_add_constant_diag(T * data, T x,
 template<typename T>
 void matrix_alloc_(matrix_<T> * A, size_t m, size_t n, enum CBLAS_ORDER ord)
 {
+	if (!A || A->data)
+		return;
 	A->size1 = m;
 	A->size2 = n;
 	ok_alloc_gpu(A->data, m * n * sizeof(ok_float));
@@ -84,7 +86,7 @@ void matrix_alloc_(matrix_<T> * A, size_t m, size_t n, enum CBLAS_ORDER ord)
 template<typename T>
 void matrix_calloc_(matrix_<T> * A, size_t m, size_t n, enum CBLAS_ORDER ord)
 {
-	if (!A)
+	if (!A || A->data)
 		return;
 	matrix_alloc(A, m, n, ord);
 	cudaMemset(A->data, 0, m * n * sizeof(ok_float));
