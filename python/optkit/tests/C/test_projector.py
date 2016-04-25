@@ -364,7 +364,7 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 				continue
 
 			TOL_PLACEHOLDER = 1e-8
-			DIGITS = 7 - 2 * lib.FLOAT - 1 * lib.GPU
+			DIGITS = 7 - 3 * lib.FLOAT - 1 * lib.GPU
 			RTOL = 10**(-DIGITS)
 			ATOLM = RTOL * m**0.5
 

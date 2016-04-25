@@ -3,12 +3,11 @@ import os
 import numpy as np
 from ctypes import c_int, byref, c_void_p
 from optkit.libs import ProxLibs
-from optkit.tests.defs import VERBOSE_TEST, CONDITIONS, version_string, \
-							  DEFAULT_SHAPE, significant_digits
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
+from optkit.tests.defs OptkitTestCase
 from optkit.tests.C.base import OptkitCTestCase
 
-class ProxLibsTestCase(unittest.TestCase):
+class ProxLibsTestCase(OptkitTestCase):
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
@@ -21,13 +20,13 @@ class ProxLibsTestCase(unittest.TestCase):
 
 	def test_libs_exist(self):
 		libs = []
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			libs.append(self.libs.get(single_precision=single_precision,
 									  gpu=gpu))
 		self.assertTrue(any(libs))
 
 	def test_lib_types(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -38,7 +37,7 @@ class ProxLibsTestCase(unittest.TestCase):
 			self.assertTrue('function_vector_p' in dir(lib))
 
 	def test_version(self):
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -48,24 +47,15 @@ class ProxLibsTestCase(unittest.TestCase):
 			change = c_int()
 			status = c_int()
 
-			lib.denselib_version(byref(major), byref(minor), byref(change),
-								  byref(status))
+			lib.optkit_version(byref(major), byref(minor), byref(change),
+							   byref(status))
 
-			dversion = version_string(major.value, minor.value, change.value,
-									  status.value)
+			version = self.version_string(major.value, minor.value,
+										  change.value, status.value)
 
-			self.assertNotEqual(dversion, '0.0.0')
-
-			lib.proxlib_version(byref(major), byref(minor), byref(change),
-								byref(status))
-
-			pxversion = version_string(major.value, minor.value, change.value,
-									   status.value)
-
-			self.assertNotEqual(pxversion, '0.0.0')
-			self.assertEqual(pxversion, dversion)
+			self.assertNotEqual(version, '0.0.0')
 			if VERBOSE_TEST:
-				print("proxlib version", pxversion)
+				print("proxlib version", version)
 
 class ProxTestCase(OptkitCTestCase):
 	@classmethod
@@ -97,7 +87,7 @@ class ProxTestCase(OptkitCTestCase):
 	def test_alloc(self):
 		m, n = self.shape
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -125,12 +115,15 @@ class ProxTestCase(OptkitCTestCase):
 		d = np.random.rand()
 		e = np.random.rand()
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			DIGITS = 5 if lib.FLOAT else 7
+			DIGITS = 7 - 2 * single_precision
+			RTOL = 10**(-DIGITS)
+			ATOLM = RTOL * m**0.5
+			ATOLN = RTOL * n**0.5
 
 			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
 			self.register_var('f', f, lib.function_vector_free)
@@ -151,24 +144,34 @@ class ProxTestCase(OptkitCTestCase):
 					f_py[i] = lib.function(hval, a, b, c, d, e)
 
 				f_list = [lib.function(*f_) for f_ in f_py]
-				for i in xrange(m):
-					self.assertAlmostEqual(f_list[i].h, hval, DIGITS)
-					self.assertAlmostEqual(f_list[i].a, a, DIGITS)
-					self.assertAlmostEqual(f_list[i].b, b, DIGITS)
-					self.assertAlmostEqual(f_list[i].c, c, DIGITS)
-					self.assertAlmostEqual(f_list[i].d, d, DIGITS)
-					self.assertAlmostEqual(f_list[i].e, e, DIGITS)
-
+				fh = [f_.h - hval for f_ in f_list]
+				fa = [f_.a - a for f_ in f_list]
+				fb = [f_.b - b for f_ in f_list]
+				fc = [f_.c - c for f_ in f_list]
+				fd = [f_.d - d for f_ in f_list]
+				fe = [f_.e - e for f_ in f_list]
+				self.assertTrue( np.linalg.norm(fh) <= ATOLM )
+				self.assertTrue( np.linalg.norm(fa) <= ATOLM )
+				self.assertTrue( np.linalg.norm(fb) <= ATOLM )
+				self.assertTrue( np.linalg.norm(fc) <= ATOLM )
+				self.assertTrue( np.linalg.norm(fd) <= ATOLM )
+				self.assertTrue( np.linalg.norm(fe) <= ATOLM )
 				# memcpy af
 				lib.function_vector_memcpy_av(f_ptr, f)
 				f_list = [lib.function(*f_) for f_ in f_py]
-				for i in xrange(m):
-					self.assertAlmostEqual(f_list[i].h, hlast, DIGITS)
-					self.assertAlmostEqual(f_list[i].a, alast, DIGITS)
-					self.assertAlmostEqual(f_list[i].b, blast, DIGITS)
-					self.assertAlmostEqual(f_list[i].c, clast, DIGITS)
-					self.assertAlmostEqual(f_list[i].d, dlast, DIGITS)
-					self.assertAlmostEqual(f_list[i].e, elast, DIGITS)
+				fh = [f_.h - hlast for f_ in f_list]
+				fa = [f_.a - alast for f_ in f_list]
+				fb = [f_.b - blast for f_ in f_list]
+				fc = [f_.c - clast for f_ in f_list]
+				fd = [f_.d - dlast for f_ in f_list]
+				fe = [f_.e - elast for f_ in f_list]
+				self.assertTrue( np.linalg.norm(fh) <= ATOLM )
+				self.assertTrue( np.linalg.norm(fa) <= ATOLM )
+				self.assertTrue( np.linalg.norm(fb) <= ATOLM )
+				self.assertTrue( np.linalg.norm(fc) <= ATOLM )
+				self.assertTrue( np.linalg.norm(fd) <= ATOLM )
+				self.assertTrue( np.linalg.norm(fe) <= ATOLM )
+
 
 				# memcpy fa
 				for i in xrange(m):
@@ -178,13 +181,20 @@ class ProxTestCase(OptkitCTestCase):
 				lib.function_vector_memcpy_av(f_ptr, f)
 
 				f_list = [lib.function(*f_) for f_ in f_py]
-				for i in xrange(m):
-					self.assertAlmostEqual(f_list[i].h, hval)
-					self.assertAlmostEqual(f_list[i].a, a, DIGITS)
-					self.assertAlmostEqual(f_list[i].b, b, DIGITS)
-					self.assertAlmostEqual(f_list[i].c, c, DIGITS)
-					self.assertAlmostEqual(f_list[i].d, d, DIGITS)
-					self.assertAlmostEqual(f_list[i].e, e, DIGITS)
+				fh = [f_.h - hval for f_ in f_list]
+				fa = [f_.a - a for f_ in f_list]
+				fb = [f_.b - b for f_ in f_list]
+				fc = [f_.c - c for f_ in f_list]
+				fd = [f_.d - d for f_ in f_list]
+				fe = [f_.e - e for f_ in f_list]
+				self.assertTrue( np.linalg.norm(fh) <= ATOLM )
+				self.assertTrue( np.linalg.norm(fa) <= ATOLM )
+				self.assertTrue( np.linalg.norm(fb) <= ATOLM )
+				self.assertTrue( np.linalg.norm(fc) <= ATOLM )
+				self.assertTrue( np.linalg.norm(fd) <= ATOLM )
+				self.assertTrue( np.linalg.norm(fe) <= ATOLM )
+
+
 
 				hlast = hval
 				alast = a
@@ -206,12 +216,15 @@ class ProxTestCase(OptkitCTestCase):
 
 		hval = 0
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			DIGITS = 5 if lib.FLOAT else 7
+			DIGITS = 7 - 2 * single_precision
+			RTOL = 10**(-DIGITS)
+			ATOLM = RTOL * m**0.5
+			ATOLN = RTOL * n**0.5
 
 			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
 			self.register_var('f', f, lib.function_vector_free)
@@ -237,18 +250,23 @@ class ProxTestCase(OptkitCTestCase):
 				d[i] *= v_py[i]
 				e[i] *= v_py[i]
 			f_list = [lib.function(*f_) for f_ in f_py]
-			for i in xrange(m):
-				self.assertAlmostEqual(f_list[i].h, hval, DIGITS)
-				self.assertAlmostEqual(significant_digits(f_list[i].a),
-									   significant_digits(a[i]), DIGITS)
-				self.assertAlmostEqual(significant_digits(f_list[i].b),
-									   significant_digits(b[i]), DIGITS)
-				self.assertAlmostEqual(significant_digits(f_list[i].c),
-									   significant_digits(c[i]), DIGITS)
-				self.assertAlmostEqual(significant_digits(f_list[i].d),
-									   significant_digits(d[i]), DIGITS)
-				self.assertAlmostEqual(significant_digits(f_list[i].e),
-									   significant_digits(e[i]), DIGITS)
+			fh = [f_.h - hval for f_ in f_list]
+			fa = [f_.a for f_ in f_list]
+			fb = [f_.b for f_ in f_list]
+			fc = [f_.c for f_ in f_list]
+			fd = [f_.d for f_ in f_list]
+			fe = [f_.e for f_ in f_list]
+			self.assertTrue( np.linalg.norm(fh) <= ATOLM )
+			self.assertTrue( np.linalg.norm(fa - a) <=
+							 ATOLM + RTOL * np.linalg.norm(a) )
+			self.assertTrue( np.linalg.norm(fb - b) <=
+							 ATOLM + RTOL * np.linalg.norm(b) )
+			self.assertTrue( np.linalg.norm(fc - c) <=
+							 ATOLM + RTOL * np.linalg.norm(c) )
+			self.assertTrue( np.linalg.norm(fd - d) <=
+							 ATOLM + RTOL * np.linalg.norm(d) )
+			self.assertTrue( np.linalg.norm(fe - e) <=
+							 ATOLM + RTOL * np.linalg.norm(e) )
 
 			# div
 			lib.function_vector_div(f, v)
@@ -258,18 +276,23 @@ class ProxTestCase(OptkitCTestCase):
 				d[i] /= v_py[i]
 				e[i] /= v_py[i]
 			f_list = [lib.function(*f_) for f_ in f_py]
-			for i in xrange(m):
-				self.assertAlmostEqual(f_list[i].h, hval, DIGITS)
-				self.assertAlmostEqual(significant_digits(f_list[i].a),
-									   significant_digits(a[i]), DIGITS)
-				self.assertAlmostEqual(significant_digits(f_list[i].b),
-									   significant_digits(b[i]), DIGITS)
-				self.assertAlmostEqual(significant_digits(f_list[i].c),
-									   significant_digits(c[i]), DIGITS)
-				self.assertAlmostEqual(significant_digits(f_list[i].d),
-									   significant_digits(d[i]), DIGITS)
-				self.assertAlmostEqual(significant_digits(f_list[i].e),
-									   significant_digits(e[i]), DIGITS)
+			fh = [f_.h - hval for f_ in f_list]
+			fa = [f_.a for f_ in f_list]
+			fb = [f_.b for f_ in f_list]
+			fc = [f_.c for f_ in f_list]
+			fd = [f_.d for f_ in f_list]
+			fe = [f_.e for f_ in f_list]
+			self.assertTrue( np.linalg.norm(fh) <= ATOLM )
+			self.assertTrue( np.linalg.norm(fa - a) <=
+							 ATOLM + RTOL * np.linalg.norm(a) )
+			self.assertTrue( np.linalg.norm(fb - b) <=
+							 ATOLM + RTOL * np.linalg.norm(b) )
+			self.assertTrue( np.linalg.norm(fc - c) <=
+							 ATOLM + RTOL * np.linalg.norm(c) )
+			self.assertTrue( np.linalg.norm(fd - d) <=
+							 ATOLM + RTOL * np.linalg.norm(d) )
+			self.assertTrue( np.linalg.norm(fe - e) <=
+							 ATOLM + RTOL * np.linalg.norm(e) )
 
 			self.free_var('f')
 			self.free_var('v')
@@ -284,12 +307,15 @@ class ProxTestCase(OptkitCTestCase):
 		e = np.random.rand(m)
 		x_rand = np.random.rand(m)
 
-		for (gpu, single_precision) in CONDITIONS:
+		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			DIGITS = 5 if lib.FLOAT else 7
+			DIGITS = 7 - 2 * single_precision
+			RTOL = 10**(-DIGITS)
+			ATOLM = RTOL * m**0.5
+			ATOLN = RTOL * n**0.5
 
 			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
 			self.register_var('f', f, lib.function_vector_free)
@@ -327,21 +353,18 @@ class ProxTestCase(OptkitCTestCase):
 				funcval_py = func_eval_python(f_list, x_rand)
 				funcval_c = lib.FuncEvalVector(f, x)
 				if funcval_c in (np.inf, np.nan):
-					self.assertTrue(1)
+					self.assertTrue( 1 )
 				else:
-					self.assertAlmostEqual(significant_digits(funcval_c),
-										   significant_digits(funcval_py),
-										   DIGITS)
+					self.assertTrue( np.abs(funcval_py - funcval_c) <=
+									 ATOLM + RTOL * np.abs(funcval_c) )
 
 				# proximal operator evaluation, random rho
 				rho = 5 * np.random.rand()
 				prox_py = prox_eval_python(f_list, rho, x_rand)
 				lib.ProxEvalVector(f, rho, x, xout)
 				lib.vector_memcpy_av(xout_ptr, xout, 1)
-				if not np.allclose(xout_py, prox_py, 2):
-					self.assertTrue(np.allclose(xout_py, prox_py, 1))
-				else:
-					self.assertTrue(np.allclose(xout_py, prox_py, 2))
+				self.assertTrue( np.linalg.norm(xout_py - prox_py) <=
+								 ATOLM + RTOL * np.linalg.norm(prox_py) )
 
 			self.free_var('f')
 			self.free_var('x')

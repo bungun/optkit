@@ -22,7 +22,7 @@
 - operator POGS for: dense, sparse
 - matrix, vector reductions (min, max, indmin); 
 - memory cleanup when tests fail 
-- TODO: test clustering
+- kmeans clustering on rows of dense matrices
 
 ###v0.0.3 (current)
 - CPU Sparse Linear Algebra
@@ -67,7 +67,6 @@
 - Cone solver
 
 ###v++
-- block clustering in c/cuda
 - adaptive alpha (line search) for POGS
 - change Python bindings from ctypes -> Cython?
 - DCP ADMM

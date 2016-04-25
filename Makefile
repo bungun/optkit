@@ -148,7 +148,7 @@ POGS_ABSTRACT_LIB_DEPS=operator cg equil projector $(LINSYS_TARGS) $(PROX_TARG)
 
 .PHONY: default, all, libs, libok, libpogs
 default: cpu_dense
-all: libs liboperator libcg libequil libprojector libpogs
+all: libs liboperator libcg libequil libprojector libpogs libcluster
 libs: libok libprox
 libok: libok_dense libok_sparse
 libpogs: libpogs_dense libpogs_abstract

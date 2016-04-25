@@ -83,17 +83,17 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 		to specified tolerance _tol_ by performing at most _maxiter_
 		CG iterations on the above least squares problem
 		"""
+		m, n = self.shape
 		tol = self.tol_cg
 		rho = self.rho_cg
 		maxiter = self.maxiter_cg
 
-		m, n = self.shape
-
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-
 			if lib is None:
 				continue
+
+			ATOLN = n**0.5 * 10**(-7 + 3 * single_precision)
 
 			# -----------------------------------------
 			# allocate x, b in python & C
@@ -132,7 +132,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				# 2. KKT condition A'(Ax - b) + rho (x) == 0 (within tol)
 				self.assertEqual(flag, 0)
 				KKT = A_.T.dot(A_.dot(x_) - b_) + rho * x_
-				self.assertTrue(np.linalg.norm(KKT) <= (tol * n)**0.5)
+				self.assertTrue( np.linalg.norm(KKT) <= ATOLN )
 
 				self.free_var('o')
 				self.free_var('A')
@@ -152,9 +152,10 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-
 			if lib is None:
 				continue
+
+			ATOLN = n**0.5 * 10**(-7 + 3 * single_precision)
 
 			# -----------------------------------------
 			# allocate x, b in python & C
@@ -189,7 +190,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				# 2. KKT condition A'(Ax - b) + rho (x) == 0 (within tol)
 				self.assertEqual(flag, 0)
 				KKT = A_.T.dot(A_.dot(x_) - b_) + rho * x_
-				self.assertTrue(np.linalg.norm(KKT) <= (tol * n)**0.5)
+				self.assertTrue( np.linalg.norm(KKT) <= ATOLN )
 
 				self.free_var('o')
 				self.free_var('A')
@@ -208,9 +209,10 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-
 			if lib is None:
 				continue
+
+			ATOLN = n**0.5 * 10**(-7 + 3 * single_precision)
 
 			# -----------------------------------------
 			# allocate x, b in python & C
@@ -250,7 +252,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				# 2. KKT condition A'(Ax - b) + rho (x) == 0 (within tol)
 				self.assertEqual(flag, 0)
 				KKT = A_.T.dot(A_.dot(x_) - b_) + rho * x_
-				self.assertTrue(np.linalg.norm(KKT) <= (tol * n)**0.5)
+				self.assertTrue( np.linalg.norm(KKT) <= ATOLN )
 
 				self.free_var('o')
 				self.free_var('A')
@@ -265,7 +267,6 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-
 			if lib is None:
 				continue
 
@@ -348,13 +349,13 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-
 			if lib is None:
 				continue
 
-			DIGITS = 7 - 2 * single_precision - 1 * gpu
+			DIGITS = 7 - 5 * single_precision - 1 * gpu
 			RTOL = 10**(-DIGITS)
 			ATOLN = RTOL * n**0.5
+			rho *= 10**(4 * single_precision)
 
 			# -----------------------------------------
 			# allocate x, b in python & C
@@ -395,6 +396,14 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				lib.pcg_nonallocating(h, o, p, b, x, rho, tol, maxiter,
 									  CG_QUIET)
 				lib.vector_memcpy_av(x_ptr, x, 1)
+
+
+				print "Tx - b", np.linalg.norm(T.dot(x_) - b_)
+				print "b", np.linalg.norm(b_)
+				print "ATOLN", ATOLN
+				print "RTOL", RTOL
+				print "||Tx-b|| <= a + r * ||b||", np.linalg.norm(T.dot(x_) - b_) <= ATOLN + RTOL * np.linalg.norm(b_)
+
 				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
 								ATOLN + RTOL * np.linalg.norm(b_))
 
@@ -419,13 +428,13 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-
 			if lib is None:
 				continue
 
-			DIGITS = 7 - 2 * single_precision - 1 * gpu
+			DIGITS = 7 - 5 * single_precision - 1 * gpu
 			RTOL = 10**(-DIGITS)
 			ATOLN = RTOL * n**0.5
+			rho *= 10**(4 * single_precision)
 
 			# -----------------------------------------
 			# allocate x, b in python & C
@@ -466,6 +475,13 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				iters1 = lib.pcg_nonallocating(h, o, p, b, x, rho, tol,
 											   maxiter, CG_QUIET)
 				lib.vector_memcpy_av(x_ptr, x, 1)
+
+				print "Tx - b", np.linalg.norm(T.dot(x_) - b_)
+				print "b", np.linalg.norm(b_)
+				print "ATOLN", ATOLN
+				print "RTOL", RTOL
+				print "||Tx-b|| <= a + r * ||b||", np.linalg.norm(T.dot(x_) - b_) <= ATOLN + RTOL * np.linalg.norm(b_)
+
 				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
 								ATOLN + RTOL * np.linalg.norm(b_))
 
@@ -499,13 +515,13 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-
 			if lib is None:
 				continue
 
-			DIGITS = 7 - 2 * single_precision - 1 * gpu
+			DIGITS = 7 - 5 * single_precision - 1 * gpu
 			RTOL = 10**(-DIGITS)
 			ATOLN = RTOL * n**0.5
+			rho *= 10**(4 * single_precision)
 
 			# -----------------------------------------
 			# allocate x, b in python & C
@@ -564,13 +580,13 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-
 			if lib is None:
 				continue
 
-			DIGITS = 7 - 2 * single_precision - 1 * gpu
+			DIGITS = 7 - 5 * single_precision - 1 * gpu
 			RTOL = 10**(-DIGITS)
 			ATOLN = RTOL * n**0.5
+			rho *= 10**(4 * single_precision)
 
 			# -----------------------------------------
 			# allocate x, b in python & C
@@ -610,6 +626,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				iters1 = lib.pcg_solve(pcg_work, o, p, b, x, rho, tol,
 											maxiter, CG_QUIET)
 				lib.vector_memcpy_av(x_ptr, x, 1)
+
 				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
 								ATOLN + RTOL * np.linalg.norm(b_))
 

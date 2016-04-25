@@ -2,8 +2,8 @@ from os import getenv, path
 import numpy as np
 import unittest
 
-# DEFAULT_SHAPE = (500, 800)
-DEFAULT_SHAPE = (10, 15)
+DEFAULT_SHAPE = (500, 800)
+# DEFAULT_SHAPE = (10, 15)
 
 # todo: modify test code to use env specified test conditions if availabe
 DEFAULT_ROWS = getenv('OPTKIT_TESTING_DEFAULT_NROWS', None)
