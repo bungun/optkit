@@ -36,24 +36,22 @@ class VectorTestCase(OptkitCTestCase):
 			len_v = 10 + int(10 * np.random.rand())
 
 			v = lib.vector(0, 0, None)
-			self.assertEqual(v.size, 0)
-			self.assertEqual(v.stride, 0)
+			self.assertEqual( v.size, 0 )
+			self.assertEqual( v.stride, 0 )
 
-			lib.vector_calloc(v, len_v)
+			self.assertCall( lib.vector_calloc(v, len_v) )
 			self.register_var('v', v, lib.vector_free)
 
-			self.assertEqual(v.size, len_v)
-			self.assertEqual(v.stride, 1)
-
-			lib.vector_calloc(v, len_v)
+			self.assertEqual( v.size, len_v )
+			self.assertEqual( v.stride, 1 )
 
 			if not gpu:
 				for i in xrange(v.size):
-					self.assertEqual(v.data[i], 0)
+					self.assertEqual( v.data[i], 0 )
 
 			self.free_var('v')
-			self.assertEqual(v.size, 0)
-			self.assertEqual(v.stride, 0)
+			self.assertEqual( v.size, 0 )
+			self.assertEqual( v.stride, 0 )
 
 	def test_io(self):
 		for (gpu, single_precision) in self.CONDITIONS:
@@ -76,25 +74,25 @@ class VectorTestCase(OptkitCTestCase):
 
 			# set_all
 			set_val = 5
-			lib.vector_set_all(v, set_val)
+			self.assertCall( lib.vector_set_all(v, set_val) )
 
 			# memcpy_av
-			lib.vector_memcpy_av(v_ptr, v, 1)
+			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
 			for i in xrange(len_v):
 				self.assertEqual(v_py[i], set_val)
 
 			# memcpy_va
 			w_rand = np.random.rand(len_v)
 			w_py[:] = w_rand[:]
-			lib.vector_memcpy_va(w, w_ptr, 1)
+			self.assertCall( lib.vector_memcpy_va(w, w_ptr, 1) )
 			w_py *= 0
-			lib.vector_memcpy_av(w_ptr, w, 1)
+			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
 			self.assertTrue( np.linalg.norm(w_py - w_rand) <=
 							 ATOL + RTOL * np.linalg.norm(w_rand) )
 
 			# memcpy_vv
-			lib.vector_memcpy_vv(v, w)
-			lib.vector_memcpy_av(v_ptr, v, 1)
+			self.assertCall( lib.vector_memcpy_vv(v, w) )
+			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
 			self.assertTrue( np.linalg.norm(v_py - w_rand) <=
 							 ATOL + RTOL * np.linalg.norm(w_rand) )
 
@@ -103,8 +101,9 @@ class VectorTestCase(OptkitCTestCase):
 				u_rand = np.random.rand(len_v).astype(lib.pyfloat)
 				u_ptr = u_rand.ctypes.data_as(lib.ok_float_p)
 				u = lib.vector(0, 0, None)
-				lib.vector_view_array(u, u_ptr, u_rand.size)
-				lib.vector_memcpy_av(v_ptr, u, 1)
+				self.assertCall( lib.vector_view_array(u, u_ptr,
+													   u_rand.size) )
+				self.assertCall( lib.vector_memcpy_av(v_ptr, u, 1) )
 	 			self.assertTrue( np.linalg.norm(v_py - u_rand) <=
 								 ATOL + RTOL * np.linalg.norm(u_rand) )
 
@@ -128,15 +127,16 @@ class VectorTestCase(OptkitCTestCase):
 			offset_sub = 3
 			len_sub = 3
 			v_sub = lib.vector(0, 0, None)
-			lib.vector_subvector(v_sub, v, offset_sub, len_sub)
-			self.assertEqual(v_sub.size, 3)
-			self.assertEqual(v_sub.stride, v.stride)
+			self.assertCall( lib.vector_subvector(v_sub, v, offset_sub,
+												  len_sub) )
+			self.assertEqual( v_sub.size, 3 )
+			self.assertEqual( v_sub.stride, v.stride )
 			v_sub_py = np.zeros(len_sub).astype(lib.pyfloat)
 			v_sub_ptr = v_sub_py.ctypes.data_as(lib.ok_float_p)
-			lib.vector_memcpy_av(v_ptr, v, 1)
-			lib.vector_memcpy_av(v_sub_ptr, v_sub, 1)
+			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
+			self.assertCall( lib.vector_memcpy_av(v_sub_ptr, v_sub, 1) )
 			for i in xrange(len_sub):
-				self.assertEqual(v_sub_py[i], v_py[i + offset_sub])
+				self.assertEqual( v_sub_py[i], v_py[i + offset_sub] )
 
 			self.free_var('v')
 
@@ -158,143 +158,148 @@ class VectorTestCase(OptkitCTestCase):
 			ATOL = RTOL * len_v**0.5
 
 			v = lib.vector(0, 0, None)
-			lib.vector_calloc(v, len_v)
+			self.assertCall( lib.vector_calloc(v, len_v) )
 			self.register_var('v', v, lib.vector_free)
 
 			v_py = np.zeros(len_v).astype(lib.pyfloat)
 			v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
 
 			w = lib.vector(0, 0, None)
-			lib.vector_calloc(w, len_v)
+			self.assertCall( lib.vector_calloc(w, len_v) )
 			self.register_var('w', w, lib.vector_free)
 
 			w_py = np.zeros(len_v).astype(lib.pyfloat)
 			w_ptr = w_py.ctypes.data_as(lib.ok_float_p)
 
 			# constant addition
-			lib.vector_add_constant(v, val1)
-			lib.vector_add_constant(w, val2)
-			lib.vector_memcpy_av(v_ptr, v, 1)
-			lib.vector_memcpy_av(w_ptr, w, 1)
-			self.assertTrue(np.linalg.norm(v_py - val1) <=
-				ATOL + RTOL * np.linalg.norm(v_py))
-			self.assertTrue(np.linalg.norm(w_py - val2) <=
-				ATOL + RTOL * np.linalg.norm(w_py))
+			self.assertCall( lib.vector_add_constant(v, val1) )
+			self.assertCall( lib.vector_add_constant(w, val2) )
+			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
+			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
+			self.assertTrue( np.linalg.norm(v_py - val1) <=
+							 ATOL + RTOL * np.linalg.norm(v_py) )
+			self.assertTrue( np.linalg.norm(w_py - val2) <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
 			# add two vectors
 			lib.vector_add(v, w)
 			val1 += val2
-			lib.vector_memcpy_av(v_ptr, v, 1)
-			lib.vector_memcpy_av(w_ptr, w, 1)
-			self.assertTrue(np.linalg.norm(v_py - val1) <=
-				ATOL + RTOL * np.linalg.norm(v_py))
-			self.assertTrue(np.linalg.norm(w_py - val2) <=
-				ATOL + RTOL * np.linalg.norm(w_py))
+			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
+			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
+			self.assertTrue( np.linalg.norm(v_py - val1) <=
+							 ATOL + RTOL * np.linalg.norm(v_py) )
+			self.assertTrue( np.linalg.norm(w_py - val2) <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
 			# subtract two vectors
-			lib.vector_sub(w, v)
+			self.assertCall( lib.vector_sub(w, v) )
 			val2 -= val1
-			lib.vector_memcpy_av(v_ptr, v, 1)
-			lib.vector_memcpy_av(w_ptr, w, 1)
-			self.assertTrue(np.linalg.norm(v_py - val1) <=
-				ATOL + RTOL * np.linalg.norm(v_py))
-			self.assertTrue(np.linalg.norm(w_py - val2) <=
-				ATOL + RTOL * np.linalg.norm(w_py))
+			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
+			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
+			self.assertTrue( np.linalg.norm(v_py - val1) <=
+							 ATOL + RTOL * np.linalg.norm(v_py) )
+			self.assertTrue( np.linalg.norm(w_py - val2) <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
 			# multiply two vectors
-			lib.vector_mul(v, w)
+			self.assertCall( lib.vector_mul(v, w) )
 			val1 *= val2
-			lib.vector_memcpy_av(v_ptr, v, 1)
-			lib.vector_memcpy_av(w_ptr, w, 1)
-			self.assertTrue(np.linalg.norm(v_py - val1) <=
-				ATOL + RTOL * np.linalg.norm(v_py))
-			self.assertTrue(np.linalg.norm(w_py - val2) <=
-				ATOL + RTOL * np.linalg.norm(w_py))
+			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
+			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
+			self.assertTrue( np.linalg.norm(v_py - val1) <=
+							 ATOL + RTOL * np.linalg.norm(v_py) )
+			self.assertTrue( np.linalg.norm(w_py - val2) <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
 			# vector scale
 			scal = 3 * np.random.rand()
 			val1 *= scal
-			lib.vector_scale(v, scal)
-			lib.vector_memcpy_av(v_ptr, v, 1)
-			self.assertTrue(np.linalg.norm(v_py - val1) <=
-				ATOL + RTOL * np.linalg.norm(v_py))
+			self.assertCall( lib.vector_scale(v, scal) )
+			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
+			self.assertTrue( np.linalg.norm(v_py - val1) <=
+							 ATOL + RTOL * np.linalg.norm(v_py))
 
 			# make sure v is strictly positive
 			val1 = 0.7 + np.random.rand()
-			lib.vector_scale(v, 0)
-			lib.vector_add_constant(v, val1)
+			self.assertCall( lib.vector_scale(v, 0) )
+			self.assertCall( lib.vector_add_constant(v, val1) )
 
 			# divide two vectors
-			lib.vector_div(w, v)
+			self.assertCall( lib.vector_div(w, v) )
 			val2 /= float(val1)
-			lib.vector_memcpy_av(v_ptr, v, 1)
-			lib.vector_memcpy_av(w_ptr, w, 1)
-			self.assertTrue(np.linalg.norm(v_py - val1) <=
-				ATOL + RTOL * np.linalg.norm(v_py))
-			self.assertTrue(np.linalg.norm(w_py - val2) <=
-				ATOL + RTOL * np.linalg.norm(w_py))
+			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
+			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
+			self.assertTrue( np.linalg.norm(v_py - val1) <=
+							 ATOL + RTOL * np.linalg.norm(v_py) )
+			self.assertTrue( np.linalg.norm(w_py - val2) <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
 			# make w strictly negative
 			w_max = w_py.max()
 			val2 -= (w_max + 1)
-			lib.vector_add_constant(w, -(w_max + 1))
+			self.assertCall( lib.vector_add_constant(w, -(w_max + 1)) )
 
 			# vector abs
-			lib.vector_abs(w)
+			self.assertCall( lib.vector_abs(w) )
 			val2 = abs(val2)
-			lib.vector_memcpy_av(w_ptr, w, 1)
-			self.assertTrue(np.linalg.norm(w_py - val2) <=
-				ATOL + RTOL * np.linalg.norm(w_py))
+			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
+			self.assertTrue( np.linalg.norm(w_py - val2) <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
 			# vector recip
-			lib.vector_recip(w)
+			self.assertCall( lib.vector_recip(w) )
 			val2 = 1. / val2
-			lib.vector_memcpy_av(w_ptr, w, 1)
-			self.assertTrue(np.linalg.norm(w_py - val2) <=
-				ATOL + RTOL * np.linalg.norm(w_py))
+			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
+			self.assertTrue( np.linalg.norm(w_py - val2) <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
 			# vector sqrt
-			lib.vector_sqrt(w)
+			self.assertCall( lib.vector_sqrt(w) )
 			val2 **= 0.5
-			lib.vector_memcpy_av(w_ptr, w, 1)
-			self.assertTrue(np.linalg.norm(w_py - val2) <=
-				ATOL + RTOL * np.linalg.norm(w_py))
+			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
+			self.assertTrue( np.linalg.norm(w_py - val2) <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
 			# vector pow
 			pow_val = -2 + 4 * np.random.rand()
-			lib.vector_pow(w, pow_val)
+			self.assertCall( lib.vector_pow(w, pow_val) )
 			val2 **= pow_val
-			lib.vector_memcpy_av(w_ptr, w, 1)
-			self.assertTrue(np.linalg.norm(w_py - val2) <=
-				ATOL + RTOL * np.linalg.norm(w_py))
+			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
+			self.assertTrue( np.linalg.norm(w_py - val2) <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
 			# vector exp
-			lib.vector_exp(w)
+			self.assertCall( lib.vector_exp(w) )
 			val2 = np.exp(val2)
-			lib.vector_memcpy_av(w_ptr, w, 1)
-			self.assertTrue(np.linalg.norm(val2 - w_py) <=
-				ATOL + RTOL * np.linalg.norm(w_py))
+			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
+			self.assertTrue( np.linalg.norm(val2 - w_py) <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
 			# min / max
 			w_py *= 0
 			w_py += np.random.rand(len(w_py))
-			lib.vector_memcpy_va(w, w_ptr, 1)
+			self.assertCall( lib.vector_memcpy_va(w, w_ptr, 1) )
 
 			# vector argmin
-			wargmin = lib.vector_indmin(w)
-			self.assertTrue(w_py[wargmin] - w_py.min() <=
-				ATOL + RTOL * np.linalg.norm(w_py))
+			wargmin = np.zeros(1).astype(c_size_t)
+			wargmin_p = wargmin.ctypes.data_as(lib.c_size_t_p)
+			self.assertCall( lib.vector_indmin(w, wargmin_p) )
+			self.assertTrue( w_py[wargmin[0]] - w_py.min() <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
-			# vector min
-			wmin = lib.vector_min(w)
+			# # vector min
+			wmin = np.zeros(1).astype(lib.pyfloat)
+			wmin_p = wmin.ctypes.data_as(lib.ok_float_p)
+			self.assertCall( lib.vector_min(w, wmin_p) )
+			self.assertTrue( wmin[0] - w_py.min() <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
-			self.assertTrue(wmin - w_py.min() <=
-				ATOL + RTOL * np.linalg.norm(w_py))
-
-			# vector max
-			wmax = lib.vector_max(w)
-			self.assertTrue(wmax - w_py.max() <=
-				ATOL + RTOL * np.linalg.norm(w_py))
+			# # vector max
+			wmax = wmin
+			wmax_p = wmin_p
+			self.assertCall( lib.vector_max(w, wmax_p) )
+			self.assertTrue( wmax[0] - w_py.max() <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
 			self.free_var('v')
 			self.free_var('w')
@@ -317,7 +322,7 @@ class VectorTestCase(OptkitCTestCase):
 			ATOL = RTOL * len_v**0.5
 
 			w = lib.indvector(0, 0, None)
-			lib.indvector_calloc(w, len_v)
+			self.assertCall( lib.indvector_calloc(w, len_v) )
 			self.register_var('w', w, lib.indvector_free)
 
 			w_py = np.zeros(len_v).astype(c_size_t)
@@ -326,21 +331,27 @@ class VectorTestCase(OptkitCTestCase):
 			# min / max
 			w_py *= 0
 			w_py += (30 * np.random.rand(len(w_py))).astype(w_py.dtype)
-			lib.indvector_memcpy_va(w, w_ptr, 1)
+			self.assertCall( lib.indvector_memcpy_va(w, w_ptr, 1) )
 
 			# vector argmin
-			wargmin = lib.indvector_indmin(w)
-			self.assertTrue(w_py[wargmin] - w_py.min() <=
-				ATOL + RTOL * np.linalg.norm(w_py))
+			wargmin = np.zeros(1).astype(c_size_t)
+			wargmin_p = wargmin.ctypes.data_as(lib.c_size_t_p)
+			self.assertCall( lib.indvector_indmin(w, wargmin_p) )
+			self.assertTrue( w_py[wargmin[0]] - w_py.min() <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
-			# vector min
-			wmin = lib.indvector_min(w)
-			self.assertTrue(wmin - w_py.min() <=
-				ATOL + RTOL * np.linalg.norm(w_py))
+			# # vector min
+			wmin = wargmin
+			wmin_p = wargmin_p
+			self.assertCall( lib.indvector_min(w, wmin_p) )
+			self.assertTrue( wmin[0] - w_py.min() <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
 			# vector max
-			wmax = lib.indvector_max(w)
-			self.assertTrue(wmax - w_py.max() <=
-				ATOL + RTOL * np.linalg.norm(w_py))
+			wmax = wmin
+			wmax_p = wmin_p
+			self.assertCall( lib.indvector_max(w, wmax_p) )
+			self.assertTrue( wmax[0] - w_py.max() <=
+							 ATOL + RTOL * np.linalg.norm(w_py) )
 
 			self.free_var('w')

@@ -126,15 +126,14 @@ ok_status blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
 	/*
 	 * require:
 	 *	- x.size == y.size
-	 *	- num_superdiag == 0 and vecA.size == y.size
-	 *	- num_superdiag > 0 and vecA.size == \sum_i=1^k y.size - i
+	 *	- num_superdiag == 0 and vecA.size >= y.size OR
+	 *	- num_superdiag > 0 and vecA.size >= \sum_i=1^k y.size - i
 	 */
-	lenA = y->size;
+	lenA = y->size * (num_superdiag + 1);
 	if (num_superdiag > 0 && num_superdiag < y->size)
-		lenA = (lenA * (lenA + 1)) / 2 -
-			((lenA - num_superdiag)*(lenA - num_superdiag + 1)) / 2;
+		lenA -= ((num_superdiag) * (num_superdiag + 1)) / 2;
 
-	if (x->size != y->size || vecA->size != lenA)
+	if (x->size != y->size || vecA->size < lenA)
 		return OPTKIT_ERROR_DIMENSION_MISMATCH;
 
 	CBLAS(sbmv)(order, uplo, (int) y->size, (int) num_superdiag, alpha,
@@ -178,40 +177,39 @@ ok_status blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
 	return OPTKIT_SUCCESS;
 }
 
-
 ok_status blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 	enum CBLAS_TRANSPOSE transB, ok_float alpha, const matrix * A,
 	const matrix * B, ok_float beta, matrix * C)
 {
-	int dim_compat = 0;
-	const int NA = (transA == CblasNoTrans) ? (int) A->size2 :
-						  (int) A->size1;
-
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_MATRIX(B);
 	OK_CHECK_MATRIX(C);
+	const int inner_dim = (transA == CblasNoTrans) ?
+		(int) A->size2 : (int) A->size1;
+
 	if (A->order != C->order || B->order != C->order)
 		return OK_SCAN_ERR( OPTKIT_ERROR_LAYOUT_MISMATCH );
-	if (transA == CblasTrans)
-		if (transB == CblasTrans)
-			dim_compat |= (A->size2 == C->size1 &&
-				B->size1 == C->size2 && A->size1 == B->size2);
-		else
-			dim_compat |= (A->size2 == C->size1 &&
-				B->size1 == C->size2 && A->size1 == B->size2);
-	else
-		if (transB == CblasTrans)
-			dim_compat |= (A->size2 == C->size1 &&
-				B->size1 == C->size2 && A->size1 == B->size2);
-		else
-			dim_compat |= (A->size2 == C->size1 &&
-				B->size1 == C->size2 && A->size1 == B->size2);
-	if (!dim_compat)
-		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	CBLAS(gemm)(A->order, transA, transB, (int) C->size1, (int) C->size2,
-		NA, alpha, A->data, (int) A->ld, B->data, (int) B->ld,
-		beta, C->data, (int) C->ld);
+	if (transA == CblasNoTrans && transB == CblasNoTrans)
+		if (A->size1 != C->size1 || A->size2 != B->size1 ||
+			B->size2 != C->size2)
+			return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+	if (transA == CblasNoTrans && transB == CblasTrans)
+		if (A->size1 != C->size1 || A->size2 != B->size2 ||
+			B->size1 != C->size2)
+			return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+	if (transA == CblasTrans && transB == CblasNoTrans)
+		if (A->size2 != C->size1 || A->size1 != B->size1 ||
+			B->size2 != C->size2)
+			return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+	if (transA == CblasTrans && transB == CblasTrans)
+		if (A->size2 != C->size1 || A->size1 != B->size2 ||
+			B->size1 != C->size2)
+			return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
+	CBLAS(gemm)(A->order, transA, transB, (int) C->size1,
+		(int) C->size2, inner_dim, alpha, A->data, (int) A->ld,
+		B->data, (int) B->ld, beta, C->data, (int) C->ld);
 	return OPTKIT_SUCCESS;
 }
 

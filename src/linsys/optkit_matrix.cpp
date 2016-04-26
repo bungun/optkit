@@ -360,12 +360,10 @@ ok_status matrix_scale_right(matrix * A, const vector * v)
 
 ok_status matrix_abs(matrix * A)
 {
-	ok_status err;
+	ok_status err = OPTKIT_SUCCESS;
 	size_t i;
 	vector row_col;
 	row_col.data = OK_NULL;
-
-	OK_CHECK_MATRIX(A);
 
 	if (A->order == CblasRowMajor)
 		for(i = 0; i < A->size1 && !err; ++i) {
@@ -382,7 +380,7 @@ ok_status matrix_abs(matrix * A)
 
 ok_status matrix_pow(matrix * A, const ok_float x)
 {
-	ok_status err;
+	ok_status err = OPTKIT_SUCCESS;
 	size_t i;
 	vector row_col;
 	row_col.data = OK_NULL;

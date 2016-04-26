@@ -134,9 +134,9 @@ def attach_vector_ccalls(lib, single_precision=False):
 	lib.vector_sqrt.argtypes = [vector_p]
 	lib.vector_pow.argtypes = [vector_p, ok_float]
 	lib.vector_exp.argtypes = [vector_p]
-	lib.vector_indmin.argtypes = [vector_p]
-	lib.vector_min.argtypes = [vector_p]
-	lib.vector_max.argtypes = [vector_p]
+	lib.vector_indmin.argtypes = [vector_p, c_size_t_p]
+	lib.vector_min.argtypes = [vector_p, ok_float_p]
+	lib.vector_max.argtypes = [vector_p, ok_float_p]
 
 	lib.indvector_alloc.argtypes = [indvector_p, c_size_t]
 	lib.indvector_calloc.argtypes = [indvector_p, c_size_t]
@@ -152,49 +152,49 @@ def attach_vector_ccalls(lib, single_precision=False):
 	lib.indvector_memcpy_av.argtypes = [c_size_t_p, indvector_p,
 										c_size_t]
 	lib.indvector_print.argtypes = [indvector_p]
-	lib.indvector_indmin.argtypes = [indvector_p]
-	lib.indvector_max.argtypes = [indvector_p]
-	lib.indvector_min.argtypes = [indvector_p]
+	lib.indvector_indmin.argtypes = [indvector_p, c_size_t_p]
+	lib.indvector_max.argtypes = [indvector_p, c_size_t_p]
+	lib.indvector_min.argtypes = [indvector_p, c_size_t_p]
 
 	## return values
-	lib.vector_alloc.restype = None
-	lib.vector_calloc.restype = None
-	lib.vector_free.restype = None
-	lib.vector_set_all.restype = None
-	lib.vector_subvector.restype = None
-	lib.vector_view_array.restype = None
-	lib.vector_memcpy_vv.restype = None
-	lib.vector_memcpy_va.restype = None
-	lib.vector_memcpy_av.restype = None
-	lib.vector_print.restype = None
-	lib.vector_scale.restype = None
-	lib.vector_add.restype = None
-	lib.vector_sub.restype = None
-	lib.vector_mul.restype = None
-	lib.vector_div.restype = None
-	lib.vector_add_constant.restype = None
-	lib.vector_abs.restype = None
-	lib.vector_recip.restype = None
-	lib.vector_sqrt.restype = None
-	lib.vector_pow.restype = None
-	lib.vector_exp.restype = None
-	lib.vector_indmin.restype = c_size_t
-	lib.vector_min.restype = ok_float
-	lib.vector_max.restype = ok_float
+	lib.vector_alloc.restype = c_uint
+	lib.vector_calloc.restype = c_uint
+	lib.vector_free.restype = c_uint
+	lib.vector_set_all.restype = c_uint
+	lib.vector_subvector.restype = c_uint
+	lib.vector_view_array.restype = c_uint
+	lib.vector_memcpy_vv.restype = c_uint
+	lib.vector_memcpy_va.restype = c_uint
+	lib.vector_memcpy_av.restype = c_uint
+	lib.vector_print.restype = c_uint
+	lib.vector_scale.restype = c_uint
+	lib.vector_add.restype = c_uint
+	lib.vector_sub.restype = c_uint
+	lib.vector_mul.restype = c_uint
+	lib.vector_div.restype = c_uint
+	lib.vector_add_constant.restype = c_uint
+	lib.vector_abs.restype = c_uint
+	lib.vector_recip.restype = c_uint
+	lib.vector_sqrt.restype = c_uint
+	lib.vector_pow.restype = c_uint
+	lib.vector_exp.restype = c_uint
+	lib.vector_indmin.restype = c_uint
+	lib.vector_min.restype = c_uint
+	lib.vector_max.restype = c_uint
 
-	lib.indvector_alloc.restype = None
-	lib.indvector_calloc.restype = None
-	lib.indvector_free.restype = None
-	lib.indvector_set_all.restype = None
-	lib.indvector_subvector.restype = None
-	lib.indvector_view_array.restype = None
-	lib.indvector_memcpy_vv.restype = None
-	lib.indvector_memcpy_va.restype = None
-	lib.indvector_memcpy_av.restype = None
-	lib.indvector_print.restype = None
-	lib.indvector_indmin.restype = c_size_t
-	lib.indvector_min.restype = c_size_t
-	lib.indvector_max.restype = c_size_t
+	lib.indvector_alloc.restype = c_uint
+	lib.indvector_calloc.restype = c_uint
+	lib.indvector_free.restype = c_uint
+	lib.indvector_set_all.restype = c_uint
+	lib.indvector_subvector.restype = c_uint
+	lib.indvector_view_array.restype = c_uint
+	lib.indvector_memcpy_vv.restype = c_uint
+	lib.indvector_memcpy_va.restype = c_uint
+	lib.indvector_memcpy_av.restype = c_uint
+	lib.indvector_print.restype = c_uint
+	lib.indvector_indmin.restype = c_uint
+	lib.indvector_min.restype = c_uint
+	lib.indvector_max.restype = c_uint
 
 def attach_dense_linsys_ccalls(lib, single_precision=False):
 	if not 'vector_p' in lib.__dict__:
@@ -231,24 +231,24 @@ def attach_dense_linsys_ccalls(lib, single_precision=False):
 	lib.matrix_pow.argtypes = [matrix_p, ok_float]
 
 	## return values
-	lib.matrix_alloc.restype = None
-	lib.matrix_calloc.restype = None
-	lib.matrix_free.restype = None
-	lib.matrix_submatrix.restype = None
-	lib.matrix_row.restype = None
-	lib.matrix_column.restype = None
-	lib.matrix_diagonal.restype = None
-	lib.matrix_view_array.restype = None
-	lib.matrix_set_all.restype = None
-	lib.matrix_memcpy_mm.restype = None
-	lib.matrix_memcpy_ma.restype = None
-	lib.matrix_memcpy_am.restype = None
-	lib.matrix_print.restype = None
-	lib.matrix_scale.restype = None
-	lib.matrix_scale_left.restype = None
-	lib.matrix_scale_right.restype = None
-	lib.matrix_abs.restype = None
-	lib.matrix_pow.restype = None
+	lib.matrix_alloc.restype = c_uint
+	lib.matrix_calloc.restype = c_uint
+	lib.matrix_free.restype = c_uint
+	lib.matrix_submatrix.restype = c_uint
+	lib.matrix_row.restype = c_uint
+	lib.matrix_column.restype = c_uint
+	lib.matrix_diagonal.restype = c_uint
+	lib.matrix_view_array.restype = c_uint
+	lib.matrix_set_all.restype = c_uint
+	lib.matrix_memcpy_mm.restype = c_uint
+	lib.matrix_memcpy_ma.restype = c_uint
+	lib.matrix_memcpy_am.restype = c_uint
+	lib.matrix_print.restype = c_uint
+	lib.matrix_scale.restype = c_uint
+	lib.matrix_scale_left.restype = c_uint
+	lib.matrix_scale_right.restype = c_uint
+	lib.matrix_abs.restype = c_uint
+	lib.matrix_pow.restype = c_uint
 
 	# BLAS
 	# ----
@@ -257,10 +257,10 @@ def attach_dense_linsys_ccalls(lib, single_precision=False):
 	lib.blas_make_handle.argtypes = [c_void_p]
 	lib.blas_destroy_handle.argtypes = [c_void_p]
 	lib.blas_axpy.argtypes = [c_void_p, ok_float, vector_p, vector_p]
-	lib.blas_nrm2.argtypes = [c_void_p, vector_p]
+	lib.blas_nrm2.argtypes = [c_void_p, vector_p, ok_float_p]
 	lib.blas_scal.argtypes = [c_void_p, ok_float, vector_p]
-	lib.blas_asum.argtypes = [c_void_p, vector_p]
-	lib.blas_dot.argtypes = [c_void_p, vector_p, vector_p]
+	lib.blas_asum.argtypes = [c_void_p, vector_p, ok_float_p]
+	lib.blas_dot.argtypes = [c_void_p, vector_p, vector_p, ok_float_p]
 	lib.blas_gemv.argtypes = [c_void_p, c_uint, ok_float, matrix_p, vector_p,
 							  ok_float, vector_p]
 	lib.blas_trsv.argtypes = [c_void_p, c_uint, c_uint, c_uint, matrix_p,
@@ -279,18 +279,18 @@ def attach_dense_linsys_ccalls(lib, single_precision=False):
 	## return values
 	lib.blas_make_handle.restype = c_uint
 	lib.blas_destroy_handle.restype = c_uint
-	lib.blas_axpy.restype = None
-	lib.blas_nrm2.restype = ok_float
-	lib.blas_scal.restype = None
-	lib.blas_asum.restype = ok_float
-	lib.blas_dot.restype = ok_float
-	lib.blas_gemv.restype = None
-	lib.blas_trsv.restype = None
-	lib.blas_sbmv.restype = None
-	lib.blas_diagmv.restype = None
-	lib.blas_syrk.restype = None
-	lib.blas_gemm.restype = None
-	lib.blas_trsm.restype = None
+	lib.blas_axpy.restype = c_uint
+	lib.blas_nrm2.restype = c_uint
+	lib.blas_scal.restype = c_uint
+	lib.blas_asum.restype = c_uint
+	lib.blas_dot.restype = c_uint
+	lib.blas_gemv.restype = c_uint
+	lib.blas_trsv.restype = c_uint
+	lib.blas_sbmv.restype = c_uint
+	lib.blas_diagmv.restype = c_uint
+	lib.blas_syrk.restype = c_uint
+	lib.blas_gemm.restype = c_uint
+	lib.blas_trsm.restype = c_uint
 
 	# LINALG
 	# -------
@@ -306,13 +306,13 @@ def attach_dense_linsys_ccalls(lib, single_precision=False):
 	lib.linalg_matrix_reduce_max.argtypes = [vector_p, matrix_p, c_uint]
 
 	## return values
-	lib.linalg_cholesky_decomp.restype = None
-	lib.linalg_cholesky_svx.restype = None
-	lib.linalg_matrix_row_squares.restype = None
-	lib.linalg_matrix_broadcast_vector.restype = None
-	lib.linalg_matrix_reduce_indmin.restype = None
-	lib.linalg_matrix_reduce_min.restype = None
-	lib.linalg_matrix_reduce_max.restype = None
+	lib.linalg_cholesky_decomp.restype = c_uint
+	lib.linalg_cholesky_svx.restype = c_uint
+	lib.linalg_matrix_row_squares.restype = c_uint
+	lib.linalg_matrix_broadcast_vector.restype = c_uint
+	lib.linalg_matrix_reduce_indmin.restype = c_uint
+	lib.linalg_matrix_reduce_min.restype = c_uint
+	lib.linalg_matrix_reduce_max.restype = c_uint
 
 def attach_sparse_linsys_ccalls(lib, single_precision=False):
 	if not 'vector_p' in lib.__dict__:

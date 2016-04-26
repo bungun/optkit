@@ -1,6 +1,7 @@
 from numpy import zeros
 from ctypes import c_void_p, byref
 from scipy.sparse import csc_matrix, csr_matrix
+from optkit.libs.error import optkit_print_error as PRINTERR
 from optkit.tests.defs import OptkitTestCase
 
 class OptkitCTestCase(OptkitTestCase):
@@ -26,6 +27,10 @@ class OptkitCTestCase(OptkitTestCase):
 		for varname in self.managed_vars.keys():
 			print 'releasing unfreed C variable {}'.format(varname)
 			self.free_var(varname)
+
+	def assertCall(self, call):
+		self.assertEqual( PRINTERR(call), 0 )
+
 
 class OptkitCOperatorTestCase(OptkitCTestCase):
 	A_test = None
