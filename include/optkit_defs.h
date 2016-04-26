@@ -31,8 +31,16 @@ extern "C" {
 #endif
 
 #define OK_NULL 0
-#define ok_alloc(x, T, len) x = (T*) malloc(len); memset(x, 0, len);
-#define ok_free(x) free(x); x = OK_NULL
+#define ok_alloc(x, T, len) \
+	do { \
+		x = (T*) malloc(len); \
+		memset(x, 0, len); \
+	} while(0)
+#define ok_free(x) \
+	do { \
+		free(x); \
+		x = OK_NULL \
+	} while(0)
 
 typedef unsigned int uint;
 typedef int ok_int;
@@ -49,26 +57,32 @@ typedef enum optkit_status {
 	OPTKIT_ERROR_UNALLOCATED = 101
 } ok_status;
 
+#define OK_SCAN_ERR(err) ok_print_status(err, __FILE__, __LINE__, __func__)
+
 #define OK_CHECK_ERR(err, call) \
 	do { \
 		if (!err) \
-			err = call; \
+			err = OK_SCAN_ERR(call); \
 	} while(0)
 
 #define OK_MAX_ERR(err, call) \
 	do { \
-		ok_status newerr = call; \
+		ok_status newerr = OK_SCAN_ERR(call); \
 		err = err > newerr ? err : newerr; \
 	} while(0)
 
 #define OK_RETURNIF_ERR(call) \
 	do { \
-		ok_status err = call; \
+		ok_status err = OK_SCAN_ERR(call); \
 		if (err) \
 			return err; \
 	} while(0)
 
-#define OK_CHECK_PTR(ptr) if (!ptr) return OPTKIT_ERROR_UNALLOCATED
+#define OK_CHECK_PTR(ptr) \
+	do { \
+		if (!ptr) \
+			return OPTKIT_ERROR_UNALLOCATED \
+	} while(0)
 
 enum OPTKIT_TRANSFORM {
 	OkTransformScale = 0,
@@ -111,6 +125,42 @@ enum OPTKIT_TRANSFORM {
 
 void optkit_version(int * maj, int * min, int * change, int * status);
 ok_status ok_device_reset(void);
+
+static const char * ok_err2string(const ok_status error) {
+	switch(error) {
+	case OPTKIT_SUCCESS:
+		return "OPTKIT_SUCCESS";
+	case OPTKIT_ERROR:
+		return "OPTKIT_ERROR";
+	case OPTKIT_ERROR_CUDA:
+		return "OPTKIT_ERROR_CUDA";
+	case OPTKIT_ERROR_CUBLAS:
+		return "OPTKIT_ERROR_CUBLAS";
+	case OPTKIT_ERROR_CUSPARSE:
+		return "OPTKIT_ERROR_CUSPARSE";
+	case OPTKIT_ERROR_LAYOUT_MISMATCH:
+		return "OPTKIT_ERROR_LAYOUT_MISMATCH";
+	case OPTKIT_ERROR_DIMENSION_MISMATCH:
+		return "OPTKIT_ERROR_DIMENSION_MISMATCH";
+	case OPTKIT_ERROR_OUT_OF_BOUNDS:
+		return "OPTKIT_ERROR_OUT_OF_BOUNDS";
+	case OPTKIT_ERROR_OVERWRITE:
+		return "OPTKIT_ERROR_OVERWRITE";
+	case OPTKIT_ERROR_UNALLOCATED:
+		return "OPTKIT_ERROR_UNALLOCATED";
+	default:
+		return "<unknown error>";
+	}
+}
+
+static ok_status ok_print_status(ok_status err, const char * file,
+	const int line, const char * function)
+{
+	if (code != OPTKIT_SUCCESS)
+		printf(":%d:%s\n ERROR_OPTKIT: %s\n", file, lin, function,
+			ok_err2string);
+	return err;
+}
 
 #ifdef __cplusplus
 }

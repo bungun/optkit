@@ -36,76 +36,93 @@ ok_status blas_make_handle(void ** handle)
 ok_status blas_destroy_handle(void * handle)
 {
 	cublasDestroy(*(cublasHandle_t *) handle);
-	CUDA_CHECK_ERR;
+	return OK_STATUS_CUDA;
 	ok_free(handle);
 	return OPTKIT_SUCCESS;
 }
 
 /* BLAS LEVEL 1 */
-void blas_axpy(void * linalg_handle, ok_float alpha, const vector *x, vector *y)
+ok_status blas_axpy(void * linalg_handle, ok_float alpha, const vector * x,
+	vector * y)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	if (!linalg_handle)
-		return;
-	CUBLAS(axpy)(*(cublasHandle_t *) linalg_handle, (int) x->size, &alpha,
-		x->data, (int) x->stride, y->data, (int) y->stride);
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	OK_CHECK_VECTOR(x);
+	OK_CHECK_VECTOR(y);
+	if (x->size != y->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
+	err = OK_SCAN_CUBLAS( CUBLAS(axpy)(*(cublasHandle_t *) linalg_handle,
+		(int) x->size, &alpha, x->data, (int) x->stride, y->data,
+		(int) y->stride) );
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
+	return err;
 }
 
-ok_float blas_nrm2(void * linalg_handle, const vector *x)
+ok_status blas_nrm2(void * linalg_handle, const vector *x, ok_float * result)
 {
-	ok_float result = kZero;
+	ok_status err = OPTKIT_SUCCESS;
 	if (!linalg_handle)
-		return OK_NAN;
-	CUBLAS(nrm2)(*(cublasHandle_t *) linalg_handle, (int) x->size, x->data,
-		(int) x->stride, &result);
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	OK_CHECK_VECTOR(x);
+
+	err = OK_SCAN_CUBLAS( CUBLAS(nrm2)(*(cublasHandle_t *) linalg_handle,
+		(int) x->size, x->data, (int) x->stride, result) );
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
-	return result;
+	return err;
 }
 
-void blas_scal(void * linalg_handle, const ok_float alpha, vector *x)
+ok_status blas_scal(void * linalg_handle, const ok_float alpha, vector *x)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	if (!linalg_handle)
-		return;
-	CUBLAS(scal)(*(cublasHandle_t *) linalg_handle, (int) x->size, &alpha,
-		x->data, (int) x->stride);
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	OK_CHECK_VECTOR(x);
+
+	err = OK_SCAN_CUBLAS( CUBLAS(scal)(*(cublasHandle_t *) linalg_handle,
+		(int) x->size, &alpha, x->data, (int) x->stride) );
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
+	return err;
 }
 
-ok_float blas_asum(void * linalg_handle, const vector * x)
+ok_status blas_asum(void * linalg_handle, const vector * x, ok_float * result)
 {
-	ok_float result = kZero;
+	ok_status err = OPTKIT_SUCCESS;
 	if (!linalg_handle)
-		return OK_NAN;
-	CUBLAS(asum)(*(cublasHandle_t *) linalg_handle, (int) x->size, x->data,
-		(int) x->stride, &result);
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	OK_CHECK_VECTOR(x);
+
+	err = OK_SCAN_CUBLAS( CUBLAS(asum)(*(cublasHandle_t *) linalg_handle,
+		(int) x->size, x->data, (int) x->stride, result) );
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
-	return result;
+	return err;
 }
 
-ok_float blas_dot(void * linalg_handle, const vector * x, const vector * y)
+ok_float blas_dot(void * linalg_handle, const vector * x, const vector * y,
+	ok_float * result)
 {
-	ok_float result = kZero;
+	ok_status err = OPTKIT_SUCCESS;
 	if (!linalg_handle)
-		return OK_NAN;
-	CUBLAS(dot)(*(cublasHandle_t *) linalg_handle, (int) x->size, x->data,
-		(int) x->stride, y->data, (int) y->stride, &result);
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	OK_CHECK_VECTOR(x);
+	OK_CHECK_VECTOR(y);
+
+	err = OK_SCAN_CUBLAS( CUBLAS(dot)(*(cublasHandle_t *) linalg_handle,
+		(int) x->size, x->data, (int) x->stride, y->data,
+		(int) y->stride, &result) );
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
-	return result;
+	return err;
 }
 
-void blas_dot_inplace(void * linalg_handle, const vector * x, const vector * y,
-	ok_float * deviceptr_result)
-{
-	CUBLAS(dot)(*(cublasHandle_t *) linalg_handle, (int) x->size, x->data,
-		(int) x->stride, y->data, (int) y->stride, deviceptr_result);
-	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
-}
+// void blas_dot_inplace(void * linalg_handle, const vector * x, const vector * y,
+// 	ok_float * deviceptr_result)
+// {
+// 	CUBLAS(dot)(*(cublasHandle_t *) linalg_handle, (int) x->size, x->data,
+// 		(int) x->stride, y->data, (int) y->stride, deviceptr_result);
+// 	cudaDeviceSynchronize();
+// 	return err;
+// }
 
 /* BLAS LEVEL 2 */
 
@@ -113,8 +130,20 @@ void blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 	ok_float alpha, const matrix *A, const vector *x, ok_float beta,
 	vector *y)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	cublasOperation_t tA;
 	int s1, s2;
+
+	if (!linalg_handle)
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	OK_CHECK_MATRIX(A);
+	OK_CHECK_VECTOR(x);
+	OK_CHECK_VECTOR(y);
+	if ((transA == CblasNoTrans &&
+		(A->size1 != y->size || A->size2 != x->size)) ||
+	    (transA == CblasTrans &&
+		(A->size2 != y->size || A->size1 != x->size)))
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	if (A->order == CblasColMajor)
 		tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
@@ -124,24 +153,28 @@ void blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 	s1 = (A->order == CblasRowMajor) ? (int) A->size2 : (int) A->size1;
 	s2 = (A->order == CblasRowMajor) ? (int) A->size1 : (int) A->size2;
 
-	if (!linalg_handle)
-		return;
-
-	CUBLAS(gemv)(*(cublasHandle_t *) linalg_handle, tA, s1, s2, &alpha,
-		A->data, (int) A->ld, x->data, (int) x->stride, &beta, y->data,
-		(int) y->stride);
-
+	err = OK_SCAN_CUBLAS( CUBLAS(gemv)(*(cublasHandle_t *) linalg_handle,
+		tA, s1, s2, &alpha, A->data, (int) A->ld, x->data,
+		(int) x->stride, &beta, y->data, (int) y->stride) );
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
+	return err;
 }
 
 void blas_trsv(void * linalg_handle, enum CBLAS_UPLO uplo,
 	enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, const matrix *A,
 	vector *x)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	cublasOperation_t tA;
 	cublasDiagType_t di;
 	cublasFillMode_t ul;
+
+	if (!linalg_handle)
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	OK_CHECK_MATRIX(A);
+	OK_CHECK_VECTOR(x);
+	if (A->size1 != A->size2 || A->size1 != x->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	if (A->order == CblasColMajor) {
 		tA = (transA == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N;
@@ -155,21 +188,41 @@ void blas_trsv(void * linalg_handle, enum CBLAS_UPLO uplo,
 
 	di = Diag == CblasNonUnit ? CUBLAS_DIAG_NON_UNIT : CUBLAS_DIAG_UNIT;
 
-	if (!linalg_handle)
-		return;
-
-	CUBLAS(trsv)(*(cublasHandle_t *) linalg_handle, ul, tA, di,
-		(int) A->size1, A->data, (int) A->ld, x->data, (int) x->stride);
-
+	err = OK_SCAN_CUBLAS( CUBLAS(trsv)(*(cublasHandle_t *) linalg_handle,
+		ul, tA, di, (int) A->size1, A->data, (int) A->ld, x->data,
+		(int) x->stride) );
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
+	return err;
 }
 
 void blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
 	enum CBLAS_UPLO uplo, const size_t num_superdiag, const ok_float alpha,
 	const vector * vecA, const vector * x, const ok_float beta, vector * y)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	cublasFillMode_t ul;
+	size_t lenA;
+
+	if (!linalg_handle)
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	OK_CHECK_MATRIX(A);
+	OK_CHECK_VECTOR(x);
+	OK_CHECK_VECTOR(y);
+
+	/*
+	 * require:
+	 *	- x.size == y.size
+	 *	- num_superdiag == 0 and vecA.size == y.size
+	 *	- num_superdiag > 0 and vecA.size == \sum_i=1^k y.size - i
+	 */
+	lenA = y->size;
+	if (num_superdiag > 0 && num_superdiag < y->size)
+		lenA = (lenA * (lenA + 1)) / 2 -
+			((lenA - num_superdiag)*(lenA - num_superdiag + 1)) / 2
+	if (x->size != y->size || vecA->size != lenA)
+		return OPTKIT_ERROR_DIMENSION_MISMATCH;
+
+
 	if (order == CblasRowMajor)
 		ul = (uplo == CblasLower) ?
 		     CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
@@ -177,20 +230,30 @@ void blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
 		ul = (uplo == CblasLower) ?
 		     CUBLAS_FILL_MODE_LOWER : CUBLAS_FILL_MODE_UPPER;
 
-	CUBLAS(sbmv)(*(cublasHandle_t *) linalg_handle, ul,
-	       (int) y->size, (int) num_superdiag, &alpha,
-	       vecA->data, (int) (num_superdiag + 1),
-	       x->data, (int) x->stride, &beta, y->data, (int) y->stride);
-
+	err = OK_SCAN_CUBLAS( CUBLAS(sbmv)(*(cublasHandle_t *) linalg_handle,
+		ul, (int) y->size, (int) num_superdiag, &alpha, vecA->data,
+		(int) (num_superdiag + 1), x->data, (int) x->stride, &beta,
+		y->data, (int) y->stride) );
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
+	return err;
 }
 
 void blas_diagmv(void * linalg_handle, const ok_float alpha,
 	const vector * vecA, const vector * x, const ok_float beta, vector * y)
 {
-	blas_sbmv(linalg_handle, CblasColMajor, CblasLower, 0, alpha, vecA, x,
-		beta, y);
+	ok_status err = OPTKIT_SUCCESS;
+	if (!linalg_handle)
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	OK_CHECK_VECTOR(vecA);
+	OK_CHECK_VECTOR(x);
+	OK_CHECK_VECTOR(y);
+	else if (vecA->size != y->size || x->size != y->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
+	err = OK_SCAN_CUBLAS( err, blas_sbmv(linalg_handle, CblasColMajor,
+		CblasLower, 0, alpha, vecA, x, beta, y) );
+	cudaDeviceSynchronize();
+	return err;
 }
 
 /* BLAS LEVEL 3 */
@@ -198,7 +261,7 @@ void blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
 	enum CBLAS_TRANSPOSE transA, ok_float alpha, const matrix * A,
 	ok_float beta, matrix * C)
 {
-
+	ok_status err = OPTKIT_SUCCESS;
 	cublasOperation_t tA;
 	cublasFillMode_t ul;
 	const int k = (transA == CblasNoTrans) ?
@@ -216,23 +279,24 @@ void blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
 
 
 	if (!linalg_handle)
-		return;
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
 	if ( !__matrix_order_compat(A, C, "A", "C", "blas_syrk") )
 		return;
 
 
-	CUBLAS(syrk)(*(cublasHandle_t *) linalg_handle, ul, tA, (int) C->size2,
-		k, &alpha, A->data, (int) A->ld, &beta, C->data, (int) C->ld);
-
+	err = OK_SCAN_CUBLAS( CUBLAS(syrk)(*(cublasHandle_t *) linalg_handle,
+		ul, tA, (int) C->size2, k, &alpha, A->data, (int) A->ld, &beta,
+		C->data, (int) C->ld) );
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
+	return err;
 }
 
 void blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 	enum CBLAS_TRANSPOSE transB, ok_float alpha, const matrix * A,
 	const matrix * B, ok_float beta, matrix * C)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	cublasOperation_t tA, tB;
 	int s1, s2;
 
@@ -250,18 +314,17 @@ void blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 	}
 
 	if (!linalg_handle)
-		return;
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
 	if (!__matrix_order_compat(A, B, "A", "B", "blas_gemm") ||
 		!__matrix_order_compat(A, C, "A", "C", "blas_gemm"))
 		return;
 
-	CUBLAS(gemm)(*(cublasHandle_t *) linalg_handle, tA, tB, s1, s2, k,
-		&alpha, A->data, (int) A->ld, B->data, (int) B->ld, &beta,
-		C->data, (int) C->ld);
-
+	err = OK_SCAN_CUBLAS( CUBLAS(gemm)(*(cublasHandle_t *) linalg_handle,
+		tA, tB, s1, s2, k, &alpha, A->data, (int) A->ld, B->data,
+		(int) B->ld, &beta, C->data, (int) C->ld) );
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
+	return err;
 }
 
 void blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side, enum CBLAS_UPLO uplo,

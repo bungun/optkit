@@ -3,8 +3,20 @@
 
 #include "optkit_defs.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef OK_CHECK_VECTOR
-#define OK_CHECK_VECTOR(v) if (!v || !v->data) return OPTKIT_ERROR_UNALLOCATED;
+#define OK_CHECK_VECTOR(v) \
+	do { \
+		if (!v || !v->data) \
+			return OK_SCAN_ERROR( OPTKIT_ERROR_UNALLOCATED ); \
+	} while(0)
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #ifdef __cplusplus

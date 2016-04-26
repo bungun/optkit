@@ -130,51 +130,51 @@ void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 	vector_free(&e_diff);
 }
 
-void dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out,
-	vector * d, vector * e, enum CBLAS_ORDER ord)
-{
-	size_t k, m = A_out->size1, n = A_out->size2;
-	vector a;
-	a.data = OK_NULL;
+// void dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out,
+// 	vector * d, vector * e, enum CBLAS_ORDER ord)
+// {
+// 	size_t k, m = A_out->size1, n = A_out->size2;
+// 	vector a;
+// 	a.data = OK_NULL;
 
-	if (A_in == A_out->data) {
-		printf("Error: Dense l2 equilibration requires \
-			distinct arrays A_in and A_out.");
-		return;
-	}
+// 	if (A_in == A_out->data) {
+// 		printf("Error: Dense l2 equilibration requires \
+// 			distinct arrays A_in and A_out.");
+// 		return;
+// 	}
 
-	matrix_memcpy_ma(A_out, A_in, ord);
+// 	matrix_memcpy_ma(A_out, A_in, ord);
 
-	if (n > m) {
-		/* fat matrix routine */
-		vector_set_all(e, kOne);
-		for (k = 0; k < m; ++k) {
-			matrix_row(&a, A_out, k);
-			blas_dot_inplace(linalg_handle, &a, &a, d->data + k);
-		}
-		vector_sqrt(d);
-		vector_recip(d);
+// 	if (n > m) {
+// 		/* fat matrix routine */
+// 		vector_set_all(e, kOne);
+// 		for (k = 0; k < m; ++k) {
+// 			matrix_row(&a, A_out, k);
+// 			blas_dot_inplace(linalg_handle, &a, &a, d->data + k);
+// 		}
+// 		vector_sqrt(d);
+// 		vector_recip(d);
 
-		for (k = 0; k < n; ++k) {
-			matrix_column(&a, A_out, k);
-			vector_mul(&a, d);
-		}
-	} else {
-		/* skinny matrix routine */
-		vector_set_all(d, kOne);
-		for (k = 0; k < n; ++k) {
-			matrix_column(&a, A_out, k);
-			blas_dot_inplace(linalg_handle, &a, &a, e->data + k);
-		}
-		vector_sqrt(e);
-		vector_recip(e);
+// 		for (k = 0; k < n; ++k) {
+// 			matrix_column(&a, A_out, k);
+// 			vector_mul(&a, d);
+// 		}
+// 	} else {
+// 		/* skinny matrix routine */
+// 		vector_set_all(d, kOne);
+// 		for (k = 0; k < n; ++k) {
+// 			matrix_column(&a, A_out, k);
+// 			blas_dot_inplace(linalg_handle, &a, &a, e->data + k);
+// 		}
+// 		vector_sqrt(e);
+// 		vector_recip(e);
 
-		for (k = 0; k < m; ++k) {
-			matrix_row(&a, A_out, k);
-			vector_mul(&a, e);
-		}
-	}
-}
+// 		for (k = 0; k < m; ++k) {
+// 			matrix_row(&a, A_out, k);
+// 			vector_mul(&a, e);
+// 		}
+// 	}
+// }
 
 #ifndef OPTKIT_NO_OPERATOR_EQUIL
 ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,

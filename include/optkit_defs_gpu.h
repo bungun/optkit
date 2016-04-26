@@ -20,30 +20,21 @@ const unsigned int kMaxGridSize = 65535u;
  */
 
 
-#define OK_CHECK_CUDA(err, expr) \
-	do { \
-		if (!err) \
-			expr;
-			err = ok_cuda_status(cudaGetLastError(), \
-				__FILE__, __LINE__, __func__); \
-	} while (0)
-
 #define OK_STATUS_CUDA ok_cuda_status(cudaGetLastError(), __FILE__, __LINE__, \
 		__func__)
 
-#define OK_CHECK_CUBLAS(err, expr) \
+#define OK_CHECK_CUDA(err, expr) \
 	do { \
 		if (!err) \
-			err = ok_cublas_status(expr, \
-				__FILE__, __LINE__, __func__); \
+			expr; \
+			err = OK_STATUS_CUDA; \
 	} while (0)
 
-#define OK_CHECK_CUSPARSE(err, expr) \
-	do { \
-		if (err) \
-			err = ok_cusparse_status(expr, \
-				__FILE__, __LINE__, __func__); \
-	} while (0)
+#define OK_SCAN_CUBLAS(call) ok_cublas_status(call, __FILE__, __LINE__, \
+		__func__)
+
+#define OK_SCAN_CUSPARSE(call) ok_cusparse_status(call, __FILE__, __LINE__, \
+		__func__)
 
 #define ok_alloc_gpu(x, n) ok_cuda_status( cudaMalloc((void **) &x, n) )
 
@@ -56,12 +47,12 @@ const unsigned int kMaxGridSize = 65535u;
 
 
 #ifndef FLOAT
-	#define CUBLAS(x) CUDA_CHECK_ERR; cublasD ## x
-	#define CUSPARSE(x) CUDA_CHECK_ERR; cusparseD ## x
+	#define CUBLAS(x) cublasD ## x
+	#define CUSPARSE(x) cusparseD ## x
 	#define OK_CUDA_NAN CUDART_NAN
 #else
-	#define CUBLAS(x) CUDA_CHECK_ERR; cublasS ## x
-	#define CUSPARSE(x) CUDA_CHECK_ERR; cusparseS ## x
+	#define CUBLAS(x) cublasS ## x
+	#define CUSPARSE(x) cusparseS ## x
 	#define OK_CUDA_NAN CUDART_NAN_F
 #endif
 
