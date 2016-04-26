@@ -7,7 +7,7 @@ ok_status matrix_alloc_(matrix_<T> * A, size_t m, size_t n,
 	if (!A)
 		return OPTKIT_ERROR_UNALLOCATED;
 	if (A->data)
-		return OPTKIT_ERROR_OVERWRITE:
+		return OPTKIT_ERROR_OVERWRITE;
 	A->size1 = m;
 	A->size2 = n;
 	A->data = (T *) malloc(m * n * sizeof(T));
@@ -56,7 +56,7 @@ template<typename T>
 ok_status matrix_row_(vector_<T> * row, matrix_<T> * A, size_t i)
 {
 	if (!row || !A || !A->data)
-		return;
+		return OPTKIT_ERROR_UNALLOCATED;
 	row->size = A->size2;
 	row->stride = (A->order == CblasRowMajor) ? 1 : A->ld;
 	row->data = (A->order == CblasRowMajor) ?
@@ -69,20 +69,20 @@ template<typename T>
 ok_status matrix_column_(vector_<T> * col, matrix_<T> *A, size_t j)
 {
 	if (!col || !A || !A->data)
-		return;
+		return OPTKIT_ERROR_UNALLOCATED;
 	col->size = A->size1;
 	col->stride = (A->order == CblasRowMajor) ? A->ld : 1;
 	col->data = (A->order == CblasRowMajor) ?
 		    A->data + j :
 		    A->data + (j * A->ld);
-	}
 	return OPTKIT_SUCCESS;
+}
 
 template<typename T>
 ok_status matrix_diagonal_(vector_<T> * diag, matrix_<T> * A)
 {
 	if (!diag || !A || !A->data)
-		return;
+		return OPTKIT_ERROR_UNALLOCATED;
 	diag->data = A->data;
 	diag->stride = A->ld + 1;
 	diag->size = (size_t) (A->size1 <= A->size2) ? A->size1 : A->size2;
@@ -94,7 +94,7 @@ template<typename T>
 ok_status matrix_cast_vector_(vector_<T> * v, matrix_<T> * A)
 {
 	if (!v || !A || !A->data)
-		return;
+		return OPTKIT_ERROR_UNALLOCATED;
 	v->size = A->size1 * A->size2;
 	v->stride = 1;
 	v->data = A->data;
@@ -105,7 +105,7 @@ template<typename T>
 ok_status matrix_view_array_(matrix_<T> * A, const T *base, size_t n1,
 	size_t n2, enum CBLAS_ORDER ord)
 {
-	if (!A)
+	if (!A || !base)
 		return OPTKIT_ERROR_UNALLOCATED;
 	A->size1 = n1;
 	A->size2 = n2;
@@ -289,47 +289,47 @@ extern "C" {
 #endif
 
 ok_status matrix_alloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord)
-	{ matrix_alloc_<ok_float>(A, m, n, ord); }
+	{ return matrix_alloc_<ok_float>(A, m, n, ord); }
 
 ok_status matrix_calloc(matrix * A, size_t m, size_t n, enum CBLAS_ORDER ord)
-	{ matrix_calloc_<ok_float>(A, m, n, ord); }
+	{ return matrix_calloc_<ok_float>(A, m, n, ord); }
 
 ok_status matrix_free(matrix * A)
-	{ matrix_free_<ok_float>(A); }
+	{ return matrix_free_<ok_float>(A); }
 
 ok_status matrix_submatrix(matrix * A_sub, matrix * A, size_t i, size_t j,
 	size_t n1, size_t n2)
-	{ matrix_submatrix_<ok_float>(A_sub, A, i, j, n1, n2); }
+	{ return matrix_submatrix_<ok_float>(A_sub, A, i, j, n1, n2); }
 
 ok_status matrix_row(vector * row, matrix * A, size_t i)
-	{ matrix_row_<ok_float>(row, A, i); }
+	{ return matrix_row_<ok_float>(row, A, i); }
 
 ok_status matrix_column(vector * col, matrix * A, size_t j)
-	{ matrix_column_<ok_float>(col, A, j); }
+	{ return matrix_column_<ok_float>(col, A, j); }
 
 ok_status matrix_diagonal(vector * diag, matrix * A)
-	{ matrix_diagonal_<ok_float>(diag, A); }
+	{ return matrix_diagonal_<ok_float>(diag, A); }
 
 ok_status matrix_cast_vector(vector * v, matrix * A)
-	{ matrix_cast_vector_<ok_float>(v, A); }
+	{ return matrix_cast_vector_<ok_float>(v, A); }
 
 ok_status matrix_view_array(matrix * A, const ok_float * base, size_t n1,
 	size_t n2, enum CBLAS_ORDER ord)
-	{ matrix_view_array_<ok_float>(A, base, n1, n2, ord); }
+	{ return matrix_view_array_<ok_float>(A, base, n1, n2, ord); }
 
 ok_status matrix_set_all(matrix * A, ok_float x)
-	{ matrix_set_all_<ok_float>(A, x); }
+	{ return matrix_set_all_<ok_float>(A, x); }
 
 ok_status matrix_memcpy_mm(matrix * A, const matrix * B)
-	{ matrix_memcpy_mm_<ok_float>(A, B); }
+	{ return matrix_memcpy_mm_<ok_float>(A, B); }
 
 ok_status matrix_memcpy_ma(matrix * A, const ok_float * B,
 	const enum CBLAS_ORDER ord)
-	{ matrix_memcpy_ma_<ok_float>(A, B, ord); }
+	{ return matrix_memcpy_ma_<ok_float>(A, B, ord); }
 
 ok_status matrix_memcpy_am(ok_float * A, const matrix * B,
 	const enum CBLAS_ORDER ord)
-	{ matrix_memcpy_am_<ok_float>(A, B, ord); }
+	{ return matrix_memcpy_am_<ok_float>(A, B, ord); }
 
 ok_status matrix_print(matrix * A)
 {
@@ -350,13 +350,13 @@ ok_status matrix_print(matrix * A)
 }
 
 ok_status matrix_scale(matrix *A, ok_float x)
-	{ matrix_scale_<ok_float>(A, x); }
+	{ return matrix_scale_<ok_float>(A, x); }
 
 ok_status matrix_scale_left(matrix * A, const vector * v)
-	{ matrix_scale_left_<ok_float>(A, v); }
+	{ return matrix_scale_left_<ok_float>(A, v); }
 
 ok_status matrix_scale_right(matrix * A, const vector * v)
-	{ matrix_scale_right_<ok_float>(A, v); }
+	{ return matrix_scale_right_<ok_float>(A, v); }
 
 ok_status matrix_abs(matrix * A)
 {

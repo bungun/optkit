@@ -52,6 +52,7 @@ ok_status vector_set_all_(vector_<T> * v, T x)
 	OK_CHECK_VECTOR(v);
 	for (i = 0; i < v->size; ++i)
 		__vector_set<T>(v, i, x);
+	return OPTKIT_SUCCESS;
 }
 
 template<typename T>
@@ -63,6 +64,7 @@ ok_status vector_subvector_(vector_<T> * v_out, vector_<T> * v_in,
 	v_out->size = n;
 	v_out->stride = v_in->stride;
 	v_out->data = v_in->data + offset * v_in->stride;
+	return OPTKIT_SUCCESS;
 }
 
 template<typename T>
@@ -83,7 +85,7 @@ ok_status vector_memcpy_vv_(vector_<T> * v1, const vector_<T> * v2)
 	OK_CHECK_VECTOR(v1);
 	OK_CHECK_VECTOR(v2);
 	if (v1->size != v2->size)
-		return OPTKIT_DIMENSION_MISMATCH;
+		return OPTKIT_ERROR_DIMENSION_MISMATCH;
 
 	if ( v1->stride == 1 && v2->stride == 1)
 		memcpy(v1->data, v2->data, v1->size * sizeof(T));
@@ -93,6 +95,7 @@ ok_status vector_memcpy_vv_(vector_<T> * v1, const vector_<T> * v2)
 		// #endif
 		for (i = 0; i < v1->size; ++i)
 			__vector_set<T>(v1, i, __vector_get<T>(v2,i));
+	return OPTKIT_SUCCESS;
 }
 
 template<typename T>
@@ -128,6 +131,7 @@ ok_status vector_memcpy_av_(T * x, const vector_<T> * v, size_t stride_x)
 		// #endif
 		for (i = 0; i < v->size; ++i)
 			x[i * stride_x] = __vector_get<T>(v,i);
+	return OPTKIT_SUCCESS;
 }
 
 template<typename T>
@@ -141,6 +145,7 @@ ok_status vector_scale_(vector_<T> * v, T x)
 	// #endif
 	for (i = 0; i < v->size; ++i)
 		v->data[i * v->stride] *= x;
+	return OPTKIT_SUCCESS;
 }
 
 
@@ -151,13 +156,14 @@ ok_status vector_add_(vector_<T> * v1, const vector_<T> * v2)
 	OK_CHECK_VECTOR(v1);
 	OK_CHECK_VECTOR(v2);
 	if (v1->size != v2->size)
-		return OPTKIT_DIMENSION_MISMATCH;
+		return OPTKIT_ERROR_DIMENSION_MISMATCH;
 
 	// #ifdef _OPENMP
 	// #pragma omp parallel for
 	// #endif
 	for (i = 0; i < v1->size; ++i)
 		v1->data[i * v1->stride] += v2->data[i * v2->stride];
+	return OPTKIT_SUCCESS;
 }
 
 template<typename T>
@@ -167,7 +173,7 @@ ok_status vector_sub_(vector_<T> * v1, const vector_<T> * v2)
 	OK_CHECK_VECTOR(v1);
 	OK_CHECK_VECTOR(v2);
 	if (v1->size != v2->size)
-		return OPTKIT_DIMENSION_MISMATCH;
+		return OPTKIT_ERROR_DIMENSION_MISMATCH;
 
 	// #ifdef _OPENMP
 	// #pragma omp parallel for
@@ -184,7 +190,7 @@ ok_status vector_mul_(vector_<T> * v1, const vector_<T> * v2)
 	OK_CHECK_VECTOR(v1);
 	OK_CHECK_VECTOR(v2);
 	if (v1->size != v2->size)
-		return OPTKIT_DIMENSION_MISMATCH;
+		return OPTKIT_ERROR_DIMENSION_MISMATCH;
 
 	// #ifdef _OPENMP
 	// #pragma omp parallel for
@@ -201,7 +207,7 @@ ok_status vector_div_(vector_<T> * v1, const vector_<T> * v2)
 	OK_CHECK_VECTOR(v1);
 	OK_CHECK_VECTOR(v2);
 	if (v1->size != v2->size)
-		return OPTKIT_DIMENSION_MISMATCH;
+		return OPTKIT_ERROR_DIMENSION_MISMATCH;
 
 	// #ifdef _OPENMP
 	// #pragma omp parallel for
@@ -215,10 +221,7 @@ template<typename T>
 ok_status vector_add_constant_(vector_<T> * v, const T x)
 {
 	uint i;
-	OK_CHECK_VECTOR(v1);
-	OK_CHECK_VECTOR(v2);
-	if (v1->size != v2->size)
-		return OPTKIT_DIMENSION_MISMATCH;
+	OK_CHECK_VECTOR(v);
 
 	// #ifdef _OPENMP
 	// #pragma omp parallel for
@@ -427,14 +430,14 @@ ok_status vector_exp(vector * v)
 	return OPTKIT_SUCCESS;
 }
 
-size_t vector_indmin(const vector * v)
-	{ return vector_indmin_<ok_float>(v, OK_FLOAT_MAX); }
+ok_status vector_indmin(const vector * v, size_t * idx)
+	{ return vector_indmin_<ok_float>(v, OK_FLOAT_MAX, idx); }
 
-ok_float vector_min(const vector * v)
-	{ return vector_min_<ok_float>(v, OK_FLOAT_MAX); }
+ok_status vector_min(const vector * v, ok_float * minval)
+	{ return vector_min_<ok_float>(v, OK_FLOAT_MAX, minval); }
 
-ok_float vector_max(const vector * v)
-	{ return vector_max_<ok_float>(v, -OK_FLOAT_MAX); }
+ok_status vector_max(const vector * v, ok_float * maxval)
+	{ return vector_max_<ok_float>(v, -OK_FLOAT_MAX, maxval); }
 
 ok_status indvector_alloc(indvector * v, size_t n)
 	{ return vector_alloc_<size_t>(v, n); }

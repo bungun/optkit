@@ -11,7 +11,7 @@ extern "C" {
 #define OK_CHECK_MATRIX(M) \
 	do { \
 		if (!M || !M->data) \
-			return OK_SCAN_ERROR( OPTKIT_ERROR_UNALLOCATED ); \
+			return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED ); \
 	} while(0)
 #endif
 

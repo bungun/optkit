@@ -11,7 +11,7 @@ extern "C" {
 #define OK_CHECK_VECTOR(v) \
 	do { \
 		if (!v || !v->data) \
-			return OK_SCAN_ERROR( OPTKIT_ERROR_UNALLOCATED ); \
+			return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED ); \
 	} while(0)
 #endif
 

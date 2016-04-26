@@ -57,8 +57,8 @@ static ok_status __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A)
 		/* A22 -= L12*L12'*/
 		OK_CHECK_ERR( err, matrix_submatrix(&a22, A, i + 1, i + 1,
 			n - i - 1, n - i - 1) );
-		OK_CHECK_ERR( blas_syrk(linalg_handle, CblasLower, CblasNoTrans,
-			-kOne, &l21, kOne, &a22) );
+		OK_CHECK_ERR( err, blas_syrk(linalg_handle, CblasLower,
+			CblasNoTrans, -kOne, &l21, kOne, &a22) );
 	}
 	return err;
 }
@@ -94,29 +94,28 @@ ok_status linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 		n11 = blk_dim < n - i ? blk_dim : n - i;
 
 		/* L11 = chol(A11) */
-		OK_RETURNIF_ERR( err,
-			matrix_submatrix(&L11, A, i, i, n11, n11) );
-		OK_RETURNIF_ERR( err,
-			__linalg_cholesky_decomp_noblk(linalg_handle, &L11) );
+		OK_RETURNIF_ERR( matrix_submatrix(&L11, A, i, i, n11, n11) );
+		OK_RETURNIF_ERR( __linalg_cholesky_decomp_noblk(linalg_handle,
+			&L11) );
 
 		if (i + blk_dim >= n)
 			break;
 
                 /* L21 = A21 L21^-ok_float */
-		OK_RETURNIF_ERR( err, matrix_submatrix(&L21, A, i + n11, i,
+		OK_RETURNIF_ERR( matrix_submatrix(&L21, A, i + n11, i,
 			n - i - n11, n11) );
-		OK_RETURNIF_ERR( err, blas_trsm(linalg_handle, CblasRight,
+		OK_RETURNIF_ERR( blas_trsm(linalg_handle, CblasRight,
 			CblasLower, CblasTrans, CblasNonUnit, kOne, &L11,
 			&L21) );
 
 		/* A22 -= L21*L21^ok_float */
-		OK_RETURNIF_ERR( err, matrix_submatrix(&A22, A, i + blk_dim,
+		OK_RETURNIF_ERR( matrix_submatrix(&A22, A, i + blk_dim,
 			i + blk_dim, n - i - blk_dim, n - i - blk_dim) );
 
 		OK_RETURNIF_ERR( blas_syrk(linalg_handle, CblasLower,
 			CblasNoTrans, -kOne, &L21, kOne, &A22) );
 	}
-	return err;
+	return OPTKIT_SUCCESS;
 }
 
 /* Cholesky solve */
@@ -156,8 +155,6 @@ ok_status linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t,
 	/* check size == v->size */
 	if (v->size != nvecs)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
-
-	}
 
 	#ifdef _OPENMP
 	#pragma omp parallel for
@@ -231,7 +228,7 @@ ok_status linalg_matrix_reduce_indmin(indvector * indices, vector * minima,
 	size_t k;
 	vector a;
 
-	void (* matrix_subvec)(vector * row_col, matrix * A, size_t k) =
+	ok_status (* matrix_subvec)(vector * row_col, matrix * A, size_t k) =
 		(reduce_rows) ? matrix_column : matrix_row;
 
 	if (output_dim != minima->size || indices->size != minima->size)
@@ -252,13 +249,12 @@ static ok_status __matrix_extrema(vector * extrema, matrix * A,
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_VECTOR(extrema);
 
-	ok_status err;
 	int reduce_rows = (side == CblasLeft);
 	size_t output_dim = (reduce_rows) ? A->size2 : A->size1;
 	size_t k;
 	vector a;
 
-	void (* matrix_subvec)(vector * row_col, matrix * A, size_t k) =
+	ok_status (* matrix_subvec)(vector * row_col, matrix * A, size_t k) =
 		(reduce_rows) ? matrix_column : matrix_row;
 
 	if (output_dim != extrema->size)
@@ -267,12 +263,12 @@ static ok_status __matrix_extrema(vector * extrema, matrix * A,
 	if (minima)
 		for (k = 0; k < output_dim; ++k) {
 			matrix_subvec(&a, A, k);
-			extrema->data[k] = vector_min(&a);
+			vector_min(&a, extrema->data + k * extrema->stride);
 		}
 	else
 		for (k = 0; k < output_dim; ++k) {
 			matrix_subvec(&a, A, k);
-			extrema->data[k] = vector_max(&a);
+			vector_max(&a, extrema->data + k * extrema->stride);
 		}
 	return OPTKIT_SUCCESS;
 }

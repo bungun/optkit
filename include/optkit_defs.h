@@ -39,7 +39,7 @@ extern "C" {
 #define ok_free(x) \
 	do { \
 		free(x); \
-		x = OK_NULL \
+		x = OK_NULL; \
 	} while(0)
 
 typedef unsigned int uint;
@@ -64,18 +64,18 @@ typedef enum optkit_status {
 #define OK_CHECK_ERR(err, call) \
 	do { \
 		if (!err) \
-			err = OK_SCAN_ERR(call); \
+			err = OK_SCAN_ERR( call ); \
 	} while(0)
 
 #define OK_MAX_ERR(err, call) \
 	do { \
-		ok_status newerr = OK_SCAN_ERR(call); \
+		ok_status newerr = OK_SCAN_ERR( call ); \
 		err = err > newerr ? err : newerr; \
 	} while(0)
 
 #define OK_RETURNIF_ERR(call) \
 	do { \
-		ok_status err = OK_SCAN_ERR(call); \
+		ok_status err = OK_SCAN_ERR( call ); \
 		if (err) \
 			return err; \
 	} while(0)
@@ -83,7 +83,7 @@ typedef enum optkit_status {
 #define OK_CHECK_PTR(ptr) \
 	do { \
 		if (!ptr) \
-			return OPTKIT_ERROR_UNALLOCATED \
+			return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED ); \
 	} while(0)
 
 enum OPTKIT_TRANSFORM {
@@ -158,9 +158,9 @@ static const char * ok_err2string(const ok_status error) {
 static ok_status ok_print_status(ok_status err, const char * file,
 	const int line, const char * function)
 {
-	if (code != OPTKIT_SUCCESS)
-		printf(":%d:%s\n ERROR_OPTKIT: %s\n", file, lin, function,
-			ok_err2string);
+	if (err != OPTKIT_SUCCESS)
+		printf("%s:%d:%s\n ERROR_OPTKIT: %s\n", file, line, function,
+			ok_err2string(err));
 	return err;
 }
 

@@ -60,7 +60,7 @@ ok_status blas_dot(void * linalg_handle, const vector * x, const vector * y,
 	if (x->size != y->size)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	result =  CBLAS(dot)((int) x->size, x->data, (int) x->stride, y->data,
+	*result = CBLAS(dot)((int) x->size, x->data, (int) x->stride, y->data,
 		(int) y->stride);
 	return OPTKIT_SUCCESS;
 }
@@ -132,7 +132,7 @@ ok_status blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
 	lenA = y->size;
 	if (num_superdiag > 0 && num_superdiag < y->size)
 		lenA = (lenA * (lenA + 1)) / 2 -
-			((lenA - num_superdiag)*(lenA - num_superdiag + 1)) / 2
+			((lenA - num_superdiag)*(lenA - num_superdiag + 1)) / 2;
 
 	if (x->size != y->size || vecA->size != lenA)
 		return OPTKIT_ERROR_DIMENSION_MISMATCH;
@@ -150,7 +150,7 @@ ok_status blas_diagmv(void * linalg_handle, const ok_float alpha,
 	OK_CHECK_VECTOR(vecA);
 	OK_CHECK_VECTOR(x);
 	OK_CHECK_VECTOR(y);
-	else if (vecA->size != y->size || x->size != y->size)
+	if (vecA->size != y->size || x->size != y->size)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	return blas_sbmv(linalg_handle, CblasColMajor, CblasLower, 0, alpha,
@@ -163,14 +163,11 @@ ok_status blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
 	enum CBLAS_TRANSPOSE transA, ok_float alpha, const matrix * A,
 	ok_float beta, matrix * C)
 {
-	const int k;
-
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_MATRIX(C);
-	k = (transA == CblasNoTrans) ? (int) A->size2 :
-					 (int) A->size1;
+	const int k = (transA == CblasNoTrans) ? (int) A->size2:(int) A->size1;
 	if (A->order != C->order)
-		return OK_SCAN_ERR( OPTKIT_ERROR_LAYOUT_MISMATCH) );
+		return OK_SCAN_ERR( OPTKIT_ERROR_LAYOUT_MISMATCH );
 	if (C->size1 != C->size2 ||
 		(transA == CblasNoTrans && A->size1 != C->size1) ||
 		(transA == CblasTrans && A->size2 != C->size2))
@@ -222,7 +219,6 @@ ok_status blas_trsm(void * linalg_handle, enum CBLAS_SIDE side,
 	enum CBLAS_UPLO uplo, enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG diag,
 	ok_float alpha, const matrix *A, matrix *B)
 {
-	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_MATRIX(B);
 	if (A->order != B->order)
