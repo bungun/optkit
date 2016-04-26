@@ -9,20 +9,21 @@
 extern "C" {
 #endif
 
-void linalg_cholesky_decomp(void * linalg_handle, matrix * A);
-void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x);
+ok_status linalg_cholesky_decomp(void * linalg_handle, matrix * A);
+ok_status linalg_cholesky_svx(void * linalg_handle, const matrix * L,
+	vector * x);
 
 /* TODO: consider changing this to matrix_reduce_unary(const enum t, matrix A,
 	vector v, const enum reduction_op, const enum unary_op) */
-void linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t, const matrix * A,
-	vector * v);
-void linalg_matrix_broadcast_vector(matrix * A, const vector * v,
+ok_status linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t,
+	const matrix * A, vector * v);
+ok_status linalg_matrix_broadcast_vector(matrix * A, const vector * v,
 	const enum OPTKIT_TRANSFORM operation, const enum CBLAS_SIDE side);
-void linalg_matrix_reduce_indmin(indvector * indices, vector * minima,
+ok_status linalg_matrix_reduce_indmin(indvector * indices, vector * minima,
 	matrix * A, const enum CBLAS_SIDE side);
-void linalg_matrix_reduce_min(vector * minima, matrix * A,
+ok_status linalg_matrix_reduce_min(vector * minima, matrix * A,
 	const enum CBLAS_SIDE side);
-void linalg_matrix_reduce_max(vector * maxima, matrix * A,
+ok_status linalg_matrix_reduce_max(vector * maxima, matrix * A,
 	const enum CBLAS_SIDE side);
 
 #ifdef __cplusplus

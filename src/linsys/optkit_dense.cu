@@ -28,17 +28,6 @@ void denselib_version(int * maj, int * min, int * change, int * status)
 	* status = (int) OPTKIT_VERSION_STATUS;
 }
 
-int __matrix_order_compat(const matrix * A, const matrix * B, const char * nm_A,
-	const char * nm_B, const char * nm_routine)
-{
-	if (A->order == B->order)
-	    return 1;
-
-	printf("OPTKIT ERROR (%s) matrices %s and %s must have same layout.\n",
-		 nm_routine, nm_A, nm_B);
-	return 0;
-}
-
 /* cholesky decomposition of a single block */
 static __global__ void __block_chol(ok_float * A, uint iter, uint ld,
 	const enum CBLAS_ORDER ord)
@@ -139,58 +128,77 @@ static __global__ void __block_trsv(ok_float * A, uint iter, uint n, uint ld,
  *
  * Stores result in Lower triangular part.
  */
-void linalg_cholesky_decomp(void * linalg_handle, matrix * A)
+ok_status linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 {
 	cublasStatus_t err;
 	cudaStream_t stm;
 	uint num_tiles, grid_dim, i;
 	matrix L21, A22;
 
-	err = cublasGetStream(*(cublasHandle_t *) linalg_handle, &stm);
+	if (!linalg_handle)
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	OK_CHECK_MATRIX(A);
+	if (A->size1 != A->size2)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
+	err = OK_SCAN_CUBLAS( cublasGetStream(*(cublasHandle_t *) linalg_handle,
+		&stm) );
 	num_tiles = (A->size1 + kTileSize - 1u) / kTileSize;
 
-	for (i = 0; i < num_tiles; ++i) {
-		if (err != CUBLAS_STATUS_SUCCESS)
-			break;
-
+	for (i = 0; i < num_tiles && !err; ++i) {
 		/* L11 = chol(A11) */
 		uint block_dim_1d = kTileSize < A->size1 - i * kTileSize ? \
 				    kTileSize : A->size1 - i * kTileSize;
 		dim3 block_dim(block_dim_1d, block_dim_1d);
 
-		__block_chol<<<1, block_dim, 0, stm>>>(A->data, i, (uint) A->ld,
-			A->order);
+		if (!err)
+			__block_chol<<<1, block_dim, 0, stm>>>(A->data, i,
+				(uint) A->ld, A->order);
 		cudaDeviceSynchronize();
-		CUDA_CHECK_ERR;
+		OK_RETURNIF_ERR( OK_STATUS_CUDA )
 
 		if (i == num_tiles - 1u)
 			break;
 
 		/* L21 = A21 * L21^-T */
 		grid_dim = num_tiles - i - 1u;
-		matrix_submatrix(&L21, A, (i + 1) * kTileSize, i * kTileSize,
-			A->size1 - (i + 1) * kTileSize, kTileSize);
+		OK_RETURNIF_ERR( matrix_submatrix(&L21, A, (i + 1) * kTileSize,
+			i * kTileSize, A->size1 - (i + 1) * kTileSize,
+			kTileSize) );
 
-		__block_trsv<<<grid_dim, kTileSize, 0, stm>>>(A->data, i,
-			(uint) A->size1, (uint) A->ld, A->order);
+		if (!err)
+			__block_trsv<<<grid_dim, kTileSize, 0, stm>>>(A->data,
+				i, (uint) A->size1, (uint) A->ld, A->order);
 		cudaDeviceSynchronize();
-		CUDA_CHECK_ERR;
+		OK_RETURNIF_ERR( OK_STATUS_CUDA )
 
 		/* A22 -= L21 * L21^T */
-		matrix_submatrix(&A22, A, (i + 1) * kTileSize,
+		OK_RETURNIF_ERR( matrix_submatrix(&A22, A, (i + 1) * kTileSize,
 			(i + 1) * kTileSize, A->size1 - (i + 1) * kTileSize,
-			A->size1 - (i + 1) * kTileSize);
+			A->size1 - (i + 1) * kTileSize) );
 
-		blas_syrk(linalg_handle, CblasLower, CblasNoTrans, -kOne, &L21,
-			kOne, &A22);
+		OK_RETURNIF_ERR( blas_syrk(linalg_handle, CblasLower,
+			CblasNoTrans, -kOne, &L21, kOne, &A22) );
 	}
+	return err;
 }
 
 /* Cholesky solve */
-void linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x)
+ok_status linalg_cholesky_svx(void * linalg_handle, const matrix * L,
+	vector * x)
 {
-	blas_trsv(linalg_handle, CblasLower, CblasNoTrans, CblasNonUnit, L, x);
-	blas_trsv(linalg_handle, CblasLower, CblasTrans, CblasNonUnit, L, x);
+	OK_CHECK_MATRIX(L);
+	OK_CHECK_VECTOR(x);
+
+	if (!linalg_handle)
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	if (L->size1 != L->size2 || L->size1 != x->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
+	OK_RETURNIF_ERR( err, blas_trsv(linalg_handle, CblasLower, CblasNoTrans,
+		CblasNonUnit, L, x) );
+	return blas_trsv(linalg_handle, CblasLower, CblasTrans,
+		CblasNonUnit, L, x) );
 }
 
 static __global__ void __block_col_squares(const ok_float * A,
@@ -223,9 +231,12 @@ static __global__ void __block_col_squares(const ok_float * A,
 	v[global_row * stride_v] = vsub[row];
 }
 
-void linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t, const matrix * A,
-	vector * v)
+ok_status linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t,
+	const matrix * A, vector * v)
 {
+	OK_CHECK_MATRIX(A);
+	OK_CHECK_VECTOR(v);
+
 	uint i, j;
 	uint block_size = kTiles2D * kTileSize;
 
@@ -245,15 +256,8 @@ void linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t, const matrix * A,
 	size_t row_stride = (transpose == rowmajor) ? A->ld : 1;
 	size_t col_stride = (transpose == rowmajor) ? 1 : A->ld;
 
-	if (!(v && A)) {
-		printf("%s\n", "A and v must both be initialized");
-		return;
-	}
-
-	if (v->size != size1) {
-		printf("%s\n", "dimensions of A and v are incompatible");
-		return;
-	}
+	if (v->size != size1)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	/* transform one bundle of [block_size] columns x M rows per stream */
 	for (j = 0; j < size2; j += block_size) {
@@ -266,7 +270,7 @@ void linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t, const matrix * A,
 		cudaStreamDestroy(s);
 	}
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
+	return OK_STATUS_CUDA;
 }
 
 static __device__ void __entry_add(ok_float * data, const size_t row,
@@ -317,9 +321,12 @@ static __global__ void __matrix_broadcast_vector(ok_float * A,
 		Asub[row * kTileLD + col];
 }
 
-void linalg_matrix_broadcast_vector(matrix * A, const vector * v,
+ok_status linalg_matrix_broadcast_vector(matrix * A, const vector * v,
 	const enum OPTKIT_TRANSFORM operation, const enum CBLAS_SIDE side)
 {
+	OK_CHECK_MATRIX(A);
+	OK_CHECK_VECTOR(v);
+
 	uint i, j;
 	uint block_size = kTiles2D * kTileSize;
 
@@ -337,11 +344,13 @@ void linalg_matrix_broadcast_vector(matrix * A, const vector * v,
 	size_t size2 = (left) ? A->size2 : A->size1;
 	size_t row_stride = (left == rowmajor) ? A->ld : 1;
 	size_t col_stride = (left == rowmajor) ? 1 : A->ld;
-
 	void (*transform)(ok_float * data, const size_t row, const size_t col,
 		const size_t stride_r, const size_t stride_c,
 		const ok_float value) = (operation == OkTransformScale) ?
 		__entry_mul : __entry_add;
+
+	if (size1 != v->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	/* transform one bundle of [block_size] rows x N cols per stream */
 	for (i = 0; i < size1; i += block_size) {
@@ -354,7 +363,7 @@ void linalg_matrix_broadcast_vector(matrix * A, const vector * v,
 		cudaStreamDestroy(s);
 	}
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
+	return OK_STATUS_CUDA;
 }
 
 static __global__ void __matrix_row_indmin(size_t * indmin,
@@ -433,9 +442,13 @@ static __global__ void __matrix_row_reduce(ok_float * reduced,
 		reduced[global_row * stride] = reduced_sub[row];
 }
 
-void linalg_matrix_reduce_indmin(indvector * indices, vector * minima,
+ok_status linalg_matrix_reduce_indmin(indvector * indices, vector * minima,
 	matrix * A, const enum CBLAS_SIDE side)
 {
+	OK_CHECK_VECTOR(indices);
+	OK_CHECK_VECTOR(minima);
+	OK_CHECK_MATRIX(A);
+
 	uint i, j;
 	uint block_size = kTiles2D * kTileSize;
 
@@ -454,7 +467,10 @@ void linalg_matrix_reduce_indmin(indvector * indices, vector * minima,
 	size_t row_stride = (left == rowmajor) ? A->ld : 1;
 	size_t col_stride = (left == rowmajor) ? 1 : A->ld;
 
-	vector_set_all(minima, OK_FLOAT_MAX);
+	if (size2 != minima->size || indices->size != minima->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
+	OK_RETURNIF_ERR( vector_set_all(minima, OK_FLOAT_MAX) );
 
 	/* reduce one bundle of [block_size] rows x N cols per stream */
 	for (i = 0; i < size1; i += block_size) {
@@ -468,13 +484,16 @@ void linalg_matrix_reduce_indmin(indvector * indices, vector * minima,
 		cudaStreamDestroy(s);
 	}
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
+	return OK_STATUS_CUDA;
 }
 
-static void __matrix_reduce_binary(vector * reduced, matrix * A,
+static ok_status __matrix_reduce_binary(vector * reduced, matrix * A,
 	const enum CBLAS_SIDE side, const ok_float default_value,
 	ok_float (* binary_op_)(const ok_float first, const ok_float second))
 {
+	OK_CHECK_VECTOR(reduced);
+	OK_CHECK_MATRIX(A);
+
 	uint i, j;
 	uint block_size = kTiles2D * kTileSize;
 
@@ -493,7 +512,10 @@ static void __matrix_reduce_binary(vector * reduced, matrix * A,
 	size_t row_stride = (left == rowmajor) ? A->ld : 1;
 	size_t col_stride = (left == rowmajor) ? 1 : A->ld;
 
-	vector_set_all(reduced, default_value);
+	if (size2 != reduced->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
+	OK_RETURNIF_ERR( vector_set_all(reduced, default_value) );
 
 	/* reduce one bundle of [block_size] rows x N cols per stream */
 	for (i = 0; i < size1; i += block_size) {
@@ -507,21 +529,21 @@ static void __matrix_reduce_binary(vector * reduced, matrix * A,
 		cudaStreamDestroy(s);
 	}
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERR;
+	return OK_STATUS_CUDA;
 }
 
-void linalg_matrix_reduce_min(vector * minima, matrix * A,
+ok_status linalg_matrix_reduce_min(vector * minima, matrix * A,
 	const enum CBLAS_SIDE side)
 {
-	vector_set_all(minima, OK_FLOAT_MAX);
-	__matrix_reduce_binary(minima, A, side, OK_FLOAT_MAX, MATH(fmin));
+	return __matrix_reduce_binary(minima, A, side, OK_FLOAT_MAX,
+		MATH(fmin));
 }
 
-void linalg_matrix_reduce_max(vector * maxima, matrix * A,
+ok_status linalg_matrix_reduce_max(vector * maxima, matrix * A,
 	const enum CBLAS_SIDE side)
 {
-	vector_set_all(maxima, -OK_FLOAT_MAX);
-	__matrix_reduce_binary(maxima, A, side, -OK_FLOAT_MAX, MATH(fmax));
+	return __matrix_reduce_binary(maxima, A, side, -OK_FLOAT_MAX,
+		MATH(fmax));
 }
 
 #ifdef __cplusplus
