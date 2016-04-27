@@ -570,7 +570,6 @@ class DenseBLASTestCase(OptkitCTestCase):
 			self.register_var('hdl', hdl, lib.blas_destroy_handle)
 
 			for rowmajor in (True, False):
-				print "ROWMAJOR", rowmajor
 				order = lib.enums.CblasRowMajor if rowmajor else \
 						lib.enums.CblasColMajor
 

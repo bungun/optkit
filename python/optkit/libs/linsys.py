@@ -362,21 +362,21 @@ def attach_sparse_linsys_ccalls(lib, single_precision=False):
 	# lib.sp_matrix_print_transpose.argtypes = [sparse_matrix_p]
 
 	## return values
-	lib.sp_matrix_alloc.restype = None
-	lib.sp_matrix_calloc.restype = None
-	lib.sp_matrix_free.restype = None
-	lib.sp_matrix_memcpy_mm.restype = None
-	lib.sp_matrix_memcpy_ma.restype = None
-	lib.sp_matrix_memcpy_am.restype = None
-	lib.sp_matrix_memcpy_vals_mm.restype = None
-	lib.sp_matrix_memcpy_vals_ma.restype = None
-	lib.sp_matrix_memcpy_vals_am.restype = None
-	lib.sp_matrix_abs.restype = None
-	lib.sp_matrix_pow.restype = None
-	lib.sp_matrix_scale.restype = None
-	lib.sp_matrix_scale_left.restype = None
-	lib.sp_matrix_scale_right.restype = None
-	lib.sp_matrix_print.restype = None
+	lib.sp_matrix_alloc.restype = c_uint
+	lib.sp_matrix_calloc.restype = c_uint
+	lib.sp_matrix_free.restype = c_uint
+	lib.sp_matrix_memcpy_mm.restype = c_uint
+	lib.sp_matrix_memcpy_ma.restype = c_uint
+	lib.sp_matrix_memcpy_am.restype = c_uint
+	lib.sp_matrix_memcpy_vals_mm.restype = c_uint
+	lib.sp_matrix_memcpy_vals_ma.restype = c_uint
+	lib.sp_matrix_memcpy_vals_am.restype = c_uint
+	lib.sp_matrix_abs.restype = c_uint
+	lib.sp_matrix_pow.restype = c_uint
+	lib.sp_matrix_scale.restype = c_uint
+	lib.sp_matrix_scale_left.restype = c_uint
+	lib.sp_matrix_scale_right.restype = c_uint
+	lib.sp_matrix_print.restype = c_uint
 	# lib.sp_matrix_print_transpose.restype = None
 
 	# Sparse BLAS
@@ -386,4 +386,4 @@ def attach_sparse_linsys_ccalls(lib, single_precision=False):
 								 vector_p, ok_float, vector_p]
 
 	## return values
-	lib.sp_blas_gemv.restype = None
+	lib.sp_blas_gemv.restype = c_uint

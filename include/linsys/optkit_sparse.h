@@ -7,6 +7,14 @@
 extern "C" {
 #endif
 
+#ifndef OK_CHECK_SPARSEMAT
+#define OK_CHECK_SPARSEMAT(M) \
+	do { \
+		if (!M || !M->val || !M->ind || !M->ptr) \
+			return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED ); \
+	} while(0)
+#endif
+
 /* transpose data from forward->adjoint or adjoint->forward */
 typedef enum SparseTransposeDirection {
 	Forward2Adjoint,
@@ -28,17 +36,18 @@ public:
 };
 
 template<typename T, typename I>
-void sp_matrix_alloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
+ok_status sp_matrix_alloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order);
 template<typename T, typename I>
-void sp_matrix_calloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
-	enum CBLAS_ORDER order);
+ok_status sp_matrix_calloc_(sp_matrix_<T, I> * A, size_t m, size_t n,
+	size_t nnz, enum CBLAS_ORDER order);
 template<typename T, typename I>
-void sp_matrix_free_(sp_matrix_<T, I> * A);
+ok_status sp_matrix_free_(sp_matrix_<T, I> * A);
 template<typename T, typename I>
-void sp_matrix_memcpy_mm_(sp_matrix_<T, I> * A, const sp_matrix_<T, I> * B);
+ok_status sp_matrix_memcpy_mm_(sp_matrix_<T, I> * A,
+	const sp_matrix_<T, I> * B);
 template<typename T, typename I>
-void sp_matrix_memcpy_vals_mm_(sp_matrix_<T, I> * A,
+ok_status sp_matrix_memcpy_vals_mm_(sp_matrix_<T, I> * A,
 	const sp_matrix_<T, I> * B);
 #endif
 
@@ -61,38 +70,38 @@ typedef struct sp_matrix {
 ok_status sp_make_handle(void ** sparse_handle);
 ok_status sp_destroy_handle(void * sparse_handle);
 
-void sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
+ok_status sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order);
-void sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
+ok_status sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order);
-void sp_matrix_free(sp_matrix * A);
+ok_status sp_matrix_free(sp_matrix * A);
 
 /* copy, I/O */
-void sp_matrix_memcpy_mm(sp_matrix * A, const sp_matrix * B);
-void sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A,
+ok_status sp_matrix_memcpy_mm(sp_matrix * A, const sp_matrix * B);
+ok_status sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A,
         const ok_float * val, const ok_int * ind, const ok_int * ptr);
-void sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
+ok_status sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
         const sp_matrix * A);
-void sp_matrix_memcpy_vals_mm(sp_matrix * A, const sp_matrix * B);
-void sp_matrix_memcpy_vals_ma(void * sparse_handle, sp_matrix * A,
+ok_status sp_matrix_memcpy_vals_mm(sp_matrix * A, const sp_matrix * B);
+ok_status sp_matrix_memcpy_vals_ma(void * sparse_handle, sp_matrix * A,
         const ok_float * val);
-void sp_matrix_memcpy_vals_am(ok_float * val, const sp_matrix * A);
+ok_status sp_matrix_memcpy_vals_am(ok_float * val, const sp_matrix * A);
 
 /* elementwise, row-wise & column-wise math */
-void sp_matrix_abs(sp_matrix * A);
-void sp_matrix_pow(sp_matrix * A, const ok_float x);
-void sp_matrix_scale(sp_matrix * A, const ok_float alpha);
-void sp_matrix_scale_left(void * sparse_handle, sp_matrix * A,
+ok_status sp_matrix_abs(sp_matrix * A);
+ok_status sp_matrix_pow(sp_matrix * A, const ok_float x);
+ok_status sp_matrix_scale(sp_matrix * A, const ok_float alpha);
+ok_status sp_matrix_scale_left(void * sparse_handle, sp_matrix * A,
 	const vector * v);
-void sp_matrix_scale_right(void * sparse_handle, sp_matrix * A,
+ok_status sp_matrix_scale_right(void * sparse_handle, sp_matrix * A,
 	const vector * v);
 
 /* print */
-void sp_matrix_print(const sp_matrix * A);
-void sp_matrix_print_transpose(const sp_matrix * A);
+ok_status sp_matrix_print(const sp_matrix * A);
+ok_status sp_matrix_print_transpose(const sp_matrix * A);
 
 /* matrix multiplication */
-void sp_blas_gemv(void * sparse_handle, enum CBLAS_TRANSPOSE transA,
+ok_status sp_blas_gemv(void * sparse_handle, enum CBLAS_TRANSPOSE transA,
 	ok_float alpha, sp_matrix * A, vector * x, ok_float beta, vector * y);
 
 #ifdef __cplusplus

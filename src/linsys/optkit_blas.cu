@@ -126,7 +126,7 @@ ok_float blas_dot(void * linalg_handle, const vector * x, const vector * y,
 
 /* BLAS LEVEL 2 */
 
-void blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
+ok_stauts blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 	ok_float alpha, const matrix *A, const vector *x, ok_float beta,
 	vector *y)
 {
@@ -160,7 +160,7 @@ void blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 	return err;
 }
 
-void blas_trsv(void * linalg_handle, enum CBLAS_UPLO uplo,
+ok_stauts blas_trsv(void * linalg_handle, enum CBLAS_UPLO uplo,
 	enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, const matrix *A,
 	vector *x)
 {
@@ -195,7 +195,7 @@ void blas_trsv(void * linalg_handle, enum CBLAS_UPLO uplo,
 	return err;
 }
 
-void blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
+ok_stauts blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
 	enum CBLAS_UPLO uplo, const size_t num_superdiag, const ok_float alpha,
 	const vector * vecA, const vector * x, const ok_float beta, vector * y)
 {
@@ -238,7 +238,7 @@ void blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
 	return err;
 }
 
-void blas_diagmv(void * linalg_handle, const ok_float alpha,
+ok_stauts blas_diagmv(void * linalg_handle, const ok_float alpha,
 	const vector * vecA, const vector * x, const ok_float beta, vector * y)
 {
 	ok_status err = OPTKIT_SUCCESS;
@@ -257,13 +257,17 @@ void blas_diagmv(void * linalg_handle, const ok_float alpha,
 }
 
 /* BLAS LEVEL 3 */
-void blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
+ok_stauts blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
 	enum CBLAS_TRANSPOSE transA, ok_float alpha, const matrix * A,
 	ok_float beta, matrix * C)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	cublasOperation_t tA;
 	cublasFillMode_t ul;
+
+	OK_CHECK_MATRIX(A);
+	OK_CHECK_MATRIX(C);
+
 	const int k = (transA == CblasNoTrans) ?
 		      (int) A->size2 : (int) A->size1;
 
@@ -292,13 +296,17 @@ void blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
 	return err;
 }
 
-void blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
+ok_stauts blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 	enum CBLAS_TRANSPOSE transB, ok_float alpha, const matrix * A,
 	const matrix * B, ok_float beta, matrix * C)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	cublasOperation_t tA, tB;
 	int s1, s2;
+
+	OK_CHECK_MATRIX(A);
+	OK_CHECK_MATRIX(B);
+	OK_CHECK_MATRIX(C);
 
 	const int k = (transA == CblasNoTrans) ?
 		      (int) A->size2 : (int) A->size1;
@@ -327,11 +335,12 @@ void blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 	return err;
 }
 
-void blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side, enum CBLAS_UPLO uplo,
-	enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, ok_float alpha,
-	const matrix *A, matrix *B)
+ok_stauts blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side,
+	enum CBLAS_UPLO uplo, enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag,
+	ok_float alpha, const matrix *A, matrix *B)
 {
-	printf("Method `blas_trsm()` not implemented for GPU\n");
+	printf("\nMethod `blas_trsm()` not implemented for GPU\n");
+	return OPTKIT_ERROR;
 }
 
 
