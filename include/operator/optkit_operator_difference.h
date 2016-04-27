@@ -13,13 +13,14 @@ typedef struct difference_operator_data{
 	vector subvec_in, subvec_out;
 } difference_operator_data;
 
-void difference_operator_data_alloc(void ** data);
-void difference_operator_data_free(void * data);
-void difference_operator_mul(void * data, vector * input, vector * output);
-void difference_operator_mul_t(void * data, vector * input, vector * output);
-void difference_operator_mul_fused(void * data, ok_float alpha, vector * input,
-	ok_float beta, vector * output);
-void difference_operator_mul_t_fused(void * data, ok_float alpha,
+void * difference_operator_data_alloc(size_t offset);
+ok_status difference_operator_data_free(void * data);
+ok_status difference_operator_mul(void * data, vector * input, vector * output);
+ok_status difference_operator_mul_t(void * data, vector * input,
+	vector * output);
+ok_status difference_operator_mul_fused(void * data, ok_float alpha,
+	vector * input, ok_float beta, vector * output);
+ok_status difference_operator_mul_t_fused(void * data, ok_float alpha,
 	vector * input, ok_float beta, vector * output);
 
 operator * difference_operator_alloc(sp_matrix * A);
@@ -30,15 +31,16 @@ typedef struct block_difference_operator_data{
 	vector subvec_in, subvec_out;
 } difference_operator_data;
 
-void block_difference_operator_data_alloc(void ** data);
-void block_difference_operator_data_free(void * data);
-void block_difference_operator_mul(void * data, vector * input,
+ok_status block_difference_operator_data_alloc(size_t n_blocks,
+	size_t * block_sizes, size_t * offsets);
+ok_status block_difference_operator_data_free(void * data);
+ok_status block_difference_operator_mul(void * data, vector * input,
 	vector * output);
-void block_difference_operator_mul_t(void * data, vector * input,
+ok_status block_difference_operator_mul_t(void * data, vector * input,
 	vector * output);
-void block_difference_operator_mul_fused(void * data, ok_float alpha,
+ok_status block_difference_operator_mul_fused(void * data, ok_float alpha,
 	vector * input, ok_float beta, vector * output);
-void block_difference_operator_mul_t_fused(void * data, ok_float alpha,
+ok_status block_difference_operator_mul_t_fused(void * data, ok_float alpha,
 	vector * input, ok_float beta, vector * output);
 
 operator * block_difference_operator_alloc(sp_matrix * A);

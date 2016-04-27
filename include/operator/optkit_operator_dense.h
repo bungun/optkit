@@ -14,13 +14,13 @@ typedef struct dense_operator_data{
 } dense_operator_data;
 
 void * dense_operator_data_alloc(matrix * A);
-void dense_operator_data_free(void * data);
-void dense_operator_mul(void * data, vector * input, vector * output);
-void dense_operator_mul_t(void * data, vector * input, vector * output);
-void dense_operator_mul_fused(void * data, ok_float alpha, vector * input,
+ok_status dense_operator_data_free(void * data);
+ok_status dense_operator_mul(void * data, vector * input, vector * output);
+ok_status dense_operator_mul_t(void * data, vector * input, vector * output);
+ok_status dense_operator_mul_fused(void * data, ok_float alpha, vector * input,
 	ok_float beta, vector * output);
-void dense_operator_mul_t_fused(void * data, ok_float alpha, vector * input,
-	ok_float beta, vector * output);
+ok_status dense_operator_mul_t_fused(void * data, ok_float alpha,
+	vector * input, ok_float beta, vector * output);
 
 operator * dense_operator_alloc(matrix * A);
 matrix * dense_operator_get_matrix_pointer(operator * A);

@@ -9,66 +9,77 @@ void * diagonal_operator_data_alloc(vector * d)
 {
 	diagonal_operator_data * op_data;
 	op_data = malloc(sizeof(*op_data));
+	memset(op_data, 0, sizeof(*op_data));
 	blas_make_handle(&(op_data->dense_handle));
 	op_data->d = d;
 	return (void *) op_data;
 }
 
-void diagonal_operator_data_free(void * data)
+ok_status diagonal_operator_data_free(void * data)
 {
 	diagonal_operator_data * op_data = (diagonal_operator_data *) data;
-	blas_destroy_handle(op_data->dense_handle);
+	OK_CHECK_PTR(op_data);
+	OK_RETURNIF_ERR( blas_destroy_handle(op_data->dense_handle) );
 	ok_free(op_data);
+	return OPTKIT_SUCCESS;
 }
 
-void diagonal_operator_mul(void * data, vector * input, vector * output)
+ok_status diagonal_operator_mul(void * data, vector * input, vector * output)
 {
-	diagonal_operator_data * op_data = (diagonal_operator_data *) data;
-	blas_diagmv(op_data->dense_handle, kOne, op_data->d, input, kZero,
+	OK_CHECK_PTR(data);
+	return blas_diagmv(((diagonal_operator_data *) data)->dense_handle,
+		kOne, ((diagonal_operator_data *) data)->d, input, kZero,
 		output);
 }
 
-void diagonal_operator_mul_t(void * data, vector * input, vector * output)
+ok_status diagonal_operator_mul_t(void * data, vector * input, vector * output)
 {
-	diagonal_operator_data * op_data = (diagonal_operator_data *) data;
-	blas_diagmv(op_data->dense_handle, kOne, op_data->d, input, kZero,
+	OK_CHECK_PTR(data);
+	return blas_diagmv(((diagonal_operator_data *) data)->dense_handle,
+		kOne, ((diagonal_operator_data *) data)->d, input, kZero,
 		output);
 }
 
-void diagonal_operator_mul_fused(void * data, ok_float alpha, vector * input,
-	ok_float beta, vector * output)
+ok_status diagonal_operator_mul_fused(void * data, ok_float alpha,
+	vector * input, ok_float beta, vector * output)
 {
-	diagonal_operator_data * op_data = (diagonal_operator_data *) data;
-	blas_diagmv(op_data->dense_handle, alpha, op_data->d, input, beta,
+	OK_CHECK_PTR(data);
+	return blas_diagmv(((diagonal_operator_data *) data)->dense_handle,
+		alpha, ((diagonal_operator_data *) data)->d, input, beta,
 		output);
 }
 
-void diagonal_operator_mul_t_fused(void * data, ok_float alpha, vector * input,
-	ok_float beta, vector * output)
+ok_status diagonal_operator_mul_t_fused(void * data, ok_float alpha,
+	vector * input, ok_float beta, vector * output)
 {
-	diagonal_operator_data * op_data = (diagonal_operator_data *) data;
-	blas_diagmv(op_data->dense_handle, alpha, op_data->d, input, beta,
+	OK_CHECK_PTR(data);
+	return blas_diagmv(((diagonal_operator_data *) data)->dense_handle,
+		alpha, ((diagonal_operator_data *) data)->d, input, beta,
 		output);
 }
 
 operator * diagonal_operator_alloc(vector * d)
 {
 	operator * o = OK_NULL;
-	o = malloc(sizeof(*o));
-	o->kind = OkOperatorDiagonal;
-	o->size1 = d->size;
-	o->size2 = d->size;
-	o->data = diagonal_operator_data_alloc(d);
-	o->apply = diagonal_operator_mul;
-	o->adjoint = diagonal_operator_mul_t;
-	o->fused_apply = diagonal_operator_mul_fused;
-	o->fused_adjoint = diagonal_operator_mul_t_fused;
-	o->free = diagonal_operator_data_free;
+	if (d && d->data) {
+		o = malloc(sizeof(*o));
+		memset(o, 0, sizeof(*o));
+		o->kind = OkOperatorDiagonal;
+		o->size1 = d->size;
+		o->size2 = d->size;
+		o->data = diagonal_operator_data_alloc(d);
+		o->apply = diagonal_operator_mul;
+		o->adjoint = diagonal_operator_mul_t;
+		o->fused_apply = diagonal_operator_mul_fused;
+		o->fused_adjoint = diagonal_operator_mul_t_fused;
+		o->free = diagonal_operator_data_free;
+	}
 	return o;
 }
 
 static ok_status diagonal_operator_typecheck(operator * A, const char * caller)
 {
+	OK_CHECK_OPERATOR(A);
 	if (A->kind != OkOperatorDiagonal) {
 		printf("diagonal_operator_%s() %s %s\n", caller, "undefined for",
 			optkit_op2str(A->kind));
@@ -80,38 +91,21 @@ static ok_status diagonal_operator_typecheck(operator * A, const char * caller)
 
 ok_status diagonal_operator_abs(operator * A)
 {
-	ok_status err = diagonal_operator_typecheck(A, "abs");
-	diagonal_operator_data * op_data = OK_NULL;
-
-	if (!err) {
-		op_data = (diagonal_operator_data *) A->data;
-		vector_abs(op_data->d);
-	}
-	return err;
+	OK_RETURNIF_ERR( diagonal_operator_typecheck(A, "abs") );
+	return vector_abs(((diagonal_operator_data *) A->data)->d);
 }
 
 ok_status diagonal_operator_pow(operator * A, const ok_float power)
 {
-	ok_status err = diagonal_operator_typecheck(A, "pow");
-	diagonal_operator_data * op_data = OK_NULL;
 
-	if (!err) {
-		op_data = (diagonal_operator_data *) A->data;
-		vector_pow(op_data->d, power);
-	}
-	return err;
+	OK_RETURNIF_ERR( diagonal_operator_typecheck(A, "pow") );
+	return vector_pow(((diagonal_operator_data *) A->data)->d, power);
 }
 
 ok_status diagonal_operator_scale(operator * A, const ok_float scaling)
 {
-	ok_status err = diagonal_operator_typecheck(A, "scale");
-	diagonal_operator_data * op_data = OK_NULL;
-
-	if (!err) {
-		op_data = (diagonal_operator_data *) A->data;
-		vector_scale(op_data->d, scaling);
-	}
-	return err;
+	OK_RETURNIF_ERR( diagonal_operator_typecheck(A, "scale") );
+	return vector_scale(((diagonal_operator_data *) A->data)->d, scaling);
 }
 
 #ifdef __cplusplus

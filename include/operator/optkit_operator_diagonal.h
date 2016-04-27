@@ -13,13 +13,13 @@ typedef struct diagonal_operator_data{
 } diagonal_operator_data;
 
 void * diagonal_operator_data_alloc(vector * d);
-void diagonal_operator_data_free(void * data);
-void diagonal_operator_mul(void * data, vector * input, vector * output);
-void diagonal_operator_mul_t(void * data, vector * input, vector * output);
-void diagonal_operator_mul_fused(void * data, ok_float alpha, vector * input,
-	ok_float beta, vector * output);
-void diagonal_operator_mul_t_fused(void * data, ok_float alpha, vector * input,
-	ok_float beta, vector * output);
+ok_status diagonal_operator_data_free(void * data);
+ok_status diagonal_operator_mul(void * data, vector * input, vector * output);
+ok_status diagonal_operator_mul_t(void * data, vector * input, vector * output);
+ok_status diagonal_operator_mul_fused(void * data, ok_float alpha,
+	vector * input, ok_float beta, vector * output);
+ok_status diagonal_operator_mul_t_fused(void * data, ok_float alpha,
+	vector * input, ok_float beta, vector * output);
 
 operator * diagonal_operator_alloc(vector * d);
 

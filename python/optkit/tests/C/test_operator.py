@@ -53,47 +53,47 @@ class OperatorLibsTestCase(OptkitCTestCase):
 		x_ += self.x_test
 		x_ptr = x_.ctypes.data_as(lib.ok_float_p)
 		x = lib.vector(0, 0, None)
-		lib.vector_calloc(x, n)
+		self.assertCall( lib.vector_calloc(x, n) )
 		self.register_var('x', x, lib.vector_free)
 
-		lib.vector_memcpy_va(x, x_ptr, 1)
+		self.assertCall( lib.vector_memcpy_va(x, x_ptr, 1) )
 
 		y_ = np.zeros(m).astype(lib.pyfloat)
 		y_ptr = y_.ctypes.data_as(lib.ok_float_p)
 		y = lib.vector(0, 0, None)
-		lib.vector_calloc(y, m)
+		self.assertCall( lib.vector_calloc(y, m) )
 		self.register_var('y', y, lib.vector_free)
 
 		# test Ax
 		Ax = A_py.dot(x_)
-		o.apply(o.data, x, y)
-		lib.vector_memcpy_av(y_ptr, y, 1)
-		self.assertTrue(np.linalg.norm(y_ - Ax) <=
-						ATOLM + RTOL * np.linalg.norm(Ax))
+		self.assertCall( o.apply(o.data, x, y) )
+		self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
+		self.assertTrue( np.linalg.norm(y_ - Ax) <=
+						 ATOLM + RTOL * np.linalg.norm(Ax) )
 
 		# test A'y
 		y_[:] = Ax[:] 	# (update for consistency)
 		Aty = A_py.T.dot(y_)
-		o.adjoint(o.data, y, x)
-		lib.vector_memcpy_av(x_ptr, x, 1)
-		self.assertTrue(np.linalg.norm(x_ - Aty) <=
-						ATOLN + RTOL * np.linalg.norm(Aty))
+		self.assertCall( o.adjoint(o.data, y, x) )
+		self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
+		self.assertTrue( np.linalg.norm(x_ - Aty) <=
+						 ATOLN + RTOL * np.linalg.norm(Aty) )
 
 		# test Axpy
 		x_[:]  = Aty[:] # (update for consistency)
 		Axpy = alpha * A_py.dot(x_) + beta * y_
-		o.fused_apply(o.data, alpha, x, beta, y)
-		lib.vector_memcpy_av(y_ptr, y, 1)
-		self.assertTrue(np.linalg.norm(y_ - Axpy) <=
-						ATOLM + RTOL * np.linalg.norm(Axpy))
+		self.assertCall( o.fused_apply(o.data, alpha, x, beta, y) )
+		self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
+		self.assertTrue( np.linalg.norm(y_ - Axpy) <=
+						 ATOLM + RTOL * np.linalg.norm(Axpy) )
 
 		# test A'ypx
 		y_[:] = Axpy[:] # (update for consistency)
 		Atypx = alpha * A_py.T.dot(y_) + beta * x_
-		o.fused_adjoint(o.data, alpha, y, beta, x)
-		lib.vector_memcpy_av(x_ptr, x, 1)
-		self.assertTrue(np.linalg.norm(x_ - Atypx) <=
-						ATOLN + RTOL * np.linalg.norm(Atypx))
+		self.assertCall( o.fused_adjoint(o.data, alpha, y, beta, x) )
+		self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
+		self.assertTrue( np.linalg.norm(x_ - Atypx) <=
+						 ATOLN + RTOL * np.linalg.norm(Atypx) )
 
 		self.free_var('x')
 		self.free_var('y')
@@ -118,7 +118,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 						lib.enums.CblasColMajor
 
 				A = lib.matrix(0, 0, 0, None, order)
-				lib.matrix_calloc(A, m, n, order)
+				self.assertCall( lib.matrix_calloc(A, m, n, order) )
 				self.register_var('A', A, lib.matrix_free)
 
 				o = lib.dense_operator_alloc(A)
@@ -128,7 +128,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				self.free_var('o')
 				self.free_var('A')
 
-				self.assertEqual(lib.ok_device_reset(), 0)
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_dense_operator(self):
 		m, n = self.shape
@@ -163,7 +163,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				self.free_var('o')
 				self.free_var('A')
 
-				self.assertEqual(lib.ok_device_reset(), 0)
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_sparse_alloc_free(self):
 		m, n = self.shape
@@ -191,7 +191,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				self.free_var('o')
 				self.free_var('A')
 
-				self.assertEqual(lib.ok_device_reset(), 0)
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_sparse_operator(self):
 		m, n = self.shape
@@ -220,10 +220,12 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				A_ptr = A_sp.indptr.ctypes.data_as(lib.ok_int_p)
 
 				A = lib.sparse_matrix(0, 0, 0, 0, None, None, None, order)
-				lib.sp_matrix_calloc(A, m, n, A_sp.nnz, order)
+				self.assertCall( lib.sp_matrix_calloc(A, m, n, A_sp.nnz,
+													  order) )
 				self.register_var('A', A, lib.sp_matrix_free)
 
-				lib.sp_matrix_memcpy_ma(hdl, A, A_val, A_ind, A_ptr, order)
+				self.assertCall( lib.sp_matrix_memcpy_ma(hdl, A, A_val, A_ind,
+														 A_ptr, order) )
 
 				o = lib.sparse_operator_alloc(A)
 				self.register_var('o', o.contents.data, o.contents.free)
@@ -234,7 +236,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				self.free_var('A')
 
 				self.assertEqual(lib.sp_destroy_handle(hdl), 0)
-				self.assertEqual(lib.ok_device_reset(), 0)
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_diagonal_alloc_free(self):
 		m, n = self.shape
@@ -246,7 +248,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 
 			for rowmajor in (True, False):
 				d = lib.vector(0, 0, None)
-				lib.vector_calloc(d, n)
+				self.assertCall( lib.vector_calloc(d, n) )
 				self.register_var('d', d, lib.vector_free)
 
 				o = lib.diagonal_operator_alloc(d)
@@ -257,7 +259,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				self.free_var('o')
 				self.free_var('d')
 
-				self.assertEqual(lib.ok_device_reset(), 0)
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_diagonal_operator(self):
 		m, n = self.shape
@@ -275,10 +277,10 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				d_ += self.A_test[0, :]
 				d_ptr = d_.ctypes.data_as(lib.ok_float_p)
 				d = lib.vector(0, 0, None)
-				lib.vector_calloc(d, n)
+				self.assertCall( lib.vector_calloc(d, n) )
 				self.register_var('d', d, lib.vector_free)
 
-				lib.vector_memcpy_va(d, d_ptr, 1)
+				self.assertCall( lib.vector_memcpy_va(d, d_ptr, 1) )
 
 				o = lib.diagonal_operator_alloc(d)
 				self.register_var('o', o.contents.data, o.contents.free)
@@ -288,4 +290,4 @@ class OperatorLibsTestCase(OptkitCTestCase):
 				self.free_var('o')
 				self.free_var('d')
 
-				self.assertEqual(lib.ok_device_reset(), 0)
+				self.assertCall( lib.ok_device_reset() )

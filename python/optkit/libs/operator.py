@@ -28,13 +28,13 @@ def attach_operator_ctypes(lib, single_precision=False):
 		_fields_ = [('size1', c_size_t),
 					('size2', c_size_t),
 					('data', c_void_p),
-					('apply', CFUNCTYPE(None, c_void_p, vector_p, vector_p)),
-					('adjoint', CFUNCTYPE(None, c_void_p,vector_p, vector_p)),
-					('fused_apply', CFUNCTYPE(None, c_void_p, ok_float,
+					('apply', CFUNCTYPE(c_uint, c_void_p, vector_p, vector_p)),
+					('adjoint', CFUNCTYPE(c_uint, c_void_p,vector_p, vector_p)),
+					('fused_apply', CFUNCTYPE(c_uint, c_void_p, ok_float,
 											  vector_p, ok_float, vector_p)),
-					('fused_adjoint', CFUNCTYPE(None, c_void_p, ok_float,
+					('fused_adjoint', CFUNCTYPE(c_uint, c_void_p, ok_float,
 												vector_p, ok_float, vector_p)),
-					('free', CFUNCTYPE(None, c_void_p)),
+					('free', CFUNCTYPE(c_uint, c_void_p)),
 					('kind', c_uint)]
 
 	lib.operator = ok_operator
