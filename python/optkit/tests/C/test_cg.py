@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix
-from ctypes import c_void_p, byref, CFUNCTYPE
+from ctypes import c_uint, c_void_p, byref, POINTER
 from optkit.libs.cg import ConjugateGradientLibs
 from optkit.tests.C.base import OptkitCTestCase, OptkitCOperatorTestCase
 
@@ -56,6 +56,32 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 									  gpu=gpu))
 		self.assertTrue(any(libs))
 
+	def gen_cgls_vectors(self, lib, m , n):
+		b = lib.vector(0, 0, None)
+		self.assertCall( lib.vector_calloc(b, m) )
+		self.register_var('b', b, lib.vector_free)
+		b_ = np.zeros(m).astype(lib.pyfloat)
+		b_ptr = b_.ctypes.data_as(lib.ok_float_p)
+
+		x = lib.vector(0, 0, None)
+		self.assertCall( lib.vector_calloc(x, n) )
+		self.register_var('x', x, lib.vector_free)
+		x_ = np.zeros(n).astype(lib.pyfloat)
+		x_ptr = x_.ctypes.data_as(lib.ok_float_p)
+
+		b_ += np.random.rand(m)
+		self.assertCall( lib.vector_memcpy_va(b, b_ptr, 1) )
+
+		return x_, x_ptr, x, b_, b_ptr, b
+
+	def assert_cgls_exit(self, A, x, b, rho, flag, tol):
+		# checks:
+		# 1. exit flag == 0
+		# 2. KKT condition A'(Ax - b) + rho (x) == 0 (within tol)
+		self.assertEqual( flag, 0 )
+		KKT = A.T.dot(A.dot(x) - b) + rho * x
+		self.assertTrue( np.linalg.norm(KKT) <= tol )
+
 	def test_cgls_helper_alloc_free(self):
 		m, n = self.shape
 
@@ -65,11 +91,13 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				continue
 
 			h = lib.cgls_helper_alloc(self.shape[0], self.shape[1])
-			self.assertTrue(isinstance(h.contents.p, lib.vector_p))
-			self.assertTrue(isinstance(h.contents.q, lib.vector_p))
-			self.assertTrue(isinstance(h.contents.r, lib.vector_p))
-			self.assertTrue(isinstance(h.contents.s, lib.vector_p))
-			lib.cgls_helper_free(h)
+			self.register_var('h', h, lib.cgls_helper_free)
+			self.assertTrue( isinstance(h.contents.p, lib.vector_p) )
+			self.assertTrue( isinstance(h.contents.q, lib.vector_p) )
+			self.assertTrue( isinstance(h.contents.r, lib.vector_p) )
+			self.assertTrue( isinstance(h.contents.s, lib.vector_p) )
+			self.assertCall( lib.cgls_helper_free(h) )
+			self.unregister_var('h')
 
 	def test_cgls_nonallocating(self):
 		"""
@@ -97,20 +125,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 			# -----------------------------------------
 			# allocate x, b in python & C
-			b = lib.vector(0, 0, None)
-			lib.vector_calloc(b, m)
-			self.register_var('b', b, lib.vector_free)
-			b_ = np.zeros(m).astype(lib.pyfloat)
-			b_ptr = b_.ctypes.data_as(lib.ok_float_p)
-
-			x = lib.vector(0, 0, None)
-			lib.vector_calloc(x, n)
-			self.register_var('x', x, lib.vector_free)
-			x_ = np.zeros(n).astype(lib.pyfloat)
-			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
-
-			b_ += np.random.rand(m)
-			lib.vector_memcpy_va(b, b_ptr, 1)
+			x_, x_ptr, x, b_, b_ptr, b = self.gen_cgls_vectors(lib, m, n)
 
 			# -----------------------------------------
 			# test cgls for each operator type defined in self.op_keys
@@ -123,16 +138,13 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				h = lib.cgls_helper_alloc(m, n)
 				self.register_var('h', h, lib.cgls_helper_free)
 
-				flag = lib.cgls_nonallocating(h, o, b, x, rho, tol, maxiter,
-											  CG_QUIET)
-				lib.vector_memcpy_av(x_ptr, x, 1)
-
-				# checks:
-				# 1. exit flag == 0
-				# 2. KKT condition A'(Ax - b) + rho (x) == 0 (within tol)
-				self.assertEqual(flag, 0)
-				KKT = A_.T.dot(A_.dot(x_) - b_) + rho * x_
-				self.assertTrue( np.linalg.norm(KKT) <= ATOLN )
+				flag = np.zeros(1).astype(c_uint)
+				flag_p = flag.ctypes.data_as(POINTER(c_uint))
+				self.assertCall( lib.cgls_nonallocating(h, o, b, x, rho, tol,
+														maxiter, CG_QUIET,
+														flag_p) )
+				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
+				self.assert_cgls_exit(A_, x_, b_, rho, flag[0], ATOLN)
 
 				self.free_var('o')
 				self.free_var('A')
@@ -159,20 +171,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 			# -----------------------------------------
 			# allocate x, b in python & C
-			b = lib.vector(0, 0, None)
-			lib.vector_calloc(b, m)
-			self.register_var('b', b, lib.vector_free)
-			b_ = np.zeros(m).astype(lib.pyfloat)
-			b_ptr = b_.ctypes.data_as(lib.ok_float_p)
-
-			x = lib.vector(0, 0, None)
-			lib.vector_calloc(x, n)
-			self.register_var('x', x, lib.vector_free)
-			x_ = np.zeros(n).astype(lib.pyfloat)
-			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
-
-			b_ += np.random.rand(m)
-			lib.vector_memcpy_va(b, b_ptr, 1)
+			x_, x_ptr, x, b_, b_ptr, b = self.gen_cgls_vectors(lib, m, n)
 
 			# -----------------------------------------
 			# test cgls for each operator type defined in self.op_keys
@@ -183,14 +182,9 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				self.register_var('o', o.contents.data, o.contents.free)
 
 				flag = lib.cgls(o, b, x, rho, tol, maxiter, CG_QUIET)
-				lib.vector_memcpy_av(x_ptr, x, 1)
-
-				# checks:
-				# 1. exit flag == 0
-				# 2. KKT condition A'(Ax - b) + rho (x) == 0 (within tol)
-				self.assertEqual(flag, 0)
-				KKT = A_.T.dot(A_.dot(x_) - b_) + rho * x_
-				self.assertTrue( np.linalg.norm(KKT) <= ATOLN )
+				self.assertTrue( flag <= lib.CGLS_MAXFLAG )
+				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
+				self.assert_cgls_exit(A_, x_, b_, rho, flag, ATOLN)
 
 				self.free_var('o')
 				self.free_var('A')
@@ -216,20 +210,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 			# -----------------------------------------
 			# allocate x, b in python & C
-			b = lib.vector(0, 0, None)
-			lib.vector_calloc(b, m)
-			self.register_var('b', b, lib.vector_free)
-			b_ = np.zeros(m).astype(lib.pyfloat)
-			b_ptr = b_.ctypes.data_as(lib.ok_float_p)
-
-			x = lib.vector(0, 0, None)
-			lib.vector_calloc(x, n)
-			self.register_var('x', x, lib.vector_free)
-			x_ = np.zeros(n).astype(lib.pyfloat)
-			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
-
-			b_ += np.random.rand(m)
-			lib.vector_memcpy_va(b, b_ptr, 1)
+			x_, x_ptr, x, b_, b_ptr, b = self.gen_cgls_vectors(lib, m, n)
 
 			# -----------------------------------------
 			# test cgls for each operator type defined in self.op_keys
@@ -243,16 +224,11 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				self.register_var('work', cgls_work, lib.cgls_finish)
 				flag = lib.cgls_solve(cgls_work, o, b, x, rho, tol,
 										   maxiter, CG_QUIET)
-
+				self.assertTrue( flag <= lib.CGLS_MAXFLAG )
 				self.free_var('work')
-				lib.vector_memcpy_av(x_ptr, x, 1)
+				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 
-				# checks:
-				# 1. exit flag == 0
-				# 2. KKT condition A'(Ax - b) + rho (x) == 0 (within tol)
-				self.assertEqual(flag, 0)
-				KKT = A_.T.dot(A_.dot(x_) - b_) + rho * x_
-				self.assertTrue( np.linalg.norm(KKT) <= ATOLN )
+				self.assert_cgls_exit(A_, x_, b_, rho, flag, ATOLN)
 
 				self.free_var('o')
 				self.free_var('A')
@@ -272,12 +248,13 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 			h = lib.pcg_helper_alloc(self.shape[0], self.shape[1])
 			self.register_var('h', h, lib.pcg_helper_free)
-			self.assertTrue(isinstance(h.contents.p, lib.vector_p))
-			self.assertTrue(isinstance(h.contents.q, lib.vector_p))
-			self.assertTrue(isinstance(h.contents.r, lib.vector_p))
-			self.assertTrue(isinstance(h.contents.z, lib.vector_p))
-			self.assertTrue(isinstance(h.contents.temp, lib.vector_p))
-			self.free_var('h')
+			self.assertTrue( isinstance(h.contents.p, lib.vector_p) )
+			self.assertTrue( isinstance(h.contents.q, lib.vector_p) )
+			self.assertTrue( isinstance(h.contents.r, lib.vector_p) )
+			self.assertTrue( isinstance(h.contents.z, lib.vector_p) )
+			self.assertTrue( isinstance(h.contents.temp, lib.vector_p) )
+			self.assertCall( lib.pcg_helper_free(h) )
+			self.unregister_var('h')
 
 	def test_diagonal_preconditioner(self):
 		tol = self.tol_cg
@@ -307,7 +284,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				T += A_.T.dot(A_)
 
 				p_vec = lib.vector(0, 0, None)
-				lib.vector_calloc(p_vec, n)
+				self.assertCall( lib.vector_calloc(p_vec, n) )
 				self.register_var('p_vec', p_vec, lib.vector_free)
 
 				p_ = np.zeros(n).astype(lib.pyfloat)
@@ -318,14 +295,47 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				for j in xrange(n):
 					p_py[j] = 1. / (rho +  np.linalg.norm(T[:, j])**2)
 
-				lib.diagonal_preconditioner(o, p_vec, rho)
-				lib.vector_memcpy_av(p_ptr, p_vec, 1)
-				self.assertTrue(np.linalg.norm(p_py - p_) <=
-								ATOLN + RTOL * np.linalg.norm(p_py))
+				self.assertCall( lib.diagonal_preconditioner(o, p_vec, rho) )
+				self.assertCall( lib.vector_memcpy_av(p_ptr, p_vec, 1) )
+				self.assertTrue( np.linalg.norm(p_py - p_) <=
+								 ATOLN + RTOL * np.linalg.norm(p_py) )
 
 				self.free_var('o')
 				self.free_var('A')
 				self.free_var('p_vec')
+
+	def gen_pcg_vectors(self, lib, n):
+		b = lib.vector(0, 0, None)
+		self.assertCall( lib.vector_calloc(b, n) )
+		self.register_var('b', b, lib.vector_free)
+		b_ = np.zeros(n).astype(lib.pyfloat)
+		b_ptr = b_.ctypes.data_as(lib.ok_float_p)
+
+		x = lib.vector(0, 0, None)
+		self.assertCall( lib.vector_calloc(x, n) )
+		self.register_var('x', x, lib.vector_free)
+		x_ = np.zeros(n).astype(lib.pyfloat)
+		x_ptr = x_.ctypes.data_as(lib.ok_float_p)
+
+		b_ += self.x_test
+		lib.vector_memcpy_va(b, b_ptr, 1)
+
+		return x_, x_ptr, x, b_, b_ptr, b
+
+	def gen_pcg_operators(self, lib, optype, rho, n):
+		A_, A, o, freeA = self.gen_operator(optype, lib)
+		self.register_var('A', A, freeA)
+		self.register_var('o', o.contents.data, o.contents.free)
+
+		T = rho * np.eye(n)
+		T += A_.T.dot(A_)
+
+		p_py, p_vec, p, free_p = self.gen_preconditioning_operator(
+				lib, T, rho)
+		self.register_var('p_vec', p_vec, free_p)
+		self.register_var('p', p, p.contents.free)
+
+		return A, o, T, p_vec, p
 
 	def test_pcg_nonallocating(self):
 		"""
@@ -359,53 +369,26 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 			# -----------------------------------------
 			# allocate x, b in python & C
-			b = lib.vector(0, 0, None)
-			lib.vector_calloc(b, n)
-			self.register_var('b', b, lib.vector_free)
-			b_ = np.zeros(n).astype(lib.pyfloat)
-			b_ptr = b_.ctypes.data_as(lib.ok_float_p)
-
-			x = lib.vector(0, 0, None)
-			lib.vector_calloc(x, n)
-			self.register_var('x', x, lib.vector_free)
-			x_ = np.zeros(n).astype(lib.pyfloat)
-			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
-
-			b_ += self.x_test
-			lib.vector_memcpy_va(b, b_ptr, 1)
+			x_, x_ptr, x, b_, b_ptr, b = self.gen_pcg_vectors(lib, n)
 
 			# -----------------------------------------
 			# test pcg for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "test pcg (nonallocating), operator type:", op_
-				A_, A, o, freeA = self.gen_operator(op_, lib)
-				self.register_var('A', A, freeA)
-				self.register_var('o', o.contents.data, o.contents.free)
+				A, o, T, p_vec, p = self.gen_pcg_operators(lib, op_, rho, n)
 
 				h = lib.pcg_helper_alloc(m, n)
 				self.register_var('h', h, lib.pcg_helper_free)
 
-				T = rho * np.eye(n)
-				T += A_.T.dot(A_)
-
-				p_py, p_vec, p, free_p = self.gen_preconditioning_operator(
-						lib, T, rho)
-				self.register_var('p_vec', p_vec, free_p)
-				self.register_var('p', p, p.contents.free)
-
-				lib.pcg_nonallocating(h, o, p, b, x, rho, tol, maxiter,
-									  CG_QUIET)
-				lib.vector_memcpy_av(x_ptr, x, 1)
-
-
-				print "Tx - b", np.linalg.norm(T.dot(x_) - b_)
-				print "b", np.linalg.norm(b_)
-				print "ATOLN", ATOLN
-				print "RTOL", RTOL
-				print "||Tx-b|| <= a + r * ||b||", np.linalg.norm(T.dot(x_) - b_) <= ATOLN + RTOL * np.linalg.norm(b_)
-
-				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
-								ATOLN + RTOL * np.linalg.norm(b_))
+				iter_ = np.zeros(1).astype(c_uint)
+				iter_p = iter_.ctypes.data_as(POINTER(c_uint))
+				self.assertCall( lib.pcg_nonallocating(h, o, p, b, x, rho, tol,
+													   maxiter, CG_QUIET,
+													   iter_p) )
+				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
+				self.assertTrue( iter_[0] <= maxiter )
+				self.assertTrue( np.linalg.norm(T.dot(x_) - b_) <=
+								 ATOLN + RTOL * np.linalg.norm(b_) )
 
 				self.free_var('p')
 				self.free_var('p_vec')
@@ -438,61 +421,42 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 			# -----------------------------------------
 			# allocate x, b in python & C
-			b = lib.vector(0, 0, None)
-			lib.vector_calloc(b, n)
-			self.register_var('b', b, lib.vector_free)
-			b_ = np.zeros(n).astype(lib.pyfloat)
-			b_ptr = b_.ctypes.data_as(lib.ok_float_p)
-
-			x = lib.vector(0, 0, None)
-			lib.vector_calloc(x, n)
-			self.register_var('x', x, lib.vector_free)
-			x_ = np.zeros(n).astype(lib.pyfloat)
-			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
-
-			b_ += self.x_test
-			lib.vector_memcpy_va(b, b_ptr, 1)
+			x_, x_ptr, x, b_, b_ptr, b = self.gen_pcg_vectors(lib, n)
 
 			# -----------------------------------------
 			# test pcg for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "test pcg (nonallocating) warmstart, operator type:", op_
-				A_, A, o, freeA = self.gen_operator(op_, lib)
-				self.register_var('A', A, freeA)
-				self.register_var('o', o.contents.data, o.contents.free)
+				A, o, T, p_vec, p = self.gen_pcg_operators(lib, op_, rho, n)
 
 				h = lib.pcg_helper_alloc(m, n)
 				self.register_var('h', h, lib.pcg_helper_free)
 
-				T = rho * np.eye(n)
-				T += A_.T.dot(A_)
+				iter_ = np.zeros(1).astype(c_uint)
+				iter_p = iter_.ctypes.data_as(POINTER(c_uint))
 
-				p_py, p_vec, p, free_p = self.gen_preconditioning_operator(
-						lib, T, rho)
-				self.register_var('p_vec', p_vec, free_p)
-				self.register_var('p', p, p.contents.free)
+				# first run
+				self.assertCall( lib.pcg_nonallocating(h, o, p, b, x, rho, tol,
+											   		   maxiter, CG_QUIET,
+											   		   iter_p) )
+				iters1 = iter_[0]
+				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
+				self.assertTrue( np.linalg.norm(T.dot(x_) - b_) <=
+								 ATOLN + RTOL * np.linalg.norm(b_))
 
-				iters1 = lib.pcg_nonallocating(h, o, p, b, x, rho, tol,
-											   maxiter, CG_QUIET)
-				lib.vector_memcpy_av(x_ptr, x, 1)
-
-				print "Tx - b", np.linalg.norm(T.dot(x_) - b_)
-				print "b", np.linalg.norm(b_)
-				print "ATOLN", ATOLN
-				print "RTOL", RTOL
-				print "||Tx-b|| <= a + r * ||b||", np.linalg.norm(T.dot(x_) - b_) <= ATOLN + RTOL * np.linalg.norm(b_)
-
-				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
-								ATOLN + RTOL * np.linalg.norm(b_))
-
-				iters2 = lib.pcg_nonallocating(h, o, p, b, x, rho, tol,
-											   maxiter, CG_QUIET)
-				lib.vector_memcpy_av(x_ptr, x, 1)
-				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
-								ATOLN + RTOL * np.linalg.norm(b_))
+				# second run
+				self.assertCall( lib.pcg_nonallocating(h, o, p, b, x, rho, tol,
+											   		   maxiter, CG_QUIET,
+											   		   iter_p) )
+				iters2 = iter_[0]
+				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
+				self.assertTrue( np.linalg.norm(T.dot(x_) - b_) <=
+								 ATOLN + RTOL * np.linalg.norm(b_) )
 
 				print 'cold start iters:', iters1
 				print 'warm start iters:', iters2
+				self.assertTrue(iters1 <= maxiter)
+				self.assertTrue(iters2 <= maxiter)
 				self.assertTrue(iters2 <= iters1)
 
 				self.free_var('p')
@@ -525,36 +489,16 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 			# -----------------------------------------
 			# allocate x, b in python & C
-			b = lib.vector(0, 0, None)
-			lib.vector_calloc(b, n)
-			self.register_var('b', b, lib.vector_free)
-			b_ = np.zeros(n).astype(lib.pyfloat)
-			b_ptr = b_.ctypes.data_as(lib.ok_float_p)
-
-			x = lib.vector(0, 0, None)
-			lib.vector_calloc(x, n)
-			self.register_var('x', x, lib.vector_free)
-			x_ = np.zeros(n).astype(lib.pyfloat)
-			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
-
-			b_ += self.x_test
-			lib.vector_memcpy_va(b, b_ptr, 1)
+			x_, x_ptr, x, b_, b_ptr, b = self.gen_pcg_vectors(lib, n)
 
 			# -----------------------------------------
 			# test pcg for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "test pcg (allocating), operator type:", op_
-				A_, A, o, freeA = self.gen_operator(op_, lib)
-				self.register_var('A', A, freeA)
-				self.register_var('o', o.contents.data, o.contents.free)
+				A, o, T, p_vec, p = self.gen_pcg_operators(lib, op_, rho, n)
 
-				T = rho * np.eye(n)
-				T += A_.T.dot(A_)
-
-				p_py, p_vec, p, free_p = self.gen_preconditioning_operator(
-						lib, T, rho)
-				self.register_var('p_vec', p_vec, free_p)
-				self.register_var('p', p, p.contents.free)
+				h = lib.pcg_helper_alloc(m, n)
+				self.register_var('h', h, lib.pcg_helper_free)
 
 				lib.pcg(o, p, b, x, rho, tol, maxiter, CG_QUIET)
 				lib.vector_memcpy_av(x_ptr, x, 1)
@@ -590,51 +534,33 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 			# -----------------------------------------
 			# allocate x, b in python & C
-			b = lib.vector(0, 0, None)
-			lib.vector_calloc(b, n)
-			self.register_var('b', b, lib.vector_free)
-			b_ = np.zeros(n).astype(lib.pyfloat)
-			b_ptr = b_.ctypes.data_as(lib.ok_float_p)
-
-			x = lib.vector(0, 0, None)
-			lib.vector_calloc(x, n)
-			self.register_var('x', x, lib.vector_free)
-			x_ = np.zeros(n).astype(lib.pyfloat)
-			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
-
-			b_ += self.x_test
-			lib.vector_memcpy_va(b, b_ptr, 1)
+			x_, x_ptr, x, b_, b_ptr, b = self.gen_pcg_vectors(lib, n)
 
 			# -----------------------------------------
 			# test pcg for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "test pcg (easy), operator type:", op_
-				A_, A, o, freeA = self.gen_operator(op_, lib)
-				self.register_var('A', A, freeA)
-				self.register_var('o', o.contents.data, o.contents.free)
+				A, o, T, p_vec, p = self.gen_pcg_operators(lib, op_, rho, n)
 
-				T = rho * np.eye(n)
-				T += A_.T.dot(A_)
+				h = lib.pcg_helper_alloc(m, n)
+				self.register_var('h', h, lib.pcg_helper_free)
 
-				p_py, p_vec, p, free_p = self.gen_preconditioning_operator(
-						lib, T, rho)
-				self.register_var('p_vec', p_vec, free_p)
-				self.register_var('p', p, p.contents.free)
 
 				pcg_work = lib.pcg_init(m, n)
 				self.register_var('work', pcg_work, lib.pcg_finish)
 				iters1 = lib.pcg_solve(pcg_work, o, p, b, x, rho, tol,
 											maxiter, CG_QUIET)
-				lib.vector_memcpy_av(x_ptr, x, 1)
-
-				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
-								ATOLN + RTOL * np.linalg.norm(b_))
+				self.assertTrue(iters1 <= maxiter)
+				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
+				self.assertTrue( np.linalg.norm(T.dot(x_) - b_) <=
+								 ATOLN + RTOL * np.linalg.norm(b_))
 
 				iters2 = lib.pcg_solve(pcg_work, o, p, b, x, rho, tol,
 											maxiter, CG_QUIET)
-				lib.vector_memcpy_av(x_ptr, x, 1)
-				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
-								ATOLN + RTOL * np.linalg.norm(b_))
+				self.assertTrue(iters2 <= maxiter)
+				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
+				self.assertTrue( np.linalg.norm(T.dot(x_) - b_) <=
+								 ATOLN + RTOL * np.linalg.norm(b_))
 
 				print 'cold start iters:', iters1
 				print 'warm start iters:', iters2

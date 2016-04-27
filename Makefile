@@ -183,7 +183,7 @@ libequil: equil $(DENSE_TARG) $(SPARSE_TARG) operator $(BASE_TARG)
 	$(OUT)$@_$(LIBCONFIG).$(SHARED)  \
 	$(EQUIL_STATIC_DEPS) $(LDFLAGS)
 
-libcg: cg $(VECTOR_TARG) $(BASE_TARG)
+libcg: cg $(DENSE_TARG) $(SPARSE_TARG) operator $(BASE_TARG)
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) -shared -o\
 	$(OUT)$@_$(LIBCONFIG).$(SHARED)  \

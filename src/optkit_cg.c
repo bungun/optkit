@@ -80,8 +80,10 @@ const ok_float kEps = (ok_float) 1e-16;
 
 cgls_helper * cgls_helper_alloc(size_t m, size_t n)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	cgls_helper * h;
 	h = malloc(sizeof(*h));
+	memset(h, 0, sizeof(*h));
 	h->norm_s = (ok_float) 0;
 	h->norm_s0 = (ok_float) 0;
 	h->norm_x = (ok_float) 0;
@@ -92,51 +94,81 @@ cgls_helper * cgls_helper_alloc(size_t m, size_t n)
 	h->gamma = (ok_float) 0;
 	h->gamma_prev = (ok_float) 0;
 	h->shrink = (ok_float) 0;
-	vector_calloc(&(h->p), n);
-	vector_calloc(&(h->q), m);
-	vector_calloc(&(h->r), m);
-	vector_calloc(&(h->s), n);
-	blas_make_handle(&(h->blas_handle));
+	err = vector_calloc(&(h->p), n);
+	OK_CHECK_ERR( err, vector_calloc(&(h->q), m) );
+	OK_CHECK_ERR( err, vector_calloc(&(h->r), m) );
+	OK_CHECK_ERR( err, vector_calloc(&(h->s), n) );
+	OK_CHECK_ERR( err, blas_make_handle(&(h->blas_handle)) );
+	if (!err)
+		h->indicator = (int *) malloc(sizeof(int));
 	return h;
 }
 
-void cgls_helper_free(cgls_helper * helper)
+ok_status cgls_helper_free(cgls_helper * helper)
 {
-	blas_destroy_handle(helper->blas_handle);
-	vector_free(&(helper->p));
-	vector_free(&(helper->q));
-	vector_free(&(helper->r));
-	vector_free(&(helper->s));
+	ok_status err = OPTKIT_SUCCESS;
+	if (!helper || !helper->p.data)
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	if (helper->blas_handle)
+	 	err = blas_destroy_handle(helper->blas_handle);
+	if (helper->p.data)
+		OK_MAX_ERR( err, vector_free(&(helper->p)) );
+	if (helper->q.data)
+		OK_MAX_ERR( err, vector_free(&(helper->q)) );
+	if (helper->r.data)
+		OK_MAX_ERR( err, vector_free(&(helper->r)) );
+	if (helper->s.data)
+		OK_MAX_ERR( err, vector_free(&(helper->s)) );
+	if (helper->indicator)
+		ok_free(helper->indicator);
 	ok_free(helper);
+	return err;
 }
 
 pcg_helper * pcg_helper_alloc(size_t m, size_t n)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	pcg_helper * h;
 	h = malloc(sizeof(*h));
+	memset(h, 0, sizeof(*h));
 	h->norm_r = (ok_float) 0;
 	h->alpha = (ok_float) 0;
 	h->gamma = (ok_float) 0;
 	h->gamma_prev = (ok_float) 0;
-	vector_calloc(&(h->p), n);
-	vector_calloc(&(h->q), n);
-	vector_calloc(&(h->r), n);
-	vector_calloc(&(h->z), n);
-	vector_calloc(&(h->temp), m);
-	blas_make_handle(&(h->blas_handle));
+	OK_CHECK_ERR( err, vector_calloc(&(h->p), n) );
+	OK_CHECK_ERR( err, vector_calloc(&(h->q), n) );
+	OK_CHECK_ERR( err, vector_calloc(&(h->r), n) );
+	OK_CHECK_ERR( err, vector_calloc(&(h->z), n) );
+	OK_CHECK_ERR( err, vector_calloc(&(h->temp), m) );
+	OK_CHECK_ERR( err, blas_make_handle(&(h->blas_handle)) );
 	h->never_solved = 1;
+	if (!err)
+		h->indicator = (int *) malloc(sizeof(int));
 	return h;
 }
 
-void pcg_helper_free(pcg_helper * helper)
+ok_status pcg_helper_free(pcg_helper * helper)
 {
-	blas_destroy_handle(helper->blas_handle);
-	vector_free(&(helper->p));
-	vector_free(&(helper->q));
-	vector_free(&(helper->r));
-	vector_free(&(helper->z));
-	vector_free(&(helper->temp));
+	ok_status err = OPTKIT_SUCCESS;
+	if (!helper || !helper->p.data)
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+
+	if (helper->blas_handle)
+		err = blas_destroy_handle(helper->blas_handle);
+	if (helper->p.data)
+		OK_MAX_ERR( err, vector_free(&(helper->p)) );
+	if (helper->q.data)
+		OK_MAX_ERR( err, vector_free(&(helper->q)) );
+	if (helper->r.data)
+		OK_MAX_ERR( err, vector_free(&(helper->r)) );
+	if (helper->z.data)
+		OK_MAX_ERR( err, vector_free(&(helper->z)) );
+	if (helper->temp.data)
+		OK_MAX_ERR( err, vector_free(&(helper->temp)) );
+	if (helper->indicator)
+		ok_free(helper->indicator);
 	ok_free(helper);
+	return err;
 }
 
 /*
@@ -152,11 +184,19 @@ void pcg_helper_free(pcg_helper * helper)
  * ref: Chris Fougner, POGS
  * https://github.com/foges/pogs/blob/master/src/cpu/include/cgls.h
  */
-uint cgls_nonallocating(cgls_helper * helper,
+ok_status cgls_nonallocating(cgls_helper * helper,
 		operator * op, vector * b, vector * x,
 		const ok_float rho, const ok_float tol,
-		const size_t maxiter, const int quiet)
+		const size_t maxiter, const int quiet,
+		uint * flag)
 {
+	if (!helper || !helper->indicator)
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	OK_CHECK_OPERATOR(op);
+	OK_CHECK_VECTOR(b);
+	OK_CHECK_VECTOR(x);
+	OK_CHECK_PTR(flag);
+
 	/* convenience abbreviations */
 	cgls_helper * h = helper;
 	vector p = h->p;
@@ -167,18 +207,25 @@ uint cgls_nonallocating(cgls_helper * helper,
 
 	/* variable and constant declarations */
 	char fmt[] = "%5d %9.2e %12.5e\n";
-	uint k, flag = 0;
+	uint k;
+	ok_float p_squared;
 	int indefinite = 0, converged = 0;
 	const ok_float kNegRho = -rho;
 
+	/* dimension check */
+	if (op->size1 != b->size || op->size2 != x->size || r.size != b->size
+		|| s.size != x->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
+
+
 	/* initialization */
-	h->norm_x = blas_nrm2(blas_hdl, x);
+	blas_nrm2(blas_hdl, x, &h->norm_x);
 
 	/* r = b - Ax */
 	vector_memcpy_vv(&r, b);
-	if (h->norm_x > 0) {
+	if (h->norm_x > 0)
 		op->fused_apply(op->data, -kOne, x, kOne, &r);
-	}
 
 	/* s = A'*r - rho * x */
 	op->adjoint(op->data, &r, &s);
@@ -189,18 +236,20 @@ uint cgls_nonallocating(cgls_helper * helper,
 	vector_memcpy_vv(&p, &s);
 
 	/* initial norms (norm_x calculated above) */
-	h->norm_s0 = h->norm_s = blas_nrm2(blas_hdl, &s);
+	blas_nrm2(blas_hdl, &s, &h->norm_s);
+	h->norm_s0 =  h->norm_s;
 	h->gamma = h->norm_s0 * h->norm_s0;
 	h->xmax = h->norm_x;
 
+	*flag = 0;
 	if (h->norm_s < kEps)
-		flag = 1;
+		*flag = 1;
 
-	if (!quiet && !flag)
+	if (!quiet && !*flag)
 		printf("    k    norm x        resNE\n");
 
 	/* ------------------- CGLS ----------------- */
-	for (k = 0; k < maxiter && !flag; ++k) {
+	for (k = 0; k < maxiter && !*flag; ++k) {
 		/* q = Ap */
 		op->apply(op->data, &p, &q);
 
@@ -210,8 +259,9 @@ uint cgls_nonallocating(cgls_helper * helper,
 		 * BUT THE CODE PERFORMS:
 		 * delta = ||q||_2^2 + rho * ||p||_2^2
 		 */
-		h->delta = blas_dot(blas_hdl, &q, &q) +
-				rho * blas_dot(blas_hdl, &p, &p);
+		blas_dot(blas_hdl, &q, &q, &h->delta);
+		blas_dot(blas_hdl, &p, &p, &p_squared);
+		h->delta += rho * p_squared;
 
 		if (h->delta <= 0)
 			indefinite = 1;
@@ -230,7 +280,7 @@ uint cgls_nonallocating(cgls_helper * helper,
 
 		/* compute gamma = ||s||^2 */
 		/* compute beta = gamma/gamma_prev */
-		h->norm_s = blas_nrm2(blas_hdl, &s);
+		blas_nrm2(blas_hdl, &s, &h->norm_s);
 		h->gamma_prev = h->gamma;
 		h->gamma = h->norm_s * h->norm_s;
 		h->beta = h->gamma / h->gamma_prev;
@@ -240,10 +290,10 @@ uint cgls_nonallocating(cgls_helper * helper,
 		blas_axpy(blas_hdl, kOne, &s, &p);
 
 		/* convergence check */
-		h->norm_x = blas_nrm2(blas_hdl, x);
+		blas_nrm2(blas_hdl, x, &h->norm_x);
 		h->xmax = (h->norm_x > h->xmax) ? h->norm_x : h->xmax;
-		converged = (h->norm_s < h->norm_s0 * tol) ||
-			(h->norm_x * tol > 1);
+		converged = ((h->norm_s < h->norm_s0 * tol) ||
+			(h->norm_x * tol > 1));
 		if (!quiet && (converged || (k + 1) % 10 == 0))
 			printf(fmt, k + 1, h->norm_x, h->norm_s / h->norm_s0);
 		if (converged)
@@ -253,24 +303,28 @@ uint cgls_nonallocating(cgls_helper * helper,
 	/* determine exit status */
 	h->shrink = h->norm_x / h->xmax;
 	if (k == maxiter)
-		flag = 2;
+		*flag = 2;
 	else if (indefinite)
-		flag = 3;
+		*flag = 3;
 	else if (h->shrink * h->shrink <= tol)
-		flag = 4;
+		*flag = 4;
 
-	return flag;
+	return OPTKIT_SUCCESS;
 }
 
 uint cgls(operator * op, vector * b, vector * x, const ok_float rho,
 	const ok_float tol, const size_t maxiter, const int quiet)
 {
 	uint flag;
+	ok_status err = OPTKIT_SUCCESS;
 
 	cgls_helper * helper = cgls_helper_alloc(op->size1, op->size2);
 
 	/* CGLS call */
-	flag = cgls_nonallocating(helper, op, b, x, rho, tol, maxiter, quiet);
+	err = cgls_nonallocating(helper, op, b, x, rho, tol, maxiter, quiet,
+		&flag);
+	if (err)
+		flag = INT_MAX;
 
 	cgls_helper_free(helper);
 
@@ -285,15 +339,18 @@ void * cgls_init(size_t m, size_t n)
 uint cgls_solve(void * cgls_work, operator * op, vector * b, vector * x,
 	const ok_float rho, const ok_float tol, const size_t maxiter, int quiet)
 {
-	return cgls_nonallocating( (cgls_helper *) cgls_work, op, b, x, rho,
-		tol, maxiter, quiet);
+	uint flag;
+	if ( cgls_nonallocating((cgls_helper *) cgls_work, op, b, x, rho,
+		tol, maxiter, quiet, &flag) )
+		return INT_MAX;
+	else
+		return flag;
 }
 
-void cgls_finish(void * cgls_work)
+ok_status cgls_finish(void * cgls_work)
 {
-	cgls_helper_free((cgls_helper *) cgls_work);
+	return cgls_helper_free((cgls_helper *) cgls_work);
 }
-
 
 /*
  * diagonal preconditioner
@@ -309,46 +366,52 @@ void cgls_finish(void * cgls_work)
  * A'Ae_i = A'a_i = (aa)_i
  * (aa)_i + rho * e_i : column
  */
-void diagonal_preconditioner(operator * op, vector * p, ok_float rho)
+ok_status diagonal_preconditioner(operator * op, vector * p, ok_float rho)
 {
-	vector ej = (vector) {0, 0, OK_NULL};
-	vector ej_sub = (vector) {0, 0, OK_NULL};
-	vector a = (vector) {0, 0, OK_NULL};
-	vector iaa = (vector) {0, 0, OK_NULL};
-	vector p_sub = (vector) {0, 0, OK_NULL};
+	OK_CHECK_OPERATOR(op);
+	OK_CHECK_VECTOR(p);
 
-	vector_calloc(&ej, op->size2);
-	vector_calloc(&a, op->size2);
-	vector_calloc(&iaa, op->size2);
-
+	ok_status err = OPTKIT_SUCCESS;
 	ok_float col_norm_sq;
 	size_t i;
-
 	void * blas_handle;
+	vector ej, ej_sub, a, iaa, p_sub;
+	ej.data = OK_NULL;
+	ej_sub.data = OK_NULL;
+	a.data = OK_NULL;
+	iaa.data = OK_NULL;
+	p_sub.data = OK_NULL;
+
+	if (p->size != op->size2)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
+	vector_calloc(&ej, op->size2);
+	vector_calloc(&a, op->size1);
+	vector_calloc(&iaa, op->size2);
 	blas_make_handle(&blas_handle);
 
 	vector_scale(p, 0);
 
 	printf("%s %f\n", "RHO C", rho);
-	for (i = 0; i < op->size2; ++i) {
+	for (i = 0; i < op->size2 && !err; ++i) {
 		vector_scale(&ej, kZero);
 		vector_subvector(&ej_sub, &ej, i, 1);
 		vector_add_constant(&ej_sub, 1);
 		op->apply(op->data, &ej, &a);
 		op->adjoint(op->data, &a, &iaa);
 
-		col_norm_sq = blas_dot(blas_handle, &iaa, &iaa);
+		blas_dot(blas_handle, &iaa, &iaa, &col_norm_sq);
 		vector_subvector(&p_sub, p, i, 1);
 		vector_add_constant(&p_sub, col_norm_sq + rho);
 	}
 
-	vector_recip(p);
+	err = vector_recip(p);
 
 	vector_free(&ej);
 	vector_free(&a);
 	vector_free(&iaa);
-
 	blas_destroy_handle(blas_handle);
+	return err;
 }
 
 /*
@@ -366,10 +429,19 @@ void diagonal_preconditioner(operator * op, vector * p, ok_float rho)
  * ref: Brendan O'Donoghue, SCS
  * https://github.com/cvxgrp/scs/blob/master/linsys/indirect/private.c
  */
-uint pcg_nonallocating(pcg_helper * helper, operator * op, operator * pre_cond,
-	vector * b, vector * x, const ok_float rho, const ok_float tol,
-	const size_t maxiter, const int quiet)
+ok_status pcg_nonallocating(pcg_helper * helper, operator * op,
+	operator * pre_cond, vector * b, vector * x, const ok_float rho,
+	const ok_float tol, const size_t maxiter, const int quiet, uint * iters)
 {
+	if (!helper || !helper->indicator)
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	OK_CHECK_OPERATOR(op);
+	OK_CHECK_OPERATOR(pre_cond);
+	OK_CHECK_VECTOR(b);
+	OK_CHECK_VECTOR(x);
+	OK_CHECK_PTR(iters);
+
+	ok_status err = OPTKIT_SUCCESS;
 	/*
 	 * convenience abbreviations
 	 * p, q: iterate vectors
@@ -393,6 +465,12 @@ uint pcg_nonallocating(pcg_helper * helper, operator * op, operator * pre_cond,
 	char fmt [] = "tol: %.4e, resid: %.4e, iters: %u\n";
 	char nocvg_fmt [] = "did not converge in %u iters (max iter = %u)\n";
 
+	/* dimension checks */
+	if (pre_cond->size1 != pre_cond->size2 || pre_cond->size1 != op->size2
+		|| op->size2 != x->size || x->size != b->size ||
+		x->size != p.size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
 	/* initialization */
 	if (h->never_solved) {
 		/* r = b */
@@ -410,23 +488,26 @@ uint pcg_nonallocating(pcg_helper * helper, operator * op, operator * pre_cond,
 	}
 
 	/* check to see if we need to run CG at all */
-	h->norm_r = MATH(sqrt)(blas_dot(blas_hdl, &r, &r));
-	if (blas_nrm2(blas_hdl, &r) < kNormTol)
+	blas_dot(blas_hdl, &r, &r, &h->norm_r);
+	h->norm_r = MATH(sqrt)(h->norm_r);
+	if (h->norm_r < kNormTol)
 	        return 0;
 
 	/* p = Mr (apply preconditioner) */
 	pre_cond->apply(pre_cond->data, &r, &p);
 	/* gamma = r'Mr */
-	h->gamma = blas_dot(blas_hdl, &r, &p);
+	blas_dot(blas_hdl, &r, &p, &h->gamma);
 
-	for (k = 0; k < maxiter; ++k) {
+	for (k = 0; k < maxiter && !err; ++k) {
 		/* q = (rho * I + A'A)p */
 		op->apply(op->data, &p, &temp);
 		op->adjoint(op->data, &temp, &q);
 		blas_axpy(blas_hdl, rho, &p, &q);
 
 		/* alpha = <p, r> / <p, q> */
-		h->alpha = h->gamma / blas_dot(blas_hdl, &p, &q);
+		blas_dot(blas_hdl, &p, &q, &h->alpha);
+		if (!err)
+			h->alpha = h->gamma / h->alpha;
 
 		/* x += alpha * p */
 		/* r -= alpha * q */
@@ -434,7 +515,9 @@ uint pcg_nonallocating(pcg_helper * helper, operator * op, operator * pre_cond,
 		blas_axpy(blas_hdl, -h->alpha, &q, &r);
 
 		/* check convergence */
-		h->norm_r = MATH(sqrt)(blas_dot(blas_hdl, &r, &r));
+		blas_dot(blas_hdl, &r, &r, &h->norm_r);
+		if (!err)
+			h->norm_r = MATH(sqrt)(h->norm_r);
 		if (h->norm_r <= tol) {
 			k += 1;
 			if (!quiet)
@@ -448,7 +531,7 @@ uint pcg_nonallocating(pcg_helper * helper, operator * op, operator * pre_cond,
 		pre_cond->apply(pre_cond->data, &r, &z);
 
 		/* gamma = r'Mr */
-		h->gamma = blas_dot(blas_hdl, &r, &z);
+		blas_dot(blas_hdl, &r, &z, &h->gamma);
 
 		/* p = p * gamma / gamma_prev + Mr */
 		vector_scale(&p, h->gamma / h->gamma_prev);
@@ -457,7 +540,8 @@ uint pcg_nonallocating(pcg_helper * helper, operator * op, operator * pre_cond,
 
 	/* store solution for warm start in x0 (alias of z) */
 	vector_memcpy_vv(&x0, x);
-	helper->never_solved = 0;
+	if (!err)
+		helper->never_solved = 0;
 
 	if (h->norm_r > tol)
 		if (!quiet){
@@ -465,21 +549,25 @@ uint pcg_nonallocating(pcg_helper * helper, operator * op, operator * pre_cond,
 			printf(fmt, tol, h->norm_r, k);
 		}
 
-	return k;
+	*iters = k;
+	return err;
 }
 
 uint pcg(operator * op, operator * pre_cond, vector * b, vector * x,
 	const ok_float rho, const ok_float tol, const size_t maxiter,
 	const int quiet)
 {
-	uint flag;
+	uint iters;
+	ok_status err = OPTKIT_SUCCESS;
 	pcg_helper * helper = pcg_helper_alloc(op->size1, op->size2);
 
-	flag = pcg_nonallocating(helper, op, pre_cond, b, x, rho, tol,
-		maxiter, quiet);
+	err = pcg_nonallocating(helper, op, pre_cond, b, x, rho, tol,
+		maxiter, quiet, &iters);
+	if (err)
+		iters = INT_MAX;
 
 	pcg_helper_free(helper);
-	return flag;
+	return iters;
 }
 
 void * pcg_init(size_t m, size_t n)
@@ -491,13 +579,17 @@ uint pcg_solve(void * pcg_work, operator * op, operator * pre_cond,
 	vector * b, vector * x, const ok_float rho, const ok_float tol,
 	const size_t maxiter, int quiet)
 {
-	return pcg_nonallocating( (pcg_helper *) pcg_work, op, pre_cond, b, x,
-		rho, tol, maxiter, quiet);
+	uint iters;
+	if ( pcg_nonallocating((pcg_helper *) pcg_work, op, pre_cond, b, x,
+		rho, tol, maxiter, quiet, &iters) )
+		return INT_MAX;
+	else
+		return iters;
 }
 
-void pcg_finish(void * pcg_work)
+ok_status pcg_finish(void * pcg_work)
 {
-	pcg_helper_free((pcg_helper *) pcg_work);
+	return pcg_helper_free((pcg_helper *) pcg_work);
 }
 
 #ifdef __cplusplus
