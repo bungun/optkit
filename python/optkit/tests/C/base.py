@@ -23,6 +23,10 @@ class OptkitCTestCase(OptkitTestCase):
 		if free_method is not None and var is not None:
 			free_method(var)
 
+	def free_vars(self, *names):
+		for name in names:
+			self.free_var(name)
+
 	def free_all_vars(self):
 		for varname in self.managed_vars.keys():
 			print 'releasing unfreed C variable {}'.format(varname)
@@ -30,6 +34,38 @@ class OptkitCTestCase(OptkitTestCase):
 
 	def assertCall(self, call):
 		self.assertEqual( PRINTERR(call), 0 )
+
+	def gen_registered_vector(self, lib, size, name):
+		if 'vector_calloc' in lib.__dict__:
+			v = lib.vector(0, 0, None)
+			self.assertCall( lib.vector_calloc(v, size) )
+			self.register_var(name, v, lib.vector_free)
+			v_py = np.zeros(size).astype(lib.pyfloat)
+			v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
+			return v, v_py, v_ptr
+		else:
+			raise ValueError('library {} cannot allocate a vector'.format(lib))
+
+	def gen_registered_matrix(self, lib, size1, size2, order, name):
+		if 'matrix_calloc' in lib.__dict__:
+			A = lib.matrix(0, 0, 0, None, order)
+			self.assertCall( lib.matrix_calloc(A, size1, size2, order) )
+			self.register_var(name, A, lib.matrix_free)
+			A_py = np.zeros((size1, size2), order=pyorder).astype(lib.pyfloat)
+			A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
+			return A, A_py, A_ptr
+		else:
+			raise ValueError('library {} cannot allocate a matrix'.format(lib))
+
+	def gen_registered_blas_handle(self, lib, name):
+		if 'blas_make_handle' in lib.__dict__:
+			hdl = c_void_p()
+			self.assertCall( lib.blas_make_handle(byref(hdl)) )
+			self.register_var(name, hdl, lib.blas_destroy_handle)
+			return hdl
+		else:
+			raise ValueError(
+					'library {} cannot allocate a BLAS handle'.format(lib))
 
 
 class OptkitCOperatorTestCase(OptkitCTestCase):
