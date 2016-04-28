@@ -121,8 +121,8 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 
 			# -----------------------------------------
 			# allocate x, y, d, e in python & C
-			x, x_py, x_ptr = self.gen_registered_vector(lib, m, 'x')
-			y, y_py, y_ptr = self.gen_registered_vector(lib, n, 'y')
+			x, x_py, x_ptr = self.gen_registered_vector(lib, n, 'x')
+			y, y_py, y_ptr = self.gen_registered_vector(lib, m, 'y')
 			d, d_py, d_ptr = self.gen_registered_vector(lib, m, 'd')
 			e, e_py, e_ptr = self.gen_registered_vector(lib, n, 'e')
 			x_py += self.x_test
@@ -179,8 +179,8 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 
 			# -----------------------------------------
 			# allocate x, y, d, e in python & C
-			x, x_py, x_ptr = self.gen_registered_vector(lib, m, 'x')
-			y, y_py, y_ptr = self.gen_registered_vector(lib, n, 'y')
+			x, x_py, x_ptr = self.gen_registered_vector(lib, n, 'x')
+			y, y_py, y_ptr = self.gen_registered_vector(lib, m, 'y')
 			d, d_py, d_ptr = self.gen_registered_vector(lib, m, 'd')
 			e, e_py, e_ptr = self.gen_registered_vector(lib, n, 'e')
 			x_py += self.x_test
@@ -195,7 +195,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 				self.register_var('o', o.contents.data, o.contents.free)
 
 				# equilibrate operator
-				status lib.operator_equilibrate(hdl, o, d, e, 1.)
+				status = lib.operator_equilibrate(hdl, o, d, e, 1.)
 
 				# extract results
 				self.assertCall( lib.vector_memcpy_av(d_ptr, d, 1) )
@@ -215,11 +215,11 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 				# self.assertEqual( status, 0)
 				# self.assertTrue( np.linalg.norm(A_eqx - DAEx) <=
 				# 				 ATOLN + RTOL * np.linalg.norm(DAEx))
-				self.free_var('A', 'o')
+				self.free_vars('A', 'o')
 
 			# -----------------------------------------
 			# free x, y, d, e
-			self.free_var('x', 'y', 'd', 'e', 'hdl')
+			self.free_vars('x', 'y', 'd', 'e', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_operator_norm(self):
@@ -245,11 +245,18 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 				self.register_var('o', o.contents.data, o.contents.free)
 
 				# estimate operator norm
-				pynorm = np.linalg.norm(A_)
-				cnorm = lib.operator_estimate_norm(hdl, o)
+				normest = np.zeros(1).astype(lib.pyfloat)
+				normest_p = normest.ctypes.data_as(lib.ok_float_p)
 
-				print pynorm
-				print cnorm
+				pynorm = np.linalg.norm(A_)
+				self.assertCall( lib.operator_estimate_norm(hdl, o,
+					normest_p) )
+				cnorm = normest[0]
+
+				if self.VERBOSE_TEST:
+					print "operator norm, Python: ", pynorm
+					print "norm estimate, C: ", cnorm
+
 				self.assertTrue(
 					cnorm >= ATOL + RTOL * pynorm or
 					pynorm >= ATOL + RTOL * cnorm )

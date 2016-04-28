@@ -55,4 +55,4 @@ def attach_operator_equilibration_ccalls(lib, single_precision=False):
 	# return types
 	lib.operator_regularized_sinkhorn.restype = c_uint
 	lib.operator_equilibrate.restype = c_uint
-	lib.operator_estimate_norm.restype = ok_float
+	lib.operator_estimate_norm.restype = c_uint

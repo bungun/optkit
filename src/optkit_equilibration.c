@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
+ok_status regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 	matrix * A_out, vector * d, vector * e, enum CBLAS_ORDER ord)
 {
 	OK_CHECK_PTR(A_in);
@@ -13,6 +13,7 @@ void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 	OK_CHECK_VECTOR(d);
 	OK_CHECK_VECTOR(e);
 
+	ok_status err = OPTKIT_SUCCESS;
 	const ok_float kSinkhornConst = (ok_float) 1e-4;
 	const ok_float kEps = (ok_float) 1e-2;
 	const size_t kMaxIter = 300;
@@ -24,7 +25,7 @@ void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 	d_diff.data = OK_NULL;
 	e_diff.data = OK_NULL;
 
-	if (A->size1 != d->size || A->size2 != e->size)
+	if (A_out->size1 != d->size || A_out->size2 != e->size)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	vector_calloc(&d_diff, A_out->size1);
@@ -32,10 +33,12 @@ void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 
 	norm_d = norm_e = 1;
 
-	matrix_memcpy_ma(A_out, A_in, ord);
-	matrix_abs(A_out);
-	vector_set_all(d, kOne);
-	vector_scale(e, kZero);
+	OK_CHECK_ERR( err, matrix_memcpy_ma(A_out, A_in, ord) );
+
+	if (!err)
+		matrix_abs(A_out);
+		vector_set_all(d, kOne);
+		vector_scale(e, kZero);
 
 	/* optional argument ok_float pnorm? */
 	/*
@@ -44,7 +47,7 @@ void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 	}
 	*/
 
-	for (i = 0; i < kMaxIter; ++i){
+	for (i = 0; i < kMaxIter && !err; ++i){
 		blas_gemv(linalg_handle, CblasTrans, kOne, A_out, d, kZero, e);
 		vector_add_constant(e, kSinkhornConst / (ok_float) e->size);
 		vector_recip(e);
@@ -59,8 +62,8 @@ void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 		blas_axpy(linalg_handle, -kOne, d, &d_diff);
 		blas_axpy(linalg_handle, -kOne, e, &e_diff);
 
-		norm_d = MATH(sqrt)(blas_dot(linalg_handle, &d_diff, &d_diff));
-		norm_e = MATH(sqrt)(blas_dot(linalg_handle, &e_diff, &e_diff));
+		blas_nrm2(linalg_handle, &d_diff, &norm_d);
+		blas_nrm2(linalg_handle, &e_diff, &norm_e);
 
 		if ((norm_d < kEps) && (norm_e < kEps))
 			break;
@@ -77,18 +80,22 @@ void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 	}
 	*/
 
-	matrix_memcpy_ma(A_out, A_in, ord);
-	for (i = 0; i < A_out->size1; ++i) {
-		matrix_row(&a, A_out, i);
-		vector_mul(&a, e);
-	}
-	for (i = 0; i < A_out->size2; ++i) {
-		matrix_column(&a, A_out, i);
-		vector_mul(&a, d);
+	OK_CHECK_ERR( err, matrix_memcpy_ma(A_out, A_in, ord) );
+	if (!err) {
+		for (i = 0; i < A_out->size1; ++i) {
+			matrix_row(&a, A_out, i);
+			vector_mul(&a, e);
+		}
+		for (i = 0; i < A_out->size2; ++i) {
+			matrix_column(&a, A_out, i);
+			vector_mul(&a, d);
+		}
 	}
 
 	vector_free(&d_diff);
 	vector_free(&e_diff);
+
+	return err;
 }
 
 #ifndef OPTKIT_NO_OPERATOR_EQUIL
@@ -157,8 +164,8 @@ ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 		vector_recip(d);
 		vector_scale(d, (ok_float) e->size);
 
-		norm_d = MATH(sqrt)(blas_dot(linalg_handle, &d_diff, &d_diff));
-		norm_e = MATH(sqrt)(blas_dot(linalg_handle, &e_diff, &e_diff));
+		blas_nrm2(linalg_handle, &d_diff, &norm_d);
+		blas_nrm2(linalg_handle, &e_diff, &norm_e);
 
 		if ((norm_d < kEps) && (norm_e < kEps))
 			break;
@@ -215,7 +222,6 @@ ok_status operator_estimate_norm(void * linalg_handle, operator * A,
 	ok_float * norm_est)
 {
 	OK_CHECK_OPERATOR(A);
-	OK_CHECK_PTR(linalg_handle);
 	OK_CHECK_PTR(norm_est);
 
 	const ok_float kNormTol = (ok_float) 1e-5;
@@ -227,7 +233,7 @@ ok_status operator_estimate_norm(void * linalg_handle, operator * A,
 
 	x.data = OK_NULL;
 	Ax.data = OK_NULL;
-	norm_est = kZero;
+	*norm_est = kZero;
 
 	vector_calloc(&x, A->size2);
 	vector_calloc(&Ax, A->size1);
@@ -238,10 +244,13 @@ ok_status operator_estimate_norm(void * linalg_handle, operator * A,
 		norm_est_prev = *norm_est;
 		A->apply(A->data, &x, &Ax);
 		A->adjoint(A->data, &Ax, &x);
-		norm_x = blas_nrm2(linalg_handle, &x);
-		if (norm_x == 0)
+		blas_nrm2(linalg_handle, &x, &norm_x);
+		blas_nrm2(linalg_handle, &Ax, norm_est);
+
+		if (norm_x == 0 || *norm_est == 0)
 			return OK_SCAN_ERR( OPTKIT_ERROR_DIVIDE_BY_ZERO );
-		*norm_est = norm_x / blas_nrm2(linalg_handle, &Ax);
+
+		*norm_est = norm_x / *norm_est;
 		vector_scale(&x, 1 / norm_x);
 		if (MATH(fabs)(norm_est_prev - *norm_est) <=
 			kNormTol * *norm_est)

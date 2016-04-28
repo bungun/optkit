@@ -15,7 +15,7 @@ def optkit_print_error(err, print_success=False):
 	elif err == 10L:
 		print '\nOPTKIT ERROR DOMAIN'
 	elif err == 11L:
-		print '\nOPTKIT ERROR DIVIIDE BY ZERO'
+		print '\nOPTKIT ERROR DIVIDE BY ZERO'
 	elif err == 100L:
 		print '\nOPTKIT ERROR LAYOUT MISMATCH'
 	elif err == 101L:
