@@ -11,12 +11,24 @@ struct sparse_operator_export {
 
 void * sparse_operator_data_alloc(sp_matrix * A)
 {
-	sparse_operator_data * op_data;
-	op_data = malloc(sizeof(*op_data));
-	memset(op_data, 0, sizeof(*op_data));
-	blas_make_handle(&(op_data->sparse_handle));
-	sp_make_handle(&(op_data->sparse_handle));
-	op_data->A = A;
+	ok_status err = OPTKIT_SUCCESS;
+	sparse_operator_data * op_data = OK_NULL;
+
+	if (!A || !A->val || !A->ind | !A->ptr)
+		err = OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+
+	if (!err) {
+		ok_alloc(op_data, sizeof(*op_data));
+		OK_CHECK_ERR( err,
+			blas_make_handle(&(op_data->sparse_handle)) );
+		OK_CHECK_ERR( err,
+			sp_make_handle(&(op_data->sparse_handle)) );
+		op_data->A = A;
+		if (err) {
+			sparse_operator_data_free(op_data);
+			op_data = OK_NULL;
+		}
+	}
 	return (void *) op_data;
 }
 
@@ -67,19 +79,22 @@ ok_status sparse_operator_mul_t_fused(void * data, ok_float alpha,
 operator * sparse_operator_alloc(sp_matrix * A)
 {
 	operator * o = OK_NULL;
-		if (A && A->val && A->ind && A->ptr) {
-		o = malloc(sizeof(*o));
-		memset(o, 0, sizeof(*o));
-		o->kind = (A->order == CblasColMajor) ? OkOperatorSparseCSC :
-				OkOperatorSparseCSR;
-		o->size1 = A->size1;
-		o->size2 = A->size2;
-		o->data = sparse_operator_data_alloc(A);
-		o->apply = sparse_operator_mul;
-		o->adjoint = sparse_operator_mul_t;
-		o->fused_apply = sparse_operator_mul_fused;
-		o->fused_adjoint = sparse_operator_mul_t_fused;
-		o->free = sparse_operator_data_free;
+	void * data = OK_NULL;
+	if (A && A->val && A->ind && A->ptr) {
+		data = sparse_operator_data_alloc(A);
+		if (data) {
+			ok_alloc(o, sizeof(*o));
+			o->kind = (A->order == CblasColMajor) ? OkOperatorSparseCSC :
+					OkOperatorSparseCSR;
+			o->size1 = A->size1;
+			o->size2 = A->size2;
+			o->data = data;
+			o->apply = sparse_operator_mul;
+			o->adjoint = sparse_operator_mul_t;
+			o->fused_apply = sparse_operator_mul_fused;
+			o->fused_adjoint = sparse_operator_mul_t_fused;
+			o->free = sparse_operator_data_free;
+		}
 	}
 	return o;
 }
@@ -188,7 +203,7 @@ transformable_operator * sparse_operator_to_transformable(operator * A)
 	transformable_operator * t = OK_NULL;
 
 	if (!err) {
-		t = malloc(sizeof(*t));
+		ok_alloc(t, sizeof(*t));
 		t->o = A;
 		t->export = sparse_operator_export;
 		t->import = sparse_operator_import;

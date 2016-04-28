@@ -78,6 +78,8 @@ def attach_cg_ccalls(lib, single_precision=False):
 	cgls_helper_p = lib.cgls_helper_p
 	pcg_helper_p = lib.pcg_helper_p
 
+	c_uint_p = POINTER(c_uint)
+
 	# argument types
 	lib.cgls_helper_alloc.argtypes = [c_size_t, c_size_t]
 	lib.cgls_helper_free.argtypes = [cgls_helper_p]
@@ -85,13 +87,13 @@ def attach_cg_ccalls(lib, single_precision=False):
 	lib.cgls_nonallocating.argtypes = [cgls_helper_p, operator_p,
 									   vector_p, vector_p, ok_float,
 									   ok_float, c_size_t, c_int,
-									   POINTER(c_uint)]
+									   c_uint_p]
 	lib.cgls.argtypes = [operator_p, vector_p, vector_p, ok_float,
-						 ok_float, c_size_t, c_int]
+						 ok_float, c_size_t, c_int, c_uint_p]
 	lib.cgls_init.argtypes = [c_size_t, c_size_t]
 	lib.cgls_solve.argtypes = [c_void_p, operator_p, vector_p,
 									vector_p, ok_float, ok_float,
-									c_size_t, c_int]
+									c_size_t, c_int, c_uint_p]
 	lib.cgls_finish.argtypes = [c_void_p]
 	lib.CGLS_MAXFLAG = 4;
 
@@ -104,13 +106,13 @@ def attach_cg_ccalls(lib, single_precision=False):
 	lib.pcg_nonallocating.argtypes = [pcg_helper_p, operator_p,
 									  operator_p, vector_p, vector_p,
 									  ok_float, ok_float, c_size_t,
-									  c_int, POINTER(c_uint)]
+									  c_int, c_uint_p]
 	lib.pcg.argtypes = [operator_p, operator_p, vector_p, vector_p,
-						ok_float, ok_float, c_size_t, c_int]
+						ok_float, ok_float, c_size_t, c_int, c_uint_p]
 	lib.pcg_init.argtypes = [c_size_t, c_size_t]
 	lib.pcg_solve.argtypes = [c_void_p, operator_p, operator_p,
 								   vector_p, vector_p, ok_float,
-								   ok_float, c_size_t, c_int]
+								   ok_float, c_size_t, c_int, c_uint_p]
 	lib.pcg_finish.argtypes = [c_void_p]
 
 	# return types

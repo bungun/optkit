@@ -87,84 +87,57 @@ class DirectProjectorTestCase(OptkitCTestCase):
 
 			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
 				for normalize in (False, True):
-					hdl = c_void_p()
-					lib.blas_make_handle(byref(hdl))
-					self.register_var('hdl', hdl, lib.blas_destroy_handle)
+					hdl = self.register_blas_handle(lib, 'hdl')
 
 					skinny = 1 if m >= n else 0
-					normalize_flag = 1 if normalize else 0
 
-					x = np.random.rand(n).astype(lib.pyfloat)
-					x_in_ptr = x.ctypes.data_as(lib.ok_float_p)
-					x_out = np.zeros(n).astype(lib.pyfloat)
-					x_out_ptr = x_out.ctypes.data_as(lib.ok_float_p)
+					# make Python and C variables
+					x_in, xi_, xi_ptr = self.register_vector(lib, n, 'x_in')
+					x_out, xo_, xo_ptr = self.register_vector(lib, n, 'x_out')
+					y_in, yi_, yi_ptr = self.register_vector(lib, m, 'y_in')
+					y_out, yo_, yo_ptr = self.register_vector(lib, m, 'y_out')
+					A, A_, A_ptr = self.register_matrix(lib, m, n, order, 'A')
 
-					y = np.random.rand(m).astype(lib.pyfloat)
-					y_in_ptr = y.ctypes.data_as(lib.ok_float_p)
-					y_out = np.zeros(m).astype(lib.pyfloat)
-					y_out_ptr = y_out.ctypes.data_as(lib.ok_float_p)
-
-					A = np.random.rand(m, n).astype(lib.pyfloat)
-					A_ptr = A.ctypes.data_as(lib.ok_float_p)
-
-					order_in = lib.enums.CblasRowMajor if A.flags.c_contiguous \
+					xi_ += np.random.rand(n)
+					yi_ += np.random.rand(m)
+					A_ += np.random.rand(m, n)
+					order_ = lib.enums.CblasRowMajor if A_.flags.c_contiguous \
 							   else lib.enums.CblasColMajor
 
-					# build C inputs
-					x_in_c = lib.vector(0, 0, None)
-					lib.vector_calloc(x_in_c, n)
-					self.register_var('x_in', x_in_c, lib.vector_free)
-					lib.vector_memcpy_va(x_in_c, x_in_ptr, 1)
-
-					y_in_c = lib.vector(0, 0, None)
-					lib.vector_calloc(y_in_c, m)
-					self.register_var('y_in', y_in_c, lib.vector_free)
-					lib.vector_memcpy_va(y_in_c, y_in_ptr, 1)
-
-					A_c = lib.matrix(0, 0, 0, None, order)
-					lib.matrix_calloc(A_c, m, n, order)
-					self.register_var('A', A_c, lib.matrix_free)
-					lib.matrix_memcpy_ma(A_c, A_ptr, order_in)
-
-					x_out_c = lib.vector(0, 0, None)
-					lib.vector_calloc(x_out_c, n)
-					self.register_var('x_out', x_out_c, lib.vector_free)
-
-					y_out_c = lib.vector(0, 0, None)
-					lib.vector_calloc(y_out_c, m)
-					self.register_var('x_out', x_out_c, lib.vector_free)
+					# populate C inputs
+					self.assertCall( lib.vector_memcpy_va(x_in, xi_ptr, 1) )
+					self.assertCall( lib.vector_memcpy_va(y_in, yi_ptr, 1) )
+					self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, order_) )
 
 					# make projector, project
-					P = lib.direct_projector(None, None, 0, skinny,
-											 normalize_flag)
+					P = lib.direct_projector(None, None, 0, skinny, 0)
 					self.register_var('P', P, lib.direct_projector_free)
 
-					lib.direct_projector_alloc(P, A_c)
-					lib.direct_projector_initialize(hdl, P, 0)
-					lib.direct_projector_project(hdl, P, x_in_c, y_in_c,
-												 x_out_c, y_out_c)
+					self.assertCall( lib.direct_projector_alloc(P, A) )
+					self.assertCall( lib.direct_projector_initialize(
+							hdl, P, normalize) )
+					self.assertCall( lib.direct_projector_project(
+							hdl, P, x_in, y_in, x_out, y_out) )
 
 					# copy results
-					lib.vector_memcpy_av(x_out_ptr, x_out_c, 1)
-					lib.vector_memcpy_av(y_out_ptr, y_out_c, 1)
+					self.assertCall( lib.vector_memcpy_av( xo_ptr, x_out, 1) )
+					self.assertCall( lib.vector_memcpy_av( yo_ptr, y_out, 1) )
 
-					self.assertTrue( np.linalg.norm(A.dot(x_out) - y_out) <=
-									 ATOLM + RTOL * np.linalg.norm(y_out) )
+					# test projection y_out == Ax_out
+					if normalize:
+						Ax = A_.dot(xo_) / P.normA
+					else:
+						Ax = A_.dot(xo_)
+					self.assertTrue( np.linalg.norm(Ax - yo_) <=
+									 ATOLM + RTOL * np.linalg.norm(yo_) )
 
 					# free memory
-					self.free_var('P')
-					self.free_var('A')
-					self.free_var('x_in')
-					self.free_var('y_in')
-					self.free_var('x_out')
-					self.free_var('x_out')
-					self.free_var('hdl')
-					self.assertEqual( lib.ok_device_reset(), 0 )
+					self.free_vars('P', 'A', 'x_in', 'y_in', 'x_out', 'y_out',
+								   'hdl')
+					self.assertCall( lib.ok_device_reset() )
 
 class IndirectProjectorTestCase(OptkitCOperatorTestCase):
-	"""
-	TODO: docstring
-	"""
+
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
@@ -202,11 +175,11 @@ class IndirectProjectorTestCase(OptkitCOperatorTestCase):
 
 				p = lib.indirect_projector(None, None)
 
-				lib.indirect_projector_alloc(p, o)
+				self.assertCall( lib.indirect_projector_alloc(p, o) )
 				self.register_var('p', p, lib.indirect_projector_free)
 
-				self.assertNotEqual(p.A, 0)
-				self.assertNotEqual(p.cgls_work, 0)
+				self.assertNotEqual( p.A, 0 )
+				self.assertNotEqual( p.cgls_work, 0 )
 
 				self.free_var('p')
 				self.free_var('A')
@@ -223,43 +196,20 @@ class IndirectProjectorTestCase(OptkitCOperatorTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOLM = RTOL * m**0.5
 
-			hdl = c_void_p()
-			lib.blas_make_handle(byref(hdl))
+			hdl = self.register_blas_handle(lib, 'hdl')
 
 			# -----------------------------------------
-			# allocate x, y in python & C
-
-			# inputs
-			x = lib.vector(0, 0, None)
-			lib.vector_calloc(x, n)
-			self.register_var('x', x, lib.vector_free)
-			x_ = np.zeros(n).astype(lib.pyfloat)
-			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
-
-			y = lib.vector(0, 0, None)
-			lib.vector_calloc(y, m)
-			self.register_var('y', y, lib.vector_free)
-			y_ = np.zeros(m).astype(lib.pyfloat)
-			y_ptr = y_.ctypes.data_as(lib.ok_float_p)
+			# allocate inputs/outputs in python & C
+			x, x_, x_ptr = self.register_vector(lib, n, 'x')
+			y, y_, y_ptr = self.register_vector(lib, m, 'y')
+			x_out, x_proj, x_p_ptr = self.register_vector(lib, n, 'x_out')
+			y_out, y_proj, y_p_ptr = self.register_vector(lib, m, 'y_out')
 
 			x_ += self.x_test
-			lib.vector_memcpy_va(x, x_ptr, 1)
+			self.assertCall( lib.vector_memcpy_va(x, x_ptr, 1) )
 
 			y_ += self.y_test
-			lib.vector_memcpy_va(y, y_ptr, 1)
-
-			# outputs
-			x_out = lib.vector(0, 0, None)
-			lib.vector_calloc(x_out, n)
-			self.register_var('x_out', x_out, lib.vector_free)
-			x_proj = np.zeros(n).astype(lib.pyfloat)
-			x_p_ptr = x_proj.ctypes.data_as(lib.ok_float_p)
-
-			y_out = lib.vector(0, 0, None)
-			lib.vector_calloc(y_out, m)
-			self.register_var('y_out', y_out, lib.vector_free)
-			y_proj = np.zeros(m).astype(lib.pyfloat)
-			y_p_ptr = y_proj.ctypes.data_as(lib.ok_float_p)
+			self.assertCall( lib.vector_memcpy_va(y, y_ptr, 1) )
 
 			# -----------------------------------------
 			# test projection for each operator type defined in self.op_keys
@@ -272,34 +222,27 @@ class IndirectProjectorTestCase(OptkitCOperatorTestCase):
 
 				p = lib.indirect_projector(None, None)
 
-				lib.indirect_projector_alloc(p, o)
+				self.assertCall( lib.indirect_projector_alloc(p, o) )
 				self.register_var('p', p, lib.indirect_projector_free)
-				lib.indirect_projector_project(hdl, p, x, y, x_out, y_out)
+				# self.assertCall( lib.indirect_projector_project(
+						# hdl, p, x, y, x_out, y_out) )
 				self.free_var('p')
 
-				lib.vector_memcpy_av(x_p_ptr, x_out, 1)
-				lib.vector_memcpy_av(y_p_ptr, y_out, 1)
+				self.assertCall( lib.vector_memcpy_av(x_p_ptr, x_out, 1) )
+				self.assertCall( lib.vector_memcpy_av(y_p_ptr, y_out, 1) )
 
-				self.assertTrue(
-						np.linalg.norm(A_.dot(x_proj) - y_proj) <=
-						ATOLM + RTOL * np.linalg.norm(y_proj))
+				self.assertTrue( np.linalg.norm(A_.dot(x_proj) - y_proj) <=
+								 ATOLM + RTOL * np.linalg.norm(y_proj) )
 
-				self.free_var('A')
-				self.free_var('o')
+				self.free_vars('A', 'o')
 
 			# -----------------------------------------
 			# free x, y
-			self.free_var('x')
-			self.free_var('y')
-			self.free_var('x_out')
-			self.free_var('y_out')
-
-			lib.blas_destroy_handle(byref(hdl))
-
+			self.free_vars('x', 'y', 'x_out', 'y_out', 'hdl')
+			self.assertCall( lib.ok_device_reset() )
+"""
 class DenseDirectProjectorTestCase(OptkitCTestCase):
-	"""
-	TODO: docstring
-	"""
+
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
@@ -329,32 +272,24 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
 						lib.enums.CblasColMajor
-				pyorder = 'C' if rowmajor else 'F'
 
-				A_ = np.zeros(self.shape, order=pyorder).astype(lib.pyfloat)
-				A_ptr = A_.ctypes.data_as(lib.ok_float_p)
-				A = lib.matrix(0, 0, 0, None, order)
-
-				lib.matrix_calloc(A, m, n, order)
-				self.register_var('A', A, lib.matrix_free)
-
+				A, A_, A_ptr = self.register_matrix(lib, m, n, order, 'A')
 				A_ += self.A_test
-				lib.matrix_memcpy_ma(A, A_ptr, order)
+				self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, order) )
 
 				p = lib.dense_direct_projector_alloc(A)
 				self.register_var('p', p.contents.data, p.contents.free)
-				self.assertEqual(p.contents.kind, lib.enums.DENSE_DIRECT)
-				self.assertEqual(p.contents.size1, m)
-				self.assertEqual(p.contents.size2, n)
+				self.assertEqual( p.contents.kind, lib.enums.DENSE_DIRECT)
+				self.assertEqual( p.contents.size1, m)
+				self.assertEqual( p.contents.size2, n)
 				self.assertNotEqual(p.contents.data, 0)
 				self.assertNotEqual(p.contents.initialize, 0)
 				self.assertNotEqual(p.contents.project, 0)
 				self.assertNotEqual(p.contents.free, 0)
 
-				self.free_var('p')
-				self.free_var('A')
+				self.free_vars('p', 'A')
 
-			lib.ok_device_reset()
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_projection(self):
 		m, n = self.shape
@@ -368,73 +303,42 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOLM = RTOL * m**0.5
 
-			hdl = c_void_p()
-			lib.blas_make_handle(byref(hdl))
+			hdl = self.register_blas_handle(lib, 'hdl')
 
 			# -----------------------------------------
-			# allocate x, y in python & C
-
-			# inputs
-			x = lib.vector(0, 0, None)
-			lib.vector_calloc(x, n)
-			self.register_var('x', x, lib.vector_free)
-			x_ = np.zeros(n).astype(lib.pyfloat)
-			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
-
-			y = lib.vector(0, 0, None)
-			lib.vector_calloc(y, m)
-			self.register_var('y', y, lib.vector_free)
-			y_ = np.zeros(m).astype(lib.pyfloat)
-			y_ptr = y_.ctypes.data_as(lib.ok_float_p)
+			# allocate inputs/outputs in python & C
+			x, x_, x_ptr = self.register_vector(lib, n, 'x')
+			y, y_, y_ptr = self.register_vector(lib, m, 'y')
+			x_out, x_proj, x_p_ptr = self.register_vector(lib, n, 'x_out')
+			y_out, y_proj, y_p_ptr = self.register_vector(lib, m, 'y_out')
 
 			x_ += self.x_test
-			lib.vector_memcpy_va(x, x_ptr, 1)
+			self.assertCall( lib.vector_memcpy_va(x, x_ptr, 1) )
 
 			y_ += self.y_test
-			lib.vector_memcpy_va(y, y_ptr, 1)
-
-			# outputs
-			x_out = lib.vector(0, 0, None)
-			lib.vector_calloc(x_out, n)
-			self.register_var('x_out', x_out, lib.vector_free)
-
-			x_proj = np.zeros(n).astype(lib.pyfloat)
-			x_p_ptr = x_proj.ctypes.data_as(lib.ok_float_p)
-
-			y_out = lib.vector(0, 0, None)
-			lib.vector_calloc(y_out, m)
-			self.register_var('y_out', y_out, lib.vector_free)
-
-			y_proj = np.zeros(m).astype(lib.pyfloat)
-			y_p_ptr = y_proj.ctypes.data_as(lib.ok_float_p)
+			self.assertCall( lib.vector_memcpy_va(y, y_ptr, 1) )
 
 			# -----------------------------------------
 			# test projection for each matrix layout
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
 						lib.enums.CblasColMajor
-				pyorder = 'C' if rowmajor else 'F'
 
-				A_ = np.zeros(self.shape, order=pyorder).astype(lib.pyfloat)
-				A_ptr = A_.ctypes.data_as(lib.ok_float_p)
-				A = lib.matrix(0, 0, 0, None, order)
-				lib.matrix_calloc(A, m, n, order)
-				self.register_var('A', A, lib.matrix_free)
-
+				A, A_, A_ptr = self.register_matrix(lib, m, n, order, 'A')
 				A_ += self.A_test
-				lib.matrix_memcpy_ma(A, A_ptr, order)
+				self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, order) )
 
 				p = lib.dense_direct_projector_alloc(A)
 				self.register_var('p', p.contents.data, p.contents.free)
-				p.contents.initialize(p.contents.data, 0)
+				self.assertCall( p.contents.initialize(p.contents.data, 0) )
 
-				p.contents.project(p.contents.data, x, y, x_out, y_out,
-								   TOL_PLACEHOLDER)
+				self.assertCall( p.contents.project(
+						p.contents.data, x, y, x_out, y_out, TOL_PLACEHOLDER) )
 
 				self.free_var('p')
 
-				lib.vector_memcpy_av(x_p_ptr, x_out, 1)
-				lib.vector_memcpy_av(y_p_ptr, y_out, 1)
+				self.assertCall( lib.vector_memcpy_av(x_p_ptr, x_out, 1) )
+				self.assertCall( lib.vector_memcpy_av(y_p_ptr, y_out, 1) )
 
 				self.assertTrue(
 						np.linalg.norm(A_.dot(x_proj) - y_proj) <=
@@ -444,17 +348,10 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 
 			# -----------------------------------------
 			# free x, y
-			self.free_var('x')
-			self.free_var('y')
-			self.free_var('x_out')
-			self.free_var('y_out')
-			lib.blas_destroy_handle(byref(hdl))
-			lib.ok_device_reset()
+			self.free_vars('x', 'y', 'x_out', 'y_out', 'hdl')
+			self.assertCall( lib.ok_device_reset() )
 
 class GenericIndirectProjectorTestCase(OptkitCOperatorTestCase):
-	"""
-	TODO: docstring
-	"""
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
@@ -492,19 +389,16 @@ class GenericIndirectProjectorTestCase(OptkitCOperatorTestCase):
 
 				p = lib.indirect_projector_generic_alloc(o)
 				self.register_var('p', p.contents.data, p.contents.free)
-				self.assertEqual(p.contents.kind, lib.enums.INDIRECT)
-				self.assertEqual(p.contents.size1, m)
-				self.assertEqual(p.contents.size2, n)
-				self.assertNotEqual(p.contents.data, 0)
-				self.assertNotEqual(p.contents.initialize, 0)
-				self.assertNotEqual(p.contents.project, 0)
-				self.assertNotEqual(p.contents.free, 0)
-				self.free_var('p')
+				self.assertEqual( p.contents.kind, lib.enums.INDIRECT )
+				self.assertEqual( p.contents.size1, m )
+				self.assertEqual( p.contents.size2, n )
+				self.assertNotEqual( p.contents.data, 0 )
+				self.assertNotEqual( p.contents.initialize, 0 )
+				self.assertNotEqual( p.contents.project, 0 )
+				self.assertNotEqual( p.contents.free, 0 )
+				self.free_vars('p', 'A', 'o')
 
-				self.free_var('A')
-				self.free_var('o')
-
-			lib.ok_device_reset()
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_projection(self):
 		m, n = self.shape
@@ -518,43 +412,20 @@ class GenericIndirectProjectorTestCase(OptkitCOperatorTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOLM = RTOL * m**0.5
 
-			hdl = c_void_p()
-			lib.blas_make_handle(byref(hdl))
+			hdl = self.register_blas_handle(lib, 'hdl')
 
 			# -----------------------------------------
-			# allocate x, y in python & C
-
-			# inputs
-			x = lib.vector(0, 0, None)
-			lib.vector_calloc(x, n)
-			self.register_var('x', x, lib.vector_free)
-			x_ = np.zeros(n).astype(lib.pyfloat)
-			x_ptr = x_.ctypes.data_as(lib.ok_float_p)
-
-			y = lib.vector(0, 0, None)
-			lib.vector_calloc(y, m)
-			self.register_var('y', y, lib.vector_free)
-			y_ = np.zeros(m).astype(lib.pyfloat)
-			y_ptr = y_.ctypes.data_as(lib.ok_float_p)
+			# allocate inputs/outputs in python & C
+			x, x_, x_ptr = self.register_vector(lib, n, 'x')
+			y, y_, y_ptr = self.register_vector(lib, m, 'y')
+			x_out, x_proj, x_p_ptr = self.register_vector(lib, n, 'x_out')
+			y_out, y_proj, y_p_ptr = self.register_vector(lib, m, 'y_out')
 
 			x_ += self.x_test
-			lib.vector_memcpy_va(x, x_ptr, 1)
+			self.assertCall( lib.vector_memcpy_va(x, x_ptr, 1) )
 
 			y_ += self.y_test
-			lib.vector_memcpy_va(y, y_ptr, 1)
-
-			# outputs
-			x_out = lib.vector(0, 0, None)
-			lib.vector_calloc(x_out, n)
-			self.register_var('x_out', x_out, lib.vector_free)
-			x_proj = np.zeros(n).astype(lib.pyfloat)
-			x_p_ptr = x_proj.ctypes.data_as(lib.ok_float_p)
-
-			y_out = lib.vector(0, 0, None)
-			lib.vector_calloc(y_out, m)
-			self.register_var('y_out', y_out, lib.vector_free)
-			y_proj = np.zeros(m).astype(lib.pyfloat)
-			y_p_ptr = y_proj.ctypes.data_as(lib.ok_float_p)
+			self.assertCall( lib.vector_memcpy_va(y, y_ptr, 1) )
 
 			# -----------------------------------------
 			# test projection for each operator type defined in self.op_keys
@@ -567,24 +438,20 @@ class GenericIndirectProjectorTestCase(OptkitCOperatorTestCase):
 
 				p = lib.indirect_projector_generic_alloc(o)
 				self.register_var('p', p.contents.data, p.contents.free)
-				p.contents.project(p.contents.data, x, y, x_out, y_out, TOL_CG)
+				self.assertCall( p.contents.project(
+						p.contents.data, x, y, x_out, y_out, TOL_CG) )
 				self.free_var('p')
 
-				lib.vector_memcpy_av(x_p_ptr, x_out, 1)
-				lib.vector_memcpy_av(y_p_ptr, y_out, 1)
+				self.assertCall( lib.vector_memcpy_av(x_p_ptr, x_out, 1) )
+				self.assertCall( lib.vector_memcpy_av(y_p_ptr, y_out, 1) )
 
-				self.assertTrue(
-						np.linalg.norm(A_.dot(x_proj) - y_proj) <=
-						ATOLM + RTOL * np.linalg.norm(y_proj))
+				self.assertTrue( np.linalg.norm(A_.dot(x_proj) - y_proj) <=
+								 ATOLM + RTOL * np.linalg.norm(y_proj))
 
-				self.free_var('A')
-				self.free_var('o')
+				self.free_vars('A', 'o')
 
 			# -----------------------------------------
 			# free x, y
-			self.free_var('x')
-			self.free_var('y')
-			self.free_var('x_out')
-			self.free_var('y_out')
-			lib.blas_destroy_handle(byref(hdl))
-			lib.ok_device_reset()
+			self.free_vars('x', 'y', 'x_out', 'y_out', 'hdl')
+			self.assertCall( lib.ok_device_reset() )
+"""

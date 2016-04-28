@@ -14,7 +14,6 @@ typedef struct cgls_helper{
 	ok_float norm_s, norm_s0, norm_x, xmax;
 	ok_float alpha, beta, delta, gamma, gamma_prev, shrink;
 	void * blas_handle;
-	int * indicator;
 } cgls_helper;
 
 cgls_helper * cgls_helper_alloc(size_t m, size_t n);
@@ -27,7 +26,6 @@ typedef struct pcg_helper{
 	ok_float alpha, gamma, gamma_prev;
 	void * blas_handle;
 	int never_solved;
-	int * indicator;
 } pcg_helper;
 
 pcg_helper * pcg_helper_alloc(size_t m, size_t n);
@@ -40,13 +38,13 @@ ok_status cgls_nonallocating(cgls_helper * helper, operator * op, vector * b,
 	const size_t maxiter, int quiet, uint * flag);
 
 /* convenience wrappers */
-uint cgls(operator * op, vector * b, vector * x, const ok_float rho,
-	const ok_float tol, const size_t maxiter, int quiet);
+ok_status cgls(operator * op, vector * b, vector * x, const ok_float rho,
+	const ok_float tol, const size_t maxiter, int quiet, uint * flag);
 
 void * cgls_init(size_t m, size_t n);
-uint cgls_solve(void * cgls_work, operator * op, vector * b, vector * x,
+ok_status cgls_solve(void * cgls_work, operator * op, vector * b, vector * x,
 	const ok_float rho, const ok_float tol, const size_t maxiter,
-	int quiet);
+	int quiet, uint * flag);
 ok_status cgls_finish(void * cgls_work);
 
 /* Preconditioned CG calls */
@@ -58,13 +56,14 @@ ok_status pcg_nonallocating(pcg_helper * helper, operator * op,
 	const ok_float tol, const size_t maxiter, int quiet, uint * iters);
 
 /* convenience wrappers */
-uint pcg(operator * op, operator * pre_cond, vector * b, vector * x,
-	const ok_float rho, const ok_float tol, const size_t maxiter, int quiet);
+ok_status pcg(operator * op, operator * pre_cond, vector * b, vector * x,
+	const ok_float rho, const ok_float tol, const size_t maxiter,
+	int quiet, uint * iters);
 
 void * pcg_init(size_t m, size_t n);
-uint pcg_solve(void * pcg_work, operator * op, operator * pre_cond,
+ok_status pcg_solve(void * pcg_work, operator * op, operator * pre_cond,
 	vector * b, vector * x, const ok_float rho, const ok_float tol,
-	const size_t maxiter, int quiet);
+	const size_t maxiter, int quiet, uint * iters);
 ok_status pcg_finish(void * pcg_work);
 
 #ifdef __cplusplus

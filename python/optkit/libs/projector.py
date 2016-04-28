@@ -49,12 +49,12 @@ def attach_projector_ctypes(lib, single_precision=False):
 					('size1', c_size_t),
 					('size2', c_size_t),
 					('data', c_void_p),
-					('initialize', CFUNCTYPE(None, c_void_p,
+					('initialize', CFUNCTYPE(c_uint, c_void_p,
 											 c_int)),
-					('project', CFUNCTYPE(None, c_void_p, vector_p,
+					('project', CFUNCTYPE(c_uint, c_void_p, vector_p,
 										  vector_p, vector_p, vector_p,
 										  ok_float)),
-					('free', CFUNCTYPE(None, c_void_p))]
+					('free', CFUNCTYPE(c_uint, c_void_p))]
 
 	lib.projector = projector
 	lib.projector_p = POINTER(lib.projector)
@@ -93,10 +93,10 @@ def attach_projector_ccalls(lib, single_precision=False):
 
 	# returns:
 	# -direct
-	lib.direct_projector_alloc.restype = None
-	lib.direct_projector_initialize.restype = None
-	lib.direct_projector_project.restype = None
-	lib.direct_projector_free.restype = None
+	lib.direct_projector_alloc.restype = c_uint
+	lib.direct_projector_initialize.restype = c_uint
+	lib.direct_projector_project.restype = c_uint
+	lib.direct_projector_free.restype = c_uint
 	lib.dense_direct_projector_alloc.restype = projector_p
 
 def attach_operator_projector_ctypes_ccalls(lib, single_precision=False):
@@ -142,8 +142,8 @@ def attach_operator_projector_ctypes_ccalls(lib, single_precision=False):
 	lib.indirect_projector_free.argtypes = [indirect_projector_p]
 	lib.indirect_projector_generic_alloc.argtypes = [operator_p]
 
-	lib.indirect_projector_alloc.restype = None
-	lib.indirect_projector_initialize.restype = None
-	lib.indirect_projector_project.restype = None
-	lib.indirect_projector_free.restype = None
+	lib.indirect_projector_alloc.restype = c_uint
+	lib.indirect_projector_initialize.restype = c_uint
+	lib.indirect_projector_project.restype = c_uint
+	lib.indirect_projector_free.restype = c_uint
 	lib.indirect_projector_generic_alloc.restype = projector_p

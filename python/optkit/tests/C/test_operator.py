@@ -28,15 +28,15 @@ class OperatorLibsTestCase(OptkitCTestCase):
 
 	def validate_operator(self, operator_, m, n, OPERATOR_KIND):
 		o = operator_
-		self.assertEqual(o.size1, m)
-		self.assertEqual(o.size2, n)
-		self.assertEqual(o.kind, OPERATOR_KIND)
-		self.assertNotEqual(o.data, 0)
-		self.assertNotEqual(o.apply, 0)
-		self.assertNotEqual(o.adjoint, 0)
-		self.assertNotEqual(o.fused_apply, 0)
-		self.assertNotEqual(o.fused_adjoint, 0)
-		self.assertNotEqual(o.free, 0)
+		self.assertEqual( o.size1, m )
+		self.assertEqual( o.size2, n )
+		self.assertEqual( o.kind, OPERATOR_KIND )
+		self.assertNotEqual( o.data, 0 )
+		self.assertNotEqual( o.apply, 0 )
+		self.assertNotEqual( o.adjoint, 0 )
+		self.assertNotEqual( o.fused_apply, 0 )
+		self.assertNotEqual( o.fused_adjoint, 0 )
+		self.assertNotEqual( o.free, 0 )
 
 	def exercise_operator(self, lib, operator_, A_py, TOL):
 		o = operator_
@@ -49,20 +49,11 @@ class OperatorLibsTestCase(OptkitCTestCase):
 		beta = np.random.rand()
 
 		# allocate vectors x, y
-		x_ = np.zeros(n).astype(lib.pyfloat)
+		x, x_, x_ptr = self.register_vector(lib, n, 'x')
+		y, y_, y_ptr = self.register_vector(lib, m, 'y')
+
 		x_ += self.x_test
-		x_ptr = x_.ctypes.data_as(lib.ok_float_p)
-		x = lib.vector(0, 0, None)
-		self.assertCall( lib.vector_calloc(x, n) )
-		self.register_var('x', x, lib.vector_free)
-
 		self.assertCall( lib.vector_memcpy_va(x, x_ptr, 1) )
-
-		y_ = np.zeros(m).astype(lib.pyfloat)
-		y_ptr = y_.ctypes.data_as(lib.ok_float_p)
-		y = lib.vector(0, 0, None)
-		self.assertCall( lib.vector_calloc(y, m) )
-		self.register_var('y', y, lib.vector_free)
 
 		# test Ax
 		Ax = A_py.dot(x_)
@@ -95,8 +86,8 @@ class OperatorLibsTestCase(OptkitCTestCase):
 		self.assertTrue( np.linalg.norm(x_ - Atypx) <=
 						 ATOLN + RTOL * np.linalg.norm(Atypx) )
 
-		self.free_var('x')
-		self.free_var('y')
+		self.free_vars('x', 'y')
+		self.assertCall( lib.ok_device_reset() )
 
 	def test_libs_exist(self):
 		libs = []
@@ -113,21 +104,14 @@ class OperatorLibsTestCase(OptkitCTestCase):
 			if lib is None:
 				continue
 
-			for rowmajor in (True, False):
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
-
-				A = lib.matrix(0, 0, 0, None, order)
-				self.assertCall( lib.matrix_calloc(A, m, n, order) )
-				self.register_var('A', A, lib.matrix_free)
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				A, _, _, = self.register_matrix(lib, m, n, order, 'A')
 
 				o = lib.dense_operator_alloc(A)
 				self.register_var('o', o.contents.data, o.contents.free)
 				self.validate_operator(o.contents, m, n, lib.enums.DENSE)
 
-				self.free_var('o')
-				self.free_var('A')
-
+				self.free_vars('o', 'A')
 				self.assertCall( lib.ok_device_reset() )
 
 	def test_dense_operator(self):
@@ -144,25 +128,17 @@ class OperatorLibsTestCase(OptkitCTestCase):
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
 						lib.enums.CblasColMajor
-				pyorder = 'C' if rowmajor else 'F'
 
-				A_ = np.zeros(self.shape, order=pyorder).astype(lib.pyfloat)
+				A, A_, A_ptr = self.register_matrix(lib, m, n, order, 'A')
 				A_ += self.A_test
-				A_ptr = A_.ctypes.data_as(lib.ok_float_p)
-				A = lib.matrix(0, 0, 0, None, order)
-				lib.matrix_calloc(A, m, n, order)
-				self.register_var('A', A, lib.matrix_free)
-
-				lib.matrix_memcpy_ma(A, A_ptr, order)
+				self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, order) )
 
 				o = lib.dense_operator_alloc(A)
 				self.register_var('o', o.contents.data, o.contents.free)
 
 				self.exercise_operator(lib, o.contents, A_, TOL)
 
-				self.free_var('o')
-				self.free_var('A')
-
+				self.free_vars('o', 'A')
 				self.assertCall( lib.ok_device_reset() )
 
 	def test_sparse_alloc_free(self):
@@ -176,21 +152,17 @@ class OperatorLibsTestCase(OptkitCTestCase):
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
 						lib.enums.CblasColMajor
-				spmat = csr_matrix if rowmajor else csc_matrix
 				enum = lib.enums.SPARSE_CSR if rowmajor else \
 					   lib.enums.SPARSE_CSC
 
-				A = lib.sparse_matrix(0, 0, 0, 0, None, None, None, order)
-				lib.sp_matrix_calloc(A, m, n, self.nnz, order)
-				self.register_var('A', A, lib.sp_matrix_free)
+				A, _, _, _, _, _ = self.register_sparsemat(
+						lib, self.A_test_sparse, order, 'A')
 
 				o = lib.sparse_operator_alloc(A)
 				self.register_var('o', o.contents.data, o.contents.free)
 				self.validate_operator(o.contents, m, n, enum)
 
-				self.free_var('o')
-				self.free_var('A')
-
+				self.free_vars('o', 'A')
 				self.assertCall( lib.ok_device_reset() )
 
 	def test_sparse_operator(self):
@@ -204,25 +176,11 @@ class OperatorLibsTestCase(OptkitCTestCase):
 			DIGITS = 7 - 2 * single_precision - 1 * gpu
 			TOL = 10**(-DIGITS)
 
-			for rowmajor in (True, False):
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
-				spmat = csr_matrix if rowmajor else csc_matrix
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				hdl = self.register_blas_handle(lib, 'hdl')
 
-				hdl = c_void_p()
-				self.assertEqual(lib.sp_make_handle(byref(hdl)), 0)
-
-				A_ = np.zeros(self.shape).astype(lib.pyfloat)
-				A_ += self.A_test_sparse
-				A_sp = spmat(A_)
-				A_val = A_sp.data.ctypes.data_as(lib.ok_float_p)
-				A_ind = A_sp.indices.ctypes.data_as(lib.ok_int_p)
-				A_ptr = A_sp.indptr.ctypes.data_as(lib.ok_int_p)
-
-				A = lib.sparse_matrix(0, 0, 0, 0, None, None, None, order)
-				self.assertCall( lib.sp_matrix_calloc(A, m, n, A_sp.nnz,
-													  order) )
-				self.register_var('A', A, lib.sp_matrix_free)
+				A, A_, A_sp, A_val, A_ind, A_ptr = self.register_sparsemat(
+						lib, self.A_test_sparse, order, 'A')
 
 				self.assertCall( lib.sp_matrix_memcpy_ma(hdl, A, A_val, A_ind,
 														 A_ptr, order) )
@@ -232,10 +190,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 
 				self.exercise_operator(lib, o.contents, A_, TOL)
 
-				self.free_var('o')
-				self.free_var('A')
-
-				self.assertEqual(lib.sp_destroy_handle(hdl), 0)
+				self.free_vars('o', 'A', 'hdl')
 				self.assertCall( lib.ok_device_reset() )
 
 	def test_diagonal_alloc_free(self):
@@ -256,9 +211,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 
 				self.validate_operator(o.contents, n, n, lib.enums.DIAGONAL)
 
-				self.free_var('o')
-				self.free_var('d')
-
+				self.free_vars('o', 'd')
 				self.assertCall( lib.ok_device_reset() )
 
 	def test_diagonal_operator(self):
@@ -273,13 +226,8 @@ class OperatorLibsTestCase(OptkitCTestCase):
 			TOL = 10**(-DIGITS)
 
 			for rowmajor in (True, False):
-				d_ = np.zeros(n).astype(lib.pyfloat)
+				d, d_, d_ptr = self.register_vector(lib, n, 'd')
 				d_ += self.A_test[0, :]
-				d_ptr = d_.ctypes.data_as(lib.ok_float_p)
-				d = lib.vector(0, 0, None)
-				self.assertCall( lib.vector_calloc(d, n) )
-				self.register_var('d', d, lib.vector_free)
-
 				self.assertCall( lib.vector_memcpy_va(d, d_ptr, 1) )
 
 				o = lib.diagonal_operator_alloc(d)
@@ -287,7 +235,5 @@ class OperatorLibsTestCase(OptkitCTestCase):
 
 				self.exercise_operator(lib, o.contents, np.diag(d_), TOL)
 
-				self.free_var('o')
-				self.free_var('d')
-
+				self.free_vars('o', 'd')
 				self.assertCall( lib.ok_device_reset() )

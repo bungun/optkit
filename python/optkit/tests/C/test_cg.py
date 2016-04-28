@@ -143,6 +143,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				self.assertCall( lib.cgls_nonallocating(h, o, b, x, rho, tol,
 														maxiter, CG_QUIET,
 														flag_p) )
+				self.assertTrue( flag[0] <= lib.CGLS_MAXFLAG )
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 				self.assert_cgls_exit(A_, x_, b_, rho, flag[0], ATOLN)
 
@@ -181,8 +182,12 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				self.register_var('A', A, freeA)
 				self.register_var('o', o.contents.data, o.contents.free)
 
-				flag = lib.cgls(o, b, x, rho, tol, maxiter, CG_QUIET)
-				self.assertTrue( flag <= lib.CGLS_MAXFLAG )
+				flag = np.zeros(1).astype(c_uint)
+				flag_p = flag.ctypes.data_as(POINTER(c_uint))
+
+				self.assertCall( lib.cgls(o, b, x, rho, tol, maxiter,
+										  CG_QUIET, flag_p) )
+				self.assertTrue( flag[0] <= lib.CGLS_MAXFLAG )
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 				self.assert_cgls_exit(A_, x_, b_, rho, flag, ATOLN)
 
@@ -222,9 +227,14 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 				cgls_work = lib.cgls_init(m, n)
 				self.register_var('work', cgls_work, lib.cgls_finish)
-				flag = lib.cgls_solve(cgls_work, o, b, x, rho, tol,
-										   maxiter, CG_QUIET)
-				self.assertTrue( flag <= lib.CGLS_MAXFLAG )
+
+				flag = np.zeros(1).astype(c_uint)
+				flag_p = flag.ctypes.data_as(POINTER(c_uint))
+
+				self.assertCall( lib.cgls_solve(cgls_work, o, b, x, rho,
+												tol, maxiter, CG_QUIET,
+												flag_p) )
+				self.assertTrue( flag[0] <= lib.CGLS_MAXFLAG )
 				self.free_var('work')
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 
@@ -500,8 +510,13 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				h = lib.pcg_helper_alloc(m, n)
 				self.register_var('h', h, lib.pcg_helper_free)
 
-				lib.pcg(o, p, b, x, rho, tol, maxiter, CG_QUIET)
-				lib.vector_memcpy_av(x_ptr, x, 1)
+				iter_ = np.zeros(1).astype(c_uint)
+				iter_p = iter_.ctypes.data_as(POINTER(c_uint))
+
+				self.assertCall( lib.pcg(o, p, b, x, rho, tol, maxiter,
+					CG_QUIET, iter_p) )
+				self.assertTrue( iter_[0] <= maxiter )
+				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
 								ATOLN + RTOL * np.linalg.norm(b_))
 
@@ -548,15 +563,22 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 				pcg_work = lib.pcg_init(m, n)
 				self.register_var('work', pcg_work, lib.pcg_finish)
-				iters1 = lib.pcg_solve(pcg_work, o, p, b, x, rho, tol,
-											maxiter, CG_QUIET)
-				self.assertTrue(iters1 <= maxiter)
+
+
+				iter_ = np.zeros(1).astype(c_uint)
+				iter_p = iter_.ctypes.data_as(POINTER(c_uint))
+
+				self.assertCall( lib.pcg_solve(pcg_work, o, p, b, x, rho, tol,
+											   maxiter, CG_QUIET, iter_p) )
+				iters1 = iter_[0]
+				self.assertTrue( iters1 <= maxiter )
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 				self.assertTrue( np.linalg.norm(T.dot(x_) - b_) <=
 								 ATOLN + RTOL * np.linalg.norm(b_))
 
-				iters2 = lib.pcg_solve(pcg_work, o, p, b, x, rho, tol,
-											maxiter, CG_QUIET)
+				self.assertCall( lib.pcg_solve(pcg_work, o, p, b, x, rho, tol,
+											   maxiter, CG_QUIET, iter_p) )
+				iters2 = iter_[0]
 				self.assertTrue(iters2 <= maxiter)
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 				self.assertTrue( np.linalg.norm(T.dot(x_) - b_) <=

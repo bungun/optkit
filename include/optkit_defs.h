@@ -33,7 +33,7 @@ extern "C" {
 #define OK_NULL 0
 #define ok_alloc(x, len) \
 	do { \
-		x = (typeof(x)) malloc(len); \
+		x = malloc(len); \
 		memset(x, 0, len); \
 	} while(0)
 #define ok_free(x) \

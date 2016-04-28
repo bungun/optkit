@@ -80,46 +80,30 @@ const ok_float kEps = (ok_float) 1e-16;
 cgls_helper * cgls_helper_alloc(size_t m, size_t n)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	cgls_helper * h;
-	h = malloc(sizeof(*h));
-	memset(h, 0, sizeof(*h));
-	h->norm_s = (ok_float) 0;
-	h->norm_s0 = (ok_float) 0;
-	h->norm_x = (ok_float) 0;
-	h->xmax = (ok_float) 0;
-	h->alpha = (ok_float) 0;
-	h->beta = (ok_float) 0;
-	h->delta = (ok_float) 0;
-	h->gamma = (ok_float) 0;
-	h->gamma_prev = (ok_float) 0;
-	h->shrink = (ok_float) 0;
-	err = vector_calloc(&(h->p), n);
+	cgls_helper * h = OK_NULL;
+	ok_alloc(h, sizeof(*h));
+	OK_CHECK_ERR( err, vector_calloc(&(h->p), n) );
 	OK_CHECK_ERR( err, vector_calloc(&(h->q), m) );
 	OK_CHECK_ERR( err, vector_calloc(&(h->r), m) );
 	OK_CHECK_ERR( err, vector_calloc(&(h->s), n) );
 	OK_CHECK_ERR( err, blas_make_handle(&(h->blas_handle)) );
-	if (!err)
-		h->indicator = (int *) malloc(sizeof(int));
+	if (err) {
+		OK_MAX_ERR( err, cgls_helper_free(h) );
+		h = OK_NULL;
+	}
 	return h;
 }
 
 ok_status cgls_helper_free(cgls_helper * helper)
 {
-	ok_status err = OPTKIT_SUCCESS;
-	if (!helper || !helper->p.data)
+	if (!helper)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
-	if (helper->blas_handle)
-	 	err = blas_destroy_handle(helper->blas_handle);
-	if (helper->p.data)
-		OK_MAX_ERR( err, vector_free(&(helper->p)) );
-	if (helper->q.data)
-		OK_MAX_ERR( err, vector_free(&(helper->q)) );
-	if (helper->r.data)
-		OK_MAX_ERR( err, vector_free(&(helper->r)) );
-	if (helper->s.data)
-		OK_MAX_ERR( err, vector_free(&(helper->s)) );
-	if (helper->indicator)
-		ok_free(helper->indicator);
+
+	ok_status err = OK_SCAN_ERR( blas_destroy_handle(helper->blas_handle) );
+	OK_MAX_ERR( err, vector_free(&(helper->p)) );
+	OK_MAX_ERR( err, vector_free(&(helper->q)) );
+	OK_MAX_ERR( err, vector_free(&(helper->r)) );
+	OK_MAX_ERR( err, vector_free(&(helper->s)) );
 	ok_free(helper);
 	return err;
 }
@@ -127,13 +111,8 @@ ok_status cgls_helper_free(cgls_helper * helper)
 pcg_helper * pcg_helper_alloc(size_t m, size_t n)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	pcg_helper * h;
-	h = malloc(sizeof(*h));
-	memset(h, 0, sizeof(*h));
-	h->norm_r = (ok_float) 0;
-	h->alpha = (ok_float) 0;
-	h->gamma = (ok_float) 0;
-	h->gamma_prev = (ok_float) 0;
+	pcg_helper * h = OK_NULL;
+	ok_alloc(h, sizeof(*h));
 	OK_CHECK_ERR( err, vector_calloc(&(h->p), n) );
 	OK_CHECK_ERR( err, vector_calloc(&(h->q), n) );
 	OK_CHECK_ERR( err, vector_calloc(&(h->r), n) );
@@ -141,31 +120,24 @@ pcg_helper * pcg_helper_alloc(size_t m, size_t n)
 	OK_CHECK_ERR( err, vector_calloc(&(h->temp), m) );
 	OK_CHECK_ERR( err, blas_make_handle(&(h->blas_handle)) );
 	h->never_solved = 1;
-	if (!err)
-		h->indicator = (int *) malloc(sizeof(int));
+	if (err) {
+		OK_MAX_ERR( err, pcg_helper_free(h) );
+		h = OK_NULL;
+	}
 	return h;
 }
 
 ok_status pcg_helper_free(pcg_helper * helper)
 {
-	ok_status err = OPTKIT_SUCCESS;
 	if (!helper || !helper->p.data)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
-	if (helper->blas_handle)
-		err = blas_destroy_handle(helper->blas_handle);
-	if (helper->p.data)
-		OK_MAX_ERR( err, vector_free(&(helper->p)) );
-	if (helper->q.data)
-		OK_MAX_ERR( err, vector_free(&(helper->q)) );
-	if (helper->r.data)
-		OK_MAX_ERR( err, vector_free(&(helper->r)) );
-	if (helper->z.data)
-		OK_MAX_ERR( err, vector_free(&(helper->z)) );
-	if (helper->temp.data)
-		OK_MAX_ERR( err, vector_free(&(helper->temp)) );
-	if (helper->indicator)
-		ok_free(helper->indicator);
+	ok_status err = OK_SCAN_ERR( blas_destroy_handle(helper->blas_handle) );
+	OK_MAX_ERR( err, vector_free(&(helper->p)) );
+	OK_MAX_ERR( err, vector_free(&(helper->q)) );
+	OK_MAX_ERR( err, vector_free(&(helper->r)) );
+	OK_MAX_ERR( err, vector_free(&(helper->z)) );
+	OK_MAX_ERR( err, vector_free(&(helper->temp)) );
 	ok_free(helper);
 	return err;
 }
@@ -189,8 +161,8 @@ ok_status cgls_nonallocating(cgls_helper * helper,
 		const size_t maxiter, const int quiet,
 		uint * flag)
 {
-	if (!helper || !helper->indicator)
-		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+
+	OK_CHECK_PTR(helper);
 	OK_CHECK_OPERATOR(op);
 	OK_CHECK_VECTOR(b);
 	OK_CHECK_VECTOR(x);
@@ -215,8 +187,6 @@ ok_status cgls_nonallocating(cgls_helper * helper,
 	if (op->size1 != b->size || op->size2 != x->size || r.size != b->size
 		|| s.size != x->size)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
-
-
 
 	/* initialization */
 	blas_nrm2(blas_hdl, x, &h->norm_x);
@@ -311,23 +281,21 @@ ok_status cgls_nonallocating(cgls_helper * helper,
 	return OPTKIT_SUCCESS;
 }
 
-uint cgls(operator * op, vector * b, vector * x, const ok_float rho,
-	const ok_float tol, const size_t maxiter, const int quiet)
+ok_status cgls(operator * op, vector * b, vector * x, const ok_float rho,
+	const ok_float tol, const size_t maxiter, const int quiet, uint * flag)
 {
-	uint flag;
 	ok_status err = OPTKIT_SUCCESS;
 
 	cgls_helper * helper = cgls_helper_alloc(op->size1, op->size2);
 
 	/* CGLS call */
-	err = cgls_nonallocating(helper, op, b, x, rho, tol, maxiter, quiet,
-		&flag);
-	if (err)
-		flag = INT_MAX;
+	OK_CHECK_ERR( err,
+		cgls_nonallocating(helper, op, b, x, rho, tol, maxiter, quiet,
+			flag) );
+	OK_MAX_ERR( err,
+		cgls_helper_free(helper) );
 
-	cgls_helper_free(helper);
-
-	return flag;
+	return err;
 }
 
 void * cgls_init(size_t m, size_t n)
@@ -335,15 +303,12 @@ void * cgls_init(size_t m, size_t n)
 	return (void *) cgls_helper_alloc(m, n);
 }
 
-uint cgls_solve(void * cgls_work, operator * op, vector * b, vector * x,
-	const ok_float rho, const ok_float tol, const size_t maxiter, int quiet)
+ok_status cgls_solve(void * cgls_work, operator * op, vector * b, vector * x,
+	const ok_float rho, const ok_float tol, const size_t maxiter, int quiet,
+	uint * flag)
 {
-	uint flag;
-	if ( cgls_nonallocating((cgls_helper *) cgls_work, op, b, x, rho,
-		tol, maxiter, quiet, &flag) )
-		return INT_MAX;
-	else
-		return flag;
+	return cgls_nonallocating((cgls_helper *) cgls_work, op, b, x,
+		rho, tol, maxiter, quiet, flag);
 }
 
 ok_status cgls_finish(void * cgls_work)
@@ -432,8 +397,7 @@ ok_status pcg_nonallocating(pcg_helper * helper, operator * op,
 	operator * pre_cond, vector * b, vector * x, const ok_float rho,
 	const ok_float tol, const size_t maxiter, const int quiet, uint * iters)
 {
-	if (!helper || !helper->indicator)
-		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	OK_CHECK_PTR(helper);
 	OK_CHECK_OPERATOR(op);
 	OK_CHECK_OPERATOR(pre_cond);
 	OK_CHECK_VECTOR(b);
@@ -552,21 +516,20 @@ ok_status pcg_nonallocating(pcg_helper * helper, operator * op,
 	return err;
 }
 
-uint pcg(operator * op, operator * pre_cond, vector * b, vector * x,
+ok_status pcg(operator * op, operator * pre_cond, vector * b, vector * x,
 	const ok_float rho, const ok_float tol, const size_t maxiter,
-	const int quiet)
+	const int quiet, uint * iters)
 {
-	uint iters;
 	ok_status err = OPTKIT_SUCCESS;
 	pcg_helper * helper = pcg_helper_alloc(op->size1, op->size2);
 
-	err = pcg_nonallocating(helper, op, pre_cond, b, x, rho, tol,
-		maxiter, quiet, &iters);
-	if (err)
-		iters = INT_MAX;
+	OK_CHECK_ERR( err,
+		pcg_nonallocating(helper, op, pre_cond, b, x, rho, tol, maxiter,
+			quiet, iters) );
+	OK_MAX_ERR( err,
+		pcg_helper_free(helper) );
 
-	pcg_helper_free(helper);
-	return iters;
+	return err;
 }
 
 void * pcg_init(size_t m, size_t n)
@@ -574,16 +537,12 @@ void * pcg_init(size_t m, size_t n)
 	return (void *) pcg_helper_alloc(m, n);
 }
 
-uint pcg_solve(void * pcg_work, operator * op, operator * pre_cond,
+ok_status pcg_solve(void * pcg_work, operator * op, operator * pre_cond,
 	vector * b, vector * x, const ok_float rho, const ok_float tol,
-	const size_t maxiter, int quiet)
+	const size_t maxiter, int quiet, uint * iters)
 {
-	uint iters;
-	if ( pcg_nonallocating((pcg_helper *) pcg_work, op, pre_cond, b, x,
-		rho, tol, maxiter, quiet, &iters) )
-		return INT_MAX;
-	else
-		return iters;
+	return pcg_nonallocating((pcg_helper *) pcg_work, op, pre_cond, b, x,
+		rho, tol, maxiter, quiet, iters);
 }
 
 ok_status pcg_finish(void * pcg_work)

@@ -6,10 +6,10 @@ extern "C" {
 
 void * difference_operator_data_alloc(size_t offset)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	difference_operator_data * op_data;
-	op_data = malloc(sizeof(*op_data));
-	memset(op_data, 0, sizeof(*op_data));
-	blas_make_handle(&(op_data->dense_handle));
+	ok_alloc(op_data, sizeof(*op_data));
+	err = OK_SCAN_ERR( blas_make_handle(&(op_data->dense_handle)) );
 	op_data->offset = offset;
 	op_data->subvec_in.size = 0;
 	op_data->subvec_in.stride = 1;
@@ -17,6 +17,11 @@ void * difference_operator_data_alloc(size_t offset)
 	op_data->subvec_out.size = 0;
 	op_data->subvec_out.stride = 1;
 	op_data->subvec_out.data = OK_NULL;
+	if (err) {
+		difference_operator_data_free(op_data);
+		op_data = OK_NULL;
+	}
+
 	return (void *) op_data;
 }
 
@@ -85,36 +90,46 @@ ok_status difference_operator_mul_t_fused(void * data, ok_float alpha,
 operator * difference_operator_alloc(size_t n, size_t offset)
 {
 	operator * o = OK_NULL;
-	o = malloc(sizeof(*o));
-	memset(op_data, 0, sizeof(*op_data));
-	o->kind = OkOperatorDifference;
-	o->size1 = n;
-	o->size2 = n;
-	o->data = difference_operator_data_alloc(n, offset);
-	o->apply = difference_operator_mul;
-	o->adjoint = difference_operator_mul_t;
-	o->fused_apply = difference_operator_mul_fused;
-	o->fused_adjoint = difference_operator_mul_t_fused;
-	o->free = difference_operator_data_free;
+	void * data = difference_operator_data_alloc(n, offset);
+
+	if (data) {
+		ok_alloc(o, sizeof(*o));
+		o->kind = OkOperatorDifference;
+		o->size1 = n;
+		o->size2 = n;
+		o->data = data;
+		o->apply = difference_operator_mul;
+		o->adjoint = difference_operator_mul_t;
+		o->fused_apply = difference_operator_mul_fused;
+		o->fused_adjoint = difference_operator_mul_t_fused;
+		o->free = difference_operator_data_free;
+	}
 	return o;
 }
 
 void * block_difference_operator_data_alloc(size_t n_blocks,
 	size_t * block_sizes, size_t * offsets)
 {
-	block_difference_operator_data * op_data;
-	op_data = malloc(sizeof(&op_data));
-	memset(op_data, 0, sizeof(*op_data));
-	blas_make_handle(&(op_data->dense_handle));
-	op_data->n_blocks = n_blocks;
-	op_data->block_sizes = block_sizes;
-	op_data->offsets = offsets;
-	op_data->subvec_in.size = 0;
-	op_data->subvec_in.stride = 1;
-	op_data->subvec_in.data = OK_NULL;
-	op_data->subvec_out.size = 0;
-	op_data->subvec_out.stride = 1;
-	op_data->subvec_out.data = OK_NULL;
+	ok_status err = OPTKIT_SUCCESS;
+	block_difference_operator_data * op_data = OK_NULL;
+
+	if (block_sizes && offsets) {
+		ok_alloc(op_data, sizeof(&op_data));
+		err = OK_SCAN_ERR( blas_make_handle(&(op_data->dense_handle)) );
+		op_data->n_blocks = n_blocks;
+		op_data->block_sizes = block_sizes;
+		op_data->offsets = offsets;
+		op_data->subvec_in.size = 0;
+		op_data->subvec_in.stride = 1;
+		op_data->subvec_in.data = OK_NULL;
+		op_data->subvec_out.size = 0;
+		op_data->subvec_out.stride = 1;
+		op_data->subvec_out.data = OK_NULL;
+		if (err) {
+			block_difference_operator_data_free(op_data);
+			op_data = OK_NULL;
+		}
+	}
 	return (void *) op_data;
 }
 
@@ -236,19 +251,22 @@ operator * block_difference_operator_alloc(size_t n, size_t n_blocks,
 	size_t * block_sizes, size_t * offsets)
 {
 	operator * o = OK_NULL;
+	void * data = OK_NULL;
 	if (block_sizes && offsets) {
-		o = malloc(sizeof(*o));
-		memset(o, 0, sizeof(*o));
-		o->kind = OkOperatorBlockDifference;
-		o->size1 = n;
-		o->size2 = n;
-		o->data = block_difference_operator_data_alloc(n_blocks,
+		data = block_difference_operator_data_alloc(n_blocks,
 			block_sizes, offsets);
-		o->apply = block_difference_operator_mul;
-		o->adjoint = block_difference_operator_mul_t;
-		o->fused_apply = block_difference_operator_mul_fused;
-		o->fused_adjoint = block_difference_operator_mul_t_fused;
-		o->free = block_difference_operator_data_free;
+		if (data) {
+			ok_alloc(o, sizeof(*o));
+			o->kind = OkOperatorBlockDifference;
+			o->size1 = n;
+			o->size2 = n;
+			o->data = data;
+			o->apply = block_difference_operator_mul;
+			o->adjoint = block_difference_operator_mul_t;
+			o->fused_apply = block_difference_operator_mul_fused;
+			o->fused_adjoint = block_difference_operator_mul_t_fused;
+			o->free = block_difference_operator_data_free;
+		}
 	}
 	return o;
 }

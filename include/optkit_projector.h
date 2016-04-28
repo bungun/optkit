@@ -9,6 +9,14 @@
 extern "C" {
 #endif
 
+#ifndef OK_CHECK_PROJECTOR
+#define OK_CHECK_PROJECTOR(P) \
+	do { \
+		if (!P || !P->data) \
+			return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED ); \
+	} while(0)
+#endif
+
 typedef enum OPTKIT_PROJECTOR {
 	OkProjectorDenseDirect = 101,
 	OkProjectorSparseDirect = 102,
@@ -19,40 +27,42 @@ typedef struct projector {
 	OPTKIT_PROJECTOR kind;
 	size_t size1, size2;
 	void * data;
-	void (* initialize)(void * data, const int normalize);
-	void (* project)(void * data, vector * x_in, vector * y_in,
+	ok_status (* initialize)(void * data, const int normalize);
+	ok_status (* project)(void * data, vector * x_in, vector * y_in,
 		vector * x_out, vector * y_out, ok_float tol);
-	void (* free)(void * data);
+	ok_status (* free)(void * data);
 } projector;
 
-int projector_normalization(projector * P);
-ok_float projector_get_norm(projector * P);
+ok_status projector_normalization(projector * P, int * normalized);
+ok_status projector_get_norm(projector * P, ok_float * norm);
 
-typedef struct DirectProjector {
+typedef struct direct_projector {
 	matrix * A;
 	matrix * L;
 	ok_float normA;
 	int skinny, normalized;
 } direct_projector;
 
-void direct_projector_alloc(direct_projector * P, matrix * A);
-void direct_projector_initialize(void * linalg_handle, direct_projector * P,
-	const int normalize);
-void direct_projector_project(void * linalg_handle, direct_projector * P,
+ok_status direct_projector_alloc(direct_projector * P, matrix * A);
+ok_status direct_projector_initialize(void * linalg_handle,
+	direct_projector * P, const int normalize);
+ok_status direct_projector_project(void * linalg_handle, direct_projector * P,
 	vector * x_in, vector * y_in, vector * x_out, vector * y_out);
-void direct_projector_free(direct_projector * P);
+ok_status direct_projector_free(direct_projector * P);
 
-typedef struct IndirectProjector {
+typedef struct indirect_projector {
 	operator * A;
 	void * cgls_work;
+	uint flag;
 } indirect_projector;
 
-void indirect_projector_alloc(indirect_projector * P, operator * A);
-void indirect_projector_initialize(void * linalg_handle, indirect_projector * P,
-	const int normalize);
-void indirect_projector_project(void * linalg_handle, indirect_projector * P,
-	vector * x_in, vector * y_in, vector * x_out, vector * y_out);
-void indirect_projector_free(indirect_projector * P);
+ok_status indirect_projector_alloc(indirect_projector * P, operator * A);
+ok_status indirect_projector_initialize(void * linalg_handle,
+	indirect_projector * P, const int normalize);
+ok_status indirect_projector_project(void * linalg_handle,
+	indirect_projector * P, vector * x_in, vector * y_in, vector * x_out,
+	vector * y_out);
+ok_status indirect_projector_free(indirect_projector * P);
 
 typedef struct dense_direct_projector {
 	matrix * A;
@@ -63,10 +73,10 @@ typedef struct dense_direct_projector {
 } dense_direct_projector;
 
 void * dense_direct_projector_data_alloc(matrix * A);
-void dense_direct_projector_data_free(void * data);
-void dense_direct_projector_initialize(void * data, const int normalize);
-void dense_direct_projector_project(void * data, vector * x_in, vector * y_in,
-	vector * x_out, vector * y_out, ok_float tol);
+ok_status dense_direct_projector_data_free(void * data);
+ok_status dense_direct_projector_initialize(void * data, const int normalize);
+ok_status dense_direct_projector_project(void * data, vector * x_in,
+	vector * y_in, vector * x_out, vector * y_out, ok_float tol);
 projector * dense_direct_projector_alloc(matrix * A);
 
 typedef struct indirect_projector_generic {
@@ -75,13 +85,14 @@ typedef struct indirect_projector_generic {
 	void * linalg_handle;
 	ok_float normA;
 	int normalized;
+	uint flag;
 } indirect_projector_generic;
 
 void * indirect_projector_data_alloc(operator * A);
-void indirect_projector_data_free(void * data);
-void indirect_projector_g_initialize(void * data, const int normalize);
-void indirect_projector_g_project(void * data, vector * x_in, vector * y_in,
-	vector * x_out, vector * y_out, ok_float tol);
+ok_status indirect_projector_data_free(void * data);
+ok_status indirect_projector_g_initialize(void * data, const int normalize);
+ok_status indirect_projector_g_project(void * data, vector * x_in,
+	vector * y_in, vector * x_out, vector * y_out, ok_float tol);
 projector * indirect_projector_generic_alloc(operator * A);
 
 #ifdef __cplusplus

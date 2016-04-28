@@ -51,11 +51,11 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 		RTOL = 10**(-DIGITS)
 		ATOLM = RTOL * m**0.5
 
-		hdl = self.gen_registered_blas_handle(lib, 'hdl')
+		hdl = self.register_blas_handle(lib, 'hdl')
 
-		A, A_py, A_ptr = self.gen_registered_matrix(lib, m, n, order, 'A')
-		d, d_py, d_ptr = self.gen_registered_vector(lib, m, 'd')
-		e, e_py, e_ptr = self.gen_registered_vector(lib, n, 'e')
+		A, A_py, A_ptr = self.register_matrix(lib, m, n, order, 'A')
+		d, d_py, d_ptr = self.register_vector(lib, m, 'd')
+		e, e_py, e_ptr = self.register_vector(lib, n, 'e')
 		A_in_ptr = A_test.astype(lib.pyfloat).ctypes.data_as(lib.ok_float_p)
 
 		order_in = lib.enums.CblasRowMajor if A_test.flags.c_contiguous else \
@@ -121,10 +121,10 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 
 			# -----------------------------------------
 			# allocate x, y, d, e in python & C
-			x, x_py, x_ptr = self.gen_registered_vector(lib, n, 'x')
-			y, y_py, y_ptr = self.gen_registered_vector(lib, m, 'y')
-			d, d_py, d_ptr = self.gen_registered_vector(lib, m, 'd')
-			e, e_py, e_ptr = self.gen_registered_vector(lib, n, 'e')
+			x, x_py, x_ptr = self.register_vector(lib, n, 'x')
+			y, y_py, y_ptr = self.register_vector(lib, m, 'y')
+			d, d_py, d_ptr = self.register_vector(lib, m, 'd')
+			e, e_py, e_ptr = self.register_vector(lib, n, 'e')
 			x_py += self.x_test
 
 			# -----------------------------------------
@@ -175,14 +175,14 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOLN = RTOL * n**0.5
 
-			hdl = self.gen_registered_blas_handle(lib, 'hdl')
+			hdl = self.register_blas_handle(lib, 'hdl')
 
 			# -----------------------------------------
 			# allocate x, y, d, e in python & C
-			x, x_py, x_ptr = self.gen_registered_vector(lib, n, 'x')
-			y, y_py, y_ptr = self.gen_registered_vector(lib, m, 'y')
-			d, d_py, d_ptr = self.gen_registered_vector(lib, m, 'd')
-			e, e_py, e_ptr = self.gen_registered_vector(lib, n, 'e')
+			x, x_py, x_ptr = self.register_vector(lib, n, 'x')
+			y, y_py, y_ptr = self.register_vector(lib, m, 'y')
+			d, d_py, d_ptr = self.register_vector(lib, m, 'd')
+			e, e_py, e_ptr = self.register_vector(lib, n, 'e')
 			x_py += self.x_test
 
 			# -----------------------------------------
@@ -233,7 +233,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 			RTOL = 0.05
 			ATOL = 0.005 * (m * n)**0.5
 
-			hdl = self.gen_registered_blas_handle(lib, 'hdl')
+			hdl = self.register_blas_handle(lib, 'hdl')
 
 			# -----------------------------------------
 			# test norm estimation for each operator type defined in

@@ -7,11 +7,21 @@ extern "C" {
 /* DENSE LINEAR OPERATOR */
 void * dense_operator_data_alloc(matrix * A)
 {
-	dense_operator_data * op_data;
-	op_data = malloc(sizeof(*op_data));
-	memset(op_data, 0, sizeof(*op_data));
-	blas_make_handle(&(op_data->dense_handle));
-	op_data->A = A;
+	ok_status err = OPTKIT_SUCCESS;
+	dense_operator_data * op_data = OK_NULL;
+
+	if (!A || !A->data)
+		err = OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+
+	if (!err) {
+		ok_alloc(op_data, sizeof(*op_data));
+		op_data->A = A;
+		err = OK_SCAN_ERR( blas_make_handle(&(op_data->dense_handle)) );
+		if (err) {
+			dense_operator_data_free(op_data);
+			op_data = OK_NULL;
+		}
+	}
 	return (void *) op_data;
 }
 
@@ -61,18 +71,21 @@ ok_status dense_operator_mul_t_fused(void * data, ok_float alpha,
 operator * dense_operator_alloc(matrix * A)
 {
 	operator * o = OK_NULL;
+	void * data = OK_NULL;
 	if (A && A->data) {
-		o = malloc(sizeof(*o));
-		memset(o, 0, sizeof(*o));
-		o->kind = OkOperatorDense;
-		o->size1 = A->size1;
-		o->size2 = A->size2;
-		o->data = dense_operator_data_alloc(A);
-		o->apply = dense_operator_mul;
-		o->adjoint = dense_operator_mul_t;
-		o->fused_apply = dense_operator_mul_fused;
-		o->fused_adjoint = dense_operator_mul_t_fused;
-		o->free = dense_operator_data_free;
+		data = dense_operator_data_alloc(A);
+		if (data) {
+			ok_alloc(o, sizeof(*o));
+			o->kind = OkOperatorDense;
+			o->size1 = A->size1;
+			o->size2 = A->size2;
+			o->data = data;
+			o->apply = dense_operator_mul;
+			o->adjoint = dense_operator_mul_t;
+			o->fused_apply = dense_operator_mul_fused;
+			o->fused_adjoint = dense_operator_mul_t_fused;
+			o->free = dense_operator_data_free;
+		}
 	}
 	return o;
 }
@@ -170,8 +183,7 @@ transformable_operator * dense_operator_to_transformable(operator * A)
 	transformable_operator * t = OK_NULL;
 
 	if (!err) {
-		t = malloc(sizeof(*t));
-		memset(t, 0, sizeof(*t));
+		ok_alloc(t, sizeof(*t));
 		t->o = A;
 		t->export = dense_operator_export;
 		t->import = dense_operator_import;

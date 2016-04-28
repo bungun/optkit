@@ -7,11 +7,21 @@ extern "C" {
 /* DIAGONAL LINEAR OPERATOR */
 void * diagonal_operator_data_alloc(vector * d)
 {
-	diagonal_operator_data * op_data;
-	op_data = malloc(sizeof(*op_data));
-	memset(op_data, 0, sizeof(*op_data));
-	blas_make_handle(&(op_data->dense_handle));
-	op_data->d = d;
+	ok_status err = OPTKIT_SUCCESS;
+	diagonal_operator_data * op_data = OK_NULL;
+
+	if (!d || !d->data)
+		err = OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+
+	if (!err) {
+		ok_alloc(op_data, sizeof(*op_data));
+		op_data->d = d;
+		err = OK_SCAN_ERR( blas_make_handle(&(op_data->dense_handle)) );
+		if (err) {
+			diagonal_operator_data_free(op_data);
+			op_data = OK_NULL;
+		}
+	}
 	return (void *) op_data;
 }
 
@@ -61,18 +71,22 @@ ok_status diagonal_operator_mul_t_fused(void * data, ok_float alpha,
 operator * diagonal_operator_alloc(vector * d)
 {
 	operator * o = OK_NULL;
+	void * data;
+
 	if (d && d->data) {
-		o = malloc(sizeof(*o));
-		memset(o, 0, sizeof(*o));
-		o->kind = OkOperatorDiagonal;
-		o->size1 = d->size;
-		o->size2 = d->size;
-		o->data = diagonal_operator_data_alloc(d);
-		o->apply = diagonal_operator_mul;
-		o->adjoint = diagonal_operator_mul_t;
-		o->fused_apply = diagonal_operator_mul_fused;
-		o->fused_adjoint = diagonal_operator_mul_t_fused;
-		o->free = diagonal_operator_data_free;
+		data = diagonal_operator_data_alloc(d);
+		if (data) {
+			ok_alloc(o, sizeof(*o));
+			o->kind = OkOperatorDiagonal;
+			o->size1 = d->size;
+			o->size2 = d->size;
+			o->data = data;
+			o->apply = diagonal_operator_mul;
+			o->adjoint = diagonal_operator_mul_t;
+			o->fused_apply = diagonal_operator_mul_fused;
+			o->fused_adjoint = diagonal_operator_mul_t_fused;
+			o->free = diagonal_operator_data_free;
+		}
 	}
 	return o;
 }

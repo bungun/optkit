@@ -35,29 +35,52 @@ class OptkitCTestCase(OptkitTestCase):
 	def assertCall(self, call):
 		self.assertEqual( PRINTERR(call), 0 )
 
-	def gen_registered_vector(self, lib, size, name):
+	def register_vector(self, lib, size, name):
 		if 'vector_calloc' in lib.__dict__:
 			v = lib.vector(0, 0, None)
 			self.assertCall( lib.vector_calloc(v, size) )
 			self.register_var(name, v, lib.vector_free)
-			v_py = np.zeros(size).astype(lib.pyfloat)
+			v_py = zeros(size).astype(lib.pyfloat)
 			v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
 			return v, v_py, v_ptr
 		else:
 			raise ValueError('library {} cannot allocate a vector'.format(lib))
 
-	def gen_registered_matrix(self, lib, size1, size2, order, name):
+	def register_matrix(self, lib, size1, size2, order, name):
 		if 'matrix_calloc' in lib.__dict__:
+			pyorder = 'C' if order == lib.enums.CblasRowMajor else 'F'
+
 			A = lib.matrix(0, 0, 0, None, order)
 			self.assertCall( lib.matrix_calloc(A, size1, size2, order) )
 			self.register_var(name, A, lib.matrix_free)
-			A_py = np.zeros((size1, size2), order=pyorder).astype(lib.pyfloat)
+			A_py = zeros((size1, size2), order=pyorder).astype(lib.pyfloat)
 			A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
 			return A, A_py, A_ptr
 		else:
 			raise ValueError('library {} cannot allocate a matrix'.format(lib))
 
-	def gen_registered_blas_handle(self, lib, name):
+	def register_sparsemat(self, lib, Adense, order, name):
+		if 'sp_matrix_calloc' in lib.__dict__:
+
+			A_py = Adense.astype(lib.pyfloat)
+			A_sp = csr_matrix(A_py) if order == lib.enums.CblasRowMajor else \
+				   csc_matrix(A_py)
+			A_val = A_sp.data.ctypes.data_as(lib.ok_float_p)
+			A_ind = A_sp.indices.ctypes.data_as(lib.ok_int_p)
+			A_ptr = A_sp.indptr.ctypes.data_as(lib.ok_int_p)
+			m, n = A_sp.shape
+			nnz = A_sp.nnz
+
+			A = lib.sparse_matrix(0, 0, 0, 0, None, None, None, order)
+			self.assertCall( lib.sp_matrix_calloc(A, m, n, nnz, order) )
+			self.register_var(name, A, lib.sp_matrix_free)
+			return A, A_py, A_sp, A_val, A_ind, A_ptr
+
+		else:
+			raise ValueError('library {} cannot allocate a sparse '
+							 'matrix'.format(lib))
+
+	def register_blas_handle(self, lib, name):
 		if 'blas_make_handle' in lib.__dict__:
 			hdl = c_void_p()
 			self.assertCall( lib.blas_make_handle(byref(hdl)) )
