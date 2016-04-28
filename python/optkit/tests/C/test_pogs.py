@@ -490,7 +490,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 			self.assertAlmostEqual(settings.verbose, VERBOSE_DEFAULT, 3)
 			self.assertAlmostEqual(settings.suppress, SUPPRESS_DEFAULT, 3)
 			self.assertAlmostEqual(settings.adaptiverho, ADAPTIVE_DEFAULT, 3)
-			self.assertAlmostEqual(settings.gapstop, GAPSTOP_DEFAULT, 3)
+			self.assertAlmostEquEqual(settings.gapstop, GAPSTOP_DEFAULT, 3)
 			self.assertAlmostEqual(settings.warmstart, WARMSTART_DEFAULT, 3)
 			self.assertAlmostEqual(settings.resume, RESUME_DEFAULT, 3)
 
@@ -504,8 +504,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 				A = self.A_test.astype(lib.pyfloat)
 				A_ptr = A.ctypes.data_as(lib.ok_float_p)
 				m, n = A.shape
-				solver = lib.pogs_init(A_ptr, m, n, order,
-									   lib.enums.EquilSinkhorn)
+				solver = lib.pogs_init(A_ptr, m, n, order)
 
 				lib.pogs_finish(solver, 1)
 
@@ -546,8 +545,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 				A += self.A_test
 				A_ptr = A.ctypes.data_as(lib.ok_float_p)
 				m, n = A.shape
-				solver = lib.pogs_init(A_ptr, m, n, order,
-									   lib.enums.EquilSinkhorn)
+				solver = lib.pogs_init(A_ptr, m, n, order)
 
 				output = self.PogsOutputLocal(lib, m, n)
 
@@ -637,8 +635,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 				A += self.A_test
 				A_ptr = A.ctypes.data_as(lib.ok_float_p)
 				m, n = A.shape
-				solver = lib.pogs_init(A_ptr, m, n, order,
-									   lib.enums.EquilSinkhorn)
+				solver = lib.pogs_init(A_ptr, m, n, order)
 
 				output = self.PogsOutputLocal(lib, m, n)
 
@@ -718,8 +715,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 				settings.verbose = 0
 
 				lib.set_default_settings(settings)
-				lib.pogs(A_ptr, f, g, settings, info, output.ptr, order,
-					lib.enums.EquilSinkhorn, 0)
+				lib.pogs(A_ptr, f, g, settings, info, output.ptr, order, 0)
 
 				if info.converged:
 					rtol = settings.reltol * 10 * single_precision
@@ -784,8 +780,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 				A += self.A_test
 				A_ptr = A.ctypes.data_as(lib.ok_float_p)
 				m, n = A.shape
-				solver = lib.pogs_init(A_ptr, m, n, order,
-									   lib.enums.EquilSinkhorn)
+				solver = lib.pogs_init(A_ptr, m, n, order)
 
 				output = self.PogsOutputLocal(lib, m, n)
 
@@ -940,8 +935,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 				A += self.A_test
 				A_ptr = A.ctypes.data_as(lib.ok_float_p)
 				m, n = A.shape
-				solver = lib.pogs_init(A_ptr, m, n, order,
-									   lib.enums.EquilSinkhorn)
+				solver = lib.pogs_init(A_ptr, m, n, order)
 
 				output = self.PogsOutputLocal(lib, m, n)
 

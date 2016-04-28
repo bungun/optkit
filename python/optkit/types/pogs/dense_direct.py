@@ -35,7 +35,7 @@ class PogsDenseDirectTypes(PogsTypes):
 				if 'no_init' not in args:
 					self.c_solver = pogslib.pogs_init(
 							self.A.ctypes.data_as(denselib.ok_float_p), m , n,
-							layout, pogslib.enums.EquilSinkhorn)
+							layout)
 				else:
 					self.c_solver = None
 

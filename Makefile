@@ -17,6 +17,10 @@ CLUSTER=clustering/optkit_
 CLUSRC=$(SRC)$(CLUSTER)
 CLUOUT=$(OUT)$(CLUSTER)
 
+POGS=pogs/optkit_
+POGSSRC=$(SRC)$(POGS)
+POGSOUT=$(OUT)$(POGS)
+
 # C Flags
 CC=gcc
 CCFLAGS= -g -O3 -fPIC -I. -I$(INCLUDE) -I$(INCLUDE)external 
@@ -129,8 +133,12 @@ PROJ_OBJ=$(PREFIX_OUT)projector_$(LIBCONFIG).o
 PROJ_DIRECT_OBJ=$(PREFIX_OUT)projector_direct_$(LIBCONFIG).o
 EQUIL_OBJ=$(PREFIX_OUT)equil_$(LIBCONFIG).o
 EQUIL_DENSE_OBJ=$(PREFIX_OUT)equil_dense_$(LIBCONFIG).o
-POGS_OBJ=$(PREFIX_OUT)pogs_$(LIBCONFIG).o
-POGS_ABSTRACT_OBJ=$(PREFIX_OUT)pogs_abstract_$(LIBCONFIG).o
+
+POGS_SRC=$(POGSSRC)pogs_common.c $(POGSSRC)pogs.c
+POGS_OBJ=$(patsubst $(POGSSRC)%.c,$(POGSOUT)%_$(LIBCONFIG).o,$(POGS_SRC))
+
+POGS_ABSTR_SRC=$(POGSSRC)pogs_common.c $(POGSSRC)pogs_abstract.c
+POGS_ABSTR_OBJ=$(patsubst $(POGSSRC)%.c,$(POGSOUT)%_$(LIBCONFIG).o,$(POGS_SRC))
 
 SPARSE_STATIC_DEPS=$(BASE_OBJ) $(VECTOR_OBJ)
 OPERATOR_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ) $(SPARSE_OBJ) $(OPERATOR_OBJ)
@@ -139,7 +147,7 @@ EQUIL_STATIC_DEPS=$(OPERATOR_STATIC_DEPS) $(EQUIL_OBJ)
 PROJ_STATIC_DEPS=$(CG_STATIC_DEPS) $(PROJ_OBJ)
 POGS_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ) $(PROX_OBJ) $(EQUIL_DENSE_OBJ) 
 POGS_STATIC_DEPS+=$(PROJ_DIRECT_OBJ) $(POGS_OBJ) 
-POGS_ABSTRACT_STATIC_DEPS=$(POGS_ABSTRACT_OBJ) $(PROX_OBJ) $(PROJ_OBJ)
+POGS_ABSTRACT_STATIC_DEPS=$(POGS_ABSTR_OBJ) $(PROX_OBJ) $(PROJ_OBJ)
 POGS_ABSTRACT_STATIC_DEPS+=$(EQUIL_STATIC_DEPS) $(CG_OBJ)
 
 POGS_DENSE_LIB_DEPS=equil_dense projector_direct $(DENSE_TARG) $(PROX_TARG)
@@ -219,17 +227,23 @@ libok_dense: $(DENSE_TARG) $(BASE_TARG)
 	$(OUT)$@_$(LIBCONFIG).$(SHARED) \
 	$(DENSE_OBJ) $(BASE_OBJ) $(LDFLAGS)
 
-pogs_abstract: $(SRC)optkit_abstract_pogs.c
+pogs_abstract: $(POGS_ABSTR_SRC)
 	mkdir -p $(OUT) 
-	$(CC) $(CCFLAGS) $< -c -o $(POGS_ABSTRACT_OBJ) \
+	mkdir -p $(OUT)/pogs 	
+	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $(POGSSRC)pogs_common.c -c -o \
+	$(POGSOUT)pogs_common.o
+	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $(POGSSRC)$@.c -c -o $(POGSOUT)$@.o
 
-pogs: $(SRC)optkit_pogs.c
+pogs: $(POGS_SRC)
 	mkdir -p $(OUT) 
-	$(CC) $(CCFLAGS) $< -c -o $(POGS_OBJ)
-	
+	mkdir -p $(OUT)/pogs 	
+	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $(POGSSRC)pogs_common.c -c -o \
+	$(POGSOUT)pogs_common.o
+	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $(POGSSRC)$@.c -c -o $(POGSOUT)$@.o
+
 equil: $(SRC)optkit_equilibration.c 
 	mkdir -p $(OUT)
-	$(CC) $(CCFLAGS) $< -c -o $(EQUIL_OBJ) \
+	$(CC) $(CCFLAGS) $< -c -o $(EQUIL_OBJ)
 
 equil_dense: $(SRC)optkit_equilibration.c
 	mkdir -p $(OUT)
