@@ -5,56 +5,14 @@
 extern "C" {
 #endif
 
-void sinkhorn_knopp(void * linalg_handle, ok_float * A_in, matrix * A_out,
-	vector * d, vector * e, enum CBLAS_ORDER ord)
-{
-	size_t m = A_out->size1, n = A_out->size2, k, NUMITER=10;
-	ok_float sqrtm, sqrtn, nrm_d2, nrm_e2, fac;
-	vector a;
-	a.data = OK_NULL;
-
-	sqrtm = MATH(sqrt)( (ok_float) m);
-	sqrtn = MATH(sqrt)( (ok_float) n);
-
-
-	if (A_in == A_out->data) {
-		printf("Error: Sinkhorn-Knopp equilibration requires \
-			distinct arrays A_in and A_out.");
-		return;
-	}
-
-	matrix_memcpy_ma(A_out, A_in, ord);
-	matrix_abs(A_out);
-	vector_set_all(d, kOne);
-
-	/* repeat NUMITER times */
-	for (k = 0; k < NUMITER; ++k) {
-		blas_gemv(linalg_handle, CblasTrans, kOne, A_out, d, kZero, e);
-		vector_recip(e);
-		blas_gemv(linalg_handle, CblasNoTrans, kOne, A_out, e, kZero, d);
-		vector_recip(d);
-		nrm_d2 = blas_dot(linalg_handle, d, d);
-		nrm_e2 = blas_dot(linalg_handle, e, e);
-		fac = MATH(sqrt)(MATH(sqrt)(nrm_e2 / nrm_d2) * sqrtm / sqrtn);
-		vector_scale(d, fac);
-		vector_scale(e, (ok_float) 1/fac);
-	}
-
-	matrix_memcpy_ma(A_out, A_in, ord);
-	for (k = 0; k < m; ++k) {
-		matrix_row(&a, A_out, k);
-		vector_mul(&a, e);
-	}
-	for (k = 0; k < n; ++k) {
-		matrix_column(&a, A_out, k);
-		vector_mul(&a, d);
-	}
-}
-
-
 void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 	matrix * A_out, vector * d, vector * e, enum CBLAS_ORDER ord)
 {
+	OK_CHECK_PTR(A_in);
+	OK_CHECK_MATRIX(A_out);
+	OK_CHECK_VECTOR(d);
+	OK_CHECK_VECTOR(e);
+
 	const ok_float kSinkhornConst = (ok_float) 1e-4;
 	const ok_float kEps = (ok_float) 1e-2;
 	const size_t kMaxIter = 300;
@@ -65,6 +23,9 @@ void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 	a.data = OK_NULL;
 	d_diff.data = OK_NULL;
 	e_diff.data = OK_NULL;
+
+	if (A->size1 != d->size || A->size2 != e->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	vector_calloc(&d_diff, A_out->size1);
 	vector_calloc(&e_diff, A_out->size2);
@@ -130,56 +91,14 @@ void regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 	vector_free(&e_diff);
 }
 
-// void dense_l2(void * linalg_handle, ok_float * A_in, matrix * A_out,
-// 	vector * d, vector * e, enum CBLAS_ORDER ord)
-// {
-// 	size_t k, m = A_out->size1, n = A_out->size2;
-// 	vector a;
-// 	a.data = OK_NULL;
-
-// 	if (A_in == A_out->data) {
-// 		printf("Error: Dense l2 equilibration requires \
-// 			distinct arrays A_in and A_out.");
-// 		return;
-// 	}
-
-// 	matrix_memcpy_ma(A_out, A_in, ord);
-
-// 	if (n > m) {
-// 		/* fat matrix routine */
-// 		vector_set_all(e, kOne);
-// 		for (k = 0; k < m; ++k) {
-// 			matrix_row(&a, A_out, k);
-// 			blas_dot_inplace(linalg_handle, &a, &a, d->data + k);
-// 		}
-// 		vector_sqrt(d);
-// 		vector_recip(d);
-
-// 		for (k = 0; k < n; ++k) {
-// 			matrix_column(&a, A_out, k);
-// 			vector_mul(&a, d);
-// 		}
-// 	} else {
-// 		/* skinny matrix routine */
-// 		vector_set_all(d, kOne);
-// 		for (k = 0; k < n; ++k) {
-// 			matrix_column(&a, A_out, k);
-// 			blas_dot_inplace(linalg_handle, &a, &a, e->data + k);
-// 		}
-// 		vector_sqrt(e);
-// 		vector_recip(e);
-
-// 		for (k = 0; k < m; ++k) {
-// 			matrix_row(&a, A_out, k);
-// 			vector_mul(&a, e);
-// 		}
-// 	}
-// }
-
 #ifndef OPTKIT_NO_OPERATOR_EQUIL
 ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 	vector * d, vector * e, const ok_float pnorm)
 {
+	OK_CHECK_OPERATOR(A);
+	OK_CHECK_VECTOR(d);
+	OK_CHECK_VECTOR(e);
+
 	transformable_operator * transform = OK_NULL;
 	void * A_temp = OK_NULL;
 	const ok_float kSinkhornConst = (ok_float) 1e-4;
@@ -193,8 +112,11 @@ ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 	d_diff.data = OK_NULL;
 	e_diff.data = OK_NULL;
 
+	if (A->size1 != d->size || A->size2 != e->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
 	if (!linalg_handle) {
-		blas_make_handle(&linalg_handle);
+		OK_RETURNIF_ERR( blas_make_handle(&linalg_handle) );
 		blas_handle_provided = 0;
 	}
 
@@ -269,7 +191,7 @@ ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 	vector_free(&e_diff);
 
 	if (!blas_handle_provided)
-		blas_destroy_handle(linalg_handle);
+		OK_MAX_ERR( err, blas_destroy_handle(linalg_handle) );
 
 	return err;
 }
@@ -289,36 +211,45 @@ ok_status operator_equilibrate(void * linalg_handle, operator * A,
  * where x is a random vector and n <= kNormIter is a
  * given number of iterations.
  */
-ok_float operator_estimate_norm(void * linalg_handle, operator * A)
+ok_status operator_estimate_norm(void * linalg_handle, operator * A,
+	ok_float * norm_est)
 {
+	OK_CHECK_OPERATOR(A);
+	OK_CHECK_PTR(linalg_handle);
+	OK_CHECK_PTR(norm_est);
+
 	const ok_float kNormTol = (ok_float) 1e-5;
 	const uint kNormIter = 50u;
 
-	ok_float norm_est = kZero, norm_est_prev, norm_x;
+	ok_float norm_est_prev, norm_x;
 	vector x, Ax;
 	uint i;
 
 	x.data = OK_NULL;
 	Ax.data = OK_NULL;
+	norm_est = kZero;
 
 	vector_calloc(&x, A->size2);
 	vector_calloc(&Ax, A->size1);
 
-	ok_rand(x.data, x.size);
+	OK_RETURNIF_ERR( ok_rand(x.data, x.size) );
 
 	for (i = 0; i < kNormIter; ++i) {
-		norm_est_prev = norm_est;
+		norm_est_prev = *norm_est;
 		A->apply(A->data, &x, &Ax);
 		A->adjoint(A->data, &Ax, &x);
 		norm_x = blas_nrm2(linalg_handle, &x);
-		norm_est = norm_x / blas_nrm2(linalg_handle, &Ax);
+		if (norm_x == 0)
+			return OK_SCAN_ERR( OPTKIT_ERROR_DIVIDE_BY_ZERO );
+		*norm_est = norm_x / blas_nrm2(linalg_handle, &Ax);
 		vector_scale(&x, 1 / norm_x);
-		if (MATH(fabs)(norm_est_prev - norm_est) <= kNormTol * norm_est)
+		if (MATH(fabs)(norm_est_prev - *norm_est) <=
+			kNormTol * *norm_est)
 			break;
 	}
 	vector_free(&x);
 	vector_free(&Ax);
-	return norm_est;
+	return OPTKIT_SUCCESS;
 }
 #else
 ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
@@ -333,7 +264,8 @@ ok_status operator_equilibrate(void * linalg_handle, operator * A,
 	return OPTKIT_ERROR;
 }
 
-ok_float operator_estimate_norm(void * linalg_handle, operator * A)
+ok_status operator_estimate_norm(void * linalg_handle, operator * A,
+	ok_float * norm_est)
 {
 	return OPTKIT_ERROR;
 }

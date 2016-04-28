@@ -19,9 +19,9 @@ ok_status dense_operator_data_free(void * data)
 {
 	dense_operator_data * op_data = (dense_operator_data *) data;
 	OK_CHECK_PTR(op_data);
-	OK_RETURNIF_ERR( blas_destroy_handle(op_data->dense_handle) );
+	ok_status err blas_destroy_handle(op_data->dense_handle);
 	ok_free(op_data);
-	return OPTKIT_SUCCESS;
+	return OK_SCAN_ERR( err );
 }
 
 ok_status dense_operator_mul(void * data, vector * input, vector * output)

@@ -31,15 +31,17 @@ extern "C" {
 #endif
 
 #define OK_NULL 0
-#define ok_alloc(x, T, len) \
+#define ok_alloc(x, len) \
 	do { \
-		x = (T*) malloc(len); \
+		x = (typeof(x)) malloc(len); \
 		memset(x, 0, len); \
 	} while(0)
 #define ok_free(x) \
 	do { \
-		free(x); \
-		x = OK_NULL; \
+		if (x) { \
+			free(x); \
+			x = OK_NULL; \
+		} \
 	} while(0)
 
 typedef unsigned int uint;

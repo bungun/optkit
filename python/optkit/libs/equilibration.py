@@ -29,17 +29,11 @@ def attach_equilibration_ccalls(lib, single_precision=False):
 	matrix_p = lib.matrix_p
 
 	# argument types
-	lib.sinkhorn_knopp.argtypes = [c_void_p, ok_float_p, matrix_p, vector_p,
-								   vector_p, c_uint]
 	lib.regularized_sinkhorn_knopp.argtypes = [c_void_p, ok_float_p, matrix_p,
 											   vector_p, vector_p, c_uint]
-	lib.dense_l2.argtypes = [c_void_p, ok_float_p, matrix_p, vector_p,
-							 vector_p, c_uint]
 
 	# return types
-	lib.sinkhorn_knopp.restype = None
-	lib.regularized_sinkhorn_knopp.restype = None
-	lib.dense_l2.restype = None
+	lib.regularized_sinkhorn_knopp.restype = c_uint
 
 def attach_operator_equilibration_ccalls(lib, single_precision=False):
 	if not 'vector_p' in lib.__dict__:

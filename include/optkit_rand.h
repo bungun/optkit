@@ -25,32 +25,39 @@ static __global__ void generate(curandState * globalState, ok_float * data,
 	size_t size)
 {
 	int tid = blockIdx.x * blockDim.x + threadIdx.x, i;
-#ifndef FLOAT
+	#ifndef FLOAT
 	for (i = tid; i < size; i += gridDim.x * blockDim.x)
 		data[i] = curand_uniform_double(&globalState[tid]);
-#else
+	#else
 	for (i = tid; i < size; i += gridDim.x * blockDim.x)
 		data[i] = curand_uniform(&globalState[tid]);
-#endif
+	#endif
 }
 
 
-static void ok_rand(ok_float * x, size_t size) {
+static ok_status ok_rand(ok_float * x, size_t size) {
 	size_t num_rand = size <= kMaxGridSize ? size : kMaxGridSize;
 	curandState * devStates;
 	int grid_dim;
 
-	ok_alloc_gpu(devStates, num_rand * sizeof(*devStates));
+	OK_CHECK_PTR(x);
+	OK_RETURNIF_ERR( ok_alloc_gpu(devStates,
+		num_rand * sizeof(*devStates)) );
+
 	grid_dim = calc_grid_dim(num_rand, kBlockSize);
 
 	__setup_kernel<<<grid_dim, kBlockSize>>>(devStates, 0);
-	__generate<<<grid_dim, kBlockSize>>>(devStates, x, size);
+	OK_RETURNIF_ERR( OK_STATUS_CUDA );
 
-	cudaFree(devStates);
+	__generate<<<grid_dim, kBlockSize>>>(devStates, x, size);
+	OK_RETURNIF_ERR( OK_STATUS_CUDA );
+
+	return ok_free_gpu(devStates);
 }
 #else
-static void ok_rand(ok_float * x, size_t size)
+static ok_status ok_rand(ok_float * x, size_t size)
 {
+	OK_CHECK_PTR(x);
 	uint i;
 	srand((uint) time(OK_NULL));
 
@@ -58,7 +65,9 @@ static void ok_rand(ok_float * x, size_t size)
 	#pragma omp parallel for
 	#endif
 	for (i = 0; i < size; ++i)
-		x[i] = (ok_float) rand() ;
+		x[i] = (ok_float) rand();
+
+	return OPTKIT_SUCCESS;
 }
 #endif
 

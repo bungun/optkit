@@ -34,10 +34,6 @@ class OKEnums(object):
 	SPARSE_DIRECT = 102
 	INDIRECT = 103
 
-	# Optkit Equilibration
-	EquilSinkhorn = c_uint(0).value
-	EquilDenseL2 = c_uint(1).value
-
 	# Errors
 	OPTKIT_SUCCESS = 0
 	OPTKIT_ERROR = 1

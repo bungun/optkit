@@ -24,9 +24,9 @@ ok_status difference_operator_data_free(void * data)
 {
 	difference_operator_data * op_data = (differnce_operator_data *) data;
 	OK_CHECK_PTR(op_data);
-	OK_RETURNIF_ERR( blas_destroy_handle(op_data->dense_handle) );
+	ok_status err = blas_destroy_handle(op_data->dense_handle);
 	ok_free(op_data);
-	return OPTKIT_SUCCESS;
+	return OK_SCAN_ERR( err );
 }
 
 ok_status difference_operator_mul(void * data, vector * input, vector * output)
@@ -123,9 +123,9 @@ ok_status block_difference_operator_data_free(void * data)
 	block_difference_operator_data * op_data =
 		(block_difference_operator_data *) data;
 	OK_CHECK_PTR(op_data);
-	OK_RETURNIF_ERR( blas_destroy_handle(op_data->dense_handle) );
+	ok_status err = blas_destroy_handle(op_data->dense_handle);
 	ok_free(op_data);
-	return OPTKIT_SUCCESS;
+	return OK_SCAN_ERR( err );
 }
 
 ok_status block_difference_operator_mul(void * data, vector * input,
