@@ -115,7 +115,8 @@ def attach_operator_projector_ctypes_ccalls(lib, single_precision=False):
 	# types
 	class indirect_projector(Structure):
 		_fields_ = [('A', operator_p),
-					('cgls_work', c_void_p)]
+					('cgls_work', c_void_p),
+					('flag', c_uint)]
 
 	lib.indirect_projector = indirect_projector
 	lib.indirect_projector_p = POINTER(lib.indirect_projector)
@@ -126,7 +127,8 @@ def attach_operator_projector_ctypes_ccalls(lib, single_precision=False):
 					('cgls_work', c_void_p),
 					('linalg_handle', c_void_p),
 					('normA', ok_float),
-					('normalized', c_int)]
+					('normalized', c_int),
+					('flag', c_uint)]
 
 	lib.indirect_projector_generic = indirect_projector_generic
 	lib.indirect_projector_generic_p = POINTER(lib.indirect_projector_generic)
