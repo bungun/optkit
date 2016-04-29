@@ -72,6 +72,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
 		self.libs = SparseLinsysLibs()
+		self.A_test_sparse = self.A_test_sparse_gen
 
 	@classmethod
 	def tearDownClass(self):
@@ -82,30 +83,6 @@ class SparseMatrixTestCase(OptkitCTestCase):
 
 	def tearDown(self):
 		self.free_all_vars()
-
-	@staticmethod
-	def make_vec_triplet(lib, size_):
-		a = lib.vector(0, 0, None)
-		lib.vector_calloc(a, size_)
-		a_py = np.zeros(size_).astype(lib.pyfloat)
-		a_ptr = a_py.ctypes.data_as(lib.ok_float_p)
-		return a, a_py, a_ptr
-
-	@staticmethod
-	def make_spmat_quintet(lib, shape, rowmajor=True):
-		fmt = 'csr' if rowmajor else 'csc'
-		order = 101 if rowmajor else 102
-		sp_constructor = sp.csr_matrix if rowmajor else sp.csc_matrix
-
-		A_py = sp.rand(shape[0], shape[1], density=0.1, format=fmt,
-					   dtype=lib.pyfloat)
-
-		A_ptr_p = A_py.indptr.ctypes.data_as(lib.ok_int_p)
-		A_ind_p = A_py.indices.ctypes.data_as(lib.ok_int_p)
-		A_val_p = A_py.data.ctypes.data_as(lib.ok_float_p)
-		A = lib.sparse_matrix(0, 0, 0, 0, None, None, None, order)
-		lib.sp_matrix_calloc(A, shape[0], shape[1], A_py.nnz, order)
-		return A, A_py, A_ptr_p, A_ind_p, A_val_p
 
 	def test_allocate(self):
 		shape = (m, n) = self.shape
@@ -163,6 +140,9 @@ class SparseMatrixTestCase(OptkitCTestCase):
 
 	def test_io(self):
 		shape = (m, n) = self.shape
+		x_rand = np.random.rand(n)
+		A_test = self.A_test_sparse
+		B_test = A_test * (1 + np.random.rand(m, n))
 
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
@@ -173,34 +153,26 @@ class SparseMatrixTestCase(OptkitCTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOLM = RTOL * m**0.5
 
-			for rowmajor in (True, False):
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
 				# sparse handle
-				hdl = c_void_p()
-				self.assertCall( lib.sp_make_handle(byref(hdl)) )
-				self.register_var('hdl', hdl, lib.sp_destroy_handle)
+				hdl = self.register_sparse_handle(lib, 'hdl')
 
-				A, A_py, A_ptr_p, A_ind_p, A_val_p = self.make_spmat_quintet(
-						lib, shape, rowmajor=rowmajor)
-				B, B_py, B_ptr_p, B_ind_p, B_val_p = self.make_spmat_quintet(
-						lib, shape, rowmajor=rowmajor)
-				self.register_var('A', A, lib.sp_matrix_free)
-				self.register_var('B', B, lib.sp_matrix_free)
+				A, A_, A_py, A_val, A_ind, A_ptr = self.register_sparsemat(
+						lib, A_test, order, 'A')
+				B, B_, B_py, B_val, B_ind, B_ptr = self.register_sparsemat(
+						lib, B_test, order, 'B')
 
-				x_rand = np.random.rand(n)
-				A_copy = A_py.toarray()
-				B_copy = B_py.toarray()
-
-				# Acopy * x == A_py * x (initalized to rand)
-				Ax_py = A_copy.dot(x_rand)
+				# Ax == A_py * x (initalized to rand)
+				Ax_py = A_.dot(x_rand)
 				Ax_c = A_py * x_rand
 				self.assertTrue( np.linalg.norm(Ax_py - Ax_c) <=
 								 ATOLM + RTOL * np.linalg.norm(Ax_py) )
 
 				# Test sparse copy optkit->python
-				# Acopy * x != A_c * x (calloc to zero)
-				self.assertCall( lib.sp_matrix_memcpy_am(A_val_p, A_ind_p,
-														 A_ptr_p, A) )
-				Ax_py = A_copy.dot(x_rand)
+				# A_ * x != A_c * x (calloc to zero)
+				self.assertCall( lib.sp_matrix_memcpy_am(A_val, A_ind, A_ptr,
+														 A) )
+				Ax_py = A_.dot(x_rand)
 				Ax_c = A_py * x_rand
 				self.assertFalse( np.linalg.norm(Ax_py - Ax_c) <=
 								 ATOLM + RTOL * np.linalg.norm(Ax_py) )
@@ -208,12 +180,12 @@ class SparseMatrixTestCase(OptkitCTestCase):
 
 				# Test sparse copy python->optkit
 				# B_py -> B_c -> B_py
-				# B_py * x == B_copy * x
-				self.assertCall( lib.sp_matrix_memcpy_ma(hdl, B, B_val_p,
-												 		 B_ind_p, B_ptr_p) )
-				self.assertCall( lib.sp_matrix_memcpy_am(B_val_p, B_ind_p,
-														 B_ptr_p, B) )
-				Bx_py = B_copy.dot(x_rand)
+				# B_py * x == B_ * x
+				self.assertCall( lib.sp_matrix_memcpy_ma(hdl, B, B_val, B_ind,
+														 B_ptr) )
+				self.assertCall( lib.sp_matrix_memcpy_am(B_val, B_ind, B_ptr,
+														 B) )
+				Bx_py = B_.dot(x_rand)
 				Bx_c = B_py * x_rand
 				self.assertTrue( np.linalg.norm(Bx_py - Bx_c) <=
 								 ATOLM + RTOL * np.linalg.norm(Bx_py) )
@@ -222,33 +194,31 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				# B_c -> A_c -> A_py
 				# B_py * x == A_py * x
 				self.assertCall( lib.sp_matrix_memcpy_mm(A, B) )
-				self.assertCall( lib.sp_matrix_memcpy_am(A_val_p, A_ind_p,
-														 A_ptr_p, A) )
-				Ax_c = A_py * x_rand
-				Bx_c = B_py * x_rand
-				self.assertTrue( np.linalg.norm(Ax_c - Bx_c) <=
-								 ATOLM + RTOL * np.linalg.norm(Bx_c) )
+				self.assertCall( lib.sp_matrix_memcpy_am(A_val, A_ind, A_ptr,
+														 A) )
+				Ax = A_py * x_rand
+				Bx = B_py * x_rand
+				self.assertTrue( np.linalg.norm(Ax - Bx) <=
+								  ATOLM + RTOL * np.linalg.norm(Ax) )
 
 				# Test sparse value copy optkit->python
 				# A_py *= 0
 				# A_c -> A_py (values)
 				# B_py * x == A_py * x (still)
 				A_py *= 0
-				self.assertCall( lib.sp_matrix_memcpy_vals_am(A_val_p, A) )
+				self.assertCall( lib.sp_matrix_memcpy_vals_am(A_val, A) )
 				Ax_c = A_py * x_rand
 				Bx_c = B_py * x_rand
 				self.assertTrue( np.linalg.norm(Ax_c - Bx_c) <=
 								 ATOLM + RTOL * np.linalg.norm(Bx_c) )
 
-
 				# Test sparse value copy python->optkit
 				# A_py *= 2; A_py -> A_c; A_py *= 0; A_c -> A_py
 				# 2 * B_py * x == A_py * x
 				A_py *= 2
-				self.assertCall( lib.sp_matrix_memcpy_vals_ma(hdl, A,
-															  A_val_p) )
+				self.assertCall( lib.sp_matrix_memcpy_vals_ma(hdl, A, A_val) )
 				A_py *= 0
-				self.assertCall( lib.sp_matrix_memcpy_vals_am(A_val_p, A) )
+				self.assertCall( lib.sp_matrix_memcpy_vals_am(A_val, A) )
 				Ax_c = A_py * x_rand
 				Bx_c = B_py * x_rand
 				self.assertTrue( np.linalg.norm(Ax_c - 2 * Bx_c) <=
@@ -258,19 +228,18 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				# A_c -> B_c -> B_py
 				# B_py * x == A_py * x
 				self.assertCall( lib.sp_matrix_memcpy_vals_mm(B, A) )
-				self.assertCall( lib.sp_matrix_memcpy_vals_am(B_val_p, B) )
+				self.assertCall( lib.sp_matrix_memcpy_vals_am(B_val, B) )
 				Ax_c = A_py * x_rand
 				Bx_c = B_py * x_rand
 				self.assertTrue( np.linalg.norm(Ax_c - Bx_c) <=
 								 ATOLM + RTOL * np.linalg.norm(Bx_c) )
 
-				self.free_var('A')
-				self.free_var('B')
-				self.free_var('hdl')
+				self.free_vars('A', 'B', 'hdl')
 				self.assertCall( lib.ok_device_reset() )
 
 	def test_multiply(self):
 		shape = (m, n) = self.shape
+		x_rand = np.random.rand(n)
 
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
@@ -282,26 +251,20 @@ class SparseMatrixTestCase(OptkitCTestCase):
 			ATOLM = RTOL * m**0.5
 			ATOLN = RTOL * n**0.5
 
-			for rowmajor in (True, False):
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
 				# sparse handle
-				hdl = c_void_p()
-				self.assertCall( lib.sp_make_handle(byref(hdl)) )
-				self.register_var('hdl', hdl, lib.sp_destroy_handle)
+				hdl = self.register_sparse_handle(lib, 'hdl')
 
-				A, A_py, A_ptr_p, A_ind_p, A_val_p = self.make_spmat_quintet(
-						lib, shape, rowmajor=rowmajor)
-				x, x_py, x_ptr = self.make_vec_triplet(lib, n)
-				y, y_py, y_ptr = self.make_vec_triplet(lib, m)
-				self.register_var('A', A, lib.sp_matrix_free)
-				self.register_var('x', x, lib.vector_free)
-				self.register_var('y', y, lib.vector_free)
+				A, A_, A_py, A_val, A_ind, A_ptr = self.register_sparsemat(
+						lib, self.A_test_sparse, order, 'A')
+				x, x_py, x_ptr = self.register_vector(lib, n, 'x')
+				y, y_py, y_ptr = self.register_vector(lib, m, 'y')
 
-				x_rand = np.random.rand(n)
 				x_py[:] = x_rand[:]
 
 				# load A_py -> A_c
-				self.assertCall( lib.sp_matrix_memcpy_ma(hdl, A, A_val_p,
-														 A_ind_p, A_ptr_p) )
+				self.assertCall( lib.sp_matrix_memcpy_ma(hdl, A, A_val,
+														 A_ind, A_ptr) )
 
 				# y = Ax, Py vs. C
 				self.assertCall( lib.vector_memcpy_va(x, x_ptr, 1) )
@@ -331,10 +294,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				self.assertTrue( np.linalg.norm(result - y_py) <=
 								 ATOLM + RTOL * np.linalg.norm(result) )
 
-				self.free_var('x')
-				self.free_var('y')
-				self.free_var('A')
-				self.free_var('hdl')
+				self.free_vars('x', 'y', 'A', 'hdl')
 				self.assertCall( lib.ok_device_reset() )
 
 	def test_elementwise_transformations(self):
@@ -349,16 +309,14 @@ class SparseMatrixTestCase(OptkitCTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOLM = RTOL * m**0.5
 
-			for rowmajor in (True, False):
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
 				# sparse handle
-				hdl = c_void_p()
-				self.assertCall( lib.sp_make_handle(byref(hdl)) )
-				self.register_var('hdl', hdl, lib.sp_destroy_handle)
+				hdl = self.register_sparse_handle(lib, 'hdl')
 
-				A, A_py, A_ptr_p, A_ind_p, A_val_p = self.make_spmat_quintet(
-						lib, shape, rowmajor=rowmajor)
-				x, x_py, x_ptr = self.make_vec_triplet(lib, n)
-				y, y_py, y_ptr = self.make_vec_triplet(lib, m)
+				A, A_, A_py, A_val, A_ind, A_ptr = self.register_sparsemat(
+						lib, self.A_test_sparse, order, 'A')
+				x, x_py, x_ptr = self.register_vector(lib, n, 'x')
+				y, y_py, y_ptr = self.register_vector(lib, m, 'y')
 				self.register_var('A', A, lib.sp_matrix_free)
 				self.register_var('x', x, lib.vector_free)
 				self.register_var('y', y, lib.vector_free)
@@ -371,37 +329,37 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				# abs
 				# make A_py mixed sign, load to A_c. then, A = abs(A)
 				A_py.data -= (amax / 2.)
-				A_copy = np.abs(A_py.toarray())
+				A_ = np.abs(A_py.toarray())
 
-				self.assertCall( lib.sp_matrix_memcpy_ma(hdl, A, A_val_p,
-														 A_ind_p, A_ptr_p) )
+				self.assertCall( lib.sp_matrix_memcpy_ma(hdl, A, A_val,
+														 A_ind, A_ptr) )
 				self.assertCall( lib.sp_matrix_abs(A) )
 				self.assertCall( lib.sp_blas_gemv(hdl, lib.enums.CblasNoTrans,
 												  1, A, x, 0, y) )
 				self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
-				self.assertTrue( np.linalg.norm(A_copy.dot(x_rand) - y_py) <=
+				self.assertTrue( np.linalg.norm(A_.dot(x_rand) - y_py) <=
 								 ATOLM + RTOL * np.linalg.norm(y_py) )
 
 				# pow
 				# A is nonnegative from previous step. set A_ij = A_ij ^ p
 				p = 3 * np.random.rand()
-				A_copy **= p
+				A_ **= p
 				self.assertCall( lib.sp_matrix_pow(A, p) )
 				self.assertCall( lib.sp_blas_gemv(hdl, lib.enums.CblasNoTrans,
 												  1, A, x, 0, y) )
 				self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
-				self.assertTrue( np.linalg.norm(A_copy.dot(x_rand) - y_py) <=
+				self.assertTrue( np.linalg.norm(A_.dot(x_rand) - y_py) <=
 								 ATOLM + RTOL * np.linalg.norm(y_py) )
 
 				# scale
 				# A = alpha * A
 				alpha = -1 + 2 * np.random.rand()
-				A_copy *= alpha
+				A_ *= alpha
 				self.assertCall( lib.sp_matrix_scale(A, alpha) )
 				self.assertCall( lib.sp_blas_gemv(hdl, lib.enums.CblasNoTrans,
 												  1, A, x, 0, y) )
 				self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
-				self.assertTrue( np.linalg.norm(A_copy.dot(x_rand) - y_py) <=
+				self.assertTrue( np.linalg.norm(A_.dot(x_rand) - y_py) <=
 								 ATOLM + RTOL * np.linalg.norm(y_py) )
 
 				self.free_var('x')
@@ -422,23 +380,16 @@ class SparseMatrixTestCase(OptkitCTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOLM = RTOL * m**0.5
 
-			for rowmajor in (True, False):
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
 				# sparse handle
-				hdl = c_void_p()
-				self.assertCall( lib.sp_make_handle(byref(hdl)) )
-				self.register_var('hdl', hdl, lib.sp_destroy_handle)
+				hdl = self.register_sparse_handle(lib, 'hdl')
 
-				A, A_py, A_ptr_p, A_ind_p, A_val_p = self.make_spmat_quintet(
-						lib, shape, rowmajor=rowmajor)
-				x, x_py, x_ptr = self.make_vec_triplet(lib, n)
-				y, y_py, y_ptr = self.make_vec_triplet(lib, m)
-				d, d_py, d_ptr = self.make_vec_triplet(lib, m)
-				e, e_py, e_ptr = self.make_vec_triplet(lib, n)
-				self.register_var('A', A, lib.sp_matrix_free)
-				self.register_var('x', x, lib.vector_free)
-				self.register_var('y', y, lib.vector_free)
-				self.register_var('d', d, lib.vector_free)
-				self.register_var('e', e, lib.vector_free)
+				A, A_, A_py, A_val, A_ind, A_ptr = self.register_sparsemat(
+						lib, self.A_test_sparse, order, 'A')
+				x, x_py, x_ptr = self.register_vector(lib, n, 'x')
+				y, y_py, y_ptr = self.register_vector(lib, m, 'y')
+				d, d_py, d_ptr = self.register_vector(lib, m, 'd')
+				e, e_py, e_ptr = self.register_vector(lib, n, 'e')
 
 				amax = A_py.data.max()
 				x_rand = np.random.rand(n)
@@ -448,8 +399,8 @@ class SparseMatrixTestCase(OptkitCTestCase):
 
 				# load x_py -> x, A_py -> A, d_py -> d, e_py -> e
 				self.assertCall( lib.vector_memcpy_va(x, x_ptr, 1) )
-				self.assertCall( lib.sp_matrix_memcpy_ma(hdl, A, A_val_p,
-														 A_ind_p, A_ptr_p) )
+				self.assertCall( lib.sp_matrix_memcpy_ma(hdl, A, A_val,
+														 A_ind, A_ptr) )
 				self.assertCall( lib.vector_memcpy_va(d, d_ptr, 1) )
 				self.assertCall( lib.vector_memcpy_va(e, e_ptr, 1) )
 
@@ -473,10 +424,5 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				self.assertTrue( np.linalg.norm(result - y_py) <=
 								 ATOLM + RTOL * np.linalg.norm(result) )
 
-				self.free_var('x')
-				self.free_var('y')
-				self.free_var('d')
-				self.free_var('e')
-				self.free_var('A')
-				self.free_var('hdl')
+				self.free_vars('x', 'y', 'd', 'e', 'A', 'hdl')
 				self.assertEqual(lib.ok_device_reset(), 0)

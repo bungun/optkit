@@ -8,7 +8,7 @@ class MatrixTestCase(OptkitCTestCase):
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.dense_libs = DenseLinsysLibs()
+		self.libs = DenseLinsysLibs()
 		self.A_test = self.A_test_gen
 
 	@classmethod
@@ -21,28 +21,15 @@ class MatrixTestCase(OptkitCTestCase):
 	def tearDown(self):
 		self.free_all_vars()
 
-	@staticmethod
-	def make_mat_triplet(lib, shape, rowmajor=True):
-		order = 101 if rowmajor else 102
-		pyorder = 'C' if rowmajor else 'F'
-		A = lib.matrix(0, 0, 0, None, order)
-		lib.matrix_calloc(A, shape[0], shape[1], order)
-		A_py = np.zeros(shape, order=pyorder).astype(lib.pyfloat)
-		A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
-		return A, A_py, A_ptr
-
 	def test_alloc(self):
 		(m, n) = self.shape
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			for rowmajor in (True, False):
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
 				A = lib.matrix(0, 0, 0, None, order)
 				self.assertEqual( A.size1, 0 )
 				self.assertEqual( A.size2, 0 )
@@ -54,7 +41,7 @@ class MatrixTestCase(OptkitCTestCase):
 				self.register_var('A', A, lib.matrix_free)
 				self.assertEqual( A.size1, m )
 				self.assertEqual( A.size2, n )
-				if rowmajor:
+				if order == lib.enums.CblasRowMajor:
 					self.assertEqual( A.ld, n )
 				else:
 					self.assertEqual( A.ld, m )
@@ -73,20 +60,15 @@ class MatrixTestCase(OptkitCTestCase):
 		x_rand = np.random.rand(n)
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			DIGITS = 11 - 4 * lib.FLOAT - 1 * lib.GPU
 			TOL = 10**(-DIGITS)
 
-			for rowmajor in (True, False):
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
-
-				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n), rowmajor)
-				self.register_var('A', A, lib.matrix_free)
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				A, A_py, A_ptr = self.register_matrix(lib, m, n, order, 'A')
 
 				# memcpy_am
 				# set A_py to A_rand. overwrite A_py with zeros from A
@@ -105,8 +87,7 @@ class MatrixTestCase(OptkitCTestCase):
 								 TOL * np.linalg.norm(A_rand) )
 
 				# memcpy_mm
-				Z, Z_py, Z_ptr = self.make_mat_triplet(lib, (m, n), rowmajor)
-				self.register_var('Z', Z, lib.matrix_free)
+				Z, Z_py, Z_ptr = self.register_matrix(lib, m, n, order, 'Z')
 				self.assertCall( lib.matrix_memcpy_mm(Z, A, order) )
 				self.assertCall( lib.matrix_memcpy_am(Z_ptr, Z, order) )
 				self.assertTrue( np.linalg.norm(Z_py - A_py) <=
@@ -131,33 +112,27 @@ class MatrixTestCase(OptkitCTestCase):
 				self.assertTrue( np.linalg.norm(A_py - A_rand) <=
 								 TOL * np.linalg.norm(A_rand) )
 
-				self.free_var('A')
-				self.free_var('Z')
+				self.free_vars('A', 'Z')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_slicing(self):
+		""" matrix slicing tests """
 		(m, n) = self.shape
 		A_rand = self.A_test
 		x_rand = np.random.rand(n)
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			DIGITS = 7 - 2 * lib.FLOAT - 1 * lib.GPU
 			TOL = 10**(-DIGITS)
 
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				pyorder = 'C' if order == lib.enums.CblasRowMajor else 'F'
 
-			for rowmajor in (True, False):
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
-				pyorder = 'C' if rowmajor else 'F'
-
-				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n),
-								   					   rowmajor)
-				self.register_var('A', A, lib.matrix_free)
+				A, A_py, A_ptr = self.register_matrix(lib, m, n, order, 'A')
 
 				# set A, A_py to A_rand
 				A_py += A_rand
@@ -206,16 +181,16 @@ class MatrixTestCase(OptkitCTestCase):
 								 TOL * np.linalg.norm(v_py) )
 
 				self.free_var('A')
-			self.assertEqual( lib.ok_device_reset(), 0)
+			self.assertCall( lib.ok_device_reset() )
 
 
 	def test_math(self):
+		""" matrix math tests """
 		(m, n) = self.shape
 		A_rand = self.A_test
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -223,13 +198,8 @@ class MatrixTestCase(OptkitCTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOLMN = RTOL * (m * n)**0.5
 
-			for rowmajor in (True, False):
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
-				pyorder = 'C' if rowmajor else 'F'
-
-				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n), rowmajor)
-				self.register_var('A', A, lib.matrix_free)
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				A, A_py, A_ptr = self.register_matrix(lib, m, n, order, 'A')
 
 				# set A, A_py to A_rand
 				A_py += A_rand
@@ -244,12 +214,7 @@ class MatrixTestCase(OptkitCTestCase):
 								 ATOLMN + RTOL * np.linalg.norm(A_rand) )
 
 				# scale_left: A = diag(d) * A
-				d = lib.vector(0, 0, None)
-				self.assertCall( lib.vector_calloc(d, m) )
-				self.register_var('d', d, lib.vector_free)
-
-				d_py = np.zeros(m).astype(lib.pyfloat)
-				d_ptr = d_py.ctypes.data_as(lib.ok_float_p)
+				d, d_py, d_ptr = self.register_vector(lib, m, 'd')
 				d_py[:] = np.random.rand(m)
 				for i in xrange(m):
 					A_rand[i, :] *= d_py[i]
@@ -260,12 +225,7 @@ class MatrixTestCase(OptkitCTestCase):
 								 ATOLMN + RTOL * np.linalg.norm(A_rand) )
 
 				# scale_right: A = A * diag(e)
-				e = lib.vector(0, 0, None)
-				self.assertCall( lib.vector_calloc(e, n) )
-				self.register_var('e', e, lib.vector_free)
-
-				e_py = np.zeros(n).astype(lib.pyfloat)
-				e_ptr = e_py.ctypes.data_as(lib.ok_float_p)
+				e, e_py, e_ptr = self.register_vector(lib, n, 'e')
 				e_py[:] = np.random.rand(n)
 				for j in xrange(n):
 					A_rand[:, j] *= e_py[j]
@@ -294,8 +254,6 @@ class MatrixTestCase(OptkitCTestCase):
 				self.assertTrue( np.linalg.norm(A_py - A_rand) <=
 								 ATOLMN + RTOL * np.linalg.norm(A_rand) )
 
-				self.free_var('d')
-				self.free_var('e')
-				self.free_var('A')
+				self.free_vars('d', 'e', 'A')
 
-			self.assertEqual( lib.ok_device_reset(), 0)
+			self.assertCall( lib.ok_device_reset() )

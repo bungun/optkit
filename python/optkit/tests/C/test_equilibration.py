@@ -132,9 +132,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 			# self.op_keys
 			for op_ in self.op_keys:
 				print "operator sinkhorn, operator type:", op_
-				A_, A, o, freeA = self.gen_operator(op_, lib)
-				self.register_var('A', A, freeA)
-				self.register_var('o', o.contents.data, o.contents.free)
+				A_, A, o = self.register_operator(lib, op_)
 
 				# equilibrate operator
 				self.assertCall( lib.operator_regularized_sinkhorn(hdl, o, d,
@@ -190,9 +188,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 			# self.op_keys
 			for op_ in self.op_keys:
 				print "operator equil generic operator type:", op_
-				A_, A, o, freeA = self.gen_operator(op_, lib)
-				self.register_var('A', A, freeA)
-				self.register_var('o', o.contents.data, o.contents.free)
+				A_, A, o = self.register_operator(lib, op_)
 
 				# equilibrate operator
 				status = lib.operator_equilibrate(hdl, o, d, e, 1.)
@@ -240,9 +236,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 			# self.op_keys
 			for op_ in self.op_keys:
 				print "indirect projection, operator type:", op_
-				A_, A, o, freeA = self.gen_operator(op_, lib)
-				self.register_var('A', A, freeA)
-				self.register_var('o', o.contents.data, o.contents.free)
+				A_, A, o = self.register_operator(lib, op_)
 
 				# estimate operator norm
 				normest = np.zeros(1).astype(lib.pyfloat)

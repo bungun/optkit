@@ -22,10 +22,11 @@ ok_status sp_matrix_alloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
 	A->size2 = n;
 	A->nnz = nnz;
 	A->ptrlen = (order == CblasColMajor) ? n + 1 : m + 1;
-	A->val = (ok_float *) malloc(2 * nnz * sizeof(T));
-	A->ind = (ok_int *) malloc(2 * nnz * sizeof(I));
-	A->ptr = (ok_int *) malloc((2 + m + n) * sizeof(I));
+	A->val = (T *) malloc(2 * nnz * sizeof(T));
+	A->ind = (I *) malloc(2 * nnz * sizeof(I));
+	A->ptr = (I *) malloc((2 + m + n) * sizeof(I));
 	A->order = order;
+
 	return OPTKIT_SUCCESS;
 }
 
@@ -60,6 +61,8 @@ ok_status sp_matrix_memcpy_mm_(sp_matrix_<T, I> * A,
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_SPARSEMAT(B);
+	if (A->nnz != B->nnz || A->size1 + A->size2 != B->size1 + B->size2)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 	memcpy(A->val, B->val, 2 * A->nnz * sizeof(T));
 	memcpy(A->ind, B->ind, 2 * A->nnz * sizeof(I));
 	memcpy(A->ptr, B->ptr, (A->size1 + A->size2 + 2) * sizeof(I));
@@ -301,9 +304,10 @@ ok_status sp_matrix_print(const sp_matrix * A)
 		for(i = 0; i < A->ptrlen - 1; ++ i) {
 			ptr1 = A->ptr[i];
 			ptr2 = A->ptr[i + 1];
-			for(j = ptr1; j < ptr2; ++j)
+			for(j = ptr1; j < ptr2; ++j){
 				printf("(%i, %i)\t%e\n", (int) i,  A->ind[j],
 					A->val[j]);
+			}
 		}
 	else
 		for(i = 0; i < A->ptrlen - 1; ++ i) {

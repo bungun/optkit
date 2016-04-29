@@ -1,5 +1,5 @@
 from numpy import zeros
-from ctypes import c_void_p, byref
+from ctypes import c_void_p, c_size_t, byref
 from scipy.sparse import csc_matrix, csr_matrix
 from optkit.libs.error import optkit_print_error as PRINTERR
 from optkit.tests.defs import OptkitTestCase
@@ -46,6 +46,18 @@ class OptkitCTestCase(OptkitTestCase):
 		else:
 			raise ValueError('library {} cannot allocate a vector'.format(lib))
 
+	def register_indvector(self, lib, size, name):
+		if 'indvector_calloc' in lib.__dict__:
+			v = lib.indvector(0, 0, None)
+			self.assertCall( lib.indvector_calloc(v, size) )
+			self.register_var(name, v, lib.indvector_free)
+			v_py = zeros(size).astype(c_size_t)
+			v_ptr = v_py.ctypes.data_as(lib.c_size_t_p)
+			return v, v_py, v_ptr
+		else:
+			raise ValueError('library {} cannot allocate a vector'.format(lib))
+
+
 	def register_matrix(self, lib, size1, size2, order, name):
 		if 'matrix_calloc' in lib.__dict__:
 			pyorder = 'C' if order == lib.enums.CblasRowMajor else 'F'
@@ -62,7 +74,8 @@ class OptkitCTestCase(OptkitTestCase):
 	def register_sparsemat(self, lib, Adense, order, name):
 		if 'sp_matrix_calloc' in lib.__dict__:
 
-			A_py = Adense.astype(lib.pyfloat)
+			A_py = zeros(Adense.shape).astype(lib.pyfloat)
+			A_py += Adense
 			A_sp = csr_matrix(A_py) if order == lib.enums.CblasRowMajor else \
 				   csc_matrix(A_py)
 			A_val = A_sp.data.ctypes.data_as(lib.ok_float_p)
@@ -77,8 +90,8 @@ class OptkitCTestCase(OptkitTestCase):
 			return A, A_py, A_sp, A_val, A_ind, A_ptr
 
 		else:
-			raise ValueError('library {} cannot allocate a sparse '
-							 'matrix'.format(lib))
+			raise ValueError(
+					'library {} cannot allocate a sparse matrix'.format(lib))
 
 	def register_blas_handle(self, lib, name):
 		if 'blas_make_handle' in lib.__dict__:
@@ -90,57 +103,55 @@ class OptkitCTestCase(OptkitTestCase):
 			raise ValueError(
 					'library {} cannot allocate a BLAS handle'.format(lib))
 
+	def register_sparse_handle(self, lib, name):
+		if 'sp_make_handle' in lib.__dict__:
+			hdl = c_void_p()
+			self.assertCall( lib.sp_make_handle(byref(hdl)) )
+			self.register_var(name, hdl, lib.sp_destroy_handle)
+			return hdl
+		else:
+			raise ValueError(
+					'library {} cannot allocate a sparse handle'.format(lib))
 
 class OptkitCOperatorTestCase(OptkitCTestCase):
-	A_test = None
-	A_test_sparse = None
+	# A_test = None
+	# A_test_sparse = None
 
 	@property
 	def op_keys(self):
 		return ['dense', 'sparse']
 
-	def gen_operator(self, opkey, lib, rowmajor=True):
+	def register_operator(self, lib, opkey, rowmajor=True):
 		if opkey == 'dense':
-			return self.gen_dense_operator(lib, self.A_test, rowmajor)
+			return self.register_dense_operator(lib, self.A_test, rowmajor)
 		elif opkey == 'sparse':
-			return self.gen_sparse_operator(lib, self.A_test_sparse, rowmajor)
+			return self.register_sparse_operator(lib, self.A_test_sparse, rowmajor)
 		else:
 			raise ValueError('invalid operator type')
 
-	@staticmethod
-	def gen_dense_operator(lib, A_py, rowmajor=True):
+	def register_dense_operator(self, lib, A_py, rowmajor=True):
 		m, n = A_py.shape
 		order = lib.enums.CblasRowMajor if rowmajor else \
 				lib.enums.CblasColMajor
-		pyorder = 'C' if rowmajor else 'F'
-		A_ = zeros(A_py.shape, order=pyorder).astype(lib.pyfloat)
+		A, A_, A_ptr = self.register_matrix(lib, m, n, order, 'A')
 		A_ += A_py
-		A_ptr = A_.ctypes.data_as(lib.ok_float_p)
-		A = lib.matrix(0, 0, 0, None, order)
-		lib.matrix_calloc(A, m, n, order)
-		lib.matrix_memcpy_ma(A, A_ptr, order)
+		self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, order) )
 		o = lib.dense_operator_alloc(A)
-		return A_, A, o, lib.matrix_free
+		self.register_var('o', o.contents.data, o.contents.free)
+		return A_, A, o
 
-	@staticmethod
-	def gen_sparse_operator(lib, A_py, rowmajor=True):
+	def register_sparse_operator(self, lib, A_py, rowmajor=True):
 		m, n = A_py.shape
 		order = lib.enums.CblasRowMajor if rowmajor else \
 				lib.enums.CblasColMajor
-		sparsemat = csr_matrix if rowmajor else csc_matrix
-		sparse_hdl = c_void_p()
-		lib.sp_make_handle(byref(sparse_hdl))
-		A_ = A_py.astype(lib.pyfloat)
-		A_sp = csr_matrix(A_)
-		A_ptr = A_sp.indptr.ctypes.data_as(lib.ok_int_p)
-		A_ind = A_sp.indices.ctypes.data_as(lib.ok_int_p)
-		A_val = A_sp.data.ctypes.data_as(lib.ok_float_p)
-		A = lib.sparse_matrix(0, 0, 0, 0, None, None, None, order)
-		lib.sp_matrix_calloc(A, m, n, A_sp.nnz, order)
+		sparse_hdl = self.register_sparse_handle(lib, 'sp_hdl')
+		A, A_, A_sp, A_val, A_ind, A_ptr = self.register_sparsemat(
+			lib, A_py, order, 'A')
 		lib.sp_matrix_memcpy_ma(sparse_hdl, A, A_val, A_ind, A_ptr)
-		lib.sp_destroy_handle(sparse_hdl)
+		self.free_var('sp_hdl')
 		o = lib.sparse_operator_alloc(A)
-		return A_, A, o, lib.sp_matrix_free
+		self.register_var('o', o.contents.data, o.contents.free)
+		return A_, A, o
 
 class OptkitCPogsTestCase(OptkitCTestCase):
 	class PogsVariablesLocal():

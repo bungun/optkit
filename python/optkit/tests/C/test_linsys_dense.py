@@ -11,7 +11,7 @@ class DenseLibsTestCase(OptkitCTestCase):
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.dense_libs = DenseLinsysLibs()
+		self.libs = DenseLinsysLibs()
 
 	@classmethod
 	def tearDownClass(self):
@@ -20,14 +20,13 @@ class DenseLibsTestCase(OptkitCTestCase):
 	def test_libs_exist(self):
 		libs = []
 		for (gpu, single_precision) in self.CONDITIONS:
-			libs.append(self.dense_libs.get(
+			libs.append(self.libs.get(
 					single_precision=single_precision, gpu=gpu))
 		self.assertTrue( any(libs) )
 
 	def test_lib_types(self):
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -45,8 +44,7 @@ class DenseLibsTestCase(OptkitCTestCase):
 
 	def test_blas_handle(self):
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -58,8 +56,7 @@ class DenseLibsTestCase(OptkitCTestCase):
 
 	def test_device_reset(self):
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -74,8 +71,7 @@ class DenseLibsTestCase(OptkitCTestCase):
 
 	def test_version(self):
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -99,7 +95,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.dense_libs = DenseLinsysLibs()
+		self.libs = DenseLinsysLibs()
 		self.A_test = self.A_test_gen
 
 	@classmethod
@@ -112,44 +108,20 @@ class DenseBLASTestCase(OptkitCTestCase):
 	def tearDown(self):
 		self.free_all_vars()
 
-	@staticmethod
-	def make_vec_triplet(lib, size_):
-			a = lib.vector(0, 0, None)
-			lib.vector_calloc(a, size_)
-			a_py = np.zeros(size_).astype(lib.pyfloat)
-			a_ptr = a_py.ctypes.data_as(lib.ok_float_p)
-			return a, a_py, a_ptr
-
-	@staticmethod
-	def make_mat_triplet(lib, shape, rowmajor=True):
-		order = 101 if rowmajor else 102
-		pyorder = 'C' if rowmajor else 'F'
-		A = lib.matrix(0, 0, 0, None, order)
-		lib.matrix_calloc(A, shape[0], shape[1], order)
-		A_py = np.zeros(shape, order=pyorder).astype(lib.pyfloat)
-		A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
-		return A, A_py, A_ptr
-
 	def test_blas1_dot(self):
 		(m, n) = self.shape
-		hdl = c_void_p()
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			DIGITS = 7 - 2 * single_precision
 			TOL = 10**(-DIGITS)
 
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var('hdl', hdl, lib.blas_destroy_handle)
-
-			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
-			w, w_py, w_ptr = self.make_vec_triplet(lib, m)
-			self.register_var('v', v, lib.vector_free)
-			self.register_var('w', w, lib.vector_free)
+			hdl = self.register_blas_handle(lib, 'hdl')
+			v, v_py, v_ptr = self.register_vector(lib, m, 'v')
+			w, w_py, w_ptr = self.register_vector(lib, m, 'w')
 
 			v_py += np.random.rand(m)
 			w_py += np.random.rand(m)
@@ -162,30 +134,23 @@ class DenseBLASTestCase(OptkitCTestCase):
 			self.assertTrue( np.abs(answer[0] - v_py.dot(w_py)) <=
 							 TOL + TOL * answer[0] )
 
-			self.free_var('v')
-			self.free_var('w')
-
-			self.free_var('hdl')
+			self.free_vars('v', 'w', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_blas1_nrm2(self):
 		(m, n) = self.shape
-		hdl = c_void_p()
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			DIGITS = 7 - 2 * single_precision
 			TOL = 10**(-DIGITS)
 
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var('hdl', hdl, lib.blas_destroy_handle)
+			hdl = self.register_blas_handle(lib, 'hdl')
+			v, v_py, v_ptr = self.register_vector(lib, m, 'v')
 
-			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
-			self.register_var('v', v, lib.vector_free)
 			v_py += np.random.rand(m)
 			lib.vector_memcpy_va(v, v_ptr, 1)
 
@@ -195,28 +160,23 @@ class DenseBLASTestCase(OptkitCTestCase):
 			self.assertTrue( np.abs(answer[0] - np.linalg.norm(v_py)) <=
 							 TOL + TOL * answer[0] )
 
-			self.free_var('v')
-			self.free_var('hdl')
+			self.free_vars('v', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_blas1_asum(self):
 		(m, n) = self.shape
-		hdl = c_void_p()
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			DIGITS = 7 - 2 * single_precision
 			TOL = 10**(-DIGITS)
 
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var('hdl', hdl, lib.blas_destroy_handle)
+			hdl = self.register_blas_handle(lib, 'hdl')
+			v, v_py, v_ptr = self.register_vector(lib, m, 'v')
 
-			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
-			self.register_var('v', v, lib.vector_free)
 			v_py += np.random.rand(m)
 			self.assertCall( lib.vector_memcpy_va(v, v_ptr, 1) )
 
@@ -226,29 +186,24 @@ class DenseBLASTestCase(OptkitCTestCase):
 			self.assertTrue( np.abs(answer[0] - np.linalg.norm(v_py, 1)) <=
 							 TOL + TOL * answer[0] )
 
-			self.free_var('v')
-			self.free_var('hdl')
+			self.free_vars('v', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_blas1_scal(self):
 		(m, n) = self.shape
-		hdl = c_void_p()
 		v_rand= np.random.rand(m)
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			DIGITS = 7 - 2 * single_precision
 			TOL = 10**(-DIGITS)
 
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var('hdl', hdl, lib.blas_destroy_handle)
+			hdl = self.register_blas_handle(lib, 'hdl')
+			v, v_py, v_ptr = self.register_vector(lib, m, 'v')
 
-			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
-			self.register_var('v', v, lib.vector_free)
 			v_py += v_rand
 			self.assertCall( lib.vector_memcpy_va(v, v_ptr, 1) )
 
@@ -259,30 +214,23 @@ class DenseBLASTestCase(OptkitCTestCase):
 							 TOL * m**0.5 + TOL * np.linalg.norm(v_py) )
 			self.assertTrue(np.allclose(v_py, alpha * v_rand, DIGITS))
 
-			self.free_var('v')
-			self.free_var('hdl')
+			self.free_vars('v', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_blas1_axpy(self):
 		(m, n) = self.shape
-		hdl = c_void_p()
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			DIGITS = 7 - 2 * single_precision
 			TOL = 10**(-DIGITS)
 
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var('hdl', hdl, lib.blas_destroy_handle)
-
-			v, v_py, v_ptr = self.make_vec_triplet(lib, m)
-			w, w_py, w_ptr = self.make_vec_triplet(lib, m)
-			self.register_var('v', v, lib.vector_free)
-			self.register_var('w', w, lib.vector_free)
+			hdl = self.register_blas_handle(lib, 'hdl')
+			v, v_py, v_ptr = self.register_vector(lib, m, 'v')
+			w, w_py, w_ptr = self.register_vector(lib, m, 'w')
 
 			v_py += np.random.rand(m)
 			w_py += np.random.rand(m)
@@ -295,39 +243,27 @@ class DenseBLASTestCase(OptkitCTestCase):
 			self.assertTrue( np.linalg.norm(w_py - pyresult) <=
 							 TOL * m**0.5 + TOL * np.linalg.norm(w_py) )
 
-			self.free_var('v')
-			self.free_var('w')
-			self.free_var('hdl')
+			self.free_vars('v', 'w', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_blas2_gemv(self):
 		(m, n) = self.shape
-		hdl = c_void_p()
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			DIGITS = 7 - 2 * single_precision
 			TOL = 10**(-DIGITS)
 
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var('hdl', hdl, lib.blas_destroy_handle)
-
-			for rowmajor in (True, False):
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				hdl = self.register_blas_handle(lib, 'hdl')
 
 				# make A, x, y
-				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n),
-													   rowmajor=rowmajor)
-				x, x_py, x_ptr = self.make_vec_triplet(lib, n)
-				y, y_py, y_ptr = self.make_vec_triplet(lib, m)
-				self.register_var('A', A, lib.matrix_free)
-				self.register_var('x', x, lib.vector_free)
-				self.register_var('y', y, lib.vector_free)
+				A, A_py, A_ptr = self.register_matrix(lib, m, n, order, 'A')
+				x, x_py, x_ptr = self.register_vector(lib, n, 'x')
+				y, y_py, y_ptr = self.register_vector(lib, m, 'y')
 
 				# populate A, x, y (in Py and C)
 				A_py += self.A_test
@@ -348,7 +284,6 @@ class DenseBLASTestCase(OptkitCTestCase):
 				self.assertTrue( np.linalg.norm(y_py - pyresult) <=
 							 	 TOL * m**0.5 + TOL * np.linalg.norm(y_py) )
 
-
 				# perform x = alpha * A' * y + beta * x
 				y_py[:] = pyresult[:]
 				pyresult = alpha * A_py.T.dot(y_py) + beta * x_py
@@ -358,16 +293,12 @@ class DenseBLASTestCase(OptkitCTestCase):
 				self.assertTrue( np.linalg.norm(x_py - pyresult) <=
 							 	 TOL * n**0.5 + TOL * np.linalg.norm(x_py) )
 
-				self.free_var('A')
-				self.free_var('x')
-				self.free_var('y')
+				self.free_vars('A', 'x', 'y', 'hdl')
 
-				self.free_var('hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_blas2_trsv(self):
 		(m, n) = self.shape
-		hdl = c_void_p()
 
 		# generate lower triangular matrix L
 		L_test = self.A_test.T.dot(self.A_test)
@@ -387,27 +318,19 @@ class DenseBLASTestCase(OptkitCTestCase):
 		x_rand = np.random.rand(n)
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			DIGITS = 7 - 2 * single_precision
 			TOL = 10**(-DIGITS)
 
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var('hdl', hdl, lib.blas_destroy_handle)
-
-			for rowmajor in (True, False):
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				hdl = self.register_blas_handle(lib, 'hdl')
 
 				# make L, x
-				L, L_py, L_ptr = self.make_mat_triplet(lib, (n, n),
-													   rowmajor=rowmajor)
-				x, x_py, x_ptr = self.make_vec_triplet(lib, n)
-				self.register_var('L', L, lib.matrix_free)
-				self.register_var('x', x, lib.vector_free)
+				L, L_py, L_ptr = self.register_matrix(lib, n, n, order, 'L')
+				x, x_py, x_ptr = self.register_vector(lib, n, 'x')
 
 				# populate L, x
 				L_py += L_test
@@ -424,11 +347,8 @@ class DenseBLASTestCase(OptkitCTestCase):
 				self.assertTrue( np.linalg.norm(x_py - pyresult) <=
 							 	 TOL * n**0.5 + TOL * np.linalg.norm(x_py) )
 
-				self.free_var('L')
-				self.free_var('x')
-				self.free_var('hdl')
+				self.free_vars('L', 'x', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
-
 
 	def test_blas2_sbmv(self):
 		(m, n) = self.shape
@@ -438,28 +358,21 @@ class DenseBLASTestCase(OptkitCTestCase):
 		x_rand = np.random.rand(n)
 		y_rand = np.random.rand(n)
 
-		hdl = c_void_p()
-
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			DIGITS = 7 - 2 * single_precision
 			TOL = 10**(-DIGITS)
 
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var('hdl', hdl, lib.blas_destroy_handle)
+			hdl = self.register_blas_handle(lib, 'hdl')
 
 			# make symmetric banded "matrix" S stored as vector s,
 			# and vectors x, y
-			s, s_py, s_ptr = self.make_vec_triplet(lib, n * diags)
-			x, x_py, x_ptr = self.make_vec_triplet(lib, n)
-			y, y_py, y_ptr = self.make_vec_triplet(lib, n)
-			self.register_var('s', s, lib.vector_free)
-			self.register_var('x', x, lib.vector_free)
-			self.register_var('y', y, lib.vector_free)
+			s, s_py, s_ptr = self.register_vector(lib, n * diags, 's')
+			x, x_py, x_ptr = self.register_vector(lib, n, 'x')
+			y, y_py, y_ptr = self.register_vector(lib, n, 'y')
 
 			# populate vectors
 			s_py += s_test
@@ -488,10 +401,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 			self.assertTrue( np.linalg.norm(y_py - pyresult) <=
 						 	 TOL * m**0.5 + TOL * np.linalg.norm(y_py) )
 
-			self.free_var('x')
-			self.free_var('y')
-			self.free_var('s')
-			self.free_var('hdl')
+			self.free_vars('x', 'y', 's', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 
@@ -502,28 +412,21 @@ class DenseBLASTestCase(OptkitCTestCase):
 		x_rand = np.random.rand(n)
 		y_rand = np.random.rand(n)
 
-		hdl = c_void_p()
-
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			DIGITS = 7 - 2 * single_precision
 			TOL = 10**(-DIGITS)
 
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var('hdl', hdl, lib.blas_destroy_handle)
+			hdl = self.register_blas_handle(lib, 'hdl')
 
 			# make diagonal "matrix" D stored as vector d,
 			# and vectors x, y
-			d, d_py, d_ptr = self.make_vec_triplet(lib, n)
-			x, x_py, x_ptr = self.make_vec_triplet(lib, n)
-			y, y_py, y_ptr = self.make_vec_triplet(lib, n)
-			self.register_var('d', d, lib.vector_free)
-			self.register_var('x', x, lib.vector_free)
-			self.register_var('y', y, lib.vector_free)
+			d, d_py, d_ptr = self.register_vector(lib, n, 'd')
+			x, x_py, x_ptr = self.register_vector(lib, n, 'x')
+			y, y_py, y_ptr = self.register_vector(lib, n, 'y')
 
 			# populate vectors
 			d_py += d_test
@@ -542,23 +445,18 @@ class DenseBLASTestCase(OptkitCTestCase):
 			self.assertTrue( np.linalg.norm(y_py - pyresult) <=
 						 	 TOL * m**0.5 + TOL * np.linalg.norm(y_py) )
 
-			self.free_var('x')
-			self.free_var('y')
-			self.free_var('d')
-			self.free_var('hdl')
+			self.free_vars('x', 'y', 'd', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_blas3_gemm(self):
 		(m, n) = self.shape
 		x_rand = np.random.rand(n)
 
-		hdl = c_void_p()
 		B_test = np.random.rand(m, n)
 		C_test = np.random.rand(n, n)
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -566,23 +464,13 @@ class DenseBLASTestCase(OptkitCTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOLMN = RTOL * (m * n)**0.5
 
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var('hdl', hdl, lib.blas_destroy_handle)
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				hdl = self.register_blas_handle(lib, 'hdl')
 
-			for rowmajor in (True, False):
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
-
-				# make A, x, y
-				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n),
-													   rowmajor=rowmajor)
-				B, B_py, B_ptr = self.make_mat_triplet(lib, (m, n),
-													   rowmajor=rowmajor)
-				C, C_py, C_ptr = self.make_mat_triplet(lib, (n, n),
-													   rowmajor=rowmajor)
-				self.register_var('A', A, lib.matrix_free)
-				self.register_var('B', B, lib.matrix_free)
-				self.register_var('C', C, lib.matrix_free)
+				# allocate A, B
+				A, A_py, A_ptr = self.register_matrix(lib, m, n, order, 'A')
+				B, B_py, B_ptr = self.register_matrix(lib, m, n, order, 'B')
+				C, C_py, C_ptr = self.register_matrix(lib, n, n, order, 'C')
 
 				# populate
 				A_py += self.A_test
@@ -603,46 +491,30 @@ class DenseBLASTestCase(OptkitCTestCase):
 				self.assertTrue( np.linalg.norm(C_py - pyresult) <=
 						 	 	 ATOLMN + RTOL * np.linalg.norm(C_py) )
 
-				self.free_var('A')
-				self.free_var('B')
-				self.free_var('C')
-				self.free_var('hdl')
+				self.free_vars('A', 'B', 'C', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_blas3_syrk(self):
 		(m, n) = self.shape
-
-		hdl = c_void_p()
 		B_test = np.random.rand(n, n)
-
 
 		# make B symmetric
 		B_test = B_test.T.dot(B_test)
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			DIGITS = 7 - 2 * single_precision
 			TOL = 10**(-DIGITS)
 
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var('hdl', hdl, lib.blas_destroy_handle)
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				hdl = self.register_blas_handle(lib, 'hdl')
 
-			for rowmajor in [True]:
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
-
-
-				# make A, x, y
-				A, A_py, A_ptr = self.make_mat_triplet(lib, (n, n),
-													   rowmajor=rowmajor)
-				B, B_py, B_ptr = self.make_mat_triplet(lib, (n, n),
-													   rowmajor=rowmajor)
-				self.register_var('A', A, lib.matrix_free)
-				self.register_var('B', B, lib.matrix_free)
+				# allocate A, B
+				A, A_py, A_ptr = self.register_matrix(lib, m, n, order, 'A')
+				B, B_py, B_ptr = self.register_matrix(lib, n, n, order, 'B')
 
 				# populate
 				if m >= n:
@@ -656,9 +528,9 @@ class DenseBLASTestCase(OptkitCTestCase):
 				# B = alpha * (A'A) + beta * B
 				alpha = np.random.rand()
 				beta = np.random.rand()
-				pyresult = alpha * A_py.dot(A_py.T) + beta * B_py
+				pyresult = alpha * A_py.T.dot(A_py) + beta * B_py
 				self.assertCall( lib.blas_syrk(hdl, lib.enums.CblasLower,
-							  	 lib.enums.CblasNoTrans, alpha, A, beta, B) )
+							  	 lib.enums.CblasTrans, alpha, A, beta, B) )
 				self.assertCall( lib.matrix_memcpy_am(B_ptr, B, order) )
 				for i in xrange(n):
 					for j in xrange(n):
@@ -668,14 +540,11 @@ class DenseBLASTestCase(OptkitCTestCase):
 				self.assertTrue( np.linalg.norm(B_py - pyresult) <=
 						 	 	 TOL * n + TOL * np.linalg.norm(B_py) )
 
-				self.free_var('A')
-				self.free_var('B')
-				self.free_var('hdl')
+				self.free_vars('A', 'B', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_blas3_trsm(self):
 		(m, n) = self.shape
-		hdl = c_void_p()
 
 		# make square, invertible L
 		L_test = np.random.rand(n, n)
@@ -691,8 +560,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 			if gpu:
 				continue
 
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -700,20 +568,12 @@ class DenseBLASTestCase(OptkitCTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOLMN = RTOL * (m * n)**0.5
 
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var('hdl', hdl, lib.blas_destroy_handle)
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				hdl = self.register_blas_handle(lib, 'hdl')
 
-			for rowmajor in (True, False):
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
-
-				# make A, x, y
-				A, A_py, A_ptr = self.make_mat_triplet(lib, (m, n),
-													   rowmajor=rowmajor)
-				L, L_py, L_ptr = self.make_mat_triplet(lib, (n, n),
-													   rowmajor=rowmajor)
-				self.register_var('A', A, lib.matrix_free)
-				self.register_var('L', L, lib.matrix_free)
+				# allocate A, L
+				A, A_py, A_ptr = self.register_matrix(lib, m, n, order, 'A')
+				L, L_py, L_ptr = self.register_matrix(lib, n, n, order, 'L')
 
 				# populate
 				A_py += self.A_test
@@ -730,10 +590,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 				self.assertTrue( np.linalg.norm(A_py - pyresult) <=
 						 	 	 ATOLMN + RTOL * np.linalg.norm(A_py) )
 
-				self.free_var('A')
-				self.free_var('L')
-
-				self.free_var('hdl')
+				self.free_vars('A', 'L', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 class DenseLinalgTestCase(OptkitCTestCase):
@@ -741,7 +598,7 @@ class DenseLinalgTestCase(OptkitCTestCase):
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.dense_libs = DenseLinsysLibs()
+		self.libs = DenseLinsysLibs()
 		self.A_test = self.A_test_gen
 
 	@classmethod
@@ -756,7 +613,6 @@ class DenseLinalgTestCase(OptkitCTestCase):
 
 	def test_cholesky(self):
 		(m, n) = self.shape
-		hdl = c_void_p()
 
 		mindim = min(m, n)
 
@@ -778,32 +634,17 @@ class DenseLinalgTestCase(OptkitCTestCase):
 		pychol = np.linalg.cholesky(AA_test)
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var('hdl', hdl, lib.blas_destroy_handle)
-
-			for rowmajor in (True, False):
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
-				pyorder = 'C' if rowmajor else 'F'
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				hdl = self.register_blas_handle(lib, 'hdl')
 
 				# allocate L, x
-				L = lib.matrix(0, 0, 0, None, order)
-				self.assertCall( lib.matrix_calloc(L, mindim, mindim, order) )
-				self.register_var('L', L, lib.matrix_free)
-				L_py = np.zeros((mindim, mindim), order=pyorder).astype(
-							lib.pyfloat)
-				L_ptr = L_py.ctypes.data_as(lib.ok_float_p)
-
-				x = lib.vector(0, 0, None)
-				self.assertCall( lib.vector_calloc(x, mindim, order) )
-				self.register_var('x', x, lib.vector_free)
-				x_py = np.zeros(mindim).astype(lib.pyfloat)
-				x_ptr = x_py.ctypes.data_as(lib.ok_float_p)
+				L, L_py, L_ptr = self.register_matrix(
+					lib, mindim, mindim, order, 'L')
+				x, x_py, x_ptr = self.register_vector(lib, mindim, 'x')
 
 				# populate L
 				L_py *= 0
@@ -840,17 +681,14 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				self.assertTrue( norm_diff <=
 								 atol * mindim**0.5 + rtol * norm )
 
-				self.free_var('L')
-				self.free_var('x')
-				self.free_var('hdl')
+				self.free_vars('L', 'x', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_row_squares(self):
 		m, n = self.shape
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-				single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -859,28 +697,17 @@ class DenseLinalgTestCase(OptkitCTestCase):
 			ATOLM = RTOL * m**0.5
 			ATOLN = RTOL * n**0.5
 
-			for rowmajor in (True, False):
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
-				pyorder = 'C' if rowmajor else 'F'
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				# allocate A, r, c
+				A, A_py, A_ptr = self.register_matrix(lib, m, n, order, 'A')
+				c, c_py, c_ptr = self.register_vector(lib, n, 'c')
+				r, r_py, r_ptr = self.register_vector(lib, m, 'r')
 
-				# allocate A, x
-				A = lib.matrix(0, 0, 0, None, order)
-				lib.matrix_calloc(A, m, n, order)
-				self.register_var('A', A, lib.matrix_free)
-				A_py = np.zeros((m, n), order=pyorder).astype(lib.pyfloat)
 				A_py += self.A_test
-				A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
 				self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, order) )
 
 				py_rows = [A_py[i, :].dot(A_py[i, :]) for i in xrange(m)]
 				py_cols = [A_py[:, j].dot(A_py[:, j]) for j in xrange(n)]
-
-				r = lib.vector(0, 0, None)
-				self.assertCall( lib.vector_calloc(r, m, order) )
-				self.register_var('r', r, lib.vector_free)
-				r_py = np.zeros(m).astype(lib.pyfloat)
-				r_ptr = r_py.ctypes.data_as(lib.ok_float_p)
 
 				# C: calculate row squares
 				self.assertCall( lib.linalg_matrix_row_squares(
@@ -890,12 +717,6 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				# compare C vs Python results
 				self.assertTrue( np.linalg.norm(r_py - py_rows) <=
 								 ATOLM + RTOL * np.linalg.norm(py_rows) )
-
-				c = lib.vector(0, 0, None)
-				self.assertCall( lib.vector_calloc(c, n, order) )
-				self.register_var('c', c, lib.vector_free)
-				c_py = np.zeros(n).astype(lib.pyfloat)
-				c_ptr = c_py.ctypes.data_as(lib.ok_float_p)
 
 				# C: calculate column squares
 				self.assertCall( lib.linalg_matrix_row_squares(
@@ -907,19 +728,15 @@ class DenseLinalgTestCase(OptkitCTestCase):
 								 ATOLN + RTOL * np.linalg.norm(py_cols) )
 
 				# free memory
-				self.free_var('A')
-				self.free_var('r')
-				self.free_var('c')
+				self.free_vars('A', 'r', 'c')
 
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_broadcast(self):
 		(m, n) = self.shape
-		hdl = c_void_p()
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-				single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -927,51 +744,21 @@ class DenseLinalgTestCase(OptkitCTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOLM = RTOL * m**0.5
 
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var('hdl', hdl, lib.blas_destroy_handle)
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				hdl = self.register_blas_handle(lib, 'hdl')
 
-			for rowmajor in (True, False):
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
-				pyorder = 'C' if rowmajor else 'F'
+				# allocate A, d, e, x, y
+				A, A_py, A_ptr = self.register_matrix(lib, m, n, order, 'A')
+				d, d_py, d_ptr = self.register_vector(lib, m, 'd')
+				e, e_py, e_ptr = self.register_vector(lib, n, 'e')
+				x, x_py, x_ptr = self.register_vector(lib, n, 'x')
+				y, y_py, y_ptr = self.register_vector(lib, m, 'y')
 
-				# allocate A, d, e
-				A = lib.matrix(0, 0, 0, None, order)
-				self.assertCall( lib.matrix_calloc(A, m, n, order) )
-				self.register_var('A', A, lib.matrix_free)
-				A_py = np.zeros((m, n), order=pyorder).astype(lib.pyfloat)
 				A_py += self.A_test
-				A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
-				self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, order) )
-
-				d = lib.vector(0, 0, None)
-				self.assertCall( lib.vector_calloc(d, m) )
-				self.register_var('d', d, lib.vector_free)
-				d_py = np.zeros(m).astype(lib.pyfloat)
-				d_ptr = d_py.ctypes.data_as(lib.ok_float_p)
-
-				e = lib.vector(0, 0, None)
-				self.assertCall( lib.vector_calloc(e, n) )
-				self.register_var('e', e, lib.vector_free)
-				e_py = np.zeros(n).astype(lib.pyfloat)
-				e_ptr = e_py.ctypes.data_as(lib.ok_float_p)
-
-				x = lib.vector(0, 0, None)
-				self.assertCall( lib.vector_calloc(x, n) )
-				self.register_var('x', x, lib.vector_free)
-				x_py = np.zeros(n).astype(lib.pyfloat)
-				x_ptr = x_py.ctypes.data_as(lib.ok_float_p)
-
-				y = lib.vector(0, 0, None)
-				self.assertCall( lib.vector_calloc(y, m) )
-				self.register_var('y', y, lib.vector_free)
-				y_py = np.zeros(m).astype(lib.pyfloat)
-				y_ptr = y_py.ctypes.data_as(lib.ok_float_p)
-
 				d_py += np.random.rand(m)
-				# e_py += np.random.rand(n)
-				e_py += [i for i in xrange(n)]
+				e_py += np.random.rand(n)
 				x_py += np.random.rand(n)
+				self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, order) )
 				self.assertCall( lib.vector_memcpy_va(d, d_ptr, 1) )
 				self.assertCall( lib.vector_memcpy_va(e, e_ptr, 1) )
 				self.assertCall( lib.vector_memcpy_va(x, x_ptr, 1) )
@@ -1027,22 +814,14 @@ class DenseLinalgTestCase(OptkitCTestCase):
 								 ATOLM + RTOL * np.linalg.norm(A_updatex) )
 
 				# free memory
-				self.free_var('A')
-				self.free_var('d')
-				self.free_var('e')
-				self.free_var('x')
-				self.free_var('y')
-
-				self.free_var('hdl')
+				self.free_vars('A', 'd', 'e', 'x', 'y', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_reduce(self):
 		(m, n) = self.shape
-		hdl = c_void_p()
 
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-				single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -1051,46 +830,18 @@ class DenseLinalgTestCase(OptkitCTestCase):
 			ATOLM = RTOL * m**0.5
 			ATOLN = RTOL * n**0.5
 
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var('hdl', hdl, lib.blas_destroy_handle)
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				hdl = self.register_blas_handle(lib, 'hdl')
 
-			for rowmajor in (True, False):
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
-				pyorder = 'C' if rowmajor else 'F'
+				# allocate A, d, e, x, y
+				A, A_py, A_ptr = self.register_matrix(lib, m, n, order, 'A')
+				d, d_py, d_ptr = self.register_vector(lib, m, 'd')
+				e, e_py, e_ptr = self.register_vector(lib, n, 'e')
+				x, x_py, x_ptr = self.register_vector(lib, n, 'x')
+				y, y_py, y_ptr = self.register_vector(lib, m, 'y')
 
-				# allocate A, d, e
-				A = lib.matrix(0, 0, 0, None, order)
-				self.assertCall( lib.matrix_calloc(A, m, n, order) )
-				self.register_var('A', A, lib.matrix_free)
-				A_py = np.zeros((m, n), order=pyorder).astype(lib.pyfloat)
 				A_py += self.A_test
-				A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
 				self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, order) )
-
-				d = lib.vector(0, 0, None)
-				self.assertCall( lib.vector_calloc(d, m) )
-				self.register_var('d', d, lib.vector_free)
-				d_py = np.zeros(m).astype(lib.pyfloat)
-				d_ptr = d_py.ctypes.data_as(lib.ok_float_p)
-
-				e = lib.vector(0, 0, None)
-				self.assertCall( lib.vector_calloc(e, n) )
-				self.register_var('e', e, lib.vector_free)
-				e_py = np.zeros(n).astype(lib.pyfloat)
-				e_ptr = e_py.ctypes.data_as(lib.ok_float_p)
-
-				x = lib.vector(0, 0, None)
-				self.assertCall( lib.vector_calloc(x, n) )
-				self.register_var('x', x, lib.vector_free)
-				x_py = np.zeros(n).astype(lib.pyfloat)
-				x_ptr = x_py.ctypes.data_as(lib.ok_float_p)
-
-				y = lib.vector(0, 0, None)
-				self.assertCall( lib.vector_calloc(y, m) )
-				self.register_var('y', y, lib.vector_free)
-				y_py = np.zeros(m).astype(lib.pyfloat)
-				y_ptr = y_py.ctypes.data_as(lib.ok_float_p)
 
 				x_py += np.random.rand(n)
 				self.assertCall( lib.vector_memcpy_va(x, x_ptr, 1) )
@@ -1128,40 +879,27 @@ class DenseLinalgTestCase(OptkitCTestCase):
 								 ATOLM + RTOL * np.linalg.norm(rowmax) )
 
 				# indmin - reduce columns
-				idx = lib.indvector(0, 0, None)
-				self.assertCall( lib.indvector_calloc(idx, n) )
-				self.register_var('idx', idx, lib.indvector_free)
-				inds = np.zeros(n).astype(c_size_t)
-				inds_ptr = inds.ctypes.data_as(lib.c_size_t_p)
+				idx, inds, inds_ptr = self.register_indvector(lib, n, 'idx')
 				self.assertCall( lib.linalg_matrix_reduce_indmin(idx, e, A,
 										lib.enums.CblasLeft) )
 				self.assertCall( lib.indvector_memcpy_av(inds_ptr, idx, 1) )
-				self.assertCall( lib.indvector_free(idx) )
+				self.free_var('idx')
 				calcmin = np.array([A_py[inds[i], i] for i in xrange(n)])
 				colmin = np.min(A_py, 0)
 				self.assertTrue( np.linalg.norm(calcmin - colmin) <=
 								 ATOLN + RTOL * np.linalg.norm(colmin) )
 
 				# indmin - reduce rows
-				self.assertCall( lib.indvector_calloc(idx, m) )
-				inds = np.zeros(m).astype(c_size_t)
-				inds_ptr = inds.ctypes.data_as(lib.c_size_t_p)
+				idx, inds, inds_ptr = self.register_indvector(lib, m, 'idx')
 				self.assertCall( lib.linalg_matrix_reduce_indmin(idx, d, A,
 										lib.enums.CblasRight) )
 				self.assertCall( lib.indvector_memcpy_av(inds_ptr, idx, 1) )
-				self.assertCall( lib.indvector_free(idx) )
+				self.free_var('idx')
 				calcmin = np.array([A_py[i, inds[i]] for i in xrange(m)])
 				rowmin = np.min(A_py, 1)
 				self.assertTrue( np.linalg.norm(calcmin - rowmin) <=
 								 ATOLM + RTOL * np.linalg.norm(rowmin) )
 
 				# free memory
-				self.free_var('A')
-				self.free_var('d')
-				self.free_var('e')
-				self.free_var('x')
-				self.free_var('y')
-				self.free_var('idx')
-
-				self.free_var('hdl')
-			self.assertEqual(lib.ok_device_reset(), 0)
+				self.free_vars('A', 'd', 'e', 'x', 'y', 'hdl')
+			self.assertCall(lib.ok_device_reset() )

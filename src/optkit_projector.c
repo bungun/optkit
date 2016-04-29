@@ -171,15 +171,18 @@ ok_status indirect_projector_alloc(indirect_projector * P, operator * A)
 {
 	OK_CHECK_PTR(P);
 	OK_CHECK_OPERATOR(A);
+
+	ok_status err = OPTKIT_SUCCESS;
 	if (P->A)
 		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
 
 	P->A = A;
 	P->cgls_work = cgls_init(A->size1, A->size2);
-	if (!P->cgls_work)
-		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
-
-	return OPTKIT_SUCCESS;
+	if (!P->A || !P->cgls_work) {
+		err = OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+		OK_MAX_ERR( err, indirect_projector_free(P) );
+	}
+	return err;
 }
 
 ok_status indirect_projector_initialize(void * linalg_handle,
@@ -235,18 +238,7 @@ ok_status indirect_projector_project(void * linalg_handle,
 	/* y_out = y_in - Ax_in */
 	OK_RETURNIF_ERR(
 		vector_memcpy_vv(y_out, y_in) );
-	printf("P %p\n", P);
-	printf("P.A %p\n", P->A);
-	printf("P.A.apply %p\n", P->A->apply);
-	printf("P.A.adjoint %p\n", P->A->adjoint);
-	printf("P.A.fused_apply %p\n", P->A->fused_apply);
-	printf("P.A.fused_adjoint %p\n", P->A->fused_adjoint);
-	printf("P.A.free %p\n", P->A->free);
-	printf("P.A.data %p\n", P->A->data);
-	printf("xin %p\n", x_in->data);
-	printf("yin %p\n", y_in->data);
-	printf("xout %p\n", x_out->data);
-	printf("yout %p\n", y_out->data);
+
 	OK_RETURNIF_ERR(
 		P->A->fused_apply(P->A->data, -kOne, x_in, kOne, y_out) );
 
@@ -259,20 +251,7 @@ ok_status indirect_projector_project(void * linalg_handle,
 	OK_RETURNIF_ERR(
 		blas_axpy(linalg_handle, kOne, x_in, x_out) );
 
-	/* y_out = Ax_ouy */
-	printf("P %p\n", P);
-	printf("P.A %p\n", P->A);
-	printf("P.A.apply %p\n", P->A->apply);
-	printf("P.A.adjoint %p\n", P->A->adjoint);
-	printf("P.A.fused_apply %p\n", P->A->fused_apply);
-	printf("P.A.fused_adjoint %p\n", P->A->fused_adjoint);
-	printf("P.A.free %p\n", P->A->free);
-	printf("P.A.data %p\n", P->A->data);
-	printf("xin %p\n", x_in->data);
-	printf("yin %p\n", y_in->data);
-	printf("xout %p\n", x_out->data);
-	printf("yout %p\n", y_out->data);
-
+	/* y_out = Ax_out */
 	return OK_SCAN_ERR(
 		P->A->apply(P->A->data, x_out, y_out) );
 }
@@ -386,7 +365,7 @@ projector * dense_direct_projector_alloc(matrix * A)
 #ifndef OPTKIT_NO_INDIRECT_PROJECTOR
 void * indirect_projector_data_alloc(operator * A)
 {
-	ok_status err;
+	ok_status err = OPTKIT_SUCCESS;
 	indirect_projector_generic * P = OK_NULL;
 	ok_alloc(P, sizeof(*P));
 	P->A = A;
@@ -428,31 +407,24 @@ ok_status indirect_projector_g_project(void * data, vector * x_in, vector * y_in
 	vector * x_out, vector * y_out, ok_float tol)
 {
 	indirect_projector_generic * P = (indirect_projector_generic *) data;
-	printf("%s\n", "HERE0");
 	OK_CHECK_PTR(P);
 
-	printf("%s\n", "HERE1");
 	/* y_out = y_in - Ax_in */
 	OK_RETURNIF_ERR(
 		vector_memcpy_vv(y_out, y_in) );
 
-	printf("%s\n", "HERE2");
 	OK_RETURNIF_ERR(
 		P->A->fused_apply(P->A->data, -kOne, x_in, kOne, y_out) );
 
-	printf("%s\n", "HERE3");
 	/* Minimize ||Ax_out - (y_in - Ax_in) ||_2 + ||x_out||_2*/
 	OK_RETURNIF_ERR(
 		cgls_solve(P->cgls_work, P->A, y_out, x_out, kOne, tol,
 			kItersCG, kQuietCG, &P->flag) );
 
-
-	printf("%s\n", "HERE4");
 	/* x_out += x0 */
 	OK_RETURNIF_ERR(
 		blas_axpy(P->linalg_handle, kOne, x_in, x_out) );
 
-	printf("%s\n", "HERE5");
 	/* y_out = Ax_ouy */
 	return OK_SCAN_ERR(
 		P->A->apply(P->A->data, x_out, y_out) );

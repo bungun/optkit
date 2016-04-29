@@ -169,12 +169,9 @@ class IndirectProjectorTestCase(OptkitCOperatorTestCase):
 			for op_ in self.op_keys:
 				if self.VERBOSE_TEST:
 					print "test indirect projector alloc, operator type:", op_
-				A_, A, o, freeA = self.gen_operator(op_, lib)
-				self.register_var('A', A, freeA)
-				self.register_var('o', o.contents.data, o.contents.free)
+				A_, A, o = self.register_operator(lib, op_)
 
 				p = lib.indirect_projector(None, None)
-
 				self.assertCall( lib.indirect_projector_alloc(p, o) )
 				self.register_var('p', p, lib.indirect_projector_free)
 
@@ -216,16 +213,13 @@ class IndirectProjectorTestCase(OptkitCOperatorTestCase):
 			for op_ in self.op_keys:
 				if self.VERBOSE_TEST:
 					print "indirect projection, operator type:", op_
-				A_, A, o, freeA = self.gen_operator(op_, lib)
-				self.register_var('A', A, freeA)
-				self.register_var('o', o.contents.data, o.contents.free)
+				A_, A, o = self.register_operator(lib, op_)
 
-				p = lib.indirect_projector(None, None)
-
+				p = lib.indirect_projector(None, None, 0)
 				self.assertCall( lib.indirect_projector_alloc(p, o) )
 				self.register_var('p', p, lib.indirect_projector_free)
-				# self.assertCall( lib.indirect_projector_project(
-						# hdl, p, x, y, x_out, y_out) )
+				self.assertCall( lib.indirect_projector_project(
+						hdl, p, x, y, x_out, y_out) )
 				self.free_var('p')
 
 				self.assertCall( lib.vector_memcpy_av(x_p_ptr, x_out, 1) )
@@ -240,7 +234,7 @@ class IndirectProjectorTestCase(OptkitCOperatorTestCase):
 			# free x, y
 			self.free_vars('x', 'y', 'x_out', 'y_out', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
-"""
+
 class DenseDirectProjectorTestCase(OptkitCTestCase):
 
 	@classmethod
@@ -383,9 +377,7 @@ class GenericIndirectProjectorTestCase(OptkitCOperatorTestCase):
 			for op_ in self.op_keys:
 				if self.VERBOSE_TEST:
 					print "test indirect projector alloc, operator type:", op_
-				_, A, o, freeA = self.gen_operator(op_, lib)
-				self.register_var('A', A, freeA)
-				self.register_var('o', o.contents.data, o.contents.free)
+				_, A, o = self.register_operator(lib, op_)
 
 				p = lib.indirect_projector_generic_alloc(o)
 				self.register_var('p', p.contents.data, p.contents.free)
@@ -432,9 +424,7 @@ class GenericIndirectProjectorTestCase(OptkitCOperatorTestCase):
 			for op_ in self.op_keys:
 				if self.VERBOSE_TEST:
 					print "indirect projection, operator type:", op_
-				A_, A, o, freeA = self.gen_operator(op_, lib)
-				self.register_var('A', A, freeA)
-				self.register_var('o', o.contents.data, o.contents.free)
+				A_, A, o = self.register_operator(lib, op_)
 
 				p = lib.indirect_projector_generic_alloc(o)
 				self.register_var('p', p.contents.data, p.contents.free)
@@ -454,4 +444,3 @@ class GenericIndirectProjectorTestCase(OptkitCOperatorTestCase):
 			# free x, y
 			self.free_vars('x', 'y', 'x_out', 'y_out', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
-"""

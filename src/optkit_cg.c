@@ -356,7 +356,6 @@ ok_status diagonal_preconditioner(operator * op, vector * p, ok_float rho)
 
 	vector_scale(p, 0);
 
-	printf("%s %f\n", "RHO C", rho);
 	for (i = 0; i < op->size2 && !err; ++i) {
 		vector_scale(&ej, kZero);
 		vector_subvector(&ej_sub, &ej, i, 1);

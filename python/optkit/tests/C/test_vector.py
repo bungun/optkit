@@ -9,7 +9,7 @@ class VectorTestCase(OptkitCTestCase):
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.dense_libs = DenseLinsysLibs()
+		self.libs = DenseLinsysLibs()
 
 	@classmethod
 	def tearDownClass(self):
@@ -18,18 +18,9 @@ class VectorTestCase(OptkitCTestCase):
 	def tearDown(self):
 		self.free_all_vars()
 
-	@staticmethod
-	def make_vec_triplet(lib, size_):
-			a = lib.vector(0, 0, None)
-			lib.vector_calloc(a, size_)
-			a_py = np.zeros(size_).astype(lib.pyfloat)
-			a_ptr = a_py.ctypes.data_as(lib.ok_float_p)
-			return a, a_py, a_ptr
-
 	def test_alloc(self):
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -55,8 +46,7 @@ class VectorTestCase(OptkitCTestCase):
 
 	def test_io(self):
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 
 			if lib is None:
 				continue
@@ -66,11 +56,8 @@ class VectorTestCase(OptkitCTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOL = RTOL * len_v**0.5
 
-			v, v_py, v_ptr = self.make_vec_triplet(lib, len_v)
-			w, w_py, w_ptr = self.make_vec_triplet(lib, len_v)
-			self.register_var('v', v, lib.vector_free)
-			self.register_var('w', w, lib.vector_free)
-
+			v, v_py, v_ptr = self.register_vector(lib, len_v, 'v')
+			w, w_py, w_ptr = self.register_vector(lib, len_v, 'w')
 
 			# set_all
 			set_val = 5
@@ -109,20 +96,17 @@ class VectorTestCase(OptkitCTestCase):
 
 				# DON'T FREE u, DATA OWNED BY PYTHON
 
-			self.free_var('v')
-			self.free_var('w')
+			self.free_vars('v', 'w')
 
 	def test_subvector(self):
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
 			len_v = 10 + int(10 * np.random.rand())
 
-			v, v_py, v_ptr = self.make_vec_triplet(lib, len_v)
-			self.register_var('v', v, lib.vector_free)
+			v, v_py, v_ptr = self.register_vector(lib, len_v, 'v')
 
 			offset_sub = 3
 			len_sub = 3
@@ -142,8 +126,7 @@ class VectorTestCase(OptkitCTestCase):
 
 	def test_math(self):
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -157,19 +140,8 @@ class VectorTestCase(OptkitCTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOL = RTOL * len_v**0.5
 
-			v = lib.vector(0, 0, None)
-			self.assertCall( lib.vector_calloc(v, len_v) )
-			self.register_var('v', v, lib.vector_free)
-
-			v_py = np.zeros(len_v).astype(lib.pyfloat)
-			v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
-
-			w = lib.vector(0, 0, None)
-			self.assertCall( lib.vector_calloc(w, len_v) )
-			self.register_var('w', w, lib.vector_free)
-
-			w_py = np.zeros(len_v).astype(lib.pyfloat)
-			w_ptr = w_py.ctypes.data_as(lib.ok_float_p)
+			v, v_py, v_ptr = self.register_vector(lib, len_v, 'v')
+			w, w_py, w_ptr = self.register_vector(lib, len_v, 'w')
 
 			# constant addition
 			self.assertCall( lib.vector_add_constant(v, val1) )
@@ -182,7 +154,7 @@ class VectorTestCase(OptkitCTestCase):
 							 ATOL + RTOL * np.linalg.norm(w_py) )
 
 			# add two vectors
-			lib.vector_add(v, w)
+			self.assertCall( lib.vector_add(v, w) )
 			val1 += val2
 			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
 			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
@@ -301,13 +273,11 @@ class VectorTestCase(OptkitCTestCase):
 			self.assertTrue( wmax[0] - w_py.max() <=
 							 ATOL + RTOL * np.linalg.norm(w_py) )
 
-			self.free_var('v')
-			self.free_var('w')
+			self.free_vars('v', 'w')
 
 	def test_indvector_math(self):
 		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.dense_libs.get(
-					single_precision=single_precision, gpu=gpu)
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
@@ -321,12 +291,7 @@ class VectorTestCase(OptkitCTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOL = RTOL * len_v**0.5
 
-			w = lib.indvector(0, 0, None)
-			self.assertCall( lib.indvector_calloc(w, len_v) )
-			self.register_var('w', w, lib.indvector_free)
-
-			w_py = np.zeros(len_v).astype(c_size_t)
-			w_ptr = w_py.ctypes.data_as(lib.c_size_t_p)
+			w, w_py, w_ptr = self.register_indvector(lib, len_v, 'w')
 
 			# min / max
 			w_py *= 0
