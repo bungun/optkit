@@ -4,10 +4,9 @@ template<typename T>
 ok_status matrix_alloc_(matrix_<T> * A, size_t m, size_t n,
 	enum CBLAS_ORDER ord)
 {
-	if (!A)
-		return OPTKIT_ERROR_UNALLOCATED;
+	OK_CHECK_PTR(A);
 	if (A->data)
-		return OPTKIT_ERROR_OVERWRITE;
+		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
 	A->size1 = m;
 	A->size2 = n;
 	A->data = (T *) malloc(m * n * sizeof(T));
@@ -41,7 +40,7 @@ ok_status matrix_submatrix_(matrix_<T> * A_sub, matrix_<T> * A,
     size_t i, size_t j, size_t n1, size_t n2)
 {
 	if (!A_sub || !A || !A->data)
-		return OPTKIT_ERROR_UNALLOCATED;
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	A_sub->size1 = n1;
 	A_sub->size2 = n2;
 	A_sub->ld = A->ld;
@@ -56,7 +55,7 @@ template<typename T>
 ok_status matrix_row_(vector_<T> * row, matrix_<T> * A, size_t i)
 {
 	if (!row || !A || !A->data)
-		return OPTKIT_ERROR_UNALLOCATED;
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	row->size = A->size2;
 	row->stride = (A->order == CblasRowMajor) ? 1 : A->ld;
 	row->data = (A->order == CblasRowMajor) ?
@@ -69,7 +68,7 @@ template<typename T>
 ok_status matrix_column_(vector_<T> * col, matrix_<T> *A, size_t j)
 {
 	if (!col || !A || !A->data)
-		return OPTKIT_ERROR_UNALLOCATED;
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	col->size = A->size1;
 	col->stride = (A->order == CblasRowMajor) ? A->ld : 1;
 	col->data = (A->order == CblasRowMajor) ?
@@ -82,7 +81,7 @@ template<typename T>
 ok_status matrix_diagonal_(vector_<T> * diag, matrix_<T> * A)
 {
 	if (!diag || !A || !A->data)
-		return OPTKIT_ERROR_UNALLOCATED;
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	diag->data = A->data;
 	diag->stride = A->ld + 1;
 	diag->size = (size_t) (A->size1 <= A->size2) ? A->size1 : A->size2;
@@ -94,7 +93,7 @@ template<typename T>
 ok_status matrix_cast_vector_(vector_<T> * v, matrix_<T> * A)
 {
 	if (!v || !A || !A->data)
-		return OPTKIT_ERROR_UNALLOCATED;
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	v->size = A->size1 * A->size2;
 	v->stride = 1;
 	v->data = A->data;
@@ -106,7 +105,7 @@ ok_status matrix_view_array_(matrix_<T> * A, const T *base, size_t n1,
 	size_t n2, enum CBLAS_ORDER ord)
 {
 	if (!A || !base)
-		return OPTKIT_ERROR_UNALLOCATED;
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	A->size1 = n1;
 	A->size2 = n2;
 	A->data = (T *) base;
@@ -160,8 +159,10 @@ template<typename T>
 ok_status matrix_memcpy_mm_(matrix_<T> * A, const matrix_<T> * B)
 {
 	uint i, j;
+	OK_CHECK_MATRIX(A);
+	OK_CHECK_MATRIX(B);
 	if (A->size1 != B->size1 || A->size2 != B->size2)
-		return OPTKIT_ERROR_DIMENSION_MISMATCH;
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	void (* mset)(matrix_<T> * M, size_t i, size_t j, T x) =
 		(A->order == CblasRowMajor) ?
@@ -185,8 +186,7 @@ ok_status matrix_memcpy_ma_(matrix_<T> * A, const T * B,
 {
 	uint i, j;
 	OK_CHECK_MATRIX(A);
-	if (!B)
-		return OPTKIT_ERROR_UNALLOCATED;
+	OK_CHECK_PTR(B);
 
 	void (* mset)(matrix_<T> * M, size_t i, size_t j, T x) =
 		(A->order == CblasRowMajor) ?
@@ -210,8 +210,7 @@ ok_status matrix_memcpy_am_(T * A, const matrix_<T> * B,
 {
 	uint i, j;
 	OK_CHECK_MATRIX(B);
-	if (!A)
-		return OPTKIT_ERROR_UNALLOCATED;
+	OK_CHECK_PTR(A);
 
 	T (* mget)(const matrix_<T> * M, size_t i, size_t j) =
 		(B->order == CblasRowMajor) ?
@@ -259,6 +258,8 @@ ok_status matrix_scale_left_(matrix_<T> * A, const vector_<T> * v)
 
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_VECTOR(v);
+	if (A->size1 != v->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	for(i = 0; i < A->size1; ++i) {
 		matrix_row_<T>(&row, A, i);
@@ -276,6 +277,8 @@ ok_status matrix_scale_right_(matrix_<T> * A, const vector_<T> * v)
 
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_VECTOR(v);
+	if (A->size2 != v->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	for(i = 0; i < A->size2; ++i) {
 		matrix_column_<T>(&col, A, i);
@@ -365,17 +368,19 @@ ok_status matrix_abs(matrix * A)
 	vector row_col;
 	row_col.data = OK_NULL;
 
+	OK_CHECK_MATRIX(A);
+
 	if (A->order == CblasRowMajor)
 		for(i = 0; i < A->size1 && !err; ++i) {
 			matrix_row(&row_col, A, i);
-			err = vector_abs(&row_col);
+			vector_abs(&row_col);
 		}
 	else
 		for(i = 0; i < A->size2 && !err; ++i) {
 			matrix_column(&row_col, A, i);
-			err = vector_abs(&row_col);
+			vector_abs(&row_col);
 		}
-	return err;
+	return OPTKIT_SUCCESS;
 }
 
 ok_status matrix_pow(matrix * A, const ok_float x)
@@ -390,14 +395,14 @@ ok_status matrix_pow(matrix * A, const ok_float x)
 	if (A->order == CblasRowMajor)
 		for(i = 0; i < A->size1 && !err; ++i) {
 			matrix_row(&row_col, A, i);
-			err = vector_pow(&row_col, x);
+			vector_pow(&row_col, x);
 	}
 	else
 		for(i = 0; i < A->size2 && !err; ++i) {
 			matrix_column(&row_col, A, i);
-			err = vector_pow(&row_col, x);
+			vector_pow(&row_col, x);
 	}
-	return err;
+	return OK_SCAN_ERR( err );
 }
 
 #ifdef __cplusplus

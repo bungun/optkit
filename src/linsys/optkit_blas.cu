@@ -21,12 +21,12 @@ ok_status blas_make_handle(void ** handle)
 	cublasStatus_t status;
 	cublasHandle_t * hdl;
 	hdl = (cublasHandle_t *) malloc(sizeof(cublasHandle_t));
-	status = cublasCreate(hdl);
-	if (status != CUBLAS_STATUS_SUCCESS) {
+	err = OK_SCAN_CUBLAS( cublasCreate(hdl) );
+	if (err) {
 		printf("CUBLAS initialization failed\n");
 		ok_free(hdl);
 		*handle = OK_NULL;
-		return OPTKIT_ERROR_CUBLAS;
+		return err;
 	} else {
 		*handle = (void *) hdl;
 		return OPTKIT_SUCCESS;
