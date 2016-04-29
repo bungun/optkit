@@ -33,10 +33,9 @@ static __global__ void __strided_memcpy(T * x, size_t stride_x, const T * y,
 template<typename T>
 ok_status vector_alloc_(vector_<T> * v, size_t n)
 {
-	if (!v)
-		return OPTKIT_ERROR_UNALLOCATED:
+	OK_CHECK_PTR(v);
 	else if (v->data)
-		return OPTKT_ERROR_OVERWRITE;
+		return OK_SCAN_ERR( OPTKT_ERROR_OVERWRITE );
 	v->size = n;
 	v->stride = 1;
 	return ok_alloc_gpu(v->data, n * sizeof(T));
@@ -69,7 +68,7 @@ ok_status vector_subvector_(vector_<T> * v_out, vector_<T> * v_in,
 	size_t offset, size_t n)
 {
 	if (!v_out || !v_in || !v_in->data)
-		return OPTKIT_ERROR_UNALLOCATED;
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	v_out->size=n;
 	v_out->stride=v_in->stride;
 	v_out->data=v_in->data + offset * v_in->stride;
@@ -80,7 +79,7 @@ template<typename T>
 ok_status vector_view_array_(vector_<T> * v, T * base, size_t n)
 {
 	if (!v || !base)
-		return OPTKIT_ERROR_UNALLOCATED;
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	v->size=n;
 	v->stride=1;
 	v->data=base;
@@ -93,6 +92,9 @@ ok_status vector_memcpy_vv_(vector_<T> * v1, const vector_<T> * v2)
 	uint grid_dim;
 	OK_CHECK_VECTOR(v1);
 	OK_CHECK_VECTOR(v2);
+	if (v1->size != v2->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
 	if ( v1->stride == 1 && v2->stride == 1) {
 		return ok_memcpy_gpu(v1->data, v2->data, v1->size * sizeof(T));
 	} else {
@@ -110,9 +112,7 @@ ok_status vector_memcpy_va_(vector_<T> * v, const T *y, size_t stride_y)
 	ok_status err = OPTKIT_SUCCESS;
 	uint i;
 	OK_CHECK_VECTOR(v);
-	if (!x)
-		return OPTKIT_ERROR_UNALLOCATED;
-
+	OK_CHECK_PTR(y);
 
 	if (v->stride == 1 && stride_y == 1)
 		return ok_memcpy_gpu(v->data, y, v->size * sizeof(T));
@@ -129,8 +129,7 @@ ok_status vector_memcpy_av_(T *x, const vector_<T> *v, size_t stride_x)
 	ok_status err;
 	uint i;
 	OK_CHECK_VECTOR(v);
-	if (!y)
-		return OPTKIT_ERROR_UNALLOCATED;
+	OK_CHECK_PTR(x)
 
 	if (v->stride == 1 && stride_x == 1)
 		return ok_memcpy_gpu(x, v->data, v->size * sizeof(T));
@@ -146,6 +145,7 @@ ok_status vector_indmin_(const vector_<T> * v, const T default_value,
 	size_t * idx)
 {
 	OK_CHECK_VECTOR(v);
+	OK_CHECK_PTR(idx);
 	*idx = __thrust_vector_indmin<T>(v);
 	return OK_STATUS_CUDA;
 
@@ -155,6 +155,7 @@ template<typename T>
 ok_status vector_min_(const vector_<T> * v, const T default_value, T * minval)
 {
 	OK_CHECK_VECTOR(v);
+	OK_CHECK_PTR(minval);
 	*minval = __thrust_vector_min<T>(v);
 	return OK_STATUS_CUDA;
 }
@@ -163,6 +164,7 @@ template<typename T>
 ok_status vector_max_(const vector_<T> * v, const T default_value, T * maxval)
 {
 	OK_CHECK_VECTOR(v);
+	OK_CHECK_PTR(maxval);
 	*maxval = __thrust_vector_max<T>(v);
 	return OK_STATUS_CUDA;
 }
@@ -218,66 +220,93 @@ ok_status vector_scale(vector * v, ok_float x)
 
 ok_status vector_add(vector * v1, const vector * v2)
 {
+	OK_CHECK_VECTOR(v1);
+	OK_CHECK_VECTOR(v2);
+	if (v1->size != v2->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
 	__thrust_vector_add(v1, v2);
 	return OK_STATUS_CUDA;
 }
 
 ok_status vector_sub(vector * v1, const vector * v2)
 {
+	OK_CHECK_VECTOR(v1);
+	OK_CHECK_VECTOR(v2);
+	if (v1->size != v2->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
 	__thrust_vector_sub(v1, v2);
 	return OK_STATUS_CUDA;
 }
 
 ok_status vector_mul(vector * v1, const vector * v2)
 {
+	OK_CHECK_VECTOR(v1);
+	OK_CHECK_VECTOR(v2);
+	if (v1->size != v2->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
 	__thrust_vector_mul(v1, v2);
 	return OK_STATUS_CUDA;
 }
 
 ok_status vector_div(vector * v1, const vector * v2)
 {
+	OK_CHECK_VECTOR(v1);
+	OK_CHECK_VECTOR(v2);
+	if (v1->size != v2->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
 	__thrust_vector_div(v1, v2);
 	return OK_STATUS_CUDA;
 }
 
 ok_status vector_add_constant(vector * v, const ok_float x)
 {
+	OK_CHECK_VECTOR(v);
 	__thrust_vector_add_constant(v, x);
 	return OK_STATUS_CUDA;
 }
 
 ok_status vector_abs(vector * v)
 {
+	OK_CHECK_VECTOR(v);
 	__thrust_vector_abs(v);
 	return OK_STATUS_CUDA;
 }
 
 ok_status vector_recip(vector * v)
 {
+	OK_CHECK_VECTOR(v);
 	__thrust_vector_recip(v);
 	return OK_STATUS_CUDA;
 }
 
 ok_status vector_safe_recip(vector * v)
 {
+	OK_CHECK_VECTOR(v);
 	__thrust_vector_safe_recip(v);
 	return OK_STATUS_CUDA;
 }
 
 ok_status vector_sqrt(vector * v)
 {
+	OK_CHECK_VECTOR(v);
 	__thrust_vector_sqrt(v);
 	return OK_STATUS_CUDA;
 }
 
 ok_status vector_pow(vector * v, const ok_float x)
 {
+	OK_CHECK_VECTOR(v);
 	__thrust_vector_pow(v, x);
 	return OK_STATUS_CUDA;
 }
 
 ok_status vector_exp(vector * v)
 {
+	OK_CHECK_VECTOR(v);
 	__thrust_vector_exp(v);
 	return OK_STATUS_CUDA;
 }
