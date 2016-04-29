@@ -34,7 +34,7 @@ template<typename T>
 ok_status vector_alloc_(vector_<T> * v, size_t n)
 {
 	OK_CHECK_PTR(v);
-	else if (v->data)
+	if (v->data)
 		return OK_SCAN_ERR( OPTKT_ERROR_OVERWRITE );
 	v->size = n;
 	v->stride = 1;
