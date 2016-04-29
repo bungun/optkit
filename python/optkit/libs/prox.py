@@ -50,6 +50,7 @@ def attach_prox_ccalls(lib, single_precision=False):
 		attach_prox_ctypes(lib, single_precision)
 
 	ok_float = lib.ok_float
+	ok_float_p = lib.ok_float_p
 	vector_p = lib.vector_p
 	function_p = lib.function_p
 	function_vector_p = lib.function_vector_p
@@ -67,22 +68,23 @@ def attach_prox_ccalls(lib, single_precision=False):
 	lib.function_vector_print.argtypes = [function_vector_p]
 
 	## return values
-	lib.function_vector_alloc.restype = None
-	lib.function_vector_calloc.restype = None
-	lib.function_vector_free.restype = None
-	lib.function_vector_memcpy_va.restype = None
-	lib.function_vector_memcpy_av.restype = None
-	lib.function_vector_mul.restype = None
-	lib.function_vector_div.restype = None
-	lib.function_vector_print.restype = None
+	lib.function_vector_alloc.restype = c_uint
+	lib.function_vector_calloc.restype = c_uint
+	lib.function_vector_free.restype = c_uint
+	lib.function_vector_memcpy_va.restype = c_uint
+	lib.function_vector_memcpy_av.restype = c_uint
+	lib.function_vector_mul.restype = c_uint
+	lib.function_vector_div.restype = c_uint
+	lib.function_vector_print.restype = c_uint
 
 	# Prox & Function evaluation
 	# --------------------------
 	## arguments
-	lib.ProxEvalVector.argtypes = [function_vector_p, ok_float, vector_p,
-								   vector_p]
-	lib.FuncEvalVector.argtypes = [function_vector_p, vector_p]
+	lib.prox_eval_vector.argtypes = [function_vector_p, ok_float, vector_p,
+									 vector_p]
+	lib.function_eval_vector.argtypes = [function_vector_p, vector_p,
+										 ok_float_p]
 
 	## return values
-	lib.ProxEvalVector.restype = None
-	lib.FuncEvalVector.restype = ok_float
+	lib.prox_eval_vector.restype = c_uint
+	lib.function_eval_vector.restype = c_uint

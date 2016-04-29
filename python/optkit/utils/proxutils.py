@@ -29,47 +29,36 @@ from numpy import log, exp, cos, arccos, sign, inf, nan,\
 """
 Python function/prox eval
 """
-def lambertw(x):
+def lambertw_exp(x):
 	"""
+	evaluate lambertW(exp(x))
+
 	ref: http://keithbriggs.info/software/LambertW.c
 	"""
-	EM1 = 0.3678794411714423215955237701614608
-  	E = 2.7182818284590452353602874713526625
-  	if x == inf or x == nan or x < -EM1:
-  		raise ValueError("bad argument ({}) to lambertw.\n"
-  						"dom[lambert w]=[-{},infty)".format(
-  						x,EM1))
-  	elif x == 0:
-  		return 0
-  	elif x < -EM1 + 1e-4:
-  		q = x + EM1
-		w = -1 \
-		+2.331643981597124203363536062168 * pow(q,0.5) 	\
-		-1.812187885639363490240191647568 * q 			\
-		+1.936631114492359755363277457668 * pow(q,1.5) 	\
-		-2.353551201881614516821543561516 * pow(q,2)	\
-		+3.066858901050631912893148922704 * pow(q,2.5)	\
-		-4.175335600258177138854984177460 * pow(q,3)	\
-		+5.858023729874774148815053846119 * pow(q,3.5)	\
-		-8.401032217523977370984161688514 * pow(q,4)
-		return w
-  	else:
-  		if x < 1:
-  			p = pow(2*(E*x+1),0.5)
-  			w = (-1+p*(1+p*(-1./3.+p*11./72.)))
-  		else:
-  			w = log(x)
-	  	if x > 3:
-	  		w = -log(w)
-	  	for i in xrange(10):
-	  		e=exp(w)
-	  		t = w*e-x
-	  		p = w+1
-	  		t /= (e*p-0.5*(p+1)*(t/p))
-	  		w -= t
-	  	return w
 
-def cubicsolve(p,q,r):
+	if x > 100:
+		# approximation for x in [100, 700]
+		logx = log(x)
+		return -0.36962844 + x - 0.97284858 * logx + 1.3437973 / logx
+	elif x < 0:
+		p = (2 * exp(x + 1) + 1)**0.5
+		w = -1 + p * (1 + p *(-1. / 3 + p * 11. / 72))
+	else:
+		w = x
+
+	if x > 1.098612288668110:
+		w = -log(w)
+
+	for i in xrange(10):
+		e = exp(w)
+		t = w * e - exp(x)
+		p = w + 1
+		t /= e * p - 0.5 * (p + 1) * t / p
+		w -= t
+
+	return w
+
+def cubicsolve(p, q, r):
 	"""
 	Find the root of a cubic x^3 + px^2 + qx + r = 0 with a single positive root
 	ref: http://math.stackexchange.com/questions/60376
@@ -199,9 +188,9 @@ def prox_eval_python(f, rho, x):
 		if func =='Abs':
 			return max(xi - 1./rhoi, 0) + min(xi + 1./rhoi, 0)
 		elif func == 'NegEntr':
-			return lambertw(exp(rhoi*xi - 1) * rhoi) / rhoi
+			return (lambertw_exp(rhoi*xi - 1) * log(rhoi)) / rhoi
 		elif func == 'Exp':
-			return xi - lambertw(exp(xi) / rhoi)
+			return xi - lambertw_exp(xi - log(rhoi))
 		elif func == 'Huber':
 			return xi * rhoi / (1.+rhoi) if abs(xi) < (1 + 1./rhoi) \
 				else xi - sign(xi) / rhoi

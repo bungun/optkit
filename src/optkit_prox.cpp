@@ -1,21 +1,21 @@
 #include "optkit_prox.hpp"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void function_vector_alloc(FunctionVector * f, size_t n)
+template<typename T>
+ok_status function_vector_alloc_(function_vector_<T> * f, size_t n)
 {
-	if (f->objectives != OK_NULL) ok_free(f->objectives);
+	OK_CHECK_PTR(f);
+	if (f->objectives)
+		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
 	f->size = n;
-	f->objectives = (FunctionObj *) malloc(n * sizeof(FunctionObj));
+	f->objectives = (function_t_<T> *) malloc(n * sizeof(*f->objectives));
+	return OPTKIT_SUCCESS;
 }
 
-void function_vector_calloc(FunctionVector * f, size_t n)
+template<typename T>
+ok_status function_vector_calloc_(function_vector_<T> * f, size_t n)
 {
 	size_t i;
-
-	function_vector_alloc(f, n);
+	OK_RETURNIF_ERR( function_vector_alloc(f, n) );
 
 	#ifdef _OPENMP
 	#pragma omp parallel for
@@ -28,80 +28,97 @@ void function_vector_calloc(FunctionVector * f, size_t n)
 		f->objectives[i].d = kZero;
 		f->objectives[i].e = kZero;
 	}
+	return OPTKIT_SUCCESS;
 }
 
-void function_vector_free(FunctionVector * f)
+template<typename T>
+ok_status function_vector_free_(function_vector_<T> * f)
 {
-	if (f->objectives != OK_NULL) ok_free(f->objectives);
+	OK_CHECK_FNVECTOR(f);
 	f->size = 0;
+	ok_free(f->objectives);
+	return OPTKIT_SUCCESS;
 }
 
-void function_vector_view_array(FunctionVector * f, FunctionObj * h, size_t n)
+template<typename T>
+ok_status function_vector_view_array_(function_vector_<T> * f,
+	function_t_<T> * h, size_t n)
 {
-	f->size=n;
-	f->objectives = (FunctionObj *) h;
+	OK_CHECK_FNVECTOR(f);
+	OK_CHECK_PTR(h);
+	f->size = n;
+	f->objectives = h;
+	return OPTKIT_SUCCESS;
 }
 
-void function_vector_memcpy_va(FunctionVector * f, FunctionObj * h)
+template<typename T>
+ok_status function_vector_memcpy_va_(function_vector_<T> * f,
+	function_t_<T> * h)
 {
-	memcpy(f->objectives, h, f->size * sizeof(FunctionObj));
+	OK_CHECK_FNVECTOR(f);
+	OK_CHECK_PTR(h);
+	memcpy(f->objectives, h, f->size * sizeof(*h));
+	return OPTKIT_SUCCESS;
 }
 
-void function_vector_memcpy_av(FunctionObj * h, FunctionVector * f)
+template<typename T>
+ok_status function_vector_memcpy_av_(function_t_<T> * h,
+	function_vector_<T> * f)
 {
-	memcpy(h, f->objectives, f->size * sizeof(FunctionObj));
+	OK_CHECK_FNVECTOR(f);
+	OK_CHECK_PTR(h);
+	memcpy(h, f->objectives, f->size * sizeof(*h));
+	return OPTKIT_SUCCESS;
 }
 
-void function_vector_mul(FunctionVector * f, const vector * v)
+template<typename T>
+ok_status function_vector_mul_(function_vector_<T> * f, const vector_<T> * v)
 {
-	size_t i;
-	vector * el = OK_NULL;
+	OK_CHECK_FNVECTOR(f);
+	OK_CHECK_VECTOR(v);
 
-	el = (vector *) malloc(sizeof(*el));
-	el->size = f->size;
-	el->stride = sizeof(FunctionObj) / sizeof(ok_float);
+	vector el;
 
-	el->data = &(f->objectives->a);
-	for (i = 0; i < f->size; ++i)
-		el->data[i * el->stride] *= v->data[i * v->stride];
+	if (f->size != v->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	el->data = &(f->objectives->d);
-	for (i = 0; i < f->size; ++i)
-		el->data[i * el->stride] *= v->data[i * v->stride];
+	el.size = f->size;
+	el.stride = sizeof(function_t_<T>) / sizeof(T);
 
-	el->data = &(f->objectives->e);
-	for (i = 0; i < f->size; ++i)
-		el->data[i * el->stride] *= v->data[i * v->stride];
+	el.data = &(f->objectives->a);
+	OK_RETURNIF_ERR( vector_mul(&el, v) );
 
-	ok_free(el);
+	el.data = &(f->objectives->d);
+	OK_RETURNIF_ERR( vector_mul(&el, v) );
+
+	el.data = &(f->objectives->e);
+	return OK_SCAN_ERR( vector_mul(&el, v) );
 }
 
-void function_vector_div(FunctionVector * f, const vector * v)
+template<typename T>
+ok_status function_vector_div_(function_vector_<T> * f, const vector_<T> * v)
 {
-	size_t i;
-	vector * el = OK_NULL;
+	OK_CHECK_FNVECTOR(f);
+	OK_CHECK_VECTOR(v);
+	vector el;
 
-	el = (vector *) malloc(sizeof(*el));
-	el->size = f->size;
-	el->stride = sizeof(FunctionObj) / sizeof(ok_float);
+	el.size = f->size;
+	el.stride = sizeof(function_t_<T>) / sizeof(T);
 
-	el->data = &(f->objectives->a);
-	for (i = 0; i < f->size; ++i)
-		el->data[i * el->stride] /= v->data[i * v->stride];
+	el.data = &(f->objectives->a);
+	OK_RETURNIF_ERR( vector_div(&el, v) );
 
-	el->data = &(f->objectives->d);
-	for (i = 0; i < f->size; ++i)
-		el->data[i * el->stride] /= v->data[i * v->stride];
+	el.data = &(f->objectives->d);
+	OK_RETURNIF_ERR( vector_div(&el, v) );
 
-	el->data = &(f->objectives->e);
-	for (i = 0; i < f->size; ++i)
-		el->data[i * el->stride] /= v->data[i * v->stride];
-
-	ok_free(el);
+	el.data = &(f->objectives->e);
+	return OK_SCAN_ERR( vector_div(&el, v) );
 }
 
-void function_vector_print(FunctionVector * f)
+template<typename T>
+ok_status function_vector_print_(function_vector_<T> * f)
 {
+	OK_CHECK_FNVECTOR(f);
 	size_t i;
 	const char * fmt =
 		"h: %i, a: %0.2e, b: %0.2e, c: %0.2e, d: %0.2e, e: %0.2e\n";
@@ -109,32 +126,92 @@ void function_vector_print(FunctionVector * f)
 		printf(fmt, (int) f->objectives[i].h, f->objectives[i].a,
 			f->objectives[i].b, f->objectives[i].c,
 			f->objectives[i].d, f->objectives[i].e);
+	return OPTKIT_SUCCESS;
 }
 
-void ProxEvalVector(const FunctionVector * f, ok_float rho,
-			  const vector * x_in, vector * x_out)
+template<typename T>
+ok_status prox_eval_vector_(const function_vector_<T> * f, T rho,
+			  const vector_<T> * x_in, vector_<T> * x_out)
 {
+	OK_CHECK_FNVECTOR(f);
+	OK_CHECK_VECTOR(x_in);
+	OK_CHECK_VECTOR(x_out);
+	if (f->size != x_in->size || f->size != x_out->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+	if (rho <= 0)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DOMAIN );
+
 	uint i;
 	#ifdef _OPENMP
 	#pragma omp parallel for
 	#endif
 	for (i = 0; i < f->size; ++i)
-		x_out->data[i * x_out->stride] = ProxEval(&f->objectives[i],
+		x_out->data[i * x_out->stride] = ProxEval<T>(&f->objectives[i],
 			x_in->data[i * x_in->stride], rho);
+
+	return OPTKIT_SUCCESS;
 }
 
-ok_float FuncEvalVector(const FunctionVector * f, const vector * x)
+template<typename T>
+ok_status function_eval_vector_(const function_vector_<T> * f,
+	const vector_<T> * x, T * fn_val)
 {
-	ok_float sum = 0;
+	OK_CHECK_FNVECTOR(f);
+	OK_CHECK_VECTOR(x);
+	OK_CHECK_PTR(fn_val);
+	if (f->size != x->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
+	T sum = 0;
 	uint i;
 	#ifdef _OPENMP
 	#pragma omp parallel for reduction(+:sum)
 	#endif
 	for (i = 0; i < f->size; ++i)
-		sum += FuncEval(&f->objectives[i], x->data[i * x->stride]);
-	return sum;
+		sum += FuncEval<T>(&f->objectives[i], x->data[i * x->stride]);
+	*fn_val = sum;
+
+	return OPTKIT_SUCCESS;
 }
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+ok_status function_vector_alloc(function_vector * f, size_t n)
+	{ return function_vector_alloc_<ok_float>(f, n); }
+
+ok_status function_vector_calloc(function_vector * f, size_t n)
+	{ return function_vector_calloc_<ok_float>(f, n); }
+
+ok_status function_vector_free(function_vector * f)
+	{ return function_vector_free_<ok_float>(f); }
+
+ok_status function_vector_view_array(function_vector * f, function_t * h,
+	size_t n)
+	{ return function_vector_view_array_<ok_float>(f, h, n); }
+
+ok_status function_vector_memcpy_va(function_vector * f, function_t * h)
+	{ return function_vector_memcpy_va_<ok_float>(f, h); }
+
+ok_status function_vector_memcpy_av(function_t * h, function_vector * f)
+	{ return function_vector_memcpy_av_<ok_float>(h, f); }
+
+ok_status function_vector_mul(function_vector * f, const vector * v)
+	{ return function_vector_mul_<ok_float>(f, v); }
+
+ok_status function_vector_div(function_vector * f, const vector * v)
+	{ return function_vector_div_<ok_float>(f, v); }
+
+ok_status function_vector_print(function_vector *f)
+	{ return function_vector_print_<ok_float>(f); }
+
+ok_status prox_eval_vector(const function_vector * f, ok_float rho,
+	const vector * x_in, vector * x_out)
+	{ return prox_eval_vector_<ok_float>(f, rho, x_in, x_out); }
+ok_status function_eval_vector(const function_vector * f, const vector * x,
+	ok_float * fn_val)
+	{ return function_eval_vector_<ok_float>(f, x, fn_val); }
 
 #ifdef __cplusplus
 }

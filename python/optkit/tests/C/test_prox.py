@@ -75,14 +75,6 @@ class ProxTestCase(OptkitCTestCase):
 	def tearDown(self):
 		self.free_all_vars()
 
-	@staticmethod
-	def make_prox_triplet(lib, size_):
-		f = lib.function_vector(0, None)
-		lib.function_vector_calloc(f, size_)
-		f_py = np.zeros(size_, dtype=lib.function)
-		f_ptr = f_py.ctypes.data_as(lib.function_p)
-		return f, f_py, f_ptr
-
 	def test_alloc(self):
 		m, n = self.shape
 
@@ -93,17 +85,17 @@ class ProxTestCase(OptkitCTestCase):
 
 			# calloc
 			f = lib.function_vector(0, None)
-			self.assertEqual(f.size, 0)
+			self.assertEqual( f.size, 0 )
 
-			lib.function_vector_calloc(f, m)
+			self.assertCall( lib.function_vector_calloc(f, m) )
 			self.register_var('f', f, lib.function_vector_free)
-			self.assertEqual(f.size, m)
+			self.assertEqual( f.size, m )
 
 			# free
 			self.free_var('f')
-			self.assertEqual(f.size, 0)
+			self.assertEqual( f.size, 0 )
 
-			self.assertEqual(lib.ok_device_reset(), 0)
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_io(self):
 		m, n = self.shape
@@ -124,8 +116,7 @@ class ProxTestCase(OptkitCTestCase):
 			ATOLM = RTOL * m**0.5
 			ATOLN = RTOL * n**0.5
 
-			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
-			self.register_var('f', f, lib.function_vector_free)
+			f, f_py, f_ptr = self.register_fnvector(lib, m, 'f')
 
 			# initialize to default values
 			hlast = 0
@@ -155,9 +146,11 @@ class ProxTestCase(OptkitCTestCase):
 				self.assertTrue( np.linalg.norm(fc) <= ATOLM )
 				self.assertTrue( np.linalg.norm(fd) <= ATOLM )
 				self.assertTrue( np.linalg.norm(fe) <= ATOLM )
+
 				# memcpy af
-				lib.function_vector_memcpy_av(f_ptr, f)
+				self.assertCall( lib.function_vector_memcpy_av(f_ptr, f) )
 				f_list = [lib.function(*f_) for f_ in f_py]
+
 				fh = [f_.h - hlast for f_ in f_list]
 				fa = [f_.a - alast for f_ in f_list]
 				fb = [f_.b - blast for f_ in f_list]
@@ -171,13 +164,12 @@ class ProxTestCase(OptkitCTestCase):
 				self.assertTrue( np.linalg.norm(fd) <= ATOLM )
 				self.assertTrue( np.linalg.norm(fe) <= ATOLM )
 
-
 				# memcpy fa
 				for i in xrange(m):
 					f_py[i] = lib.function(hval, a, b, c, d, e)
 
-				lib.function_vector_memcpy_va(f, f_ptr)
-				lib.function_vector_memcpy_av(f_ptr, f)
+				self.assertCall( lib.function_vector_memcpy_va(f, f_ptr) )
+				self.assertCall( lib.function_vector_memcpy_av(f_ptr, f) )
 
 				f_list = [lib.function(*f_) for f_ in f_py]
 				fh = [f_.h - hval for f_ in f_list]
@@ -193,8 +185,6 @@ class ProxTestCase(OptkitCTestCase):
 				self.assertTrue( np.linalg.norm(fd) <= ATOLM )
 				self.assertTrue( np.linalg.norm(fe) <= ATOLM )
 
-
-
 				hlast = hval
 				alast = a
 				blast = b
@@ -203,6 +193,7 @@ class ProxTestCase(OptkitCTestCase):
 				elast = e
 
 			self.free_var('f')
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_math(self):
 		m, n = self.shape
@@ -225,11 +216,11 @@ class ProxTestCase(OptkitCTestCase):
 			ATOLM = RTOL * m**0.5
 			ATOLN = RTOL * n**0.5
 
-			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
+			f, f_py, f_ptr = self.register_fnvector(lib, m, 'f')
 			self.register_var('f', f, lib.function_vector_free)
 
 			v = lib.vector(0, 0, None)
-			lib.vector_calloc(v, m)
+			self.assertCall( lib.vector_calloc(v, m) )
 			self.register_var('v', v, lib.vector_free)
 
 			v_py = np.zeros(m).astype(lib.pyfloat)
@@ -237,13 +228,13 @@ class ProxTestCase(OptkitCTestCase):
 
 			for i in xrange(m):
 				f_py[i] = lib.function(hval, a[i], b[i], c[i], d[i], e[i])
-			lib.function_vector_memcpy_va(f, f_ptr)
+			self.assertCall( lib.function_vector_memcpy_va(f, f_ptr) )
 			v_py[:] = np.random.rand(m)
-			lib.vector_memcpy_va(v, v_ptr, 1)
+			self.assertCall( lib.vector_memcpy_va(v, v_ptr, 1) )
 
 			# mul
-			lib.function_vector_mul(f, v)
-			lib.function_vector_memcpy_av(f_ptr, f)
+			self.assertCall( lib.function_vector_mul(f, v) )
+			self.assertCall( lib.function_vector_memcpy_av(f_ptr, f) )
 			for i in xrange(m):
 				a[i] *= v_py[i]
 				d[i] *= v_py[i]
@@ -268,8 +259,8 @@ class ProxTestCase(OptkitCTestCase):
 							 ATOLM + RTOL * np.linalg.norm(e) )
 
 			# div
-			lib.function_vector_div(f, v)
-			lib.function_vector_memcpy_av(f_ptr, f)
+			self.assertCall( lib.function_vector_div(f, v) )
+			self.assertCall( lib.function_vector_memcpy_av(f_ptr, f) )
 			for i in xrange(m):
 				a[i] /= v_py[i]
 				d[i] /= v_py[i]
@@ -293,8 +284,8 @@ class ProxTestCase(OptkitCTestCase):
 			self.assertTrue( np.linalg.norm(fe - e) <=
 							 ATOLM + RTOL * np.linalg.norm(e) )
 
-			self.free_var('f')
-			self.free_var('v')
+			self.free_vars('f', 'v')
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_eval(self):
 		m, n = self.shape
@@ -316,42 +307,37 @@ class ProxTestCase(OptkitCTestCase):
 			ATOLM = RTOL * m**0.5
 			ATOLN = RTOL * n**0.5
 
-			f, f_py, f_ptr = self.make_prox_triplet(lib, m)
-			self.register_var('f', f, lib.function_vector_free)
-
-			x = lib.vector(0, 0, None)
-			x_py = np.zeros(m).astype(lib.pyfloat)
-			x_ptr = x_py.ctypes.data_as(lib.ok_float_p)
-			lib.vector_calloc(x, m)
-			self.register_var('x', x, lib.vector_free)
-
-			xout = lib.vector(0, 0, None)
-			xout_py = np.zeros(m).astype(lib.pyfloat)
-			xout_ptr = xout_py.ctypes.data_as(lib.ok_float_p)
-			lib.vector_calloc(xout, m)
-			self.register_var('xout', xout, lib.vector_free)
+			f, f_py, f_ptr = self.register_fnvector(lib, m, 'f')
+			x, x_py, x_ptr = self.register_vector(lib, m, 'x')
+			xout, xout_py, xout_ptr = self.register_vector(lib, m, 'xout')
 
 			# populate
 			x_py += x_rand
-			lib.vector_memcpy_va(x, x_ptr, 1)
+			self.assertCall( lib.vector_memcpy_va(x, x_ptr, 1) )
 
 			for hkey, hval in lib.function_enums.dict.items():
 				if self.VERBOSE_TEST:
 					print hkey
 
+				print hkey
 				# avoid domain errors with randomly generated data
 				if 'Log' in hkey or 'Exp' in hkey or 'Entr' in hkey:
 					continue
 
 				for i in xrange(m):
 					f_py[i] = lib.function(hval, a[i], b[i], c[i], d[i], e[i])
-				lib.function_vector_memcpy_va(f, f_ptr)
+				self.assertCall( lib.function_vector_memcpy_va(f, f_ptr) )
 
 				# function evaluation
 				f_list = [lib.function(*f_) for f_ in f_py]
 				funcval_py = func_eval_python(f_list, x_rand)
-				funcval_c = lib.FuncEvalVector(f, x)
-				if funcval_c in (np.inf, np.nan):
+
+				funcval_c = np.zeros(1).astype(lib.pyfloat)
+				funcval_c_ptr = funcval_c.ctypes.data_as(lib.ok_float_p)
+				self.assertCall( lib.function_eval_vector(f, x,
+														  funcval_c_ptr) )
+
+				if funcval_c[0] in (np.inf, np.nan):
 					self.assertTrue( 1 )
 				else:
 					self.assertTrue( np.abs(funcval_py - funcval_c) <=
@@ -360,11 +346,10 @@ class ProxTestCase(OptkitCTestCase):
 				# proximal operator evaluation, random rho
 				rho = 5 * np.random.rand()
 				prox_py = prox_eval_python(f_list, rho, x_rand)
-				lib.ProxEvalVector(f, rho, x, xout)
-				lib.vector_memcpy_av(xout_ptr, xout, 1)
+				self.assertCall( lib.prox_eval_vector(f, rho, x, xout) )
+				self.assertCall( lib.vector_memcpy_av(xout_ptr, xout, 1) )
 				self.assertTrue( np.linalg.norm(xout_py - prox_py) <=
 								 ATOLM + RTOL * np.linalg.norm(prox_py) )
 
-			self.free_var('f')
-			self.free_var('x')
-			self.free_var('xout')
+			self.free_vars('f', 'x', 'xout')
+			self.assertCall( lib.ok_device_reset() )
