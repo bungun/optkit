@@ -113,6 +113,20 @@ class OptkitCTestCase(OptkitTestCase):
 			raise ValueError(
 					'library {} cannot allocate a sparse handle'.format(lib))
 
+	def register_fnvector(self, lib, size, name):
+		if 'function_vector_calloc' in lib.__dict__:
+			f_ = zeros(size, dtype=lib.function)
+			f_ptr = f_.ctypes.data_as(lib.function_p)
+
+			f = lib.function_vector(0, None)
+			self.assertCall( lib.function_vector_calloc(f, size) )
+			self.register_var(name, f, lib.function_vector_free)
+			return f, f_, f_ptr
+
+		else:
+			raise ValueError(
+					'library {} cannot allocate function vector'.format(lib))
+
 class OptkitCOperatorTestCase(OptkitCTestCase):
 	# A_test = None
 	# A_test_sparse = None
