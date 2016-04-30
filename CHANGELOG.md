@@ -1,34 +1,35 @@
 ###v0.1 (targets)
 - TODO: OMP parallelization for C vector operations
 - TODO: documentation
+- TODO: continuous integration
 - TODO: Cython bindings
-
-###v0.0.5 (next release)
-- TODO: error checking throughout GPU calls (and mirrored for CPU)
-- TODO: license
-- TODO: cite POGS
-- TODO: append version numbers to .so, check version numbers when loading libs in python
 - TODO: operator typesafe equilibration
 - TODO: operator IO
 
+###v0.0.5 (next release)
+- TODO: license
+- TODO: cite POGS
+- TODO: append version numbers to .so, check version numbers when loading libs in python
+
 ###v0.0.4 (beta)
-- migrated tests to unittests
-- eliminated slow Python implementations (to be replaced with Cython implementations in future, potentially)
-- abstract linear operators
-- operator implementations: dense, sparse, diagonal
+- Migrate tests to unittests
+- Eliminate slow Python implementations (to be replaced with Cython implementations in future, potentially)
+- Abstract linear operators
+- Operator implementations: dense, sparse, diagonal
 - CGLS, preconditioned CG methods for abstract operators
-- operator equilibration for: dense, sparse
-- approximate projection (with CGLS) for abstract linear operators
-- operator POGS for: dense, sparse
-- matrix, vector reductions (min, max, indmin); 
-- memory cleanup when tests fail 
-- kmeans clustering on rows of dense matrices
+- Pperator equilibration for: dense, sparse
+- Approximate projection (with CGLS) for abstract linear operators
+- Operator POGS for: dense, sparse
+- Matrix, vector reductions (min, max, indmin); 
+- Memory cleanup when tests fail 
+- K-means clustering on rows of dense matrices
+- Error checking throughout C libraries (all calls that don't return a pointer return an error code)
 
 ###v0.0.3 (current)
 - CPU Sparse Linear Algebra
 - GPU Sparse Linear Algebra
 - Python Sparse Linear Algebra bindings
-- Separated FunctionVector (python implementation of POGS) from Objective (python wrapper for C implementation of POGS)
+- Separate FunctionVector (python implementation of POGS) from Objective (python wrapper for C implementation of POGS)
 - Python backend counts allocations and calls cudaDeviceReset() when allocated blas handles and PogsSolver go out of scope (purpose: for scripts creating multiple PogsSolver instances, can delete solver objects to free GPU memory)
 - Option to suppress [y, mu, nu] from POGS solver output (C and Py)
 - Version number calls in C, Py
@@ -68,7 +69,6 @@
 
 ###v++
 - adaptive alpha (line search) for POGS
-- change Python bindings from ctypes -> Cython?
 - DCP ADMM
 - installation manifest (text or yaml) for clean uninstall
 - operator l-BFGS preconditioner
