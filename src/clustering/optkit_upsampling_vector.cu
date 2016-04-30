@@ -41,8 +41,7 @@ ok_status upsamplingvec_alloc(upsamplingvec * u, size_t size1, size_t size2)
 
 ok_status upsamplingvec_free(upsamplingvec * u)
 {
-	if (!u || !(u->indices))
-		return OPTKIT_ERROR_UNALLOCATED;
+	OK_CHECK_UPSAMPLINGVEC(u);
 	ok_free(u->vec.data);
 	memset(u, 0, sizeof(*u));
 	return OPTKIT_SUCCESS;
@@ -51,21 +50,20 @@ ok_status upsamplingvec_free(upsamplingvec * u)
 ok_status upsamplingvec_check_bounds(const upsamplingvec * u)
 {
 	size_t idx;
-	ok_status err = OPTKIT_SUCCESS;
-
-	err = indvector_max(&u->vec, &idx);
+	OK_CHECK_UPSAMPLINGVEC(u);
+	OK_RETURNIF_ERR( indvector_max(&u->vec, &idx) );
 	if (idx >= u->size2)
-		OK_MAX_ERR( err, OPTKIT_ERROR_DIMENSION_MISMATCH )
-
-	return err;
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+	else
+		return OPTKIT_SUCCESS;
 }
 
 ok_status upsamplingvec_update_size(upsamplingvec * u)
 {
-	if (!u || !u->indices)
-		return OPTKIT_ERROR_UNALLOCATED;
-
-	return indvector_max(&u->vec, &u->size2);
+	OK_CHECK_UPSAMPLINGVEC(u);
+	ok_status err = indvector_max(&u->vec, &u->size2);
+	++u->size2;
+	return err;
 }
 
 
@@ -73,7 +71,7 @@ ok_status upsamplingvec_subvector(upsamplingvec * usub, upsamplingvec * u,
 	size_t offset1, size_t length1, size_t size2)
 {
 	if (!u || !u->indices || !usub)
-		return OPTKIT_ERROR_UNALLOCATED;
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
 	OK_RETURNIF_ERR( indvector_subvector(&usub->vec, &u->vec, offset1,
 		length1) );
@@ -124,6 +122,10 @@ ok_status upsamplingvec_mul_matrix(const enum CBLAS_TRANSPOSE transU,
 	const ok_float alpha, upsamplingvec * u, matrix * M_in, ok_float beta,
 	matrix * M_out)
 {
+	OK_CHECK_UPSAMPLINGVEC(u);
+	OK_CHECK_MATRIX(M_in);
+	OK_CHECK_MATRIX(M_out);
+
 	size_t dim_in1 = (transI == CblasNoTrans) ? M_in->size1 : M_in->size2;
 	size_t dim_in2 = (transI == CblasNoTrans) ? M_in->size2 : M_in->size1;
 	size_t dim_out1 = (transO == CblasNoTrans) ? M_out->size1 : M_out->size2;
@@ -137,12 +139,9 @@ ok_status upsamplingvec_mul_matrix(const enum CBLAS_TRANSPOSE transU,
 	dim3 grid_dim(grid_dim_x, grid_dim_y, 1u);
 	dim3 block_dim(kBlockSize2D, kBlockSize2D, 1u);
 
-	if ((!u || !M_in || !M_out) ||
-	    (!u->indices || !M_in->data ||!M_out->data))
-		return OPTKIT_ERROR_UNALLOCATED;
 	if (!upsampling_dims_compatible(transU, u, dim_in1, dim_in2,
 		dim_out1, dim_out2))
-		return OPTKIT_ERROR_DIMENSION_MISMATCH;
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	row_stride_in =
 		((transI == CblasNoTrans) == (M_in->order == CblasRowMajor)) ?
@@ -182,13 +181,13 @@ static __global__ void __upsampling_count(size_t * indices,
 
 ok_status upsamplingvec_count(const upsamplingvec * u, vector * counts)
 {
+	if ((!u || !counts) || (!u->indices || !counts->data))
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+
 	uint grid_dim = calc_grid_dim(u->size1);
 
-	if ((!u || !counts) || (!u->indices || !counts->data))
-		return OPTKIT_ERROR_UNALLOCATED;
-
 	if (u->size2 > counts->size)
-		return OPTKIT_ERROR_DIMENSION_MISMATCH;
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	OK_RETURNIF_ERR( err, vector_scale(counts, kZero) );
 

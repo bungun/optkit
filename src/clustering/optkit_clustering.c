@@ -16,9 +16,17 @@ const size_t kBlockSize = 128;
 static ok_status assign_clusters_l2(matrix * A, matrix * C,
 	upsamplingvec * a2c, cluster_aid * h)
 {
-	ok_status err = OPTKIT_SUCCESS;
+	OK_CHECK_MATRIX(A);
+	OK_CHECK_MATRIX(C);
+	OK_CHECK_UPSAMPLINGVEC(a2c);
+	OK_CHECK_PTR(h);
+
 	size_t i;
 	upsamplingvec * u = &h->a2c_tentative;
+
+	if (A->size1 != a2c->size1 || a2c->size2 >= C->size1 ||
+		A->size2 != C->size2)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	h->reassigned = 0;
 	#ifdef _OPENMP
@@ -29,7 +37,7 @@ static ok_status assign_clusters_l2(matrix * A, matrix * C,
 			a2c->indices[i] = u->indices[i];
 			++h->reassigned;
 		}
-	return err;
+	return OPTKIT_SUCCESS;
 }
 
 static ok_float __dist_lInf_A_minus_UC_i(const ok_float * A,
@@ -65,13 +73,22 @@ static ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	upsamplingvec * a2c, cluster_aid * h, ok_float maxdist)
 {
 	ok_status err = OPTKIT_SUCCESS;
+	OK_CHECK_MATRIX(A);
+	OK_CHECK_MATRIX(C);
+	OK_CHECK_UPSAMPLINGVEC(a2c);
+	OK_CHECK_PTR(h);
+	if (A->size1 != a2c->size1 || a2c->size2 >= C->size1 ||
+		A->size2 != C->size2)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
 	size_t i, blk, row_stride, idx_stride, row_strideA, row_strideC;
 	int strideA, strideC;
 	matrix * A_blk;
 	upsamplingvec * u = &h->a2c_tentative;
 
 	if (!h->A_reducible.data)
-		matrix_alloc(&h->A_reducible, kBlockSize, A->size2, A->order);
+		err = matrix_alloc(&h->A_reducible, kBlockSize, A->size2,
+			A->order);
 
 	A_blk = &h->A_reducible;
 	row_stride = (A_blk->order == CblasRowMajor) ? A_blk->ld : 1;

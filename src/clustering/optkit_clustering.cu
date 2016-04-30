@@ -134,6 +134,14 @@ static ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	dim3 grid_dim(kTileSize, kTileSize);
 	dim3 blk_dim(kTiles2D, kTiles2D);
 
+	OK_CHECK_MATRIX(A);
+	OK_CHECK_MATRIX(C);
+	OK_CHECK_UPSAMPLINGVEC(a2c);
+	OK_CHECK_PTR(h);
+	if (A->size1 != a2c->size1 || a2c->size2 >= C->size1 ||
+		A->size2 != C->size2)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
 	size_t row_stride_A = (A->order == CblasRowMajor) ? A->ld : 1;
 	size_t col_stride_A = (A->order == CblasRowMajor) ? 1 : A->ld;
 	size_t row_stride_C = (C->order == CblasRowMajor) ? C->ld : 1;

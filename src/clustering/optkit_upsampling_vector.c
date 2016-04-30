@@ -21,9 +21,9 @@ static inline int upsampling_dims_compatible(const int transpose,
 ok_status upsamplingvec_alloc(upsamplingvec * u, size_t size1, size_t size2)
 {
 	if (!u)
-		return OPTKIT_ERROR_UNALLOCATED;
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	else if (u->indices)
-		return OPTKIT_ERROR_OVERWRITE;
+		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
 
 	memset(u, 0, sizeof(*u));
 	u->size1 = size1;
@@ -36,8 +36,7 @@ ok_status upsamplingvec_alloc(upsamplingvec * u, size_t size1, size_t size2)
 
 ok_status upsamplingvec_free(upsamplingvec * u)
 {
-	if (!u || !u->indices)
-		return OPTKIT_ERROR_UNALLOCATED;
+	OK_CHECK_UPSAMPLINGVEC(u);
 	ok_free(u->vec.data);
 	memset(u, 0, sizeof(*u));
 	return OPTKIT_SUCCESS;
@@ -46,28 +45,27 @@ ok_status upsamplingvec_free(upsamplingvec * u)
 ok_status upsamplingvec_check_bounds(const upsamplingvec * u)
 {
 	size_t idx;
-	ok_status err = OPTKIT_SUCCESS;
-
-	err = indvector_max(&u->vec, &idx);
+	OK_CHECK_UPSAMPLINGVEC(u);
+	OK_RETURNIF_ERR( indvector_max(&u->vec, &idx) );
 	if (idx >= u->size2)
-		OK_MAX_ERR( err, OPTKIT_ERROR_DIMENSION_MISMATCH )
-
-	return err;
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+	else
+		return OPTKIT_SUCCESS;
 }
 
 ok_status upsamplingvec_update_size(upsamplingvec * u)
 {
-	if (!u || !u->indices)
-		return OPTKIT_ERROR_UNALLOCATED;
-
-	return indvector_max(&u->vec, &u->size2);
+	OK_CHECK_UPSAMPLINGVEC(u);
+	ok_status err = indvector_max(&u->vec, &u->size2);
+	++u->size2;
+	return err;
 }
 
 ok_status upsamplingvec_subvector(upsamplingvec * usub, upsamplingvec * u,
 	size_t offset1, size_t length1, size_t size2)
 {
 	if (!u || !u->indices || !usub)
-		return OPTKIT_ERROR_UNALLOCATED;
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
 	OK_RETURNIF_ERR( indvector_subvector(&usub->vec, &u->vec, offset1,
 		length1) );
@@ -82,6 +80,10 @@ ok_status upsamplingvec_mul_matrix(const enum CBLAS_TRANSPOSE transU,
 	const ok_float alpha, upsamplingvec * u, matrix * M_in, ok_float beta,
 	matrix * M_out)
 {
+	OK_CHECK_UPSAMPLINGVEC(u);
+	OK_CHECK_MATRIX(M_in);
+	OK_CHECK_MATRIX(M_out);
+
 	size_t i, dim_in1, dim_in2, dim_out1, dim_out2;
 	size_t ptr_stride_in, ptr_stride_out;
 	int stride_in, stride_out;
@@ -98,7 +100,7 @@ ok_status upsamplingvec_mul_matrix(const enum CBLAS_TRANSPOSE transU,
 
 	if (!upsampling_dims_compatible(transpose, u, dim_in1, dim_in2,
 		dim_out1, dim_out2))
-		return OPTKIT_ERROR_DIMENSION_MISMATCH;
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	stride_in =
 		((transI == CblasNoTrans) == (M_in->order == CblasRowMajor)) ?
