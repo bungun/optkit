@@ -23,7 +23,7 @@ class ProxLibsTestCase(OptkitTestCase):
 		for (gpu, single_precision) in self.CONDITIONS:
 			libs.append(self.libs.get(single_precision=single_precision,
 									  gpu=gpu))
-		self.assertTrue(any(libs))
+		self.assertTrue( any(libs) )
 
 	def test_lib_types(self):
 		for (gpu, single_precision) in self.CONDITIONS:
