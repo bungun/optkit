@@ -42,6 +42,8 @@ enum OPTKIT_SCALAR_FUNCTION {
 }   /* extern "C" */
 #endif
 
+
+#ifdef __cplusplus
 /* f(x) = c * h(ax-b) + dx + ex^2 */
 template<typename T>
 struct function_t_{
@@ -54,6 +56,7 @@ struct function_vector_ {
 	size_t size;
 	function_t_<T> * objectives;
 };
+#endif /* __cplusplus */
 
 #ifdef __cplusplus
 extern "C" {
@@ -69,8 +72,8 @@ typedef struct function_t{
 } function_t;
 
 typedef struct function_vector {
-	size_t size, stride;
-	function_t * data;
+	size_t size;
+	function_t * objectives;
 } function_vector;
 #endif
 
@@ -79,6 +82,7 @@ typedef struct function_vector {
 }   /* extern "C" */
 #endif
 
+#ifdef __cplusplus
 __DEVICE__ inline double Abs(double x) { return fabs(x); }
 __DEVICE__ inline double Acos(double x) { return acos(x); }
 __DEVICE__ inline double Cos(double x) { return cos(x); }
@@ -550,6 +554,7 @@ ok_status prox_eval_vector_(const function_vector_<T> * f, T rho,
 template<typename T>
 ok_status function_eval_vector_(const function_vector_<T> * f,
 	const vector_<T> * x, T * fn_val);
+#endif /* __cplusplus */
 
 #ifdef __cplusplus
 extern "C" {

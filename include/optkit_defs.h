@@ -31,11 +31,16 @@ extern "C" {
 #endif
 
 #define OK_NULL 0
+
+#ifndef ok_alloc
 #define ok_alloc(x, len) \
 	do { \
 		x = malloc(len); \
 		memset(x, 0, len); \
 	} while(0)
+#endif
+
+#ifndef ok_free
 #define ok_free(x) \
 	do { \
 		if (x) { \
@@ -43,6 +48,7 @@ extern "C" {
 			x = OK_NULL; \
 		} \
 	} while(0)
+#endif
 
 typedef unsigned int uint;
 typedef int ok_int;

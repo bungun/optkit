@@ -9,6 +9,14 @@
 extern "C" {
 #endif
 
+#ifndef OK_CHECK_UPSAMPLINGVEC
+#define OK_CHECK_UPSAMPLINGVEC(u) \
+	do { \
+		if (!u || !u->indices) \
+			return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED ); \
+	} while(0)
+#endif
+
 typedef struct upsamplingvec {
 	size_t size1, size2, stride;
 	size_t * indices;
