@@ -1,6 +1,7 @@
 #ifndef OPTKIT_POGS_H_
 #define OPTKIT_POGS_H_
 
+#include "optkit_timer.h"
 #include "optkit_pogs_common.h"
 
 #ifdef __cplusplus
@@ -26,7 +27,7 @@ typedef struct POGSMatrix {
 typedef struct POGSSolver {
 	pogs_matrix * M;
 	pogs_variables * z;
-	FunctionVector * f, * g;
+	function_vector * f, * g;
 	ok_float rho;
 	pogs_settings * settings;
 	void * linalg_handle;
@@ -43,10 +44,11 @@ POGS_PRIVATE ok_status pogs_solver_alloc(pogs_solver ** solver, size_t m,
 POGS_PRIVATE ok_status pogs_solver_free(pogs_solver * solver);
 POGS_PRIVATE ok_status equilibrate(void * linalg_handle, ok_float * A_orig,
 	pogs_matrix * M, enum CBLAS_ORDER ord);
-POGS_PRIVATE ok_float estimate_norm(void * linalg_handle, pogs_matrix * M);
+POGS_PRIVATE ok_status estimate_norm(void * linalg_handle, pogs_matrix * M,
+	ok_float * normest);
 POGS_PRIVATE ok_status normalize_DAE(void * linalg_handle, pogs_matrix * M);
-POGS_PRIVATE ok_status update_problem(pogs_solver * solver, FunctionVector * f,
-	FunctionVector * g);
+POGS_PRIVATE ok_status update_problem(pogs_solver * solver, function_vector * f,
+	function_vector * g);
 POGS_PRIVATE ok_status initialize_variables(pogs_solver * solver);
 POGS_PRIVATE pogs_tolerances make_tolerances(const pogs_settings * settings,
 	size_t m, size_t n);
@@ -54,18 +56,17 @@ POGS_PRIVATE ok_status update_residuals(void * linalg_handle,
 	pogs_solver * solver, pogs_objectives * obj, pogs_residuals * res,
 	pogs_tolerances * eps);
 POGS_PRIVATE int check_convergence(void * linalg_handle, pogs_solver * solver,
-	pogs_objectives * obj, pogs_residuals * res, pogs_tolerances * eps,
-	int gapstop);
+	pogs_objectives * obj, pogs_residuals * res, pogs_tolerances * eps);
 POGS_PRIVATE ok_status project_primal(void * linalg_handle, projector_ * proj,
 	pogs_variables * z,  ok_float alpha);
 POGS_PRIVATE ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info);
 
 pogs_solver * pogs_init(ok_float * A, size_t m, size_t n, enum CBLAS_ORDER ord);
-ok_status pogs_solve(pogs_solver * solver, FunctionVector * f,
-	FunctionVector * g, const pogs_settings * settings, pogs_info * info,
+ok_status pogs_solve(pogs_solver * solver, function_vector * f,
+	function_vector * g, const pogs_settings * settings, pogs_info * info,
 	pogs_output * output);
 ok_status pogs_finish(pogs_solver * solver, int reset);
-ok_status pogs(ok_float * A, FunctionVector * f, FunctionVector * g,
+ok_status pogs(ok_float * A, function_vector * f, function_vector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output,
 	enum CBLAS_ORDER ord, int reset);
 pogs_solver * pogs_load_solver(ok_float * A_equil,

@@ -1,4 +1,4 @@
-#include "optkit_pogs.h"
+#include "optkit_pogs_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,9 +24,9 @@ POGS_PRIVATE ok_status block_vector_alloc(block_vector ** z, size_t m, size_t n)
 	z_->size = m + n;
 	z_->m = m;
 	z_->n = n;
-	ok_alloc(z->vec, sizeof(vector));
-	ok_alloc(z->x, sizeof(vector));
-	ok_alloc(z->y, sizeof(vector));
+	ok_alloc(z_->vec, sizeof(*z_->vec));
+	ok_alloc(z_->x, sizeof(*z_->x));
+	ok_alloc(z_->y, sizeof(*z_->y));
 	err = vector_calloc(z_->vec, m + n);
 	if (!err) {
 		vector_subvector(z_->y, z_->vec, 0, m);
@@ -114,27 +114,31 @@ POGS_PRIVATE ok_status initialize_conditions(pogs_objectives * obj,
 	tol->gap = kZero;
 	tol->reltol = settings->reltol;
 	tol->abstol = settings->abstol;
-	tol->atolm = MATH(sqrt)((ok_float) m) * settings->abstol,
-	tol->atoln = MATH(sqrt)((ok_float) n) * settings->abstol,
-	tol->atolmn = MATH(sqrt)((ok_float) (m * n)) * settings->abstol,
+	tol->atolm = MATH(sqrt)((ok_float) m) * settings->abstol;
+	tol->atoln = MATH(sqrt)((ok_float) n) * settings->abstol;
+	tol->atolmn = MATH(sqrt)((ok_float) (m * n)) * settings->abstol;
 	return OPTKIT_SUCCESS;
 }
 
-POGS_PRIVATE ok_status update_objective(void * linalg_handle, FunctionVector * f,
-	FunctionVector * g, ok_float rho, pogs_variables * z,
-	pogs_objectives * obj)
+POGS_PRIVATE ok_status update_objective(void * linalg_handle,
+	const function_vector * f, const function_vector * g, ok_float rho,
+	pogs_variables * z, pogs_objectives * obj)
 {
 	OK_CHECK_FNVECTOR(f);
 	OK_CHECK_FNVECTOR(g);
 	OK_CHECK_PTR(z);
 	OK_CHECK_PTR(obj);
-
 	OK_RETURNIF_ERR( blas_dot(linalg_handle, z->primal12->vec,
 		z->dual12->vec, &obj->gap) );
-	obj->gap = MATH(fabs)(obj_gap);
 
-	obj->primal = FuncEvalVector(f, z->primal12->y) +
-			FuncEvalVector(g, z->primal12->x);
+	ok_float val_f, val_g;
+
+	obj->gap = MATH(fabs)(obj->gap);
+
+	OK_RETURNIF_ERR( function_eval_vector(f, z->primal12->y, &val_f) );
+	OK_RETURNIF_ERR( function_eval_vector(g, z->primal12->x, &val_g) );
+
+	obj->primal = val_f + val_g;
 	obj->dual = obj->primal - obj->gap;
 	return OPTKIT_SUCCESS;
 }
@@ -160,7 +164,7 @@ POGS_PRIVATE ok_status update_tolerances(void * linalg_handle,
 
 	OK_RETURNIF_ERR( blas_nrm2(linalg_handle, z->primal->vec, &nrm_z) );
 	OK_RETURNIF_ERR( blas_nrm2(linalg_handle, z->primal12->vec, &nrm_z12) );
-	eps->gap = eps->atolmn + eps->reltol * MATH(sqrt)(nrm_2) *
+	eps->gap = eps->atolmn + eps->reltol * MATH(sqrt)(nrm_z) *
 		MATH(sqrt)(nrm_z12);
 
 	return OPTKIT_SUCCESS;
@@ -178,14 +182,17 @@ POGS_PRIVATE ok_status set_prev(pogs_variables * z)
  *	y^{k+1/2} = Prox_{rho, f} (y^k - yt^k)
  *	x^{k+1/2} = Prox_{rho, g} (x^k - xt^k)
  */
-POGS_PRIVATE ok_status prox(void * linalg_handle, FunctionVector * f,
-	FunctionVector * g, pogs_variables * z, ok_float rho)
+POGS_PRIVATE ok_status prox(void * linalg_handle, const function_vector * f,
+	const function_vector * g, pogs_variables * z, ok_float rho)
 {
-	OK_RETURNIF_ERR( vector_memcpy_vv(z->temp->vec, z->primal->vec) );
-	OK_RETURNIF_ERR( blas_axpy(linalg_handle, -kOne, z->dual->vec,
-		z->temp->vec) );
-	OK_RETURNIF_ERR( ProxEvalVector(f, rho, z->temp->y, z->primal12->y) );
-	return OK_SCAN_ERR( ProxEvalVector(g, rho, z->temp->x, z->primal12->x));
+	OK_RETURNIF_ERR(
+		vector_memcpy_vv(z->temp->vec, z->primal->vec) );
+	OK_RETURNIF_ERR(
+		blas_axpy(linalg_handle, -kOne, z->dual->vec, z->temp->vec) );
+	OK_RETURNIF_ERR(
+		prox_eval_vector(f, rho, z->temp->y, z->primal12->y) );
+	return OK_SCAN_ERR(
+		prox_eval_vector(g, rho, z->temp->x, z->primal12->x));
 }
 
 /*
@@ -277,16 +284,14 @@ POGS_PRIVATE ok_status adaptrho(pogs_variables * z,
  *	2: copy (x, nu), suppress (y, mu)
  *	3: copy (x), suppress (y, mu, nu)
  */
-POGS_PRIVATE ok_status copy_output(pogs_variables * z, pogs_vector * d,
-	pogs_vector * e, pogs_output * output)
+POGS_PRIVATE ok_status copy_output(pogs_variables * z, vector * d, vector * e,
+	pogs_output * output, const ok_float rho, const uint suppress)
 {
 	OK_CHECK_PTR(z);
 	OK_CHECK_VECTOR(d);
 	OK_CHECK_VECTOR(e);
-	if (z->n->size != e->size || z->m != d->size)
+	if (z->n != e->size || z->m != d->size)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
-
-	uint suppress = solver->settings->suppress;
 
 	vector_memcpy_vv(z->temp->vec, z->primal12->vec);
 	vector_mul(z->temp->x, e);
@@ -299,7 +304,7 @@ POGS_PRIVATE ok_status copy_output(pogs_variables * z, pogs_vector * d,
 
 	if (suppress < 3) {
 		vector_memcpy_vv(z->temp->vec, z->dual12->vec);
-		vector_scale(z->temp->vec, -solver->rho);
+		vector_scale(z->temp->vec, -rho);
 		vector_mul(z->temp->y, d);
 		vector_memcpy_av(output->nu, z->temp->y, 1);
 
@@ -311,7 +316,7 @@ POGS_PRIVATE ok_status copy_output(pogs_variables * z, pogs_vector * d,
 	return OPTKIT_SUCCESS;
 }
 
-POGS_PRIVATE void print_header_string()
+POGS_PRIVATE ok_status print_header_string()
 {
 	printf("\n   #    %s    %s    %s   %s   %s        %s    %s\n",
 		"res_pri", "eps_pri", "res_dual", "eps_dual",
@@ -319,6 +324,7 @@ POGS_PRIVATE void print_header_string()
 	printf("   -    %s    %s    %s   %s   %s        %s    %s\n",
 		"-------", "-------", "--------", "--------",
 		"---", "-------", "---------");
+	return OPTKIT_SUCCESS;
 }
 
 POGS_PRIVATE ok_status print_iter_string(pogs_residuals * res,

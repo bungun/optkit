@@ -138,7 +138,8 @@ POGS_SRC=$(POGSSRC)pogs_common.c $(POGSSRC)pogs.c
 POGS_OBJ=$(patsubst $(POGSSRC)%.c,$(POGSOUT)%_$(LIBCONFIG).o,$(POGS_SRC))
 
 POGS_ABSTR_SRC=$(POGSSRC)pogs_common.c $(POGSSRC)pogs_abstract.c
-POGS_ABSTR_OBJ=$(patsubst $(POGSSRC)%.c,$(POGSOUT)%_$(LIBCONFIG).o,$(POGS_SRC))
+POGS_ABSTR_OBJ=$(patsubst \
+	$(POGS_ABSTR_SRC)%.c,$(POGSOUT)%_$(LIBCONFIG).o,$(POGS_ABSTR_SRC))
 
 SPARSE_STATIC_DEPS=$(BASE_OBJ) $(VECTOR_OBJ)
 OPERATOR_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ) $(SPARSE_OBJ) $(OPERATOR_OBJ)
@@ -147,8 +148,8 @@ EQUIL_STATIC_DEPS=$(OPERATOR_STATIC_DEPS) $(EQUIL_OBJ)
 PROJ_STATIC_DEPS=$(CG_STATIC_DEPS) $(PROJ_OBJ)
 POGS_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ) $(PROX_OBJ) $(EQUIL_DENSE_OBJ) 
 POGS_STATIC_DEPS+=$(PROJ_DIRECT_OBJ) $(POGS_OBJ) 
-POGS_ABSTRACT_STATIC_DEPS=$(POGS_ABSTR_OBJ) $(PROX_OBJ) $(PROJ_OBJ)
-POGS_ABSTRACT_STATIC_DEPS+=$(EQUIL_STATIC_DEPS) $(CG_OBJ)
+POGS_ABSTRACT_STATIC_DEPS=$(EQUIL_STATIC_DEPS) $(CG_OBJ) $(PROJ_OBJ) $(PROX_OBJ)
+POGS_ABSTRACT_STATIC_DEPS+= $(POGS_ABSTR_OBJ)
 
 POGS_DENSE_LIB_DEPS=equil_dense projector_direct $(DENSE_TARG) $(PROX_TARG)
 POGS_SPARSE_LIB_DEPS=operator cg equil projector $(LINSYS_TARGS) $(PROX_TARG)
@@ -163,7 +164,7 @@ libpogs: libpogs_dense libpogs_abstract
 
 libpogs_abstract: pogs_abstract $(POGS_ABSTRACT_LIB_DEPS) $(BASE_TARG)
 	mkdir -p $(OUT)
-	$(CC) $(CCFLAGS) -shared -o \
+	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs -shared -o \
 	$(OUT)$@_$(LIBCONFIG).$(SHARED)  \
 	$(POGS_ABSTRACT_STATIC_DEPS) $(LDFLAGS) 
 
@@ -231,15 +232,17 @@ pogs_abstract: $(POGS_ABSTR_SRC)
 	mkdir -p $(OUT) 
 	mkdir -p $(OUT)/pogs 	
 	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $(POGSSRC)pogs_common.c -c -o \
-	$(POGSOUT)pogs_common.o
-	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $(POGSSRC)$@.c -c -o $(POGSOUT)$@.o
+	$(POGSOUT)pogs_common_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $(POGSSRC)pogs_abstract.c -c -o \
+	$(POGSOUT)$pogs_abstract_$(LIBCONFIG).o
 
 pogs: $(POGS_SRC)
 	mkdir -p $(OUT) 
 	mkdir -p $(OUT)/pogs 	
 	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $(POGSSRC)pogs_common.c -c -o \
-	$(POGSOUT)pogs_common.o
-	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $(POGSSRC)$@.c -c -o $(POGSOUT)$@.o
+	$(POGSOUT)pogs_common_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $(POGSSRC)pogs.c -c -o \
+	$(POGSOUT)pogs_$(LIBCONFIG).o
 
 equil: $(SRC)optkit_equilibration.c 
 	mkdir -p $(OUT)

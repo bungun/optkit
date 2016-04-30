@@ -47,6 +47,56 @@ class PogsTestCase(OptkitCPogsTestCase):
 		self.free_all_vars()
 		self.exit_call()
 
+	def assert_pogs_equilibration(self, lib, solver_work, A, A_equil):
+		m, n = A.shape
+
+		DIGITS = 7 - 2 * lib.FLOAT
+		RTOL = 10**(-DIGITS
+		ATOLM = RTOL * m**0.5
+
+		d_local = np.zeros(m).astype(lib.pyfloat)
+		e_local = np.zeros(n).astype(lib.pyfloat)
+		self.load_to_local(lib, solver_work.contents.d)
+		self.load_to_local(lib, solver_work.contents.e)
+
+		x_rand = np.random.rand(n)
+		A_eqx = A_equil.dot(x_rand)
+		DAEx = d_local * A.dot(e_local * x_rand)
+		self.assertVecEqual( A_eqx, DAEx, ATOLM, RTOL )
+
+	def assert_pogs_projector(self, lib, blas_handle, solver, A_equil):
+		m, n = A_equil.shape
+		DIGITS = 7 - 2 * lib.FLOAT
+		RTOL = 10**(-DIGITS)
+		ATOLM = RTOL * m**0.5
+
+		x_in, x_in_py, x_in_ptr = self.register_vector(lib, n, 'x_in')
+		y_in, y_in_py, y_in_ptr = self.register_vector(lib, m, 'y_in')
+		x_out, x_out_py, x_out_ptr = self.register_vector(lib, n, 'x_out')
+		y_out, y_out_py, y_out_ptr = self.register_vector(lib, m, 'y_out')
+
+		x_in_py += np.random.rand(n)
+		y_in_py += np.random.rand(m)
+		self.assertCall( lib.vector_memcpy_va(x_in, x_in_ptr, 1) )
+		self.assertCall( lib.vector_memcpy_va(y_in, y_in_ptr, 1) )
+
+		if lib.direct:
+			self.assertCall( lib.direct_projector_project(
+					blas_handle, solver.contents.M.contents.P, x_in, y_in,
+					x_out, y_out) )
+		else:
+			self.assertCall( lib.indirect_projector_project(
+					blas_handle, solver.contents.M.contents.P, x_in, y_in,
+					x_out, y_out) )
+
+		self.load_to_local(lib, x_out_py, x_out)
+		self.load_to_local(lib, y_out_py, y_out)
+
+		self.assertVecEqual(
+				A_equil.dot(x_out_py), y_out_py), ATOLM, RTOL )
+
+		self.free_vars('x_in', 'y_in', 'x_out', 'y_out')
+
 	def test_default_settings(self):
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
@@ -92,7 +142,6 @@ class PogsTestCase(OptkitCPogsTestCase):
 				self.register_solver('solver', solver, lib.pogs_finish)
 				output, info, settings = self.gen_pogs_params(lib, m, n)
 
-
 				localvars = self.PogsVariablesLocal(m, n, lib.pyfloat)
 				localA, localA_ptr = self.gen_py_matrix(lib, m, n, order)
 
@@ -104,17 +153,24 @@ class PogsTestCase(OptkitCPogsTestCase):
 				obj = lib.pogs_objectives(0, 0, 0)
 
 				# test (coldstart) solver calls
-				self.assert_pogs_equilibration(lib, solver, A, localA, localvars)
-				self.assert_pogs_projector(lib, hdl, solver, localA)
-				self.assert_pogs_scaling(lib, solver, f, f_py, g, g_py, localvars)
-				self.assert_pogs_primal_update(lib, solver, localvars)
-				self.assert_pogs_prox(lib, hdl, solver, f, f_py, g, g_py, localvars)
-				self.assert_pogs_primal_project(lib, hdl, solver, settings, localA,
+				z = solver.contents.z
+				M = solver.contents.M
+				rho = solver.contents.rho
+				self.assert_pogs_equilibration(lib, M, A, localA,
+											   localvars)
+				self.assert_pogs_projector(lib, hdl, M.contents.P, localA)
+				self.assert_pogs_scaling(lib, solver, M, f, f_py, g, g_py,
 										 localvars)
-				self.assert_pogs_dual_update(lib, hdl, solver, settings,localvars)
-				self.assert_pogs_check_convergence(lib, hdl, solver, f_list, g_list,
-											obj, res, tols, settings, localA,
-											localvars)
+				self.assert_pogs_primal_update(lib, z, localvars)
+				self.assert_pogs_prox(lib, hdl, z, M, rho, f, f_py, g, g_py,
+									  localvars)
+				self.assert_pogs_primal_project(lib, hdl, z, settings,
+												localA, localvars)
+				self.assert_pogs_dual_update(lib, hdl, z,
+											 localvars)
+				self.assert_pogs_check_convergence(lib, hdl, solver, f_list,
+												   g_list, obj, res, tols,
+												   localA, localvars)
 				self.assert_pogs_adapt_rho(lib, solver, settings, res, tols,
 										   localvars)
 				self.assert_pogs_unscaling(lib, solver, output, localvars)
@@ -125,9 +181,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 				self.assertCall( lib.update_settings(solver.contents.settings,
 													 settings) )
 				self.assertCall( lib.initialize_variables(solver) )
-				self.assert_pogs_warmstart(lib, solver.contents.rho,
-										   solver.contents.z,
-										   solver.contents.M, settings, localA,
+				self.assert_pogs_warmstart(lib, rho, z, M, settings, localA,
 										   localvars)
 
 				self.free_var('solver', 'f', 'g', 'hdl')

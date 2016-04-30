@@ -62,7 +62,7 @@ POGS_PRIVATE ok_status pogs_work_free(pogs_work * W)
 	if (!W)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
-	ok_status_err = OK_SCAN_ERR( W->P->free(W->P->data) );
+	ok_status err = OK_SCAN_ERR( W->P->free(W->P->data) );
 	ok_free(W->P);
 	OK_MAX_ERR( err, vector_free(W->d) );
 	OK_MAX_ERR( err, vector_free(W->e) );
@@ -137,7 +137,7 @@ POGS_PRIVATE ok_status normalize_DAE(void * linalg_handle, pogs_work * W)
 	size_t m = W->A->size1,  n = W->A->size2;
 	size_t mindim = m < n ? m : n;
 	ok_float sqrt_mindim = MATH(sqrt)((ok_float) mindim), factor;
-	ok_float nrm_d, nrm_e;
+	ok_float nrm_d = kZero, nrm_e = kZero;
 	ok_float sqrt_n_over_m = MATH(sqrt)((ok_float) n / (ok_float) m);
 
 	OK_RETURNIF_ERR( projector_normalization(W->P, &W->normalized) );
@@ -154,7 +154,7 @@ POGS_PRIVATE ok_status normalize_DAE(void * linalg_handle, pogs_work * W)
 	OK_CHECK_ERR( err, blas_nrm2(linalg_handle, W->e, &nrm_e) );
 	factor = MATH(sqrt)(sqrt_n_over_m * nrm_d / nrm_e);
 
-	if (factor == 0 || W_->normA == 0)
+	if (factor == 0 || W->normA == 0)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIVIDE_BY_ZERO );
 
 	OK_CHECK_ERR( err,
@@ -165,8 +165,8 @@ POGS_PRIVATE ok_status normalize_DAE(void * linalg_handle, pogs_work * W)
 	return err;
 }
 
-POGS_PRIVATE ok_status update_problem(pogs_solver * solver, FunctionVector * f,
-	FunctionVector * g)
+POGS_PRIVATE ok_status update_problem(pogs_solver * solver, function_vector * f,
+	function_vector * g)
 {
 	OK_CHECK_PTR(solver);
 	OK_CHECK_FNVECTOR(f);
@@ -211,7 +211,6 @@ POGS_PRIVATE ok_status update_residuals(void * linalg_handle,
 	pogs_solver * solver, pogs_objectives * obj, pogs_residuals * res,
 	pogs_tolerances * eps)
 {
-	ok_status err = OPTKIT_SUCCESS;
 	if (!solver || !obj || !res || !eps)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
@@ -234,7 +233,7 @@ POGS_PRIVATE ok_status update_residuals(void * linalg_handle,
 POGS_PRIVATE int check_convergence(void * linalg_handle, pogs_solver * solver,
 	pogs_objectives * obj, pogs_residuals * res, pogs_tolerances * eps)
 {
-	ok_status err;
+	ok_status err = OPTKIT_SUCCESS;
 	if (!solver || !obj || !res || !eps)
 		err = OPTKIT_ERROR_UNALLOCATED;
 
@@ -257,7 +256,7 @@ POGS_PRIVATE int check_convergence(void * linalg_handle, pogs_solver * solver,
 POGS_PRIVATE ok_status project_primal(void * linalg_handle, projector * proj,
 	pogs_variables * z, ok_float alpha, ok_float tol)
 {
-	if (!proj || !proj->data || !z || !z->valid)
+	if (!proj || !proj->data || !z)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
 	vector_set_all(z->temp->vec, kZero);
@@ -282,7 +281,7 @@ POGS_PRIVATE ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 	pogs_objectives obj;
 	pogs_residuals res;
 	pogs_tolerances eps;
-	ok_status err = initialize_conditions(&obj, &res, &tol, settings,
+	ok_status err = initialize_conditions(&obj, &res, &eps, settings,
 		solver->z->m, solver->z->n);
 
 	void * linalg_handle = solver->linalg_handle;
@@ -317,7 +316,7 @@ POGS_PRIVATE ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 			&eps);
 
 		if ((k % PRINT_ITER == 0 || converged || k == settings->maxiter)
-			&& setings->verbose)
+			&& settings->verbose)
 			print_iter_string(&res, &eps, &obj, k);
 
 		if (converged || k == settings->maxiter)
@@ -325,7 +324,8 @@ POGS_PRIVATE ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 
 		if (!err && settings->adaptiverho)
 			OK_CHECK_ERR( err,
-				adaptrho(solver, &rho_params, &res, &eps, k) );
+				adaptrho(z, settings, &solver->rho, &rho_params,
+					&res, &eps, k) );
 	}
 
 	if (!converged && k == settings->maxiter)
@@ -376,8 +376,8 @@ pogs_solver * pogs_init(operator * A, const int direct,
 }
 
 
-ok_status pogs_solve(pogs_solver * solver, FunctionVector * f,
-	FunctionVector * g, const pogs_settings * settings, pogs_info * info,
+ok_status pogs_solve(pogs_solver * solver, function_vector * f,
+	function_vector * g, const pogs_settings * settings, pogs_info * info,
 	pogs_output * output)
 {
 	if (!solver || !settings || !info || !output)
@@ -415,7 +415,8 @@ ok_status pogs_solve(pogs_solver * solver, FunctionVector * f,
 
 	/* unscale output */
 	OK_CHECK_ERR( err,
-		copy_output(solver->z, solver->M->d, solver->M->e, output) );
+		copy_output(solver->z, solver->W->d, solver->W->e, output,
+			solver->rho, settings->suppress) );
 	return err;
 }
 
@@ -423,11 +424,11 @@ ok_status pogs_finish(pogs_solver * solver, const int reset)
 {
 	ok_status err = OK_SCAN_ERR( pogs_solver_free(solver) );
 	if (reset)
-		OK_MAX_ERROR( err, ok_device_reset() );
+		OK_MAX_ERR( err, ok_device_reset() );
 	return err;
 }
 
-ok_status pogs(operator * A, FunctionVector * f, FunctionVector * g,
+ok_status pogs(operator * A, function_vector * f, function_vector * g,
 	const pogs_settings * settings, pogs_info * info, pogs_output * output,
 	const int direct, const ok_float equil_norm, const int reset)
 {
@@ -463,7 +464,7 @@ operator * pogs_sparse_operator_gen(const ok_float * val, const ok_int * ind,
 	enum CBLAS_ORDER order)
 {
 	void * handle = OK_NULL;
-	operator * o;
+	operator * o = OK_NULL;
 	sp_matrix * A = OK_NULL;
 	ok_status err = OPTKIT_SUCCESS;
 
@@ -471,10 +472,14 @@ operator * pogs_sparse_operator_gen(const ok_float * val, const ok_int * ind,
 		err = OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	else {
 		ok_alloc(A, sizeof(*A));
-		OK_CHECK_ERR( err, sp_matrix_calloc(A, m, n, nnz, order) );
-		OK_CHECK_ERR( err, sp_make_handle(&handle) );
-		OK_CHECK_ERR( err, sp_matrix_memcpy_ma(handle, A, val, ind, ptr) );
-		OK_CHECK_ERR( err, sp_destroy_handle(handle) );
+		OK_CHECK_ERR( err,
+			sp_matrix_calloc(A, m, n, nnz, order) );
+		OK_CHECK_ERR( err,
+			sp_make_handle(&handle) );
+		OK_CHECK_ERR( err,
+			sp_matrix_memcpy_ma(handle, A, val, ind, ptr) );
+		OK_CHECK_ERR( err,
+			sp_destroy_handle(handle) );
 		if (!err)
 			o = sparse_operator_alloc(A);
 	}

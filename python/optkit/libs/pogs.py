@@ -1,5 +1,6 @@
 from ctypes import POINTER, CFUNCTYPE, Structure, c_int, c_uint, c_size_t, \
 				   c_void_p
+from np import nan
 from optkit.libs.loader import OptkitLibs
 from optkit.libs.enums import OKFunctionEnums
 from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\
@@ -119,6 +120,14 @@ def attach_pogs_common_ctypes(lib, single_precision=False):
 					('rho', ok_float),
 					('setup_time', ok_float),
 					('solve_time', ok_float)]
+		def __init__(self):
+			self.err = 0
+			self.converged = 0
+			self.k = 0
+			self.obj = nan
+			self.rho = nan
+			self.setup_time = nan
+			self.solve_time = nan
 
 	lib.pogs_info = PogsInfo
 	lib.pogs_info_p =  POINTER(lib.pogs_info)
@@ -157,6 +166,10 @@ def attach_pogs_common_ctypes(lib, single_precision=False):
 		_fields_ = [('primal', ok_float),
 					('dual', ok_float),
 					('gap', ok_float)]
+		def __init__(self):
+			self.primal = nan
+			self.dual = nan
+			self.gap = nan
 
 	lib.pogs_residuals = PogsResiduals
 	lib.pogs_residuals_p = POINTER(lib.pogs_residuals)
@@ -178,6 +191,10 @@ def attach_pogs_common_ctypes(lib, single_precision=False):
 		_fields_ = [('primal', ok_float),
 					('dual', ok_float),
 					('gap', ok_float)]
+		def __init__(self):
+			self.primal = nan
+			self.dual = nan
+			self.gap = nan
 
 	lib.pogs_objectives = PogsObjectives
 	lib.pogs_objectives_p = POINTER(lib.pogs_objectives)
@@ -285,7 +302,8 @@ def attach_pogs_common_calls(lib, single_precision=False):
 		lib.adaptrho.argtypes = [pogs_solver_p, adapt_params_p,
 								 pogs_residuals_p, pogs_tolerances_p, c_uint]
 		lib.copy_output.argtypes = [pogs_variables_p, pogs_vector_p,
-									pogs_vector_p, pogs_output_p]
+									pogs_vector_p, pogs_output_p, ok_float,
+									c_uint]
 
 		## results
 		lib.initialize_conditions.restype = c_uint
@@ -340,12 +358,12 @@ def attach_pogs_ccalls(lib, single_precision=False):
 										ok_float_p, ok_float_p, c_uint]
 
 	## return types
-	lib.pogs_init.restype = c_void_p
-	lib.pogs_solve.restype = None
-	lib.pogs_finish.restype = None
-	lib.pogs.restype = None
-	lib.pogs_load_solver.restype = c_void_p
-	lib.pogs_extract_solver.restype = None
+	lib.pogs_init.restype = pogs_solver_p
+	lib.pogs_solve.restype = c_uint
+	lib.pogs_finish.restype = c_uint
+	lib.pogs.restype = c_uint
+	lib.pogs_load_solver.restype = pogs_solver_p
+	lib.pogs_extract_solver.restype = c_uint
 
 	# Private API
 	if lib.private_api_accessible:
@@ -377,10 +395,6 @@ def attach_pogs_ccalls(lib, single_precision=False):
 		else:
 			lib.indirect_projector_project.argtypes = proj_argtypes
 			lib.indirect_projector_project.restype = proj_restype
-
-		# redefinitions
-		lib.pogs_init.restype = pogs_solver_p
-		lib.pogs_load_solver.restype = pogs_solver_p
 
 def attach_pogs_abstract_ctypes(lib, single_precision=False):
 	if not 'vector_p' in lib.__dict__:
@@ -482,17 +496,17 @@ def attach_pogs_abstract_ccalls(lib, single_precision=False):
 	# 									ok_float_p, c_uint]
 
 	## return types
-	lib.pogs_init.restype = c_void_p
+	lib.pogs_init.restype = pogs_solver_p
 	lib.pogs_solve.restype = c_uint
 	lib.pogs_finish.restype = c_uint
 	lib.pogs.restype = c_uint
 	lib.pogs_dense_operator_gen.restype = operator_p
 	lib.pogs_sparse_operator_gen.restype = operator_p
-	lib.pogs_dense_operator_free.restype = None
-	lib.pogs_sparse_operator_free.restype = None
+	lib.pogs_dense_operator_free.restype = c_uint
+	lib.pogs_sparse_operator_free.restype = c_uint
 
 	# lib.pogs_load_solver.restype = c_void_p
-	# lib.pogs_extract_solver.restype = None
+	# lib.pogs_extract_solver.restype = c_uint
 
 	# Private API
 
