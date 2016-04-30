@@ -59,6 +59,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
 				A, A_ptr = self.gen_py_matrix(lib, m, n, order)
@@ -73,16 +74,15 @@ class PogsTestCase(OptkitCPogsTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
-
-			if not lib.full_api_accessible:
+			elif not lib.full_api_accessible:
 				continue
-
-			hdl = self.register_blas_handle(lib, 'hdl')
-			f, f_py, g, g_py = self.gen_registered_pogs_test_vars(lib, m, n)
-			f_list = [lib.function(*f_) for f_ in f_py]
-			g_list = [lib.function(*g_) for g_ in g_py]
+			self.register_exit(lib.ok_device_reset)
 
 			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				hdl = self.register_blas_handle(lib, 'hdl')
+				f, f_py, g, g_py = self.gen_registered_pogs_test_vars(lib, m, n)
+				f_list = [lib.function(*f_) for f_ in f_py]
+				g_list = [lib.function(*g_) for g_ in g_py]
 
 				# problem matrix A
 				A, A_ptr = self.gen_py_matrix(lib, m, n, order)
@@ -130,10 +130,8 @@ class PogsTestCase(OptkitCPogsTestCase):
 										   solver.contents.M, settings, localA,
 										   localvars)
 
-				self.free_var('solver')
-
-			self.free_vars('f', 'g', 'hdl')
-			self.assertCall( lib.ok_device_reset() )
+				self.free_var('solver', 'f', 'g', 'hdl')
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_pogs_call(self):
 		m, n = self.shape
@@ -142,10 +140,10 @@ class PogsTestCase(OptkitCPogsTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
-
-			f, f_py, g, g_py = self.gen_registered_pogs_test_vars(lib, m, n)
+			self.register_exit(lib.ok_device_reset)
 
 			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				f, f_py, g, g_py = self.gen_registered_pogs_test_vars(lib, m, n)
 
 				# problem matrix
 				A, A_ptr = self.gen_py_matrix(lib, m, n, order)
@@ -163,8 +161,8 @@ class PogsTestCase(OptkitCPogsTestCase):
 				if info.converged:
 					self.assert_pogs_convergence(A, settings, output)
 
-			self.free_vars('f', 'g')
-			self.assertCall( lib.ok_device_reset() )
+				self.free_vars('f', 'g')
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_pogs_call_unified(self):
 		m, n = self.shape
@@ -173,10 +171,10 @@ class PogsTestCase(OptkitCPogsTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
-
-			f, f_py, g, g_py = self.gen_registered_pogs_test_vars(lib, m, n)
+			self.register_exit(lib.ok_device_reset)
 
 			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				f, f_py, g, g_py = self.gen_registered_pogs_test_vars(lib, m, n)
 
 				# problem matrix
 				A, A_ptr = self.gen_py_matrix(lib, m, n, order)
@@ -192,8 +190,8 @@ class PogsTestCase(OptkitCPogsTestCase):
 				if info.converged:
 					self.assert_pogs_convergence(A, settings, output)
 
-			self.free_vars('f', 'g')
-			self.assertCall( lib.ok_device_reset() )
+				self.free_vars('f', 'g')
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_pogs_warmstart(self):
 		m, n = self.shape
@@ -202,6 +200,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * lib.FLOAT
 			RTOL = 10**(-DIGITS)
@@ -211,10 +210,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 			x_rand, _ = self.gen_py_vector(lib, n)
 			nu_rand, _ = self.gen_py_vector(lib, m)
 
-
 			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
-
-
 				f, f_py, g, g_py = self.gen_registered_pogs_test_vars(lib, m, n)
 
 				# problem matrix
@@ -247,11 +243,9 @@ class PogsTestCase(OptkitCPogsTestCase):
 				# WARMSTART SOLVE SEQUENCE
 				self.assert_warmstart_sequence(lib, solver, f, g, settings,
 											   info, output)
-				self.free_var('solver', 'f', 'g')
 
-			self.assertCall( lib.ok_device_reset() )
-
-			self.free_vars('f', 'g')
+				self.free_vars('solver', 'f', 'g')
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_pogs_io(self):
 		m, n = self.shape
@@ -260,15 +254,13 @@ class PogsTestCase(OptkitCPogsTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
-			f, f_py, g, g_py = self.gen_registered_pogs_test_vars(lib, m, n)
 			x_rand, _ = self.gen_py_vector(lib, n)
 			nu_rand, _ = self.gen_py_vector(lib, m)
 
 			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
-
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
+				f, f_py, g, g_py = self.gen_registered_pogs_test_vars(lib, m, n)
 
 				# problem matrix
 				A, A_ptr = self.gen_py_matrix(lib, m, n, order)
@@ -320,7 +312,5 @@ class PogsTestCase(OptkitCPogsTestCase):
 				self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
 												output.ptr) )
 				self.assertTrue(info.k <= k_orig or not info.converged)
-				self.free_var('solver')
-
-			self.free_vars('f', 'g')
-			self.assertEqual(lib.ok_device_reset(), 0)
+				self.free_vars('solver', 'f', 'g')
+				self.assertCall( lib.ok_device_reset() )

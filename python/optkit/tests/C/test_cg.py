@@ -100,23 +100,22 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			ATOLN = n**0.5 * 10**(-7 + 3 * single_precision)
 			TOL = tol * 10**(5 * single_precision)
 			RHO = rho * 10**(1 * single_precision)
 
 			# -----------------------------------------
-			# allocate x, b in python & C
-			x, x_, x_ptr = self.register_vector(lib, n, 'x')
-			b, b_, b_ptr = self.register_vector(lib, m, 'b')
-
-			b_ += np.random.rand(m)
-			self.assertCall( lib.vector_memcpy_va(b, b_ptr, 1) )
-
-			# -----------------------------------------
 			# test cgls for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "test cgls (nonallocating), operator type:", op_
+				x, x_, x_ptr = self.register_vector(lib, n, 'x')
+				b, b_, b_ptr = self.register_vector(lib, m, 'b')
+
+				b_ += np.random.rand(m)
+				self.assertCall( lib.vector_memcpy_va(b, b_ptr, 1) )
+
 				A_, A, o = self.register_operator(lib, op_)
 
 				h = lib.cgls_helper_alloc(m, n)
@@ -131,12 +130,8 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 				self.assert_cgls_exit(A_, x_, b_, RHO, flag[0], ATOLN)
 
-				self.free_vars('o', 'A', 'h')
-
-			# -----------------------------------------
-			# free x, b
-			self.free_vars('x', 'b')
-			self.assertCall( lib.ok_device_reset() )
+				self.free_vars('o', 'A', 'h', 'x', 'b')
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_cgls_allocating(self):
 		tol = self.tol_cg
@@ -149,6 +144,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			ATOLN = n**0.5 * 10**(-7 + 3 * single_precision)
 			TOL = tol * 10**(5 * single_precision)
@@ -166,6 +162,12 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			# test cgls for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "test cgls (allocating), operator type:", op_
+				x, x_, x_ptr = self.register_vector(lib, n, 'x')
+				b, b_, b_ptr = self.register_vector(lib, m, 'b')
+
+				b_ += np.random.rand(m)
+				self.assertCall( lib.vector_memcpy_va(b, b_ptr, 1) )
+
 				A_, A, o = self.register_operator(lib, op_)
 
 				flag = np.zeros(1).astype(c_uint)
@@ -177,12 +179,8 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 				self.assert_cgls_exit(A_, x_, b_, RHO, flag[0], ATOLN)
 
-				self.free_vars('o', 'A')
-
-			# -----------------------------------------
-			# free x, b
-			self.free_vars('x', 'b')
-			self.assertCall( lib.ok_device_reset() )
+				self.free_vars('o', 'A', 'x', 'b')
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_cgls_easy(self):
 		tol = self.tol_cg
@@ -195,23 +193,22 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			ATOLN = n**0.5 * 10**(-7 + 3 * single_precision)
 			TOL = tol * 10**(5 * single_precision)
 			RHO = rho * 10**(1 * single_precision)
 
 			# -----------------------------------------
-			# allocate x, b in python & C
-			x, x_, x_ptr = self.register_vector(lib, n, 'x')
-			b, b_, b_ptr = self.register_vector(lib, m, 'b')
-
-			b_ += np.random.rand(m)
-			self.assertCall( lib.vector_memcpy_va(b, b_ptr, 1) )
-
-			# -----------------------------------------
 			# test cgls for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "test cgls (easy), operator type:", op_
+				x, x_, x_ptr = self.register_vector(lib, n, 'x')
+				b, b_, b_ptr = self.register_vector(lib, m, 'b')
+
+				b_ += np.random.rand(m)
+				self.assertCall( lib.vector_memcpy_va(b, b_ptr, 1) )
+
 				A_, A, o = self.register_operator(lib, op_)
 
 				cgls_work = lib.cgls_init(m, n)
@@ -228,12 +225,8 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 
 				self.assert_cgls_exit(A_, x_, b_, RHO, flag[0], ATOLN)
-				self.free_vars('o', 'A')
-
-			# -----------------------------------------
-			# free x, b
-			self.free_vars('x', 'b')
-			self.assertCall( lib.ok_device_reset() )
+				self.free_vars('o', 'A', 'x', 'b')
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_pcg_helper_alloc_free(self):
 		m, n = self.shape
@@ -264,6 +257,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			RTOL = 2e-2
 			ATOLN = RTOL * n**0.5
@@ -289,7 +283,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				self.assertVecEqual( p_py, p, ATOLN, RTOL )
 
 				self.free_vars('o', 'A', 'p_vec')
-			self.assertCall( lib.ok_device_reset() )
+				self.assertCall( lib.ok_device_reset() )
 
 	def register_pcg_operators(self, lib, optype, rho, n):
 		A_, A, o = self.register_operator(lib, optype)
@@ -322,6 +316,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 5 * single_precision - 1 * gpu
 			RTOL = 10**(-DIGITS)
@@ -329,17 +324,15 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			RHO = self.rho_cg * 10**(4 * single_precision)
 
 			# -----------------------------------------
-			# allocate x, b in python & C
-			x, x_, x_ptr = self.register_vector(lib, n, 'x')
-			b, b_, b_ptr = self.register_vector(lib, n, 'b')
-
-			b_ += np.random.rand(n)
-			self.assertCall( lib.vector_memcpy_va(b, b_ptr, 1) )
-
-			# -----------------------------------------
 			# test pcg for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "test pcg (nonallocating), operator type:", op_
+				x, x_, x_ptr = self.register_vector(lib, n, 'x')
+				b, b_, b_ptr = self.register_vector(lib, n, 'b')
+
+				b_ += np.random.rand(n)
+				self.assertCall( lib.vector_memcpy_va(b, b_ptr, 1) )
+
 				A, o, T, p_vec, p = self.register_pcg_operators(lib, op_, RHO,
 																n)
 
@@ -354,12 +347,8 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				self.assertTrue( iter_[0] <= maxiter )
 				self.assertVecEqual( T.dot(x_), b_, ATOLN, RTOL )
 
-				self.free_vars('p', 'p_vec', 'o', 'A', 'h')
-
-			# -----------------------------------------
-			# free x, b
-			self.free_vars('x', 'b')
-			self.assertCall( lib.ok_device_reset() )
+				self.free_vars('p', 'p_vec', 'o', 'A', 'h', 'x', 'b')
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_pcg_nonallocating_warmstart(self):
 		"""TODO: DOCSTRING"""
@@ -372,6 +361,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 5 * single_precision - 1 * gpu
 			RTOL = 10**(-DIGITS)
@@ -379,17 +369,15 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			RHO = self.rho_cg * 10**(4 * single_precision)
 
 			# -----------------------------------------
-			# allocate x, b in python & C
-			x, x_, x_ptr = self.register_vector(lib, n, 'x')
-			b, b_, b_ptr = self.register_vector(lib, n, 'b')
-
-			b_ += np.random.rand(n)
-			self.assertCall( lib.vector_memcpy_va(b, b_ptr, 1) )
-
-			# -----------------------------------------
 			# test pcg for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "test pcg (nonallocating) warmstart, operator type:", op_
+				x, x_, x_ptr = self.register_vector(lib, n, 'x')
+				b, b_, b_ptr = self.register_vector(lib, n, 'b')
+
+				b_ += np.random.rand(n)
+				self.assertCall( lib.vector_memcpy_va(b, b_ptr, 1) )
+
 				A, o, T, p_vec, p = self.register_pcg_operators(lib, op_, RHO,
 																n)
 
@@ -419,12 +407,8 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				self.assertTrue(iters2 <= maxiter)
 				self.assertTrue(iters2 <= iters1)
 
-				self.free_vars('p', 'p_vec', 'o', 'A', 'h')
-
-			# -----------------------------------------
-			# free x, b
-			self.free_vars('x', 'b')
-			self.assertCall( lib.ok_device_reset() )
+				self.free_vars('p', 'p_vec', 'o', 'A', 'h', 'x', 'b')
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_pcg_allocating(self):
 		tol = self.tol_cg
@@ -436,6 +420,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 5 * single_precision - 1 * gpu
 			RTOL = 10**(-DIGITS)
@@ -443,17 +428,15 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			RHO = self.rho_cg * 10**(4 * single_precision)
 
 			# -----------------------------------------
-			# allocate x, b in python & C
-			x, x_, x_ptr = self.register_vector(lib, n, 'x')
-			b, b_, b_ptr = self.register_vector(lib, n, 'b')
-
-			b_ += np.random.rand(n)
-			self.assertCall( lib.vector_memcpy_va(b, b_ptr, 1) )
-
-			# -----------------------------------------
 			# test pcg for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "test pcg (allocating), operator type:", op_
+				x, x_, x_ptr = self.register_vector(lib, n, 'x')
+				b, b_, b_ptr = self.register_vector(lib, n, 'b')
+
+				b_ += np.random.rand(n)
+				self.assertCall( lib.vector_memcpy_va(b, b_ptr, 1) )
+
 				A, o, T, p_vec, p = self.register_pcg_operators(lib, op_, RHO,
 																n)
 
@@ -469,12 +452,8 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 				self.assertVecEqual( T.dot(x_), b_, ATOLN, RTOL )
 
-				self.free_vars('p', 'p_vec', 'o', 'A')
-
-			# -----------------------------------------
-			# free x, b
-			self.free_vars('x', 'b')
-			self.assertCall( lib.ok_device_reset() )
+				self.free_vars('p', 'p_vec', 'o', 'A', 'x', 'b')
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_pcg_easy(self):
 		tol = self.tol_cg
@@ -486,6 +465,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 5 * single_precision - 1 * gpu
 			RTOL = 10**(-DIGITS)
@@ -493,23 +473,19 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			RHO = self.rho_cg * 10**(4 * single_precision)
 
 			# -----------------------------------------
-			# allocate x, b in python & C
-			x, x_, x_ptr = self.register_vector(lib, n, 'x')
-			b, b_, b_ptr = self.register_vector(lib, n, 'b')
-
-			b_ += np.random.rand(n)
-			self.assertCall( lib.vector_memcpy_va(b, b_ptr, 1) )
-
-			# -----------------------------------------
 			# test pcg for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				print "test pcg (easy), operator type:", op_
+				x, x_, x_ptr = self.register_vector(lib, n, 'x')
+				b, b_, b_ptr = self.register_vector(lib, n, 'b')
+
+				b_ += np.random.rand(n)
+				self.assertCall( lib.vector_memcpy_va(b, b_ptr, 1) )
+
 				A, o, T, p_vec, p = self.register_pcg_operators(lib, op_, RHO,
 																n)
-
 				h = lib.pcg_helper_alloc(m, n)
 				self.register_var('h', h, lib.pcg_helper_free)
-
 
 				pcg_work = lib.pcg_init(m, n)
 				self.register_var('work', pcg_work, lib.pcg_finish)
@@ -535,9 +511,5 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				print 'warm start iters:', iters2
 				self.assertTrue(iters2 <= iters1)
 
-				self.free_vars('work', 'p', 'p_vec', 'o', 'A')
-
-			# -----------------------------------------
-			# free x, b
-			self.free_vars('x', 'b')
-			self.assertCall( lib.ok_device_reset() )
+				self.free_vars('work', 'p', 'p_vec', 'o', 'A', 'x', 'b')
+				self.assertCall( lib.ok_device_reset() )

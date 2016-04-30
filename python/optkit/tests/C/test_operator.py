@@ -118,6 +118,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * single_precision - 1 * gpu
 			TOL = 10**(-DIGITS)
@@ -145,6 +146,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
@@ -169,6 +171,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * single_precision - 1 * gpu
 			TOL = 10**(-DIGITS)
@@ -197,6 +200,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			for rowmajor in (True, False):
 				d = lib.vector(0, 0, None)
@@ -218,6 +222,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * single_precision - 1 * gpu
 			TOL = 10**(-DIGITS)

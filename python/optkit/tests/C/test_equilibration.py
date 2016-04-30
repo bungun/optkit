@@ -82,6 +82,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			for rowmajor in (True, False):
 				order = lib.enums.CblasRowMajor if rowmajor else \
@@ -101,43 +102,37 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 				A_colmissing[:, self.shape[1]/2] *= 0
 
 				self.equilibrate(lib, order, pyorder, A_colmissing)
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_operator_sinkhorn_knopp(self):
 		m, n = self.shape
 
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * single_precision - 2 * gpu
 			RTOL = 10**(-DIGITS)
 			ATOLN = RTOL * n**0.5
-
-			hdl = c_void_p()
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var
-
-			# -----------------------------------------
-			# allocate x, y, d, e in python & C
-			x, x_py, x_ptr = self.register_vector(lib, n, 'x')
-			y, y_py, y_ptr = self.register_vector(lib, m, 'y')
-			d, d_py, d_ptr = self.register_vector(lib, m, 'd')
-			e, e_py, e_ptr = self.register_vector(lib, n, 'e')
-			x_py += self.x_test
 
 			# -----------------------------------------
 			# test equilibration for each operator type defined in
 			# self.op_keys
 			for op_ in self.op_keys:
 				print "operator sinkhorn, operator type:", op_
+				hdl = self.register_blas_handle(lib, 'hdl')
+				x, x_py, x_ptr = self.register_vector(lib, n, 'x')
+				y, y_py, y_ptr = self.register_vector(lib, m, 'y')
+				d, d_py, d_ptr = self.register_vector(lib, m, 'd')
+				e, e_py, e_ptr = self.register_vector(lib, n, 'e')
+				x_py += self.x_test
 				A_, A, o = self.register_operator(lib, op_)
 
 				# equilibrate operator
 				self.assertCall( lib.operator_regularized_sinkhorn(hdl, o, d,
 																   e, 1.) )
-
 				# extract results
 				self.assertCall( lib.vector_memcpy_av(d_ptr, d, 1) )
 				self.assertCall( lib.vector_memcpy_av(e_ptr, e, 1) )
@@ -151,42 +146,35 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 
 				self.assertVecEqual( A_eqx, DAEx, ATOLN, RTOL )
 
-				self.free_vars('A', 'o')
-
-			# -----------------------------------------
-			self.free_vars('x', 'y', 'd', 'e')
-
-			lib.blas_destroy_handle(hdl)
-			lib.ok_device_reset()
+				self.free_vars('A', 'o', 'x', 'y', 'd', 'e', 'hdl')
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_operator_equil(self):
 		m, n = self.shape
 
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * single_precision - 2 * gpu
 			RTOL = 10**(-DIGITS)
 			ATOLN = RTOL * n**0.5
 
-			hdl = self.register_blas_handle(lib, 'hdl')
-
-			# -----------------------------------------
-			# allocate x, y, d, e in python & C
-			x, x_py, x_ptr = self.register_vector(lib, n, 'x')
-			y, y_py, y_ptr = self.register_vector(lib, m, 'y')
-			d, d_py, d_ptr = self.register_vector(lib, m, 'd')
-			e, e_py, e_ptr = self.register_vector(lib, n, 'e')
-			x_py += self.x_test
 
 			# -----------------------------------------
 			# test equilibration for each operator type defined in
 			# self.op_keys
 			for op_ in self.op_keys:
 				print "operator equil generic operator type:", op_
+				hdl = self.register_blas_handle(lib, 'hdl')
+				x, x_py, x_ptr = self.register_vector(lib, n, 'x')
+				y, y_py, y_ptr = self.register_vector(lib, m, 'y')
+				d, d_py, d_ptr = self.register_vector(lib, m, 'd')
+				e, e_py, e_ptr = self.register_vector(lib, n, 'e')
+				x_py += self.x_test
+
 				A_, A, o = self.register_operator(lib, op_)
 
 				# equilibrate operator
@@ -209,12 +197,8 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 				# REAL TEST:
 				# self.assertEqual( status, 0 )
 				# self.assertVecEqual( A_eqx, DAEx, ATOLN, RTOL )
-				self.free_vars('A', 'o')
-
-			# -----------------------------------------
-			# free x, y, d, e
-			self.free_vars('x', 'y', 'd', 'e', 'hdl')
-			self.assertCall( lib.ok_device_reset() )
+				self.free_vars('A', 'o', 'x', 'y', 'd', 'e', 'hdl')
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_operator_norm(self):
 		m, n = self.shape
@@ -223,17 +207,17 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
-			RTOL = 0.05
-			ATOL = 0.005 * (m * n)**0.5
-
-			hdl = self.register_blas_handle(lib, 'hdl')
+			RTOL = 5e-2
+			ATOL = 5e-3 * (m * n)**0.5
 
 			# -----------------------------------------
 			# test norm estimation for each operator type defined in
 			# self.op_keys
 			for op_ in self.op_keys:
 				print "indirect projection, operator type:", op_
+				hdl = self.register_blas_handle(lib, 'hdl')
 				A_, A, o = self.register_operator(lib, op_)
 
 				# estimate operator norm
@@ -252,7 +236,5 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 				self.assertTrue(
 					cnorm >= ATOL, RTOL )* pynorm or
 					pynorm >= ATOL, RTOL )* cnorm )
-				self.free_vars('A', 'o')
-
-			self.free_var('hdl')
-			self.assertCall( lib.ok_device_reset() )
+				self.free_vars('A', 'o','hdl')
+				self.assertCall( lib.ok_device_reset() )

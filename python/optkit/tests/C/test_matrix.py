@@ -29,6 +29,7 @@ class MatrixTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
 				A = lib.matrix(0, 0, 0, None, order)
@@ -52,8 +53,7 @@ class MatrixTestCase(OptkitCTestCase):
 						self.assertEqual( A.data[i], 0 )
 				# free
 				self.free_var('A')
-
-			self.assertCall( lib.ok_device_reset() )
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_io(self):
 		(m, n) = self.shape
@@ -64,6 +64,7 @@ class MatrixTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 11 - 4 * lib.FLOAT - 1 * lib.GPU
 			TOL = 10**(-DIGITS)
@@ -110,7 +111,7 @@ class MatrixTestCase(OptkitCTestCase):
 				self.assertVecEqual( A_py, A_rand, TOL, TOL )
 
 				self.free_vars('A', 'Z')
-			self.assertCall( lib.ok_device_reset() )
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_slicing(self):
 		""" matrix slicing tests """
@@ -122,6 +123,7 @@ class MatrixTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * lib.FLOAT - 1 * lib.GPU
 			TOL = 10**(-DIGITS)
@@ -174,8 +176,7 @@ class MatrixTestCase(OptkitCTestCase):
 				self.assertVecEqual( np.diag(A_py), v_py, TOL, TOL )
 
 				self.free_var('A')
-			self.assertCall( lib.ok_device_reset() )
-
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_math(self):
 		""" matrix math tests """
@@ -186,6 +187,7 @@ class MatrixTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * lib.FLOAT - 1 * lib.GPU
 			RTOL = 10**(-DIGITS)
@@ -243,5 +245,4 @@ class MatrixTestCase(OptkitCTestCase):
 				self.assertVecEqual( A_py, A_rand, ATOLMN, RTOL )
 
 				self.free_vars('d', 'e', 'A')
-
-			self.assertCall( lib.ok_device_reset() )
+				self.assertCall( lib.ok_device_reset() )

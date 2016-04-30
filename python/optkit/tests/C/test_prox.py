@@ -83,6 +83,7 @@ class ProxTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			# calloc
 			f = lib.function_vector(0, None)
@@ -111,6 +112,7 @@ class ProxTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * single_precision
 			RTOL = 10**(-DIGITS)
@@ -211,6 +213,7 @@ class ProxTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * single_precision
 			RTOL = 10**(-DIGITS)
@@ -291,6 +294,7 @@ class ProxTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * single_precision
 			RTOL = 10**(-DIGITS)

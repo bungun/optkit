@@ -93,6 +93,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			A = lib.sparse_matrix(0, 0, 0, 0, None, None, None, 101)
 
@@ -149,6 +150,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * single_precision
 			RTOL = 10**(-DIGITS)
@@ -239,6 +241,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * single_precision
 			RTOL = 10**(-DIGITS)
@@ -295,6 +298,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * single_precision
 			RTOL = 10**(-DIGITS)
@@ -363,6 +367,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * single_precision
 			RTOL = 10**(-DIGITS)

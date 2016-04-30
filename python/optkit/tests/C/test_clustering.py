@@ -124,6 +124,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			u = lib.upsamplingvec()
 
@@ -135,6 +136,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			self.assertCall( lib.upsamplingvec_free(u) )
 			self.unregister_var('u')
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_upsamplingvec_check_bounds(self):
 		m, n = self.shape
@@ -144,6 +146,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			u_py = np.zeros(m).astype(c_size_t)
 			u_ptr = u_py.ctypes.data_as(lib.c_size_t_p)
@@ -164,6 +167,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			self.assertCall( lib.upsamplingvec_free(u) )
 			self.unregister_var('u')
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_upsamplingvec_update_size(self):
 		m, n = self.shape
@@ -173,6 +177,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			u_py = np.random.rand(m).astype(c_size_t)
 			u_ptr = u_py.ctypes.data_as(lib.c_size_t_p)
@@ -198,6 +203,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			self.assertCall( lib.upsamplingvec_free(u) )
 			self.unregister_var('u')
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_upsamplingvec_subvector(self):
 		m, n = self.shape
@@ -207,6 +213,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			offset = m / 4
 			msub = m / 2
@@ -238,6 +245,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			self.assertCall( lib.upsamplingvec_free(u) )
 			self.unregister_var('u')
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_upsamplingvec_mul_matrix(self):
 		m, n = self.shape
@@ -248,6 +256,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			self.assertCall( lib.blas_make_handle(byref(hdl)) )
 			self.register_var('hdl', hdl, lib.blas_destroy_handle)
@@ -412,14 +421,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			err = lib.upsamplingvec_mul_matrix(T, N, N, alpha, u, E, beta, C)
 			self.assertEqual( err, lib.enums.OPTKIT_ERROR_UNALLOCATED )
 
-			self.free_var('A')
-			self.free_var('B')
-			self.free_var('C')
-			self.free_var('D')
-			self.free_var('mvec')
-			self.free_var('nvec')
-			self.free_var('kvec')
-			self.free_var('u')
+			self.free_vars('A', 'B', 'C', 'D', 'mvec', 'nvec', 'kvec', 'u')
 			self.free_var('hdl')
 			self.assertCall( lib.ok_device_reset() )
 
@@ -432,6 +434,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			u = lib.upsamplingvec()
 			usub = lib.upsamplingvec()
@@ -458,8 +461,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			self.assertTrue( sum(counts_py - counts_host) < 1e-7 * k**0.5 )
 
-			self.free_var('u')
-			self.free_var('counts')
+			self.free_vars('u', 'counts')
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_cluster_aid_alloc_free(self):
 		m, n = self.shape
@@ -469,6 +472,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			h = lib.cluster_aid()
 
@@ -499,6 +503,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual( h.c_squared_full.size, 0 )
 			self.assertEqual( h.D_full.size1, 0 )
 			self.assertEqual( h.D_full.size2, 0 )
+			self.assertCall( lib.ok_device_reset() )
 
 	# def test_cluster_aid_resize(self):
 	# 	m, n = self.shape
@@ -517,6 +522,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			w = lib.kmeans_work()
 			self.assertCall( lib.kmeans_work_alloc(w, m, k, n) )
@@ -545,6 +551,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual( w.n_vectors, 0 )
 			self.assertEqual( w.n_clusters, 0 )
 			self.assertEqual( w.vec_length, 0 )
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_kmeans_work_resize(self):
 		m, n = self.shape
@@ -554,6 +561,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			w = lib.kmeans_work()
 			self.assertCall( lib.kmeans_work_alloc(w, m, k, n) )
@@ -584,6 +592,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual( w.a2c.size2, k / 2 )
 
 			self.free_var('w')
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_kmeans_work_load_extract(self):
 		m, n = self.shape
@@ -593,6 +602,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			DIGITS = 7 - 2 * single_precision - 1 * gpu
 			RTOL = 10**(-DIGITS)
@@ -650,6 +660,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertVecEqual( counts_orig, counts, ATOLK, RTOL )
 
 			self.free_var('w')
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_cluster(self):
 		""" cluster
@@ -674,6 +685,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			for MAXDIST in [1e3, 0.2]:
 
@@ -766,12 +778,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 				self.assertCall( lib.cluster_aid_free(h) )
 				self.unregister_var('h')
-				self.free_var('A')
-				self.free_var('C')
-				self.free_var('a2c')
-				self.free_var('mvec')
-				self.free_var('kvec')
-				self.free_var('hdl')
+				self.free_vars('A', 'C', 'a2c', 'mvec', 'kvec', 'hdl')
 				self.assertCall( lib.ok_device_reset() )
 
 	def test_calculate_centroids(self):
@@ -789,6 +796,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			hdl = c_void_p()
 			self.assertCall( lib.blas_make_handle(byref(hdl)) )
@@ -870,13 +878,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			# compare C vs. Py
 			self.assertVecEqual( kvec_py, Cnvec, ATOLK, RTOL)
 
-			self.free_var('A')
-			self.free_var('C')
-			self.free_var('a2c')
-			self.free_var('counts')
-			self.free_var('nvec')
-			self.free_var('kvec')
-			self.free_var('hdl')
+			self.free_vars('A', 'C', 'a2c', 'counts', 'nvec', 'kvec', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_kmeans(self):
@@ -893,6 +895,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			hdl = c_void_p()
 			self.assertCall( lib.blas_make_handle(byref(hdl)) )
@@ -953,13 +956,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertCall( lib.k_means(A, C, a2c, counts, h, DIST_RELTOL,
 										 CHANGE_TOL, MAXITER, VERBOSE) )
 
-			self.free_var('A')
-			self.free_var('C')
-			self.free_var('a2c')
-			self.free_var('counts')
-			self.free_var('nvec')
-			self.free_var('kvec')
-			self.free_var('hdl')
+			self.free_vars('A', 'C', 'a2c', 'counts', 'nvec', 'kvec', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_kmeans_easy_init_free(self):
@@ -970,6 +967,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			w_int = lib.kmeans_easy_init(m, k, n)
 			self.assertNotEqual(w_int, 0 )
@@ -981,6 +979,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual(cwork.contents.vec_length, n)
 			self.assertCall( lib.kmeans_easy_finish(work) )
 			self.unregister_var('work')
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_kmeans_easy_resize(self):
 		m, n = self.shape
@@ -990,6 +989,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			work = lib.kmeans_easy_init(m, k, n)
 			self.register_var('work', work, lib.kmeans_easy_finish)
@@ -1002,6 +1002,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual(cwork.contents.A.size2, n / 2)
 
 			self.free_var('work')
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_kmeans_easy_run(self):
 		""" k-means
@@ -1017,6 +1018,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			A = np.random.rand(m, n).astype(lib.pyfloat)
 			C = np.random.rand(k, n).astype(lib.pyfloat)
@@ -1050,3 +1052,4 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertCall( lib.kmeans_easy_run(work, settings, io) )
 
 			self.free_var('work')
+			self.assertCall( lib.ok_device_reset() )

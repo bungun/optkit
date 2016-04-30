@@ -51,9 +51,8 @@ class OptkitCTestCase(OptkitTestCase):
 		self.__exit_call = call
 
 	def exit_call(self):
-		self.__exit_call()
+		PRINTERR( self.__exit_call() )
 		self.__exit_call = lambda : None
-
 
 	@staticmethod
 	def gen_py_vector(lib, size, random=False):

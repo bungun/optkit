@@ -24,6 +24,7 @@ class VectorTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			len_v = 10 + int(10 * np.random.rand())
 
@@ -48,9 +49,9 @@ class VectorTestCase(OptkitCTestCase):
 	def test_io(self):
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			len_v = 10 + int(1000 * np.random.rand())
 			DIGITS = 7 - 2 * single_precision
@@ -95,12 +96,14 @@ class VectorTestCase(OptkitCTestCase):
 				# DON'T FREE u, DATA OWNED BY PYTHON
 
 			self.free_vars('v', 'w')
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_subvector(self):
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			len_v = 10 + int(10 * np.random.rand())
 
@@ -121,12 +124,14 @@ class VectorTestCase(OptkitCTestCase):
 				self.assertEqual( v_sub_py[i], v_py[i + offset_sub] )
 
 			self.free_var('v')
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_math(self):
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			val1 = 12 * np.random.rand()
 			val2 = 5 * np.random.rand()
@@ -252,12 +257,14 @@ class VectorTestCase(OptkitCTestCase):
 			self.assertScalarEqual( wmax[0], w_py.max(), RTOL )
 
 			self.free_vars('v', 'w')
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_indvector_math(self):
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			val1 = 12 * np.random.rand()
 			val2 = 5 * np.random.rand()
@@ -293,3 +300,4 @@ class VectorTestCase(OptkitCTestCase):
 			self.assertScalarEqual( wmax[0], w_py.max(), RTOL )
 
 			self.free_var('w')
+			self.assertCall( lib.ok_device_reset() )
