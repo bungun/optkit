@@ -22,7 +22,7 @@ class OKBackend(object):
 		self.dense_lib_loader = DenseLinsysLibs()
 		self.sparse_lib_loader = SparseLinsysLibs()
 		self.prox_lib_loader = ProxLibs()
-		self.pogs_lib_loader = PogsLibs(dense=True)
+		self.pogs_lib_loader = PogsLibs()
 
 		# library instances
 		self.dense = None
@@ -87,12 +87,11 @@ class OKBackend(object):
 					self.dense = self.dense_lib_loader.get(
 							single_precision=single, gpu=gpu)
 					self.prox = self.prox_lib_loader.get(
-							self.dense, single_precision=single, gpu=gpu)
+							single_precision=single, gpu=gpu)
 					self.sparse = self.sparse_lib_loader.get(
-							self.dense, gpu=gpu, single_precision=single)
+							single_precision=single, gpu=gpu)
 					self.pogs = self.pogs_lib_loader.get(
-							self.dense, self.prox, gpu=gpu,
-							single_precision=single)
+							single_precision=single, gpu=gpu)
 					return
 				else:
 					print str('Libraries for configuration {} '
