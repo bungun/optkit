@@ -74,6 +74,7 @@ class ProxTestCase(OptkitCTestCase):
 
 	def tearDown(self):
 		self.free_all_vars()
+		self.exit_call()
 
 	def test_alloc(self):
 		m, n = self.shape
@@ -140,12 +141,12 @@ class ProxTestCase(OptkitCTestCase):
 				fc = [f_.c - c for f_ in f_list]
 				fd = [f_.d - d for f_ in f_list]
 				fe = [f_.e - e for f_ in f_list]
-				self.assertTrue( np.linalg.norm(fh) <= ATOLM )
-				self.assertTrue( np.linalg.norm(fa) <= ATOLM )
-				self.assertTrue( np.linalg.norm(fb) <= ATOLM )
-				self.assertTrue( np.linalg.norm(fc) <= ATOLM )
-				self.assertTrue( np.linalg.norm(fd) <= ATOLM )
-				self.assertTrue( np.linalg.norm(fe) <= ATOLM )
+				self.assertVecEqual( 0, fh, ATOLM, 0 )
+				self.assertVecEqual( 0, fa, ATOLM, 0 )
+				self.assertVecEqual( 0, fb, ATOLM, 0 )
+				self.assertVecEqual( 0, fc, ATOLM, 0 )
+				self.assertVecEqual( 0, fd, ATOLM, 0 )
+				self.assertVecEqual( 0, fe, ATOLM, 0 )
 
 				# memcpy af
 				self.assertCall( lib.function_vector_memcpy_av(f_ptr, f) )
@@ -157,12 +158,12 @@ class ProxTestCase(OptkitCTestCase):
 				fc = [f_.c - clast for f_ in f_list]
 				fd = [f_.d - dlast for f_ in f_list]
 				fe = [f_.e - elast for f_ in f_list]
-				self.assertTrue( np.linalg.norm(fh) <= ATOLM )
-				self.assertTrue( np.linalg.norm(fa) <= ATOLM )
-				self.assertTrue( np.linalg.norm(fb) <= ATOLM )
-				self.assertTrue( np.linalg.norm(fc) <= ATOLM )
-				self.assertTrue( np.linalg.norm(fd) <= ATOLM )
-				self.assertTrue( np.linalg.norm(fe) <= ATOLM )
+				self.assertVecEqual( 0, fh, ATOLM, 0 )
+				self.assertVecEqual( 0, fa, ATOLM, 0 )
+				self.assertVecEqual( 0, fb, ATOLM, 0 )
+				self.assertVecEqual( 0, fc, ATOLM, 0 )
+				self.assertVecEqual( 0, fd, ATOLM, 0 )
+				self.assertVecEqual( 0, fe, ATOLM, 0 )
 
 				# memcpy fa
 				for i in xrange(m):
@@ -178,12 +179,12 @@ class ProxTestCase(OptkitCTestCase):
 				fc = [f_.c - c for f_ in f_list]
 				fd = [f_.d - d for f_ in f_list]
 				fe = [f_.e - e for f_ in f_list]
-				self.assertTrue( np.linalg.norm(fh) <= ATOLM )
-				self.assertTrue( np.linalg.norm(fa) <= ATOLM )
-				self.assertTrue( np.linalg.norm(fb) <= ATOLM )
-				self.assertTrue( np.linalg.norm(fc) <= ATOLM )
-				self.assertTrue( np.linalg.norm(fd) <= ATOLM )
-				self.assertTrue( np.linalg.norm(fe) <= ATOLM )
+				self.assertVecEqual( 0, fh, ATOLM, 0 )
+				self.assertVecEqual( 0, fa, ATOLM, 0 )
+				self.assertVecEqual( 0, fb, ATOLM, 0 )
+				self.assertVecEqual( 0, fc, ATOLM, 0 )
+				self.assertVecEqual( 0, fd, ATOLM, 0 )
+				self.assertVecEqual( 0, fe, ATOLM, 0 )
 
 				hlast = hval
 				alast = a
@@ -246,18 +247,12 @@ class ProxTestCase(OptkitCTestCase):
 			fc = [f_.c for f_ in f_list]
 			fd = [f_.d for f_ in f_list]
 			fe = [f_.e for f_ in f_list]
-			self.assertTrue( np.linalg.norm(fh) <= ATOLM )
-			self.assertTrue( np.linalg.norm(fa - a) <=
-							 ATOLM + RTOL * np.linalg.norm(a) )
-			self.assertTrue( np.linalg.norm(fb - b) <=
-							 ATOLM + RTOL * np.linalg.norm(b) )
-			self.assertTrue( np.linalg.norm(fc - c) <=
-							 ATOLM + RTOL * np.linalg.norm(c) )
-			self.assertTrue( np.linalg.norm(fd - d) <=
-							 ATOLM + RTOL * np.linalg.norm(d) )
-			self.assertTrue( np.linalg.norm(fe - e) <=
-							 ATOLM + RTOL * np.linalg.norm(e) )
-
+			self.assertVecEqual( 0, fh, ATOLM, 0 )
+			self.assertVecEqual( fa, a , ATOLM, RTOL )
+			self.assertVecEqual( fb, b , ATOLM, RTOL )
+			self.assertVecEqual( fc, c , ATOLM, RTOL )
+			self.assertVecEqual( fd, d , ATOLM, RTOL )
+			self.assertVecEqual( fe, e , ATOLM, RTOL )
 			# div
 			self.assertCall( lib.function_vector_div(f, v) )
 			self.assertCall( lib.function_vector_memcpy_av(f_ptr, f) )
@@ -272,17 +267,12 @@ class ProxTestCase(OptkitCTestCase):
 			fc = [f_.c for f_ in f_list]
 			fd = [f_.d for f_ in f_list]
 			fe = [f_.e for f_ in f_list]
-			self.assertTrue( np.linalg.norm(fh) <= ATOLM )
-			self.assertTrue( np.linalg.norm(fa - a) <=
-							 ATOLM + RTOL * np.linalg.norm(a) )
-			self.assertTrue( np.linalg.norm(fb - b) <=
-							 ATOLM + RTOL * np.linalg.norm(b) )
-			self.assertTrue( np.linalg.norm(fc - c) <=
-							 ATOLM + RTOL * np.linalg.norm(c) )
-			self.assertTrue( np.linalg.norm(fd - d) <=
-							 ATOLM + RTOL * np.linalg.norm(d) )
-			self.assertTrue( np.linalg.norm(fe - e) <=
-							 ATOLM + RTOL * np.linalg.norm(e) )
+			self.assertVecEqual( fh) <= ATOLM )
+			self.assertVecEqual( fa, a , ATOLM, RTOL )
+			self.assertVecEqual( fb, b , ATOLM, RTOL )
+			self.assertVecEqual( fc, c , ATOLM, RTOL )
+			self.assertVecEqual( fd, d , ATOLM, RTOL )
+			self.assertVecEqual( fe, e , ATOLM, RTOL )
 
 			self.free_vars('f', 'v')
 			self.assertCall( lib.ok_device_reset() )
@@ -340,16 +330,14 @@ class ProxTestCase(OptkitCTestCase):
 				if funcval_c[0] in (np.inf, np.nan):
 					self.assertTrue( 1 )
 				else:
-					self.assertTrue( np.abs(funcval_py - funcval_c) <=
-									 ATOLM + RTOL * np.abs(funcval_c) )
+					self.assertScalarEqual( funcval_py, funcval_c, RTOL )
 
 				# proximal operator evaluation, random rho
 				rho = 5 * np.random.rand()
 				prox_py = prox_eval_python(f_list, rho, x_rand)
 				self.assertCall( lib.prox_eval_vector(f, rho, x, xout) )
 				self.assertCall( lib.vector_memcpy_av(xout_ptr, xout, 1) )
-				self.assertTrue( np.linalg.norm(xout_py - prox_py) <=
-								 ATOLM + RTOL * np.linalg.norm(prox_py) )
+				self.assertVecEqual( xout_py, prox_py, ATOLM, RTOL )
 
 			self.free_vars('f', 'x', 'xout')
 			self.assertCall( lib.ok_device_reset() )

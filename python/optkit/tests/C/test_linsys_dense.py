@@ -107,6 +107,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 
 	def tearDown(self):
 		self.free_all_vars()
+		self.exit_call()
 
 	def test_blas1_dot(self):
 		(m, n) = self.shape
@@ -157,8 +158,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 			answer = np.zeros(1).astype(lib.pyfloat)
 			answer_p = answer.ctypes.data_as(lib.ok_float_p)
 			self.assertCall( lib.blas_nrm2(hdl, v, answer_p) )
-			self.assertTrue( np.abs(answer[0] - np.linalg.norm(v_py)) <=
-							 TOL + TOL * answer[0] )
+			self.assertScalarEqual( answer[0], np.linalg.norm(v_py), TOL )
 
 			self.free_vars('v', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
@@ -183,8 +183,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 			answer = np.zeros(1).astype(lib.pyfloat)
 			answer_p = answer.ctypes.data_as(lib.ok_float_p)
 			self.assertCall( lib.blas_asum(hdl, v, answer_p) )
-			self.assertTrue( np.abs(answer[0] - np.linalg.norm(v_py, 1)) <=
-							 TOL + TOL * answer[0] )
+			self.assertScalarEqual( answer[0], np.linalg.norm(v_py, 1), TOL )
 
 			self.free_vars('v', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
@@ -210,9 +209,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 			alpha = np.random.rand()
 			self.assertCall( lib.blas_scal(hdl, alpha, v) )
 			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
-			self.assertTrue( np.linalg.norm(v_py - alpha * v_rand) <=
-							 TOL * m**0.5 + TOL * np.linalg.norm(v_py) )
-			self.assertTrue(np.allclose(v_py, alpha * v_rand, DIGITS))
+			self.assertVecEqual( v_py, alpha * v_rand, TOL * m**0.5, TOL )
 
 			self.free_vars('v', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
@@ -240,8 +237,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 			self.assertCall( lib.vector_memcpy_va(w, w_ptr, 1) )
 			self.assertCall( lib.blas_axpy(hdl, alpha, v, w) )
 			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
-			self.assertTrue( np.linalg.norm(w_py - pyresult) <=
-							 TOL * m**0.5 + TOL * np.linalg.norm(w_py) )
+			self.assertVecEqual( w_py, pyresult, TOL * m**0.5, TOL )
 
 			self.free_vars('v', 'w', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
@@ -281,8 +277,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 				self.assertCall( lib.blas_gemv(hdl, lib.enums.CblasNoTrans,
 								 alpha, A, x, beta, y) )
 				self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
-				self.assertTrue( np.linalg.norm(y_py - pyresult) <=
-							 	 TOL * m**0.5 + TOL * np.linalg.norm(y_py) )
+				self.assertVecEqual( y_py, pyresult, TOL * m**0.5, TOL )
 
 				# perform x = alpha * A' * y + beta * x
 				y_py[:] = pyresult[:]
@@ -290,8 +285,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 				self.assertCall( lib.blas_gemv(hdl, lib.enums.CblasTrans,
 								 alpha, A, y, beta, x) )
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
-				self.assertTrue( np.linalg.norm(x_py - pyresult) <=
-							 	 TOL * n**0.5 + TOL * np.linalg.norm(x_py) )
+				self.assertVecEqual( x_py, pyresult, TOL * n**0.5, TOL )
 
 				self.free_vars('A', 'x', 'y', 'hdl')
 
@@ -344,8 +338,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 							  lib.enums.CblasNoTrans, lib.enums.CblasNonUnit,
 							  L, x) )
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
-				self.assertTrue( np.linalg.norm(x_py - pyresult) <=
-							 	 TOL * n**0.5 + TOL * np.linalg.norm(x_py) )
+				self.assertVecEqual( x_py, pyresult, TOL * n**0.5, TOL )
 
 				self.free_vars('L', 'x', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
@@ -398,8 +391,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 							 lib.enums.CblasLower, diags - 1, alpha, s, x,
 							 beta, y) )
 			self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
-			self.assertTrue( np.linalg.norm(y_py - pyresult) <=
-						 	 TOL * m**0.5 + TOL * np.linalg.norm(y_py) )
+			self.assertVecEqual( y_py, pyresult, TOL * m**0.5, TOL )
 
 			self.free_vars('x', 'y', 's', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
@@ -442,8 +434,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 			pyresult = alpha * d_py * x_py + beta * y_py
 			self.assertCall( lib.blas_diagmv(hdl, alpha, d, x, beta, y) )
 			self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
-			self.assertTrue( np.linalg.norm(y_py - pyresult) <=
-						 	 TOL * m**0.5 + TOL * np.linalg.norm(y_py) )
+			self.assertVecEqual( y_py, pyresult, TOL * m**0.5, TOL )
 
 			self.free_vars('x', 'y', 'd', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
@@ -488,8 +479,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 							  	 lib.enums.CblasNoTrans, alpha, B, A, beta,
 							  	 C) )
 				self.assertCall( lib.matrix_memcpy_am(C_ptr, C, order) )
-				self.assertTrue( np.linalg.norm(C_py - pyresult) <=
-						 	 	 ATOLMN + RTOL * np.linalg.norm(C_py) )
+				self.assertVecEqual( C_py, pyresult, ATOLMN, RTOL )
 
 				self.free_vars('A', 'B', 'C', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
@@ -537,8 +527,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 						if j > i:
 							pyresult[i, j] *= 0
 							B_py[i, j] *= 0
-				self.assertTrue( np.linalg.norm(B_py - pyresult) <=
-						 	 	 TOL * n + TOL * np.linalg.norm(B_py) )
+				self.assertVecEqual( B_py, pyresult, TOL * n, TOL )
 
 				self.free_vars('A', 'B', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
@@ -587,8 +576,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 								 lib.enums.CblasLower, lib.enums.CblasNoTrans,
 								 lib.enums.CblasNonUnit, 1., L, A) )
 				self.assertCall( lib.matrix_memcpy_am(A_ptr, A, order) )
-				self.assertTrue( np.linalg.norm(A_py - pyresult) <=
-						 	 	 ATOLMN + RTOL * np.linalg.norm(A_py) )
+				self.assertVecEqual( A_py, pyresult, ATOLMN, RTOL )
 
 				self.free_vars('A', 'L', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
@@ -610,6 +598,7 @@ class DenseLinalgTestCase(OptkitCTestCase):
 
 	def tearDown(self):
 		self.free_all_vars()
+
 
 	def test_cholesky(self):
 		(m, n) = self.shape
@@ -660,12 +649,10 @@ class DenseLinalgTestCase(OptkitCTestCase):
 							L_py[i, j] *= 0
 
 				imprecision_factor = 5**(int(gpu) + int(single_precision))
-				atol = 1e-2 * imprecision_factor
+				atol = 1e-2 * imprecision_factor * mindim
 				rtol = 1e-2 * imprecision_factor
-				norm_diff = np.linalg.norm(
-						L_py.dot(x_rand) - pychol.dot(x_rand))
-				norm = np.linalg.norm(pychol)
-				self.assertTrue( norm_diff <= atol * mindim + rtol * norm )
+				self.assertVecEqual( L_py.dot(x_rand), pychol.dot(x_rand),
+									 atol, rtol )
 
 				# populate x
 				x_py *= 0
@@ -675,11 +662,7 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				# cholesky solve
 				self.assertCall( lib.linalg_cholesky_svx(hdl, L, x) )
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
-
-				norm_diff = np.linalg.norm(x_py - pysol)
-				norm = np.linalg.norm(pysol)
-				self.assertTrue( norm_diff <=
-								 atol * mindim**0.5 + rtol * norm )
+				self.assertVecEqual( x_py, pysol, atol * mindim**0.5, rtol )
 
 				self.free_vars('L', 'x', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
@@ -715,8 +698,7 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				self.assertCall( lib.vector_memcpy_av(r_ptr, r, 1) )
 
 				# compare C vs Python results
-				self.assertTrue( np.linalg.norm(r_py - py_rows) <=
-								 ATOLM + RTOL * np.linalg.norm(py_rows) )
+				self.assertVecEqual( r_py, py_rows, ATOLM, RTOL )
 
 				# C: calculate column squares
 				self.assertCall( lib.linalg_matrix_row_squares(
@@ -724,8 +706,7 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				self.assertCall( lib.vector_memcpy_av(c_ptr, c, 1) )
 
 				# compare C vs Python results
-				self.assertTrue( np.linalg.norm(c_py - py_cols) <=
-								 ATOLN + RTOL * np.linalg.norm(py_cols) )
+				self.assertVecEqual( c_py, py_cols, ATOLN, RTOL )
 
 				# free memory
 				self.free_vars('A', 'r', 'c')
@@ -774,8 +755,7 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				Ax = y_py
 				AEx = A_py.dot(e_py * x_py)
 
-				self.assertTrue( np.linalg.norm(Ax - AEx) <=
-								 ATOLM + RTOL * np.linalg.norm(AEx) )
+				self.assertVecEqual( Ax, AEx, ATOLM, RTOL )
 
 				# A = diag(D) * A
 				self.assertCall( lib.linalg_matrix_broadcast_vector(A, d,
@@ -786,8 +766,7 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
 				Ax = y_py
 				DAEx = d_py * AEx
-				self.assertTrue( np.linalg.norm(Ax - DAEx) <=
-								 ATOLM + RTOL * np.linalg.norm(DAEx))
+				self.assertVecEqual( Ax, DAEx, ATOLM, RTOL )
 
 				# A += 1e'
 				self.assertCall( lib.linalg_matrix_broadcast_vector(A, e,
@@ -798,8 +777,7 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
 				Ax = y_py
 				A_updatex = DAEx + np.ones(m) * e_py.dot(x_py)
-				self.assertTrue( np.linalg.norm(Ax - A_updatex) <=
-								 ATOLM + RTOL * np.linalg.norm(A_updatex) )
+				self.assertVecEqual( Ax, A_updatex, ATOLM, RTOL )
 
 				# A += d1'
 				self.assertCall( lib.linalg_matrix_broadcast_vector(A, d,
@@ -810,8 +788,7 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
 				Ax = y_py
 				A_updatex += d_py * sum(x_py)
-				self.assertTrue( np.linalg.norm(Ax - A_updatex) <=
-								 ATOLM + RTOL * np.linalg.norm(A_updatex) )
+				self.assertVecEqual( Ax, A_updatex, ATOLM, RTOL )
 
 				# free memory
 				self.free_vars('A', 'd', 'e', 'x', 'y', 'hdl')
@@ -851,32 +828,28 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				self.assertCall( lib.linalg_matrix_reduce_min(e, A,
 										lib.enums.CblasLeft) )
 				self.assertCall( lib.vector_memcpy_av(e_ptr, e, 1) )
-				self.assertTrue( np.linalg.norm(e_py - colmin) <=
-								 ATOLN + RTOL * np.linalg.norm(colmin) )
+				self.assertVecEqual( e_py, colmin, ATOLN, RTOL )
 
 				# min - reduce rows
 				rowmin = np.min(A_py, 1)
 				self.assertCall( lib.linalg_matrix_reduce_min(d, A,
 										lib.enums.CblasRight) )
 				self.assertCall( lib.vector_memcpy_av(d_ptr, d, 1) )
-				self.assertTrue( np.linalg.norm(d_py - rowmin) <=
-								 ATOLM + RTOL * np.linalg.norm(rowmin) )
+				self.assertVecEqual( d_py, rowmin, ATOLM, RTOL )
 
 				# max - reduce columns
 				colmax = np.max(A_py, 0)
 				self.assertCall( lib.linalg_matrix_reduce_max(e, A,
 										lib.enums.CblasLeft) )
 				self.assertCall( lib.vector_memcpy_av(e_ptr, e, 1) )
-				self.assertTrue( np.linalg.norm(e_py - colmax) <=
-								 ATOLN + RTOL * np.linalg.norm(colmax) )
+				self.assertVecEqual( e_py, colmax, ATOLN, RTOL )
 
 				# max - reduce rows
 				rowmax = np.max(A_py, 1)
 				self.assertCall( lib.linalg_matrix_reduce_max(d, A,
 										lib.enums.CblasRight) )
 				self.assertCall( lib.vector_memcpy_av(d_ptr, d, 1) )
-				self.assertTrue( np.linalg.norm(d_py - rowmax) <=
-								 ATOLM + RTOL * np.linalg.norm(rowmax) )
+				self.assertVecEqual( d_py, rowmax, ATOLM, RTOL )
 
 				# indmin - reduce columns
 				idx, inds, inds_ptr = self.register_indvector(lib, n, 'idx')
@@ -886,8 +859,7 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				self.free_var('idx')
 				calcmin = np.array([A_py[inds[i], i] for i in xrange(n)])
 				colmin = np.min(A_py, 0)
-				self.assertTrue( np.linalg.norm(calcmin - colmin) <=
-								 ATOLN + RTOL * np.linalg.norm(colmin) )
+				self.assertVecEqual( calcmin, colmin, ATOLN, RTOL )
 
 				# indmin - reduce rows
 				idx, inds, inds_ptr = self.register_indvector(lib, m, 'idx')
@@ -897,8 +869,7 @@ class DenseLinalgTestCase(OptkitCTestCase):
 				self.free_var('idx')
 				calcmin = np.array([A_py[i, inds[i]] for i in xrange(m)])
 				rowmin = np.min(A_py, 1)
-				self.assertTrue( np.linalg.norm(calcmin - rowmin) <=
-								 ATOLM + RTOL * np.linalg.norm(rowmin) )
+				self.assertVecEqual( calcmin, rowmin, ATOLM, RTOL )
 
 				# free memory
 				self.free_vars('A', 'd', 'e', 'x', 'y', 'hdl')

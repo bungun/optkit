@@ -37,6 +37,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 
 	def tearDown(self):
 		self.free_all_vars()
+		self.exit_call()
 
 	def test_libs_exist(self):
 		libs = []
@@ -74,8 +75,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 		A_eqx = A_py.dot(self.x_test)
 		DAEx = d_py * A_test.dot(e_py * self.x_test)
 
-		self.assertTrue( np.linalg.norm(A_eqx - DAEx) <=
-						 ATOLM + RTOL * np.linalg.norm(DAEx) )
+		self.assertVecEqual( A_eqx, DAEx, ATOLM, RTOL )
 
 	def test_regularized_sinkhorn_knopp(self):
 		for (gpu, single_precision) in self.CONDITIONS:
@@ -149,8 +149,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 				self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
 				A_eqx = y_py
 
-				self.assertTrue( np.linalg.norm(A_eqx - DAEx) <=
-								 ATOLN + RTOL * np.linalg.norm(DAEx))
+				self.assertVecEqual( A_eqx, DAEx, ATOLN, RTOL )
 
 				self.free_vars('A', 'o')
 
@@ -208,9 +207,8 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 				self.assertEqual(status, 1)
 
 				# REAL TEST:
-				# self.assertEqual( status, 0)
-				# self.assertTrue( np.linalg.norm(A_eqx - DAEx) <=
-				# 				 ATOLN + RTOL * np.linalg.norm(DAEx))
+				# self.assertEqual( status, 0 )
+				# self.assertVecEqual( A_eqx, DAEx, ATOLN, RTOL )
 				self.free_vars('A', 'o')
 
 			# -----------------------------------------
@@ -252,8 +250,8 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 					print "norm estimate, C: ", cnorm
 
 				self.assertTrue(
-					cnorm >= ATOL + RTOL * pynorm or
-					pynorm >= ATOL + RTOL * cnorm )
+					cnorm >= ATOL, RTOL )* pynorm or
+					pynorm >= ATOL, RTOL )* cnorm )
 				self.free_vars('A', 'o')
 
 			self.free_var('hdl')

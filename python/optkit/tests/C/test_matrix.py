@@ -20,6 +20,7 @@ class MatrixTestCase(OptkitCTestCase):
 
 	def tearDown(self):
 		self.free_all_vars()
+		self.exit_call()
 
 	def test_alloc(self):
 		(m, n) = self.shape
@@ -83,15 +84,13 @@ class MatrixTestCase(OptkitCTestCase):
 				self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, order) )
 				A_py *= 0
 				self.assertCall( lib.matrix_memcpy_am(A_ptr, A, order) )
-				self.assertTrue( np.linalg.norm(A_py - A_rand) <=
-								 TOL * np.linalg.norm(A_rand) )
+				self.assertVecEqual( A_py, A_rand, TOL, TOL )
 
 				# memcpy_mm
 				Z, Z_py, Z_ptr = self.register_matrix(lib, m, n, order, 'Z')
 				self.assertCall( lib.matrix_memcpy_mm(Z, A, order) )
 				self.assertCall( lib.matrix_memcpy_am(Z_ptr, Z, order) )
-				self.assertTrue( np.linalg.norm(Z_py - A_py) <=
-								 TOL * np.linalg.norm(A_py) )
+				self.assertVecEqual( Z_py, A_py, TOL, TOL )
 
 				# view_array
 				if not gpu:
@@ -100,8 +99,7 @@ class MatrixTestCase(OptkitCTestCase):
 					self.assertCall( lib.matrix_view_array(B,
 						A_rand.ctypes.data_as(lib.ok_float_p), m, n, order) )
 					self.assertCall( lib.matrix_memcpy_am(A_ptr, A, order) )
-					self.assertTrue( np.linalg.norm(A_py - A_rand) <=
-									 TOL * np.linalg.norm(A_rand) )
+					self.assertVecEqual( A_py, A_rand, TOL, TOL )
 
 				# set_all
 				val = 2
@@ -109,8 +107,7 @@ class MatrixTestCase(OptkitCTestCase):
 				A_rand += val
 				self.assertCall( lib.matrix_set_all(A, val) )
 				self.assertCall( lib.matrix_memcpy_am(A_ptr, A, order) )
-				self.assertTrue( np.linalg.norm(A_py - A_rand) <=
-								 TOL * np.linalg.norm(A_rand) )
+				self.assertVecEqual( A_py, A_rand, TOL, TOL )
 
 				self.free_vars('A', 'Z')
 			self.assertCall( lib.ok_device_reset() )
@@ -152,8 +149,7 @@ class MatrixTestCase(OptkitCTestCase):
 								 nsub) )
 				self.assertCall( lib.matrix_memcpy_am(Asub_ptr, Asub, order) )
 				A_py_sub = A_py[m0 : m0+msub, n0 : n0+nsub]
-				self.assertTrue( np.linalg.norm(Asub_py - A_py_sub) <=
-								 TOL * np.linalg.norm(A_py_sub) )
+				self.assertVecEqual( Asub_py, A_py_sub, TOL, TOL )
 
 				# row
 				v = lib.vector(0, 0, None)
@@ -161,24 +157,21 @@ class MatrixTestCase(OptkitCTestCase):
 				v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
 				self.assertCall( lib.matrix_row(v, A, m0) )
 				self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
-				self.assertTrue( np.linalg.norm(A_py[m0, :] - v_py) <=
-								 TOL * np.linalg.norm(v_py) )
+				self.assertVecEqual( A_py[m0, :], v_py, TOL, TOL )
 
 				# column
 				v_py = np.zeros(m).astype(lib.pyfloat)
 				v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
 				self.assertCall( lib.matrix_column(v, A, n0) )
 				self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
-				self.assertTrue( np.linalg.norm(A_py[: , n0] - v_py) <=
-								 TOL * np.linalg.norm(v_py) )
+				self.assertVecEqual( A_py[: , n0], v_py, TOL, TOL )
 
 				# diagonal
 				v_py = np.zeros(min(m, n)).astype(lib.pyfloat)
 				v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
 				self.assertCall( lib.matrix_diagonal(v, A) )
 				self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
-				self.assertTrue( np.linalg.norm(np.diag(A_py) - v_py) <=
-								 TOL * np.linalg.norm(v_py) )
+				self.assertVecEqual( np.diag(A_py), v_py, TOL, TOL )
 
 				self.free_var('A')
 			self.assertCall( lib.ok_device_reset() )
@@ -210,8 +203,7 @@ class MatrixTestCase(OptkitCTestCase):
 				A_rand *= alpha
 				self.assertCall( lib.matrix_scale(A, alpha) )
 				self.assertCall( lib.matrix_memcpy_am(A_ptr, A, order) )
-				self.assertTrue( np.linalg.norm(A_py - A_rand) <=
-								 ATOLMN + RTOL * np.linalg.norm(A_rand) )
+				self.assertVecEqual( A_py, A_rand, ATOLMN, RTOL )
 
 				# scale_left: A = diag(d) * A
 				d, d_py, d_ptr = self.register_vector(lib, m, 'd')
@@ -221,8 +213,7 @@ class MatrixTestCase(OptkitCTestCase):
 				self.assertCall( lib.vector_memcpy_va(d, d_ptr, 1) )
 				self.assertCall( lib.matrix_scale_left(A, d) )
 				self.assertCall( lib.matrix_memcpy_am(A_ptr, A, order) )
-				self.assertTrue( np.linalg.norm(A_py - A_rand) <=
-								 ATOLMN + RTOL * np.linalg.norm(A_rand) )
+				self.assertVecEqual( A_py, A_rand, ATOLMN, RTOL )
 
 				# scale_right: A = A * diag(e)
 				e, e_py, e_ptr = self.register_vector(lib, n, 'e')
@@ -232,8 +223,7 @@ class MatrixTestCase(OptkitCTestCase):
 				self.assertCall( lib.vector_memcpy_va(e, e_ptr, 1) )
 				self.assertCall( lib.matrix_scale_right(A, e) )
 				self.assertCall( lib.matrix_memcpy_am(A_ptr, A, order) )
-				self.assertTrue( np.linalg.norm(A_py - A_rand) <=
-								 ATOLMN + RTOL * np.linalg.norm(A_rand) )
+				self.assertVecEqual( A_py, A_rand, ATOLMN, RTOL )
 
 				# abs: A_ij = abs(A_ij)
 				A_rand -= (A_rand.max() - A_rand.min()) / 2
@@ -243,16 +233,14 @@ class MatrixTestCase(OptkitCTestCase):
 				self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, order) )
 				self.assertCall( lib.matrix_abs(A) )
 				self.assertCall( lib.matrix_memcpy_am(A_ptr, A, order) )
-				self.assertTrue( np.linalg.norm(A_py - A_rand) <=
-								 ATOLMN + RTOL * np.linalg.norm(A_rand) )
+				self.assertVecEqual( A_py, A_rand, ATOLMN, RTOL )
 
 				# pow
 				p = 3 * np.random.rand()
 				A_rand **= p
 				self.assertCall( lib.matrix_pow(A, p) )
 				self.assertCall( lib.matrix_memcpy_am(A_ptr, A, order) )
-				self.assertTrue( np.linalg.norm(A_py - A_rand) <=
-								 ATOLMN + RTOL * np.linalg.norm(A_rand) )
+				self.assertVecEqual( A_py, A_rand, ATOLMN, RTOL )
 
 				self.free_vars('d', 'e', 'A')
 

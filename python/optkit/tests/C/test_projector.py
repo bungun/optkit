@@ -128,8 +128,7 @@ class DirectProjectorTestCase(OptkitCTestCase):
 						Ax = A_.dot(xo_) / P.normA
 					else:
 						Ax = A_.dot(xo_)
-					self.assertTrue( np.linalg.norm(Ax - yo_) <=
-									 ATOLM + RTOL * np.linalg.norm(yo_) )
+					self.assertVecEqual( Ax, yo_, ATOLM, RTOL )
 
 					# free memory
 					self.free_vars('P', 'A', 'x_in', 'y_in', 'x_out', 'y_out',
@@ -156,6 +155,7 @@ class IndirectProjectorTestCase(OptkitCOperatorTestCase):
 
 	def tearDown(self):
 		self.free_all_vars()
+		self.exit_call()
 
 	def test_alloc_free(self):
 		for (gpu, single_precision) in self.CONDITIONS:
@@ -225,8 +225,7 @@ class IndirectProjectorTestCase(OptkitCOperatorTestCase):
 				self.assertCall( lib.vector_memcpy_av(x_p_ptr, x_out, 1) )
 				self.assertCall( lib.vector_memcpy_av(y_p_ptr, y_out, 1) )
 
-				self.assertTrue( np.linalg.norm(A_.dot(x_proj) - y_proj) <=
-								 ATOLM + RTOL * np.linalg.norm(y_proj) )
+				self.assertVecEqual( A_.dot(x_proj), y_proj, ATOLM, RTOL )
 
 				self.free_vars('A', 'o')
 
@@ -254,6 +253,7 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 
 	def tearDown(self):
 		self.free_all_vars()
+		self.exit_call()
 
 	def test_alloc_free(self):
 		m, n = self.shape
@@ -334,9 +334,7 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 				self.assertCall( lib.vector_memcpy_av(x_p_ptr, x_out, 1) )
 				self.assertCall( lib.vector_memcpy_av(y_p_ptr, y_out, 1) )
 
-				self.assertTrue(
-						np.linalg.norm(A_.dot(x_proj) - y_proj) <=
-						ATOLM + RTOL * np.linalg.norm(y_proj))
+				self.assertTrue( A_.dot(x_proj), y_proj, ATOLM, RTOL )
 
 				self.free_var('A')
 
@@ -364,6 +362,7 @@ class GenericIndirectProjectorTestCase(OptkitCOperatorTestCase):
 
 	def tearDown(self):
 		self.free_all_vars()
+		self.exit_call()
 
 	def test_alloc_free(self):
 		m, n = self.shape
@@ -435,8 +434,7 @@ class GenericIndirectProjectorTestCase(OptkitCOperatorTestCase):
 				self.assertCall( lib.vector_memcpy_av(x_p_ptr, x_out, 1) )
 				self.assertCall( lib.vector_memcpy_av(y_p_ptr, y_out, 1) )
 
-				self.assertTrue( np.linalg.norm(A_.dot(x_proj) - y_proj) <=
-								 ATOLM + RTOL * np.linalg.norm(y_proj))
+				self.assertVecEqual( A_.dot(x_proj), y_proj, ATOLM, RTOL )
 
 				self.free_vars('A', 'o')
 

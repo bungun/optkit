@@ -25,6 +25,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 
 	def tearDown(self):
 		self.free_all_vars()
+		self.exit_call()
 
 	def validate_operator(self, operator_, m, n, OPERATOR_KIND):
 		o = operator_
@@ -59,32 +60,28 @@ class OperatorLibsTestCase(OptkitCTestCase):
 		Ax = A_py.dot(x_)
 		self.assertCall( o.apply(o.data, x, y) )
 		self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
-		self.assertTrue( np.linalg.norm(y_ - Ax) <=
-						 ATOLM + RTOL * np.linalg.norm(Ax) )
+		self.assertVecEqual( y_, Ax, ATOLM, RTOL )
 
 		# test A'y
 		y_[:] = Ax[:] 	# (update for consistency)
 		Aty = A_py.T.dot(y_)
 		self.assertCall( o.adjoint(o.data, y, x) )
 		self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
-		self.assertTrue( np.linalg.norm(x_ - Aty) <=
-						 ATOLN + RTOL * np.linalg.norm(Aty) )
+		self.assertVecEqual( x_, Aty, ATOLN, RTOL )
 
 		# test Axpy
 		x_[:]  = Aty[:] # (update for consistency)
 		Axpy = alpha * A_py.dot(x_) + beta * y_
 		self.assertCall( o.fused_apply(o.data, alpha, x, beta, y) )
 		self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
-		self.assertTrue( np.linalg.norm(y_ - Axpy) <=
-						 ATOLM + RTOL * np.linalg.norm(Axpy) )
+		self.assertVecEqual( y_, Axpy, ATOLM, RTOL )
 
 		# test A'ypx
 		y_[:] = Axpy[:] # (update for consistency)
 		Atypx = alpha * A_py.T.dot(y_) + beta * x_
 		self.assertCall( o.fused_adjoint(o.data, alpha, y, beta, x) )
 		self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
-		self.assertTrue( np.linalg.norm(x_ - Atypx) <=
-						 ATOLN + RTOL * np.linalg.norm(Atypx) )
+		self.assertVecEqual( x_, Atypx, ATOLN, RTOL )
 
 		self.free_vars('x', 'y')
 		self.assertCall( lib.ok_device_reset() )

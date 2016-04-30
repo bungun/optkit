@@ -83,6 +83,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 
 	def tearDown(self):
 		self.free_all_vars()
+		self.exit_call()
 
 	def test_allocate(self):
 		shape = (m, n) = self.shape
@@ -165,8 +166,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				# Ax == A_py * x (initalized to rand)
 				Ax_py = A_.dot(x_rand)
 				Ax_c = A_py * x_rand
-				self.assertTrue( np.linalg.norm(Ax_py - Ax_c) <=
-								 ATOLM + RTOL * np.linalg.norm(Ax_py) )
+				self.assertTrue( Ax_py, Ax_c, ATOLM, RTOL )
 
 				# Test sparse copy optkit->python
 				# A_ * x != A_c * x (calloc to zero)
@@ -174,9 +174,8 @@ class SparseMatrixTestCase(OptkitCTestCase):
 														 A) )
 				Ax_py = A_.dot(x_rand)
 				Ax_c = A_py * x_rand
-				self.assertFalse( np.linalg.norm(Ax_py - Ax_c) <=
-								 ATOLM + RTOL * np.linalg.norm(Ax_py) )
-				self.assertTrue( np.linalg.norm(Ax_c) <= ATOLM )
+				self.assertVecNotEqual( Ax_py, Ax_c, ATOLM, RTOL )
+				self.assertVecEqual( 0, Ax_c, ATOLM, 0)
 
 				# Test sparse copy python->optkit
 				# B_py -> B_c -> B_py
@@ -187,8 +186,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 														 B) )
 				Bx_py = B_.dot(x_rand)
 				Bx_c = B_py * x_rand
-				self.assertTrue( np.linalg.norm(Bx_py - Bx_c) <=
-								 ATOLM + RTOL * np.linalg.norm(Bx_py) )
+				self.assertVecEqual( Bx_py, Bx_c, ATOLM, RTOL )
 
 				# Test sparse copy optkit->optkit
 				# B_c -> A_c -> A_py
@@ -198,8 +196,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 														 A) )
 				Ax = A_py * x_rand
 				Bx = B_py * x_rand
-				self.assertTrue( np.linalg.norm(Ax - Bx) <=
-								  ATOLM + RTOL * np.linalg.norm(Ax) )
+				self.assertVecEqual( Ax, Bx, ATOLM, RTOL )
 
 				# Test sparse value copy optkit->python
 				# A_py *= 0
@@ -209,8 +206,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				self.assertCall( lib.sp_matrix_memcpy_vals_am(A_val, A) )
 				Ax_c = A_py * x_rand
 				Bx_c = B_py * x_rand
-				self.assertTrue( np.linalg.norm(Ax_c - Bx_c) <=
-								 ATOLM + RTOL * np.linalg.norm(Bx_c) )
+				self.assertVecEqual( Ax_c, Bx_c, ATOLM, RTOL )
 
 				# Test sparse value copy python->optkit
 				# A_py *= 2; A_py -> A_c; A_py *= 0; A_c -> A_py
@@ -221,8 +217,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				self.assertCall( lib.sp_matrix_memcpy_vals_am(A_val, A) )
 				Ax_c = A_py * x_rand
 				Bx_c = B_py * x_rand
-				self.assertTrue( np.linalg.norm(Ax_c - 2 * Bx_c) <=
-								 ATOLM + RTOL * 2 * np.linalg.norm(Bx_c) )
+				self.assertVecEqual( Ax_c, 2 * Bx_c, ATOLM, RTOL )
 
 				# Test sparse value copy optkit->optkit
 				# A_c -> B_c -> B_py
@@ -231,8 +226,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				self.assertCall( lib.sp_matrix_memcpy_vals_am(B_val, B) )
 				Ax_c = A_py * x_rand
 				Bx_c = B_py * x_rand
-				self.assertTrue( np.linalg.norm(Ax_c - Bx_c) <=
-								 ATOLM + RTOL * np.linalg.norm(Bx_c) )
+				self.assertVecEqual( Ax_c, Bx_c, ATOLM, RTOL )
 
 				self.free_vars('A', 'B', 'hdl')
 				self.assertCall( lib.ok_device_reset() )
@@ -272,16 +266,14 @@ class SparseMatrixTestCase(OptkitCTestCase):
 												  1, A, x, 0, y) )
 				self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
 				Ax = A_py * x_rand
-				self.assertTrue( np.linalg.norm(Ax - y_py) <=
-								 ATOLM + RTOL * np.linalg.norm(y_py) )
+				self.assertVecEqual( Ax, y_py, ATOLM, RTOL )
 
 				# x = A'y, Py vs. C
 				self.assertCall( lib.sp_blas_gemv(hdl, lib.enums.CblasTrans, 1,
 												  A, y, 0, x) )
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 				Ay = A_py.T * Ax
-				self.assertTrue( np.linalg.norm(Ay - x_py) <=
-								 ATOLN + RTOL * np.linalg.norm(x_py) )
+				self.assertVecEqual( Ay, x_py, ATOLN, RTOL )
 
 				# y = alpha Ax + beta y, Py vs. C
 				alpha = np.random.rand()
@@ -291,8 +283,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				self.assertCall( lib.sp_blas_gemv(hdl, lib.enums.CblasNoTrans,
 												  alpha, A, x, beta, y) )
 				self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
-				self.assertTrue( np.linalg.norm(result - y_py) <=
-								 ATOLM + RTOL * np.linalg.norm(result) )
+				self.assertVecEqual( result, y_py, ATOLM, RTOL )
 
 				self.free_vars('x', 'y', 'A', 'hdl')
 				self.assertCall( lib.ok_device_reset() )
@@ -337,8 +328,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				self.assertCall( lib.sp_blas_gemv(hdl, lib.enums.CblasNoTrans,
 												  1, A, x, 0, y) )
 				self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
-				self.assertTrue( np.linalg.norm(A_.dot(x_rand) - y_py) <=
-								 ATOLM + RTOL * np.linalg.norm(y_py) )
+				self.assertVecEqual( A_.dot(x_rand), y_py, ATOLM, RTOL )
 
 				# pow
 				# A is nonnegative from previous step. set A_ij = A_ij ^ p
@@ -348,8 +338,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				self.assertCall( lib.sp_blas_gemv(hdl, lib.enums.CblasNoTrans,
 												  1, A, x, 0, y) )
 				self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
-				self.assertTrue( np.linalg.norm(A_.dot(x_rand) - y_py) <=
-								 ATOLM + RTOL * np.linalg.norm(y_py) )
+				self.assertVecEqual( A_.dot(x_rand), y_py, ATOLM, RTOL )
 
 				# scale
 				# A = alpha * A
@@ -359,8 +348,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				self.assertCall( lib.sp_blas_gemv(hdl, lib.enums.CblasNoTrans,
 												  1, A, x, 0, y) )
 				self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
-				self.assertTrue( np.linalg.norm(A_.dot(x_rand) - y_py) <=
-								 ATOLM + RTOL * np.linalg.norm(y_py) )
+				self.assertVecEqual( A_.dot(x_rand), y_py, ATOLM, RTOL )
 
 				self.free_var('x')
 				self.free_var('y')
@@ -411,8 +399,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 												  1, A, x, 0, y) )
 				self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
 				result = (np.diag(d_py) * A_py).dot(x_py)
-				self.assertTrue( np.linalg.norm(result - y_py) <=
-								 ATOLM + RTOL * np.linalg.norm(result) )
+				self.assertVecEqual( result, y_py, ATOLM, RTOL )
 
 				# scale_right: A = A * diag(e)
 				# (form diag (d) * A * diag(e) * x, compare Py vs. C)
@@ -421,8 +408,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 												  1, A, x, 0, y) )
 				self.assertCall( lib.vector_memcpy_av(y_ptr, y, 1) )
 				result = (np.diag(d_py) * A_py).dot(e_py * x_py)
-				self.assertTrue( np.linalg.norm(result - y_py) <=
-								 ATOLM + RTOL * np.linalg.norm(result) )
+				self.assertVecEqual( result, y_py, ATOLM, RTOL )
 
 				self.free_vars('x', 'y', 'd', 'e', 'A', 'hdl')
 				self.assertEqual(lib.ok_device_reset(), 0)

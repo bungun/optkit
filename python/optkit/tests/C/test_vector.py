@@ -17,6 +17,7 @@ class VectorTestCase(OptkitCTestCase):
 
 	def tearDown(self):
 		self.free_all_vars()
+		self.exit_call()
 
 	def test_alloc(self):
 		for (gpu, single_precision) in self.CONDITIONS:
@@ -74,14 +75,12 @@ class VectorTestCase(OptkitCTestCase):
 			self.assertCall( lib.vector_memcpy_va(w, w_ptr, 1) )
 			w_py *= 0
 			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
-			self.assertTrue( np.linalg.norm(w_py - w_rand) <=
-							 ATOL + RTOL * np.linalg.norm(w_rand) )
+			self.assertVecEqual( w_py, w_rand, ATOL, RTOL )
 
 			# memcpy_vv
 			self.assertCall( lib.vector_memcpy_vv(v, w) )
 			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
-			self.assertTrue( np.linalg.norm(v_py - w_rand) <=
-							 ATOL + RTOL * np.linalg.norm(w_rand) )
+			self.assertVecEqual( v_py, w_rand, ATOL, RTOL )
 
 			# view_array
 			if not gpu:
@@ -91,8 +90,7 @@ class VectorTestCase(OptkitCTestCase):
 				self.assertCall( lib.vector_view_array(u, u_ptr,
 													   u_rand.size) )
 				self.assertCall( lib.vector_memcpy_av(v_ptr, u, 1) )
-	 			self.assertTrue( np.linalg.norm(v_py - u_rand) <=
-								 ATOL + RTOL * np.linalg.norm(u_rand) )
+	 			self.assertVecEqual( v_py, u_rand, ATOL, RTOL )
 
 				# DON'T FREE u, DATA OWNED BY PYTHON
 
@@ -130,13 +128,12 @@ class VectorTestCase(OptkitCTestCase):
 			if lib is None:
 				continue
 
-			DIGITS = 7 - 2 * lib.FLOAT - 1 * lib.GPU
-
 			val1 = 12 * np.random.rand()
 			val2 = 5 * np.random.rand()
 			len_v = 10 + int(1000 * np.random.rand())
 			# len_v = 10 + int(10 * np.random.rand())
 
+			DIGITS = 7 - 2 * lib.FLOAT - 1 * lib.GPU
 			RTOL = 10**(-DIGITS)
 			ATOL = RTOL * len_v**0.5
 
@@ -148,48 +145,39 @@ class VectorTestCase(OptkitCTestCase):
 			self.assertCall( lib.vector_add_constant(w, val2) )
 			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
 			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
-			self.assertTrue( np.linalg.norm(v_py - val1) <=
-							 ATOL + RTOL * np.linalg.norm(v_py) )
-			self.assertTrue( np.linalg.norm(w_py - val2) <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertVecEqual( v_py, val1, ATOL, RTOL )
+			self.assertVecEqual( w_py, val2, ATOL, RTOL )
 
 			# add two vectors
 			self.assertCall( lib.vector_add(v, w) )
 			val1 += val2
 			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
 			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
-			self.assertTrue( np.linalg.norm(v_py - val1) <=
-							 ATOL + RTOL * np.linalg.norm(v_py) )
-			self.assertTrue( np.linalg.norm(w_py - val2) <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertVecEqual( v_py, val1, ATOL, RTOL )
+			self.assertVecEqual( w_py, val2, ATOL, RTOL )
 
 			# subtract two vectors
 			self.assertCall( lib.vector_sub(w, v) )
 			val2 -= val1
 			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
 			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
-			self.assertTrue( np.linalg.norm(v_py - val1) <=
-							 ATOL + RTOL * np.linalg.norm(v_py) )
-			self.assertTrue( np.linalg.norm(w_py - val2) <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertVecEqual( v_py, val1, ATOL, RTOL )
+			self.assertVecEqual( w_py, val2, ATOL, RTOL )
 
 			# multiply two vectors
 			self.assertCall( lib.vector_mul(v, w) )
 			val1 *= val2
 			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
 			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
-			self.assertTrue( np.linalg.norm(v_py - val1) <=
-							 ATOL + RTOL * np.linalg.norm(v_py) )
-			self.assertTrue( np.linalg.norm(w_py - val2) <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertVecEqual( v_py, val1, ATOL, RTOL )
+			self.assertVecEqual( w_py, val2, ATOL, RTOL )
 
 			# vector scale
 			scal = 3 * np.random.rand()
 			val1 *= scal
 			self.assertCall( lib.vector_scale(v, scal) )
 			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
-			self.assertTrue( np.linalg.norm(v_py - val1) <=
-							 ATOL + RTOL * np.linalg.norm(v_py))
+			self.assertVecEqual( v_py, val1, ATOL, RTOL )
 
 			# make sure v is strictly positive
 			val1 = 0.7 + np.random.rand()
@@ -201,10 +189,8 @@ class VectorTestCase(OptkitCTestCase):
 			val2 /= float(val1)
 			self.assertCall( lib.vector_memcpy_av(v_ptr, v, 1) )
 			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
-			self.assertTrue( np.linalg.norm(v_py - val1) <=
-							 ATOL + RTOL * np.linalg.norm(v_py) )
-			self.assertTrue( np.linalg.norm(w_py - val2) <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertVecEqual( v_py, val1, ATOL, RTOL )
+			self.assertVecEqual( w_py, val2, ATOL, RTOL )
 
 			# make w strictly negative
 			w_max = w_py.max()
@@ -215,37 +201,32 @@ class VectorTestCase(OptkitCTestCase):
 			self.assertCall( lib.vector_abs(w) )
 			val2 = abs(val2)
 			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
-			self.assertTrue( np.linalg.norm(w_py - val2) <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertVecEqual( w_py, val2, ATOL, RTOL )
 
 			# vector recip
 			self.assertCall( lib.vector_recip(w) )
 			val2 = 1. / val2
 			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
-			self.assertTrue( np.linalg.norm(w_py - val2) <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertVecEqual( w_py, val2, ATOL, RTOL )
 
 			# vector sqrt
 			self.assertCall( lib.vector_sqrt(w) )
 			val2 **= 0.5
 			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
-			self.assertTrue( np.linalg.norm(w_py - val2) <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertVecEqual( w_py, val2, ATOL, RTOL )
 
 			# vector pow
 			pow_val = -2 + 4 * np.random.rand()
 			self.assertCall( lib.vector_pow(w, pow_val) )
 			val2 **= pow_val
 			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
-			self.assertTrue( np.linalg.norm(w_py - val2) <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertVecEqual( w_py, val2, ATOL, RTOL )
 
 			# vector exp
 			self.assertCall( lib.vector_exp(w) )
 			val2 = np.exp(val2)
 			self.assertCall( lib.vector_memcpy_av(w_ptr, w, 1) )
-			self.assertTrue( np.linalg.norm(val2 - w_py) <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertVecEqual( val2, w_py, ATOL, RTOL )
 
 			# min / max
 			w_py *= 0
@@ -256,22 +237,19 @@ class VectorTestCase(OptkitCTestCase):
 			wargmin = np.zeros(1).astype(c_size_t)
 			wargmin_p = wargmin.ctypes.data_as(lib.c_size_t_p)
 			self.assertCall( lib.vector_indmin(w, wargmin_p) )
-			self.assertTrue( w_py[wargmin[0]] - w_py.min() <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertScalarEqual( w_py[wargmin[0]], w_py.min(), RTOL )
 
 			# # vector min
 			wmin = np.zeros(1).astype(lib.pyfloat)
 			wmin_p = wmin.ctypes.data_as(lib.ok_float_p)
 			self.assertCall( lib.vector_min(w, wmin_p) )
-			self.assertTrue( wmin[0] - w_py.min() <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertScalarEqual( wmin[0], w_py.min(), RTOL )
 
 			# # vector max
 			wmax = wmin
 			wmax_p = wmin_p
 			self.assertCall( lib.vector_max(w, wmax_p) )
-			self.assertTrue( wmax[0] - w_py.max() <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertScalarEqual( wmax[0], w_py.max(), RTOL )
 
 			self.free_vars('v', 'w')
 
@@ -281,15 +259,13 @@ class VectorTestCase(OptkitCTestCase):
 			if lib is None:
 				continue
 
-			DIGITS = 7 - 2 * lib.FLOAT - 1 * lib.GPU
-
 			val1 = 12 * np.random.rand()
 			val2 = 5 * np.random.rand()
 			len_v = 10 + int(1000 * np.random.rand())
 			# len_v = 10 + int(10 * np.random.rand())
 
+			DIGITS = 7 - 2 * lib.FLOAT - 1 * lib.GPU
 			RTOL = 10**(-DIGITS)
-			ATOL = RTOL * len_v**0.5
 
 			w, w_py, w_ptr = self.register_indvector(lib, len_v, 'w')
 
@@ -302,21 +278,18 @@ class VectorTestCase(OptkitCTestCase):
 			wargmin = np.zeros(1).astype(c_size_t)
 			wargmin_p = wargmin.ctypes.data_as(lib.c_size_t_p)
 			self.assertCall( lib.indvector_indmin(w, wargmin_p) )
-			self.assertTrue( w_py[wargmin[0]] - w_py.min() <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertScalarEqual( w_py[wargmin[0]], w_py.min(), RTOL )
 
 			# # vector min
 			wmin = wargmin
 			wmin_p = wargmin_p
 			self.assertCall( lib.indvector_min(w, wmin_p) )
-			self.assertTrue( wmin[0] - w_py.min() <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertScalarEqual( wmin[0], w_py.min(), RTOL )
 
 			# vector max
 			wmax = wmin
 			wmax_p = wmin_p
 			self.assertCall( lib.indvector_max(w, wmax_p) )
-			self.assertTrue( wmax[0] - w_py.max() <=
-							 ATOL + RTOL * np.linalg.norm(w_py) )
+			self.assertScalarEqual( wmax[0], w_py.max(), RTOL )
 
 			self.free_var('w')

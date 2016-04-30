@@ -1,4 +1,5 @@
-from numpy import zeros
+from numpy import zeros, ndarray
+from numpy.linalg import norm
 from ctypes import c_void_p, c_size_t, byref
 from scipy.sparse import csc_matrix, csr_matrix
 from optkit.libs.error import optkit_print_error as PRINTERR
@@ -8,6 +9,19 @@ class OptkitCTestCase(OptkitTestCase):
 	managed_vars = {}
 	free_methods = {}
 	libs = None
+	__exit_call = lambda : None
+
+	def assertCall(self, call):
+		self.assertEqual( PRINTERR(call), 0 )
+
+	def assertVecEqual(self, first, second, atol, rtol):
+		self.assertTrue( norm(first - second) <= atol + rtol * norm(second) )
+
+	def assertVecNotEqual(self, first, second, atol, rtol):
+		self.assertFalse( norm(first - second) <= atol + rtol * norm(second) )
+
+	def assertScalarEqual(self, first, second, tol):
+		self.assertTrue( abs(first - second) <= tol + tol * abs(second) )
 
 	def register_var(self, name, var, free):
 		self.managed_vars[name] = var;
@@ -21,7 +35,7 @@ class OptkitCTestCase(OptkitTestCase):
 		var = self.managed_vars.pop(name, None)
 		free_method = self.free_methods.pop(name, None)
 		if free_method is not None and var is not None:
-			free_method(var)
+			PRINTERR( free_method(var) )
 
 	def free_vars(self, *names):
 		for name in names:
@@ -32,16 +46,46 @@ class OptkitCTestCase(OptkitTestCase):
 			print 'releasing unfreed C variable {}'.format(varname)
 			self.free_var(varname)
 
-	def assertCall(self, call):
-		self.assertEqual( PRINTERR(call), 0 )
+	# register device_reset() call so GPU is reset when tests error
+	def register_exit(self, call):
+		self.__exit_call = call
+
+	def exit_call(self):
+		self.__exit_call()
+		self.__exit_call = lambda : None
+
+
+	@staticmethod
+	def gen_py_vector(lib, size, random=False):
+		if 'ok_float_p' not in lib.__dict__:
+			raise ValueError(
+				'symbol "ok_float_p" undefined in library {}'.format(lib))
+
+		v_py = zeros(size).astype(lib.pyfloat)
+		v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
+		if random:
+			v_py +=  np.random.rand(size)
+		return v_py, v_ptr
+
+	@staticmethod
+	def gen_py_matrix(lib, size1, size2, order, random=False):
+		if 'ok_float_p' not in lib.__dict__:
+			raise ValueError(
+				'symbol "ok_float_p" undefined in library {}'.format(lib))
+
+		pyorder = 'C' if order == lib.enums.CblasRowMajor else 'F'
+		A_py = zeros((size1, size2), order=pyorder).astype(lib.pyfloat)
+		A_ptr = v_py.ctypes.data_as(lib.ok_float_p)
+		if random:
+			A_py += np.random.rand(size1, size2)
+		return A_py, A_ptr
 
 	def register_vector(self, lib, size, name):
 		if 'vector_calloc' in lib.__dict__:
 			v = lib.vector(0, 0, None)
 			self.assertCall( lib.vector_calloc(v, size) )
 			self.register_var(name, v, lib.vector_free)
-			v_py = zeros(size).astype(lib.pyfloat)
-			v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
+			v_py, v_ptr = self.gen_pyvector(lib, size)
 			return v, v_py, v_ptr
 		else:
 			raise ValueError('library {} cannot allocate a vector'.format(lib))
@@ -57,16 +101,12 @@ class OptkitCTestCase(OptkitTestCase):
 		else:
 			raise ValueError('library {} cannot allocate a vector'.format(lib))
 
-
 	def register_matrix(self, lib, size1, size2, order, name):
 		if 'matrix_calloc' in lib.__dict__:
-			pyorder = 'C' if order == lib.enums.CblasRowMajor else 'F'
-
 			A = lib.matrix(0, 0, 0, None, order)
 			self.assertCall( lib.matrix_calloc(A, size1, size2, order) )
 			self.register_var(name, A, lib.matrix_free)
-			A_py = zeros((size1, size2), order=pyorder).astype(lib.pyfloat)
-			A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
+			A_py, A_ptr = self.gen_py_matrix(size1, size2, order)
 			return A, A_py, A_ptr
 		else:
 			raise ValueError('library {} cannot allocate a matrix'.format(lib))
@@ -166,59 +206,3 @@ class OptkitCOperatorTestCase(OptkitCTestCase):
 		o = lib.sparse_operator_alloc(A)
 		self.register_var('o', o.contents.data, o.contents.free)
 		return A_, A, o
-
-class OptkitCPogsTestCase(OptkitCTestCase):
-	class PogsVariablesLocal():
-		def __init__(self, m, n, pytype):
-			self.m = m
-			self.n = n
-			self.z = zeros(m + n).astype(pytype)
-			self.z12 = zeros(m + n).astype(pytype)
-			self.zt = zeros(m + n).astype(pytype)
-			self.zt12 = zeros(m + n).astype(pytype)
-			self.prev = zeros(m + n).astype(pytype)
-			self.d = zeros(m).astype(pytype)
-			self.e = zeros(n).astype(pytype)
-
-		@property
-		def x(self):
-			return self.z[self.m:]
-
-		@property
-		def y(self):
-			return self.z[:self.m]
-
-		@property
-		def x12(self):
-			return self.z12[self.m:]
-
-		@property
-		def y12(self):
-			return self.z12[:self.m]
-
-		@property
-		def xt(self):
-			return self.zt[self.m:]
-
-		@property
-		def yt(self):
-			return self.zt[:self.m]
-
-		@property
-		def xt12(self):
-			return self.zt12[self.m:]
-
-		@property
-		def yt12(self):
-			return self.zt12[:self.m]
-
-	class PogsOutputLocal():
-		def __init__(self, lib, m, n):
-			self.x = zeros(n).astype(lib.pyfloat)
-			self.y = zeros(m).astype(lib.pyfloat)
-			self.mu = zeros(n).astype(lib.pyfloat)
-			self.nu = zeros(m).astype(lib.pyfloat)
-			self.ptr = lib.pogs_output(self.x.ctypes.data_as(lib.ok_float_p),
-									   self.y.ctypes.data_as(lib.ok_float_p),
-									   self.mu.ctypes.data_as(lib.ok_float_p),
-									   self.nu.ctypes.data_as(lib.ok_float_p))

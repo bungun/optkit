@@ -3,7 +3,6 @@ import numpy as np
 from numpy import ndarray
 from ctypes import c_void_p, c_size_t, byref, cast
 from optkit.libs.clustering import ClusteringLibs
-from optkit.libs.error import optkit_print_error as PRINTERR
 from optkit.tests.C.base import OptkitCTestCase
 
 class ClusterLibsTestCase(OptkitCTestCase):
@@ -40,6 +39,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 	def tearDown(self):
 		self.free_all_vars()
+		self.exit_call()
 
 	def test_libs_exist(self):
 		libs = []
@@ -127,17 +127,14 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			u = lib.upsamplingvec()
 
-			err = PRINTERR( lib.upsamplingvec_alloc(u, m, k) )
+			self.assertCall( lib.upsamplingvec_alloc(u, m, k) )
 			self.register_var('u', u, lib.upsamplingvec_free)
 
-			self.assertEqual( err, 0 )
 			self.assertEqual( u.size1, m )
 			self.assertEqual( u.size2, k )
 
-			err = PRINTERR( lib.upsamplingvec_free(u) )
+			self.assertCall( lib.upsamplingvec_free(u) )
 			self.unregister_var('u')
-
-			self.assertEqual( err, 0 )
 
 	def test_upsamplingvec_check_bounds(self):
 		m, n = self.shape
@@ -152,19 +149,20 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			u_ptr = u_py.ctypes.data_as(lib.c_size_t_p)
 
 			u = lib.upsamplingvec()
-			err = PRINTERR( lib.upsamplingvec_alloc(u, m, k) )
+			self.assertCall( lib.upsamplingvec_alloc(u, m, k) )
 			self.register_var('u', u, lib.upsamplingvec_free)
-			self.assertEqual( err, 0 )
 
-			self.assertEqual( lib.upsamplingvec_check_bounds(u), 0 )
-			lib.indvector_memcpy_va(u.vec, u_ptr, 1)
-			self.assertEqual( lib.upsamplingvec_check_bounds(u), 0 )
+			self.assertCall( lib.upsamplingvec_check_bounds(u) )
+			self.assertCall( lib.indvector_memcpy_va(u.vec, u_ptr, 1) )
+			self.assertCall( lib.upsamplingvec_check_bounds(u) )
 			u_py += 2 * k
-			lib.indvector_memcpy_va(u.vec, u_ptr, 1)
-			self.assertNotEqual( lib.upsamplingvec_check_bounds(u), 0 )
+			self.assertCall( lib.indvector_memcpy_va(u.vec, u_ptr, 1) )
 
-			err = PRINTERR( lib.upsamplingvec_free(u) )
-			self.assertEqual( err, 0 )
+			# expect error
+			err = lib.upsamplingvec_check_bounds(u)
+			self.assertEqual( err, lib.enums.OPTKIT_ERROR_DIMENSION_MISMATCH )
+
+			self.assertCall( lib.upsamplingvec_free(u) )
 			self.unregister_var('u')
 
 	def test_upsamplingvec_update_size(self):
@@ -182,24 +180,23 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			u_py[-1] = k - 1
 
 			u = lib.upsamplingvec()
-			err = PRINTERR( lib.upsamplingvec_alloc(u, m, k) )
+			self.assertCall( lib.upsamplingvec_alloc(u, m, k) )
 			self.register_var('u', u, lib.upsamplingvec_free)
-			self.assertEqual( err, 0 )
 
-			self.assertEqual( lib.upsamplingvec_check_bounds(u), 0 )
-			lib.indvector_memcpy_va(u.vec, u_ptr, 1)
-			self.assertEqual( lib.upsamplingvec_check_bounds(u), 0 )
+			self.assertCall( lib.upsamplingvec_check_bounds(u) )
+			self.assertCall( lib.indvector_memcpy_va(u.vec, u_ptr, 1) )
+			self.assertCall( lib.upsamplingvec_check_bounds(u) )
 
 			# incorrect size
 			u.size2 = k / 2
-			self.assertNotEqual( lib.upsamplingvec_check_bounds(u), 0 )
+			err = lib.upsamplingvec_check_bounds(u)
+			self.assertEqual( err, lib.enums.OPTKIT_ERROR_DIMENSION_MISMATCH )
 
-			self.assertEqual( lib.upsamplingvec_update_size(u), 0 )
+			self.assertCall( lib.upsamplingvec_update_size(u) )
 			self.assertEqual( u.size2, k )
-			self.assertEqual( lib.upsamplingvec_check_bounds(u), 0 )
+			self.assertCall( lib.upsamplingvec_check_bounds(u) )
 
-			err = PRINTERR( lib.upsamplingvec_free(u) )
-			self.assertEqual( err, 0 )
+			self.assertCall( lib.upsamplingvec_free(u) )
 			self.unregister_var('u')
 
 	def test_upsamplingvec_subvector(self):
@@ -222,24 +219,24 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			u = lib.upsamplingvec()
 			usub = lib.upsamplingvec()
-			err = PRINTERR( lib.upsamplingvec_alloc(u, m, k) )
+			self.assertCall( lib.upsamplingvec_alloc(u, m, k) )
 			self.register_var('u', u, lib.upsamplingvec_free)
-			self.assertEqual( err, 0 )
 
 			u_py += (k * np.random.rand(m)).astype(c_size_t)
-			lib.indvector_memcpy_va(u.vec, u_ptr, 1)
-			lib.upsamplingvec_subvector(usub, u, offset, msub, k)
-			lib.indvector_memcpy_av(usub_ptr, usub.vec, 1)
+			self.assertCall( lib.indvector_memcpy_va(u.vec, u_ptr, 1) )
+			self.assertCall( lib.upsamplingvec_subvector(usub, u, offset, msub,
+									k) )
+			self.assertCall( lib.indvector_memcpy_av(usub_ptr, usub.vec, 1) )
 			self.assertTrue( usub.size1 == msub )
 			self.assertTrue( usub.size2 == k )
 			self.assertTrue( sum(usub_py - u_py[offset : offset + msub]) == 0 )
 
-			lib.upsamplingvec_subvector(usub, u, offset, msub, ksub)
-			self.assertTrue(usub.size1 == msub)
-			self.assertTrue(usub.size2 == ksub)
+			self.assertCall( lib.upsamplingvec_subvector(usub, u, offset, msub,
+									ksub) )
+			self.assertTrue( usub.size1 == msub )
+			self.assertTrue( usub.size2 == ksub )
 
-			err = PRINTERR( lib.upsamplingvec_free(u) )
-			self.assertEqual( err, 0 )
+			self.assertCall( lib.upsamplingvec_free(u) )
 			self.unregister_var('u')
 
 	def test_upsamplingvec_mul_matrix(self):
@@ -252,9 +249,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			if lib is None:
 				continue
 
-			err = lib.blas_make_handle(byref(hdl))
+			self.assertCall( lib.blas_make_handle(byref(hdl)) )
 			self.register_var('hdl', hdl, lib.blas_destroy_handle)
-			self.assertEqual( err, 0 )
 
 			DIGITS = 7 - 2 * single_precision - 1 * gpu
 			RTOL = 10**(-DIGITS)
@@ -267,10 +263,14 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			C = lib.matrix(0, 0, 0, None, 0)
 			D = lib.matrix(0, 0, 0, None, 0)
 			E = lib.matrix(0, 0, 0, None, 0)
-			lib.matrix_calloc(A, m, n, lib.enums.CblasRowMajor)
-			lib.matrix_calloc(B, n, m, lib.enums.CblasRowMajor)
-			lib.matrix_calloc(C, k, n, lib.enums.CblasRowMajor)
-			lib.matrix_calloc(D, n, k, lib.enums.CblasRowMajor)
+			self.assertCall( lib.matrix_calloc(A, m, n,
+									lib.enums.CblasRowMajor) )
+			self.assertCall( lib.matrix_calloc(B, n, m,
+									lib.enums.CblasRowMajor) )
+			self.assertCall( lib.matrix_calloc(C, k, n,
+									lib.enums.CblasRowMajor) )
+			self.assertCall( lib.matrix_calloc(D, n, k,
+									lib.enums.CblasRowMajor) )
 			self.register_var('A', A, lib.matrix_free)
 			self.register_var('B', B, lib.matrix_free)
 			self.register_var('C', C, lib.matrix_free)
@@ -284,17 +284,21 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			B_ptr = B_py.ctypes.data_as(lib.ok_float_p)
 			C_ptr = C_py.ctypes.data_as(lib.ok_float_p)
 			D_ptr = D_py.ctypes.data_as(lib.ok_float_p)
-			lib.matrix_memcpy_ma(A, A_ptr, lib.enums.CblasRowMajor)
-			lib.matrix_memcpy_ma(B, B_ptr, lib.enums.CblasRowMajor)
-			lib.matrix_memcpy_ma(C, C_ptr, lib.enums.CblasRowMajor)
-			lib.matrix_memcpy_ma(D, D_ptr, lib.enums.CblasRowMajor)
+			self.assertCall( lib.matrix_memcpy_ma(A, A_ptr,
+									lib.enums.CblasRowMajor) )
+			self.assertCall( lib.matrix_memcpy_ma(B, B_ptr,
+									lib.enums.CblasRowMajor) )
+			self.assertCall( lib.matrix_memcpy_ma(C, C_ptr,
+									lib.enums.CblasRowMajor) )
+			self.assertCall( lib.matrix_memcpy_ma(D, D_ptr,
+									lib.enums.CblasRowMajor) )
 
 			mvec = lib.vector()
 			nvec = lib.vector()
 			kvec = lib.vector()
-			lib.vector_calloc(mvec, m)
-			lib.vector_calloc(nvec, n)
-			lib.vector_calloc(kvec, k)
+			self.assertCall( lib.vector_calloc(mvec, m) )
+			self.assertCall( lib.vector_calloc(nvec, n) )
+			self.assertCall( lib.vector_calloc(kvec, k) )
 			self.register_var('mvec', mvec, lib.vector_free)
 			self.register_var('nvec', nvec, lib.vector_free)
 			self.register_var('kvec', kvec, lib.vector_free)
@@ -305,20 +309,19 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			mvec_ptr = mvec_py.ctypes.data_as(lib.ok_float_p)
 			nvec_ptr = nvec_py.ctypes.data_as(lib.ok_float_p)
 			kvec_ptr = kvec_py.ctypes.data_as(lib.ok_float_p)
-			lib.vector_memcpy_va(mvec, mvec_ptr, 1)
-			lib.vector_memcpy_va(nvec, nvec_ptr, 1)
-			lib.vector_memcpy_va(kvec, kvec_ptr, 1)
+			self.assertCall( lib.vector_memcpy_va(mvec, mvec_ptr, 1) )
+			self.assertCall( lib.vector_memcpy_va(nvec, nvec_ptr, 1) )
+			self.assertCall( lib.vector_memcpy_va(kvec, kvec_ptr, 1) )
 
 			u = lib.upsamplingvec()
 			usub = lib.upsamplingvec()
-			err = PRINTERR( lib.upsamplingvec_alloc(u, m, k) )
+			self.assertCall( lib.upsamplingvec_alloc(u, m, k) )
 			self.register_var('u', u, lib.upsamplingvec_free)
-			self.assertEqual( err, 0 )
 
 			u_py = self.u_test
 			u_py[-1] = self.k - 1
 			u_ptr = u_py.ctypes.data_as(lib.c_size_t_p)
-			lib.indvector_memcpy_va(u.vec, u_ptr, 1)
+			self.assertCall( lib.indvector_memcpy_va(u.vec, u_ptr, 1) )
 
 			T = lib.enums.CblasTrans
 			N = lib.enums.CblasNoTrans
@@ -328,91 +331,86 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			# functioning cases
 			self.upsamplingvec_mul('N', 'N', 'N', alpha, u_py, C_py, beta,
-				A_py)
+								   A_py)
 			result_py = A_py.dot(nvec_py)
-			err = lib.upsamplingvec_mul_matrix(N, N, N, alpha, u, C, beta, A)
-			self.assertEqual( PRINTERR(err), 0 )
-			lib.blas_gemv(hdl, N, 1, A, nvec, 0, mvec)
-			lib.vector_memcpy_av(mvec_ptr, mvec, 1)
-			self.assertTrue( np.linalg.norm(mvec_py - result_py) <=
-							 ATOLM + RTOL * np.linalg.norm(result_py))
+			self.assertCall( lib.upsamplingvec_mul_matrix(N, N, N, alpha, u, C,
+														  beta, A) )
+			self.assertCall( lib.blas_gemv(hdl, N, 1, A, nvec, 0, mvec) )
+			self.assertCall( lib.vector_memcpy_av(mvec_ptr, mvec, 1) )
+			self.assertVecEqual( mvec_py, result_py, ATOLM, RTOL )
 
 			self.upsamplingvec_mul('T', 'N', 'N', alpha, u_py, A_py, beta,
-				C_py)
+								   C_py)
 			result_py = C_py.dot(nvec_py)
-			err = lib.upsamplingvec_mul_matrix(T, N, N, alpha, u, A, beta, C)
-			self.assertEqual( PRINTERR(err), 0 )
-			lib.blas_gemv(hdl, N, 1, C, nvec, 0, kvec)
-			lib.vector_memcpy_av(kvec_ptr, kvec, 1)
-			self.assertTrue( np.linalg.norm(kvec_py - result_py) <=
-							 ATOLK + RTOL * np.linalg.norm(result_py))
+			self.assertCall( lib.upsamplingvec_mul_matrix(T, N, N, alpha, u, A,
+														  beta, C) )
+			self.assertCall( lib.blas_gemv(hdl, N, 1, C, nvec, 0, kvec) )
+			self.assertCall( lib.vector_memcpy_av(kvec_ptr, kvec, 1) )
+			self.assertVecEqual( kvec_py, result_py, ATOLK, RTOL )
 
 			self.upsamplingvec_mul('N', 'N', 'T', alpha, u_py, C_py, beta,
-				B_py)
+								   B_py)
 			result_py = B_py.dot(mvec_py)
-			err = lib.upsamplingvec_mul_matrix(N, N, T, alpha, u, C, beta, B)
-			self.assertEqual( PRINTERR(err), 0 )
-			lib.blas_gemv(hdl, N, 1, B, mvec, 0, nvec)
-			lib.vector_memcpy_av(nvec_ptr, nvec, 1)
-			self.assertTrue( np.linalg.norm(nvec_py - result_py) <=
-							 ATOLN + RTOL * np.linalg.norm(result_py))
+			self.assertCall( lib.upsamplingvec_mul_matrix(N, N, T, alpha, u, C,
+														  beta, B) )
+			self.assertCall( lib.blas_gemv(hdl, N, 1, B, mvec, 0, nvec) )
+			self.assertCall( lib.vector_memcpy_av(nvec_ptr, nvec, 1) )
+			self.assertVecEqual( nvec_py - result_py, ATOLN, RTOL )
 
-			self.upsamplingvec_mul('T', 'N', 'T', alpha, u_py, A_py, beta, D_py)
+			self.upsamplingvec_mul('T', 'N', 'T', alpha, u_py, A_py, beta,
+								   D_py)
 			result_py = D_py.dot(kvec_py)
-			err = lib.upsamplingvec_mul_matrix(T, N, T, alpha, u, A, beta, D)
-			self.assertEqual( PRINTERR(err), 0 )
-			lib.blas_gemv(hdl, N, 1, D, kvec, 0, nvec)
-			lib.vector_memcpy_av(nvec_ptr, nvec, 1)
-			self.assertTrue( np.linalg.norm(nvec_py - result_py) <=
-							 ATOLN + RTOL * np.linalg.norm(result_py))
+			self.assertCall( lib.upsamplingvec_mul_matrix(T, N, T, alpha, u, A,
+														  beta, D) )
+			self.assertCall( lib.blas_gemv(hdl, N, 1, D, kvec, 0, nvec) )
+			self.assertCall( lib.vector_memcpy_av(nvec_ptr, nvec, 1) )
+			self.assertVecEqual( nvec_py - result_py, ATOLN, RTOL )
 
 			self.upsamplingvec_mul('N', 'T', 'N', alpha, u_py, D_py, beta,
-				A_py)
+								   A_py)
 			result_py = A_py.dot(nvec_py)
-			err = lib.upsamplingvec_mul_matrix(N, T, N, alpha, u, D, beta, A)
-			self.assertEqual( PRINTERR(err), 0 )
-			lib.blas_gemv(hdl, N, 1, A, nvec, 0, mvec)
-			lib.vector_memcpy_av(mvec_ptr, mvec, 1)
-			self.assertTrue( np.linalg.norm(mvec_py - result_py) <=
-							 ATOLM + RTOL * np.linalg.norm(result_py))
+			self.assertCall( lib.upsamplingvec_mul_matrix(N, T, N, alpha, u, D,
+														  beta, A) )
+			self.assertCall( lib.blas_gemv(hdl, N, 1, A, nvec, 0, mvec) )
+			self.assertCall( lib.vector_memcpy_av(mvec_ptr, mvec, 1) )
+			self.assertVecEqual( mvec_py, result_py, ATOLM, RTOL )
 
 			self.upsamplingvec_mul('T', 'T', 'N', alpha, u_py, B_py, beta,
-				C_py)
+								   C_py)
 			result_py = C_py.dot(nvec_py)
-			err = lib.upsamplingvec_mul_matrix(T, T, N, alpha, u, B, beta, C)
-			self.assertEqual( PRINTERR(err), 0 )
-			lib.blas_gemv(hdl, N, 1, C, nvec, 0, kvec)
-			lib.vector_memcpy_av(kvec_ptr, kvec, 1)
-			self.assertTrue( np.linalg.norm(kvec_py - result_py) <=
-							 ATOLK + RTOL * np.linalg.norm(result_py))
+			self.assertCall( lib.upsamplingvec_mul_matrix(T, T, N, alpha, u, B,
+														  beta, C) )
+			self.assertCall( lib.blas_gemv(hdl, N, 1, C, nvec, 0, kvec) )
+			self.assertCall( lib.vector_memcpy_av(kvec_ptr, kvec, 1) )
+			self.assertVecEqual( kvec_py - result_py, ATOLK, RTOL)
 
-			self.upsamplingvec_mul('N', 'T', 'T', alpha, u_py, D_py, beta, B_py)
+			self.upsamplingvec_mul('N', 'T', 'T', alpha, u_py, D_py, beta,
+								   B_py)
 			result_py = B_py.dot(mvec_py)
-			err = lib.upsamplingvec_mul_matrix(N, T, T, alpha, u, D, beta, B)
-			self.assertEqual( PRINTERR(err), 0 )
-			lib.blas_gemv(hdl, N, 1, B, mvec, 0, nvec)
-			lib.vector_memcpy_av(nvec_ptr, nvec, 1)
-			self.assertTrue( np.linalg.norm(nvec_py - result_py) <=
-							 ATOLN + RTOL * np.linalg.norm(result_py))
+			self.assertCall( lib.upsamplingvec_mul_matrix(N, T, T, alpha, u, D,
+														  beta, B) )
+			self.assertCall( lib.blas_gemv(hdl, N, 1, B, mvec, 0, nvec) )
+			self.assertCall( lib.vector_memcpy_av(nvec_ptr, nvec, 1) )
+			self.assertVecEqual( nvec_py, result_py, ATOLN, RTOL)
 
-			self.upsamplingvec_mul('T', 'T', 'T', alpha, u_py, B_py, beta, D_py)
+			self.upsamplingvec_mul('T', 'T', 'T', alpha, u_py, B_py, beta,
+								   D_py)
 			result_py = D_py.dot(kvec_py)
-			err = lib.upsamplingvec_mul_matrix(T, T, T, alpha, u, B, beta, D)
-			self.assertEqual( PRINTERR(err), 0 )
-			lib.blas_gemv(hdl, N, 1, D, kvec, 0, nvec)
-			lib.vector_memcpy_av(nvec_ptr, nvec, 1)
-			self.assertTrue( np.linalg.norm(nvec_py - result_py) <=
-							 ATOLN + RTOL * np.linalg.norm(result_py))
+			self.assertCall( lib.upsamplingvec_mul_matrix(T, T, T, alpha, u, B,
+														  beta, D) )
+			self.assertCall( lib.blas_gemv(hdl, N, 1, D, kvec, 0, nvec) )
+			self.assertCall( lib.vector_memcpy_av(nvec_ptr, nvec, 1) )
+			self.assertVecEqual( nvec_py, result_py, ATOLN, RTOL)
 
 			# reject: dimension mismatch
 			err = lib.upsamplingvec_mul_matrix(N, N, N, alpha, u, C, beta, B)
-			self.assertEqual( err, 11L )
+			self.assertEqual( err, lib.enums.OPTKIT_ERROR_DIMENSION_MISMATCH )
 			err = lib.upsamplingvec_mul_matrix(T, N, N, alpha, u, A, beta, D)
-			self.assertEqual( err, 11L )
+			self.assertEqual( err, lib.enums.OPTKIT_ERROR_DIMENSION_MISMATCH )
 
 			# reject: unallocated
 			err = lib.upsamplingvec_mul_matrix(T, N, N, alpha, u, E, beta, C)
-			self.assertEqual( err, 101L )
+			self.assertEqual( err, lib.enums.OPTKIT_ERROR_UNALLOCATED )
 
 			self.free_var('A')
 			self.free_var('B')
@@ -423,8 +421,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.free_var('kvec')
 			self.free_var('u')
 			self.free_var('hdl')
-
-			self.assertEqual( lib.ok_device_reset(), 0 )
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_upsamplingvec_count(self):
 		m, n = self.shape
@@ -438,12 +435,11 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			u = lib.upsamplingvec()
 			usub = lib.upsamplingvec()
-			err = PRINTERR( lib.upsamplingvec_alloc(u, m, k) )
+			self.assertCall( lib.upsamplingvec_alloc(u, m, k) )
 			self.register_var('u', u, lib.upsamplingvec_free)
-			self.assertEqual( err, 0 )
 
 			counts = lib.vector()
-			lib.vector_calloc(counts, k)
+			self.assertCall( lib.vector_calloc(counts, k) )
 			self.register_var('counts', counts, lib.vector_free)
 			counts_py = np.zeros(k).astype(lib.pyfloat)
 			counts_ptr = counts_py.ctypes.data_as(lib.ok_float_p)
@@ -451,10 +447,10 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			u_py = self.u_test
 			u_py[-1] = self.k - 1
 			u_ptr = u_py.ctypes.data_as(lib.c_size_t_p)
-			lib.indvector_memcpy_va(u.vec, u_ptr, 1)
+			self.assertCall( lib.indvector_memcpy_va(u.vec, u_ptr, 1) )
 
-			lib.upsamplingvec_count(u, counts)
-			lib.vector_memcpy_av(counts_ptr, counts, 1)
+			self.assertCall( lib.upsamplingvec_count(u, counts) )
+			self.assertCall( lib.vector_memcpy_av(counts_ptr, counts, 1) )
 
 			counts_host = np.zeros(k)
 			for idx in u_py:
@@ -476,11 +472,10 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			h = lib.cluster_aid()
 
-			err = PRINTERR( lib.cluster_aid_alloc(h, m, k,
-				lib.enums.CblasRowMajor) )
+			self.assertCall( lib.cluster_aid_alloc(h, m, k,
+							 		lib.enums.CblasRowMajor) )
 			self.register_var('h', h, lib.cluster_aid_free)
 
-			self.assertEqual( err, 0 )
 			self.assertEqual( h.a2c_tentative_full.size1, m )
 			self.assertEqual( h.a2c_tentative_full.size2, k )
 			self.assertEqual( h.a2c_tentative.size1, m )
@@ -495,7 +490,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual( h.D.size2, m )
 			self.assertEqual( h.reassigned, 0 )
 
-			err = PRINTERR( lib.cluster_aid_free(h) )
+			self.assertCall( lib.cluster_aid_free(h) )
 			self.unregister_var('h')
 
 			self.assertEqual( h.a2c_tentative_full.size1, 0 )
@@ -504,7 +499,6 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual( h.c_squared_full.size, 0 )
 			self.assertEqual( h.D_full.size1, 0 )
 			self.assertEqual( h.D_full.size2, 0 )
-			self.assertEqual( err, 0 )
 
 	# def test_cluster_aid_resize(self):
 	# 	m, n = self.shape
@@ -525,7 +519,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 				continue
 
 			w = lib.kmeans_work()
-			self.assertEqual( lib.kmeans_work_alloc(w, m, k, n), 0 )
+			self.assertCall( lib.kmeans_work_alloc(w, m, k, n) )
 			self.register_var('w', w, lib.kmeans_work_free)
 
 			self.assertNotEqual( w.indicator, 0 )
@@ -545,14 +539,12 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertNotEqual( w.a2c.indices, 0 )
 			self.assertNotEqual( w.h.indicator, 0 )
 
-			self.assertEqual( lib.kmeans_work_free(w), 0)
+			self.assertCall( lib.kmeans_work_free(w) )
 			self.unregister_var('w')
 
 			self.assertEqual( w.n_vectors, 0 )
 			self.assertEqual( w.n_clusters, 0 )
 			self.assertEqual( w.vec_length, 0 )
-
-
 
 	def test_kmeans_work_resize(self):
 		m, n = self.shape
@@ -564,9 +556,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 				continue
 
 			w = lib.kmeans_work()
-			err = PRINTERR( lib.kmeans_work_alloc(w, m, k, n) )
+			self.assertCall( lib.kmeans_work_alloc(w, m, k, n) )
 			self.register_var('w', w, lib.kmeans_work_free)
-			self.assertEqual( err, 0 )
 
 			self.assertEqual( w.n_vectors, m )
 			self.assertEqual( w.n_clusters, k )
@@ -579,9 +570,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual( w.a2c.size1, m )
 			self.assertEqual( w.a2c.size2, k )
 
-			err = PRINTERR( lib.kmeans_work_subselect(
-					w, m / 2, k / 2, n / 2) )
-			self.assertEqual( err, 0 )
+			self.assertCall( lib.kmeans_work_subselect(w, m/2, k/2, n/2) )
 
 			self.assertEqual( w.n_vectors, m )
 			self.assertEqual( w.n_clusters, k )
@@ -642,29 +631,23 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			counts_orig *= SCALING
 
 			w = lib.kmeans_work()
-			self.assertEqual( lib.kmeans_work_alloc(w, m, k, n), 0 )
+			self.assertCall( lib.kmeans_work_alloc(w, m, k, n) )
 			self.register_var('w', w, lib.kmeans_work_free)
 
-			self.assertEqual(
-					lib.kmeans_work_load(
-							w, A_ptr, orderA, C_ptr, orderC, a2c_ptr, 1,
-							counts_ptr, 1), 0 )
+			self.assertCall( lib.kmeans_work_load(w, A_ptr, orderA, C_ptr,
+												  orderC, a2c_ptr, 1,
+												  counts_ptr, 1) )
 
 			lib.matrix_scale(w.C, SCALING)
 			lib.vector_scale(w.counts, SCALING)
 
-			self.assertEqual(
-					lib.kmeans_work_extract(
-							C_ptr, orderC, a2c_ptr, 1, counts_ptr, 1, w), 0 )
+			self.assertCall( lib.kmeans_work_extract(C_ptr, orderC, a2c_ptr, 1,
+													 counts_ptr, 1, w) )
 
-			self.assertTrue( np.linalg.norm(A_orig - A) <=
-							 ATOLKN + RTOL * np.linalg.norm(A) )
-			self.assertTrue( np.linalg.norm(C_orig - C) <=
-							 ATOLKN + RTOL * np.linalg.norm(C) )
-			self.assertTrue( np.linalg.norm(a2c_orig - a2c) <=
-							 ATOLM + RTOL * np.linalg.norm(a2c) )
-			self.assertTrue( np.linalg.norm(counts_orig - counts) <=
-							 ATOLK + RTOL * np.linalg.norm(counts) )
+			self.assertVecEqual( A_orig, A, ATOLKN, RTOL )
+			self.assertVecEqual( C_orig, C, ATOLKN, RTOL )
+			self.assertVecEqual( a2c_orig, a2c, ATOLM, RTOL )
+			self.assertVecEqual( counts_orig, counts, ATOLK, RTOL )
 
 			self.free_var('w')
 
@@ -695,9 +678,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			for MAXDIST in [1e3, 0.2]:
 
 				hdl = c_void_p()
-				err = lib.blas_make_handle(byref(hdl))
+				self.assertCall( lib.blas_make_handle(byref(hdl)) )
 				self.register_var('hdl', hdl, lib.blas_destroy_handle)
-				self.assertEqual( err, 0 )
 
 				DIGITS = 7 - 2 * single_precision - 1 * gpu
 				RTOL = 10**(-DIGITS)
@@ -707,8 +689,10 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 				A = lib.matrix(0, 0, 0, None, 0)
 				C = lib.matrix(0, 0, 0, None, 0)
-				lib.matrix_calloc(A, m, n, lib.enums.CblasRowMajor)
-				lib.matrix_calloc(C, k, n, lib.enums.CblasRowMajor)
+				self.assertCall( lib.matrix_calloc(
+						A, m, n, lib.enums.CblasRowMajor) )
+				self.assertCall( lib.matrix_calloc(
+						C, k, n, lib.enums.CblasRowMajor) )
 				self.register_var('A', A, lib.matrix_free)
 				self.register_var('C', C, lib.matrix_free)
 
@@ -716,27 +700,27 @@ class ClusterLibsTestCase(OptkitCTestCase):
 				C_py = np.random.rand(k, n).astype(lib.pyfloat)
 				A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
 				C_ptr = C_py.ctypes.data_as(lib.ok_float_p)
-				lib.matrix_memcpy_ma(A, A_ptr, lib.enums.CblasRowMajor)
-				lib.matrix_memcpy_ma(C, C_ptr, lib.enums.CblasRowMajor)
+				self.assertCall( lib.matrix_memcpy_ma(
+						A, A_ptr, lib.enums.CblasRowMajor) )
+				self.assertCall( lib.matrix_memcpy_ma(
+						C, C_ptr, lib.enums.CblasRowMajor) )
 
 				a2c = lib.upsamplingvec()
-				err = PRINTERR( lib.upsamplingvec_alloc(a2c, m, k) )
+				self.assertCall( lib.upsamplingvec_alloc(a2c, m, k) )
 				self.register_var('a2c', a2c, lib.upsamplingvec_free)
-				self.assertEqual( err, 0 )
 
 				a2c_py = np.zeros(m).astype(c_size_t)
 				a2c_ptr = a2c_py.ctypes.data_as(lib.c_size_t_p)
 
 				a2c_py += self.u_test
-				lib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1)
+				self.assertCall( lib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1) )
 
 				h = lib.cluster_aid_p()
 
 				D, dmin, reassigned = self.cluster(A_py, C_py, a2c_py, MAXDIST)
 
-				err = PRINTERR( lib.cluster(A, C, a2c, byref(h), MAXDIST) )
+				self.assertCall( lib.cluster(A, C, a2c, byref(h), MAXDIST) )
 				self.register_var('h', h, lib.cluster_aid_free)
-				self.assertEqual( err, 0 )
 
 				# compare number of reassignments, C vs Py
 				ATOL_REASSIGN = int(1 + 0.1 * k)
@@ -745,17 +729,17 @@ class ClusterLibsTestCase(OptkitCTestCase):
 								 ATOL_REASSIGN + RTOL_REASSIGN )
 
 				# verify number reassigned
-				lib.indvector_memcpy_av(a2c_ptr, a2c.vec, 1)
+				self.assertCall( lib.indvector_memcpy_av(a2c_ptr, a2c.vec, 1) )
 				self.assertEqual( h.contents.reassigned,
-					sum(a2c_py != self.u_test) )
+								  sum(a2c_py != self.u_test) )
 
 				# verify all distances
 				kvec = lib.vector()
-				lib.vector_calloc(kvec, k)
+				self.assertCall( lib.vector_calloc(kvec, k) )
 				self.register_var('kvec', kvec, lib.vector_free)
 
 				mvec = lib.vector()
-				lib.vector_calloc(mvec, m)
+				self.assertCall( lib.vector_calloc(mvec, m) )
 				self.register_var('mvec', mvec, lib.vector_free)
 
 				kvec_py = np.zeros(k).astype(lib.pyfloat)
@@ -764,33 +748,31 @@ class ClusterLibsTestCase(OptkitCTestCase):
 				mvec_py = np.random.rand(m).astype(lib.pyfloat)
 				mvec_ptr = mvec_py.ctypes.data_as(lib.ok_float_p)
 
-				lib.vector_memcpy_va(mvec, mvec_ptr, 1)
-				lib.blas_gemv(hdl, lib.enums.CblasNoTrans, 1,
-							   h.contents.D_full, mvec, 0, kvec)
-				lib.vector_memcpy_av(kvec_ptr, kvec, 1)
+				self.assertCall( lib.vector_memcpy_va(mvec, mvec_ptr, 1) )
+				self.assertCall( lib.blas_gemv(hdl, lib.enums.CblasNoTrans, 1,
+							   				   h.contents.D_full, mvec, 0,
+							   				   kvec) )
+				self.assertCall( lib.vector_memcpy_av(kvec_ptr, kvec, 1) )
 
 				Dmvec = D.dot(mvec_py)
-				self.assertTrue( np.linalg.norm(Dmvec - kvec_py) <=
-								 ATOLK + RTOL * np.linalg.norm(Dmvec) )
+				self.assertVecEqual( Dmvec, kvec_py, ATOLK, RTOL)
 
 				# verify min distances
 				dmin_py = np.zeros(m).astype(lib.pyfloat)
 				dmin_ptr = dmin_py.ctypes.data_as(lib.ok_float_p)
-				lib.vector_memcpy_av(dmin_ptr, h.contents.d_min_full, 1)
-				self.assertTrue( np.linalg.norm(dmin_py - dmin) <=
-								 ATOLM + RTOL * np.linalg.norm(dmin) )
+				self.assertCall( lib.vector_memcpy_av(
+							dmin_ptr, h.contents.d_min_full, 1) )
+				self.assertVecEqual( dmin_py, dmin, ATOLM, RTOL )
 
-				err = PRINTERR( lib.cluster_aid_free(h) )
+				self.assertCall( lib.cluster_aid_free(h) )
 				self.unregister_var('h')
-
 				self.free_var('A')
 				self.free_var('C')
 				self.free_var('a2c')
 				self.free_var('mvec')
 				self.free_var('kvec')
 				self.free_var('hdl')
-
-				self.assertEqual( lib.ok_device_reset(), 0 )
+				self.assertCall( lib.ok_device_reset() )
 
 	def test_calculate_centroids(self):
 		""" calculate centroids
@@ -809,9 +791,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 				continue
 
 			hdl = c_void_p()
-			err = lib.blas_make_handle(byref(hdl))
+			self.assertCall( lib.blas_make_handle(byref(hdl)) )
 			self.register_var('hdl', hdl, lib.blas_destroy_handle)
-			self.assertEqual( err, 0 )
 
 			DIGITS = 7 - 2 * single_precision - 1 * gpu
 			RTOL = 10**(-DIGITS)
@@ -821,8 +802,10 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			A = lib.matrix(0, 0, 0, None, 0)
 			C = lib.matrix(0, 0, 0, None, 0)
-			lib.matrix_calloc(A, m, n, lib.enums.CblasRowMajor)
-			lib.matrix_calloc(C, k, n, lib.enums.CblasRowMajor)
+			self.assertCall( lib.matrix_calloc(A, m, n,
+											   lib.enums.CblasRowMajor) )
+			self.assertCall( lib.matrix_calloc(C, k, n,
+											   lib.enums.CblasRowMajor) )
 			self.register_var('A', A, lib.matrix_free)
 			self.register_var('C', C, lib.matrix_free)
 
@@ -830,30 +813,31 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			C_py = np.random.rand(k, n).astype(lib.pyfloat)
 			A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
 			C_ptr = C_py.ctypes.data_as(lib.ok_float_p)
-			lib.matrix_memcpy_ma(A, A_ptr, lib.enums.CblasRowMajor)
-			lib.matrix_memcpy_ma(C, C_ptr, lib.enums.CblasRowMajor)
+			self.assertCall( lib.matrix_memcpy_ma(A, A_ptr,
+												  lib.enums.CblasRowMajor) )
+			self.assertCall( lib.matrix_memcpy_ma(C, C_ptr,
+												  lib.enums.CblasRowMajor) )
 
 			a2c = lib.upsamplingvec()
-			err = PRINTERR( lib.upsamplingvec_alloc(a2c, m, k) )
+			self.assertCall( lib.upsamplingvec_alloc(a2c, m, k) )
 			self.register_var('a2c', a2c, lib.upsamplingvec_free)
-			self.assertEqual( err, 0 )
 
 			a2c_py = np.zeros(m).astype(c_size_t)
 			a2c_ptr = a2c_py.ctypes.data_as(lib.c_size_t_p)
 
 			a2c_py += self.u_test
-			lib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1)
+			self.assertCall( lib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1) )
 
 			counts = lib.vector()
-			lib.vector_calloc(counts, k)
+			self.assertCall( lib.vector_calloc(counts, k) )
 			self.register_var('counts', counts, lib.vector_free)
 
 			kvec = lib.vector()
-			lib.vector_calloc(kvec, k)
+			self.assertCall( lib.vector_calloc(kvec, k) )
 			self.register_var('kvec', kvec, lib.vector_free)
 
 			nvec = lib.vector()
-			lib.vector_calloc(nvec, n)
+			self.assertCall( lib.vector_calloc(nvec, n) )
 			self.register_var('nvec', nvec, lib.vector_free)
 
 			kvec_py = np.zeros(k).astype(lib.pyfloat)
@@ -863,7 +847,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			nvec_ptr = nvec_py.ctypes.data_as(lib.ok_float_p)
 
 			# C: build centroids
-			lib.calculate_centroids(A, C, a2c, counts)
+			self.assertCall( lib.calculate_centroids(A, C, a2c, counts) )
 
 			# Py: build centroids
 			self.upsamplingvec_mul('T', 'N', 'N', 1, a2c_py, A_py, 0, C_py)
@@ -875,17 +859,16 @@ class ClusterLibsTestCase(OptkitCTestCase):
 				C_py[idx, :] *= counts_local[idx]
 
 			# C: kvec = C * nvec
-			lib.vector_memcpy_va(nvec, nvec_ptr, 1)
-			lib.blas_gemv(hdl, lib.enums.CblasNoTrans, 1, C, nvec, 0,
-						   kvec)
-			lib.vector_memcpy_av(kvec_ptr, kvec, 1)
+			self.assertCall( lib.vector_memcpy_va(nvec, nvec_ptr, 1) )
+			self.assertCall( lib.blas_gemv(hdl, lib.enums.CblasNoTrans, 1, C,
+										   nvec, 0, kvec) )
+			self.assertCall( lib.vector_memcpy_av(kvec_ptr, kvec, 1) )
 
 			# Py: kvec = C * nvec
 			Cnvec = C_py.dot(nvec_py)
 
 			# compare C vs. Py
-			self.assertTrue( np.linalg.norm(kvec_py - Cnvec) <=
-							 ATOLK + RTOL * np.linalg.norm(Cnvec) )
+			self.assertVecEqual( kvec_py, Cnvec, ATOLK, RTOL)
 
 			self.free_var('A')
 			self.free_var('C')
@@ -894,8 +877,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.free_var('nvec')
 			self.free_var('kvec')
 			self.free_var('hdl')
-
-			self.assertEqual( lib.ok_device_reset(), 0 )
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_kmeans(self):
 		""" k-means
@@ -913,14 +895,15 @@ class ClusterLibsTestCase(OptkitCTestCase):
 				continue
 
 			hdl = c_void_p()
-			err = lib.blas_make_handle(byref(hdl))
+			self.assertCall( lib.blas_make_handle(byref(hdl)) )
 			self.register_var('hdl', hdl, lib.blas_destroy_handle)
-			self.assertEqual( err, 0 )
 
 			A = lib.matrix(0, 0, 0, None, 0)
 			C = lib.matrix(0, 0, 0, None, 0)
-			lib.matrix_calloc(A, m, n, lib.enums.CblasRowMajor)
-			lib.matrix_calloc(C, k, n, lib.enums.CblasRowMajor)
+			self.assertCall( lib.matrix_calloc(A, m, n,
+											   lib.enums.CblasRowMajor) )
+			self.assertCall( lib.matrix_calloc(C, k, n,
+											   lib.enums.CblasRowMajor) )
 			self.register_var('A', A, lib.matrix_free)
 			self.register_var('C', C, lib.matrix_free)
 
@@ -928,30 +911,31 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			C_py = np.random.rand(k, n).astype(lib.pyfloat)
 			A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
 			C_ptr = C_py.ctypes.data_as(lib.ok_float_p)
-			lib.matrix_memcpy_ma(A, A_ptr, lib.enums.CblasRowMajor)
-			lib.matrix_memcpy_ma(C, C_ptr, lib.enums.CblasRowMajor)
+			self.assertCall( lib.matrix_memcpy_ma(A, A_ptr,
+												  lib.enums.CblasRowMajor) )
+			self.assertCall( lib.matrix_memcpy_ma(C, C_ptr,
+												  lib.enums.CblasRowMajor) )
 
 			a2c = lib.upsamplingvec()
-			err = PRINTERR( lib.upsamplingvec_alloc(a2c, m, k) )
+			self.assertCall( lib.upsamplingvec_alloc(a2c, m, k) )
 			self.register_var('a2c', a2c, lib.upsamplingvec_free)
-			self.assertEqual( err, 0 )
 
 			a2c_py = np.zeros(m).astype(c_size_t)
 			a2c_ptr = a2c_py.ctypes.data_as(lib.c_size_t_p)
 
 			a2c_py += self.u_test
-			lib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1)
+			self.assertCall( lib.indvector_memcpy_va(a2c.vec, a2c_ptr, 1) )
 
 			counts = lib.vector()
-			lib.vector_calloc(counts, k)
+			self.assertCall( lib.vector_calloc(counts, k) )
 			self.register_var('counts', counts, lib.vector_free)
 
 			kvec = lib.vector()
-			lib.vector_calloc(kvec, k)
+			self.assertCall( lib.vector_calloc(kvec, k) )
 			self.register_var('kvec', kvec, lib.vector_free)
 
 			nvec = lib.vector()
-			lib.vector_calloc(nvec, n)
+			self.assertCall( lib.vector_calloc(nvec, n) )
 			self.register_var('nvec', nvec, lib.vector_free)
 
 			kvec_py = np.zeros(k).astype(lib.pyfloat)
@@ -966,10 +950,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			CHANGE_TOL = int(1 + 0.01 * m)
 			MAXITER = 500
 			VERBOSE = 1
-			err = lib.k_means(A, C, a2c, counts, h, DIST_RELTOL, CHANGE_TOL,
-							  MAXITER, VERBOSE)
-
-			self.assertEqual( err, 0 )
+			self.assertCall( lib.k_means(A, C, a2c, counts, h, DIST_RELTOL,
+										 CHANGE_TOL, MAXITER, VERBOSE) )
 
 			self.free_var('A')
 			self.free_var('C')
@@ -978,8 +960,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.free_var('nvec')
 			self.free_var('kvec')
 			self.free_var('hdl')
-
-			self.assertEqual( lib.ok_device_reset(), 0 )
+			self.assertCall( lib.ok_device_reset() )
 
 	def test_kmeans_easy_init_free(self):
 		m, n = self.shape
@@ -990,14 +971,15 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			if lib is None:
 				continue
 
-			work = c_void_p(lib.kmeans_easy_init(m, k, n))
+			w_int = lib.kmeans_easy_init(m, k, n)
+			self.assertNotEqual(w_int, 0 )
+			work = c_void_p(w_int)
 			self.register_var('work', work, lib.kmeans_easy_finish)
-			self.assertNotEqual( work, 0 )
 			cwork = cast(work, lib.kmeans_work_p)
 			self.assertEqual(cwork.contents.n_vectors, m)
 			self.assertEqual(cwork.contents.n_clusters, k)
 			self.assertEqual(cwork.contents.vec_length, n)
-			self.assertEqual( lib.kmeans_easy_finish(work), 0 )
+			self.assertCall( lib.kmeans_easy_finish(work) )
 			self.unregister_var('work')
 
 	def test_kmeans_easy_resize(self):
@@ -1012,8 +994,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			work = lib.kmeans_easy_init(m, k, n)
 			self.register_var('work', work, lib.kmeans_easy_finish)
 
-			err = PRINTERR( lib.kmeans_easy_resize(work, m / 2, k / 2, n / 2) )
-			self.assertEqual( err, 0 )
+			self.assertCall( lib.kmeans_easy_resize(work, m/2, k/2, n/2) )
 
 			cwork = cast(work, lib.kmeans_work_p)
 			self.assertEqual(cwork.contents.A.size1, m / 2)
@@ -1066,6 +1047,6 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			settings = lib.kmeans_settings(DIST_RELTOL, CHANGE_TOL, MAXITER,
 											VERBOSE)
 
-			self.assertEqual( lib.kmeans_easy_run(work, settings, io), 0 )
+			self.assertCall( lib.kmeans_easy_run(work, settings, io) )
 
 			self.free_var('work')

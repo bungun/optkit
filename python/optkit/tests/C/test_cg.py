@@ -32,6 +32,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 	def tearDown(self):
 		self.free_all_vars()
+		self.exit_call()
 
 	def register_preconditioning_operator(self, lib, A_py, rho):
 		n = A_py.shape[1]
@@ -285,8 +286,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 				self.assertCall( lib.diagonal_preconditioner(o, p_vec, rho) )
 				self.assertCall( lib.vector_memcpy_av(p_ptr, p_vec, 1) )
-				self.assertTrue( np.linalg.norm(p_py - p_) <=
-								 ATOLN + RTOL * np.linalg.norm(p_py) )
+				self.assertVecEqual( p_py, p, ATOLN, RTOL )
 
 				self.free_vars('o', 'A', 'p_vec')
 			self.assertCall( lib.ok_device_reset() )
@@ -352,8 +352,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 						h, o, p, b, x, RHO, tol, maxiter, CG_QUIET, iter_p) )
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 				self.assertTrue( iter_[0] <= maxiter )
-				self.assertTrue( np.linalg.norm(T.dot(x_) - b_) <=
-								 ATOLN + RTOL * np.linalg.norm(b_) )
+				self.assertVecEqual( T.dot(x_), b_, ATOLN, RTOL )
 
 				self.free_vars('p', 'p_vec', 'o', 'A', 'h')
 
@@ -405,16 +404,14 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 						h, o, p, b, x, RHO, tol, maxiter, CG_QUIET, iter_p) )
 				iters1 = iter_[0]
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
-				self.assertTrue( np.linalg.norm(T.dot(x_) - b_) <=
-								 ATOLN + RTOL * np.linalg.norm(b_))
+				self.assertVecEqual( T.dot(x_), b_, ATOLN, RTOL )
 
 				# second run
 				self.assertCall( lib.pcg_nonallocating(
 						h, o, p, b, x, RHO, tol, maxiter, CG_QUIET, iter_p) )
 				iters2 = iter_[0]
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
-				self.assertTrue( np.linalg.norm(T.dot(x_) - b_) <=
-								 ATOLN + RTOL * np.linalg.norm(b_) )
+				self.assertVecEqual( T.dot(x_), b_, ATOLN, RTOL )
 
 				print 'cold start iters:', iters1
 				print 'warm start iters:', iters2
@@ -470,8 +467,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 					CG_QUIET, iter_p) )
 				self.assertTrue( iter_[0] <= maxiter )
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
-				self.assertTrue(np.linalg.norm(T.dot(x_) - b_) <=
-								ATOLN + RTOL * np.linalg.norm(b_))
+				self.assertVecEqual( T.dot(x_), b_, ATOLN, RTOL )
 
 				self.free_vars('p', 'p_vec', 'o', 'A')
 
@@ -526,16 +522,14 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				iters1 = iter_[0]
 				self.assertTrue( iters1 <= maxiter )
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
-				self.assertTrue( np.linalg.norm(T.dot(x_) - b_) <=
-								 ATOLN + RTOL * np.linalg.norm(b_))
+				self.assertVecEqual( T.dot(x_), b_, ATOLN, RTOL )
 
 				self.assertCall( lib.pcg_solve(pcg_work, o, p, b, x, RHO, tol,
 											   maxiter, CG_QUIET, iter_p) )
 				iters2 = iter_[0]
 				self.assertTrue(iters2 <= maxiter)
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
-				self.assertTrue( np.linalg.norm(T.dot(x_) - b_) <=
-								 ATOLN + RTOL * np.linalg.norm(b_))
+				self.assertVecEqual( T.dot(x_), b_, ATOLN, RTOL )
 
 				print 'cold start iters:', iters1
 				print 'warm start iters:', iters2
