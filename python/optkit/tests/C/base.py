@@ -1,5 +1,6 @@
-from numpy import zeros, ndarray
+from numpy import zeros, array, ndarray
 from numpy.linalg import norm
+from numpy.random import rand
 from ctypes import c_void_p, c_size_t, byref
 from scipy.sparse import csc_matrix, csr_matrix
 from optkit.libs.error import optkit_print_error as PRINTERR
@@ -9,7 +10,12 @@ class OptkitCTestCase(OptkitTestCase):
 	managed_vars = {}
 	free_methods = {}
 	libs = None
-	__exit_call = lambda : None
+
+	@staticmethod
+	def __exit_default():
+		return None
+
+	__exit_call = __exit_default
 
 	def assertCall(self, call):
 		self.assertEqual( PRINTERR(call), 0 )
@@ -52,7 +58,7 @@ class OptkitCTestCase(OptkitTestCase):
 
 	def exit_call(self):
 		PRINTERR( self.__exit_call() )
-		self.__exit_call = lambda : None
+		self.__exit_call = self.__exit_default
 
 	@staticmethod
 	def gen_py_vector(lib, size, random=False):
@@ -63,7 +69,7 @@ class OptkitCTestCase(OptkitTestCase):
 		v_py = zeros(size).astype(lib.pyfloat)
 		v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
 		if random:
-			v_py +=  np.random.rand(size)
+			v_py +=  rand(size)
 		return v_py, v_ptr
 
 	@staticmethod
@@ -74,9 +80,9 @@ class OptkitCTestCase(OptkitTestCase):
 
 		pyorder = 'C' if order == lib.enums.CblasRowMajor else 'F'
 		A_py = zeros((size1, size2), order=pyorder).astype(lib.pyfloat)
-		A_ptr = v_py.ctypes.data_as(lib.ok_float_p)
+		A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
 		if random:
-			A_py += np.random.rand(size1, size2)
+			A_py += rand(size1, size2)
 		return A_py, A_ptr
 
 	def register_vector(self, lib, size, name):
@@ -84,7 +90,7 @@ class OptkitCTestCase(OptkitTestCase):
 			v = lib.vector(0, 0, None)
 			self.assertCall( lib.vector_calloc(v, size) )
 			self.register_var(name, v, lib.vector_free)
-			v_py, v_ptr = self.gen_pyvector(lib, size)
+			v_py, v_ptr = self.gen_py_vector(lib, size)
 			return v, v_py, v_ptr
 		else:
 			raise ValueError('library {} cannot allocate a vector'.format(lib))
@@ -105,7 +111,7 @@ class OptkitCTestCase(OptkitTestCase):
 			A = lib.matrix(0, 0, 0, None, order)
 			self.assertCall( lib.matrix_calloc(A, size1, size2, order) )
 			self.register_var(name, A, lib.matrix_free)
-			A_py, A_ptr = self.gen_py_matrix(size1, size2, order)
+			A_py, A_ptr = self.gen_py_matrix(lib, size1, size2, order)
 			return A, A_py, A_ptr
 		else:
 			raise ValueError('library {} cannot allocate a matrix'.format(lib))

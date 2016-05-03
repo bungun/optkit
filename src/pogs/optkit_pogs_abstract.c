@@ -18,7 +18,7 @@ POGS_PRIVATE ok_status pogs_work_alloc(pogs_work ** W, operator * A, int direct)
 		A->kind == OkOperatorSparseCSC ||
 		A->kind == OkOperatorSparseCSR);
 	pogs_work * W_ = OK_NULL;
-	ok_alloc(W, sizeof(*W_));
+	ok_alloc(W_, sizeof(*W_));
 	W_->A = A;
 
 	/* set projector */
@@ -82,7 +82,7 @@ POGS_PRIVATE ok_status pogs_solver_alloc(pogs_solver ** solver, operator * A,
 
 	ok_alloc(s, sizeof(*s));
 	ok_alloc(s->settings, sizeof(*(s->settings)));
-	err = set_default_settings(s->settings);
+	OK_CHECK_ERR(  err, set_default_settings(s->settings) );
 	ok_alloc(s->f, sizeof(*(s->f)));
 	ok_alloc(s->g, sizeof(*(s->g)));
 	OK_CHECK_ERR( err, function_vector_calloc(s->f, A->size1) );
@@ -225,7 +225,7 @@ POGS_PRIVATE ok_status update_residuals(void * linalg_handle,
 
 	vector_memcpy_vv(z->temp->x, z->dual12->x);
 	A->fused_adjoint(A->data, kOne, z->dual12->y, kOne, z->temp->x);
-	blas_dot(linalg_handle, z->temp->x, z->temp->x, &res->dual);
+	blas_nrm2(linalg_handle, z->temp->x, &res->dual);
 
 	return OPTKIT_SUCCESS;
 }
@@ -415,7 +415,7 @@ ok_status pogs_solve(pogs_solver * solver, function_vector * f,
 
 	/* unscale output */
 	OK_CHECK_ERR( err,
-		copy_output(solver->z, solver->W->d, solver->W->e, output,
+		copy_output(output, solver->z, solver->W->d, solver->W->e,
 			solver->rho, settings->suppress) );
 	return err;
 }

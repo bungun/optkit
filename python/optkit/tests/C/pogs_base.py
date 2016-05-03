@@ -1,5 +1,6 @@
-from numpy import zeros, ndarray
+from numpy import zeros, array, ndarray
 from numpy.linalg import norm
+from numpy.random import rand
 from optkit.tests.C.base import OptkitCTestCase
 
 ALPHA_DEFAULT = 1.7
@@ -74,39 +75,54 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		self.assertCall( lib.vector_memcpy_av(
 				py_vector.ctypes.data_as(lib.ok_float_p), c_vector, 1) )
 
-	def load_all_local(self, lib, py_vars, solver_vars, solver_work):
+	def load_all_local(self, lib, py_vars, solver):
 		if not isinstance(py_vars, self.PogsVariablesLocal):
 			raise TypeError('argument "py_vars" must be of type {}'.format(
 							self.PogsVariablesLocal))
+		elif 'pogs_solver_p' not in lib.__dict__:
+			raise ValueError('argument "lib" must contain field named '
+							 '"pogs_solver_p"')
+		elif not isinstance(solver, lib.pogs_solver_p):
+			raise TypeError('argument "solver" must be of type {}'.format(
+							lib.pogs_solver_p))
 
-		z = solver_vars;
+		z = solver.contents.z
 		self.load_to_local(lib, py_vars.z, z.contents.primal.contents.vec)
 		self.load_to_local(lib, py_vars.z12, z.contents.primal12.contents.vec)
 		self.load_to_local(lib, py_vars.zt, z.contents.dual.contents.vec)
 		self.load_to_local(lib, py_vars.zt12, z.contents.dual12.contents.vec)
 		self.load_to_local(lib, py_vars.prev, z.contents.prev.contents.vec)
 
-		if solver_work is not None:
-			self.load_to_local(lib, py_vars.d, solver_work.contents.d)
-			self.load_to_local(lib, py_vars.e, solver_work.contents.e)
+		if 'pogs_matrix_p' in lib.__dict__:
+			solver_work = solver.contents.M
+		elif 'pogs_work_p' in lib.__dict__:
+			solver_work = solver.contents.W
+		else:
+			raise ValueError('argument "lib" must contain a field named'
+							 '"pogs_matrix_p" or "pogs_work_p"')
+
+		self.load_to_local(lib, py_vars.d, solver_work.contents.d)
+		self.load_to_local(lib, py_vars.e, solver_work.contents.e)
 
 	def register_solver(self, name, solver, libcall):
 		class solver_free(object):
+			def __init__(self, libcall_):
+				self.libcall = libcall_
 			def __call__(self, solver):
-				return libcall(solver, 0)
+				return self.libcall(solver, 0)
 		self.register_var(name, solver, solver_free(libcall) )
 
-	def gen_registered_pogs_test_vars(self, lib, m, n, name1='f', name2='g'):
-			f, f_py, f_ptr = self.register_fnvector(lib, m, name1)
-			g, g_py, g_ptr = self.register_fnvector(lib, n, name2)
+	def gen_registered_pogs_fns(self, lib, m, n, name1='f', name2='g'):
+		f, f_py, f_ptr = self.register_fnvector(lib, m, name1)
+		g, g_py, g_ptr = self.register_fnvector(lib, n, name2)
 
-			for i in xrange(m):
-				f_py[i] = lib.function(lib.function_enums.Abs, 1, 1, 1, 0, 0)
-			for j in xrange(n):
-				g_py[j] = lib.function(lib.function_enums.IndGe0, 1, 0, 1, 0, 0)
+		for i in xrange(m):
+			f_py[i] = lib.function(lib.function_enums.Abs, 1, 1, 1, 0, 0)
+		for j in xrange(n):
+			g_py[j] = lib.function(lib.function_enums.IndGe0, 1, 0, 1, 0, 0)
 
-			self.assertCall( lib.function_vector_memcpy_va(f, f_ptr) )
-			self.assertCall( lib.function_vector_memcpy_va(g, g_ptr) )
+		self.assertCall( lib.function_vector_memcpy_va(f, f_ptr) )
+		self.assertCall( lib.function_vector_memcpy_va(g, g_ptr) )
 
 		return f, f_py, g, g_py
 
@@ -140,8 +156,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 									 TOL )
 		self.assertScalarEqual(settings.resume, RESUME_DEFAULT, TOL )
 
-	def assert_pogs_scaling(self, lib, solver, solver_work, f, f_py, g, g_py,
-							localvars):
+	def assert_pogs_scaling(self, lib, solver, f, f_py, g, g_py, local_vars):
 		m = len(f_py)
 		n = len(g_py)
 		DIGITS = 7 - 2 * lib.FLOAT
@@ -151,12 +166,12 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 
 		def fv_list2arrays(function_vector_list):
 			fv = function_vector_list
-			fvh = [fv_.h for fv_ in fv]
-			fva = [fv_.a for fv_ in fv]
-			fvb = [fv_.b for fv_ in fv]
-			fvc = [fv_.c for fv_ in fv]
-			fvd = [fv_.d for fv_ in fv]
-			fve = [fv_.e for fv_ in fv]
+			fvh = array([fv_.h for fv_ in fv])
+			fva = array([fv_.a for fv_ in fv])
+			fvb = array([fv_.b for fv_ in fv])
+			fvc = array([fv_.c for fv_ in fv])
+			fvd = array([fv_.d for fv_ in fv])
+			fve = array([fv_.e for fv_ in fv])
 			return fvh, fva, fvb, fvc, fvd, fve
 
 		# record original function vector parameters
@@ -176,25 +191,24 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 
 		# retrieve scaled function vector parameters
 		self.assertCall( lib.function_vector_memcpy_av(f_py_ptr,
-													   solver.f) )
+													   solver.contents.f) )
 		self.assertCall( lib.function_vector_memcpy_av(g_py_ptr,
-													   solver.g) )
+													   solver.contents.g) )
 		f_list = [lib.function(*f_) for f_ in f_py]
 		g_list = [lib.function(*f_) for f_ in g_py]
 		f_h1, f_a1, f_b1, f_c1, f_d1, f_e1 = fv_list2arrays(f_list)
 		g_h1, g_a1, g_b1, g_c1, g_d1, g_e1 = fv_list2arrays(g_list)
 
 		# retrieve scaling
-		self.load_all_local(lib, localvars, solver.contents.z,
-							solver_work)
+		self.load_all_local(lib, local_vars, solver)
 
 		# scaled vars
-		self.assertVecEqual( f_a0, localvars.d * f_a1, ATOLM, RTOL )
-		self.assertVecEqual( f_d0, localvars.d * f_d1, ATOLM, RTOL )
-		self.assertVecEqual( f_e0, localvars.d * f_e1, ATOLM, RTOL )
-		self.assertVecEqual( g_a0 * localvars.e, g_a1, ATOLN, RTOL )
-		self.assertVecEqual( g_d0 * localvars.e, g_d1, ATOLN, RTOL )
-		self.assertVecEqual( g_e0 * localvars.e, g_e1, ATOLN, RTOL )
+		self.assertVecEqual( f_a0, local_vars.d * f_a1, ATOLM, RTOL )
+		self.assertVecEqual( f_d0, local_vars.d * f_d1, ATOLM, RTOL )
+		self.assertVecEqual( f_e0, local_vars.d * f_e1, ATOLM, RTOL )
+		self.assertVecEqual( g_a0 * local_vars.e, g_a1, ATOLN, RTOL )
+		self.assertVecEqual( g_d0 * local_vars.e, g_d1, ATOLN, RTOL )
+		self.assertVecEqual( g_e0 * local_vars.e, g_e1, ATOLN, RTOL )
 
 		# unchanged vars
 		self.assertVecEqual( f_h0, f_h1, ATOLM, RTOL )
@@ -204,32 +218,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		self.assertVecEqual( g_b0, g_b1, ATOLN, RTOL )
 		self.assertVecEqual( g_c0, g_c1, ATOLN, RTOL )
 
-	def assert_pogs_warmstart(self, lib, rho, solver_vars, solver_work,
-							  settings, localA, localvars):
-		m, n = localA.shape
-		DIGITS = 7 - 2 * lib.FLOAT
-		RTOL = 10**(-DIGITS)
-		ATOLM = RTOL * m**0.5
-		ATOLN = RTOL * n**0.5
-
-		x_rand = np.random.rand(n)
-		nu_rand = np.random.rand(m)
-
-		self.load_all_local(lib, localvars, solver_vars, solver_work)
-
-		# check variable state is consistent after warm start
-		self.assertVecEqual(
-				x_rand, localvars.e * localvars.x, ATOLN, RTOL )
-		self.assertVecEqual(
-				nu_rand * -1/rho, localvars.d * localvars.yt,
-				ATOLM, RTOL )
-		self.assertVecEqual(
-				localA.dot(localvars.x), localvars.y, ATOLM, RTOL )
-		self.assertVecEqual(
-				localA.T.dot(localvars.yt), -localvars.xt, ATOLN,
-				RTOL )
-
-	def assert_pogs_primal_update(self, lib, solver_vars, localvars):
+	def assert_pogs_primal_update(self, lib, solver, local_vars):
 		"""primal update test
 
 			set
@@ -244,13 +233,13 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		"""
 		DIGITS = 7 - 2 * lib.FLOAT
 		RTOL = 10**(-DIGITS)
-		ATOLMN = RTOL * (localvars.m + localvars.n)**0.5
-		self.assertCall( lib.set_prev(solver_vars) )
-		self.load_all_local(lib, localvars, solver_vars, None)
-		self.assertVecEqual( localvars.z, localvars.prev, ATOLMN, RTOL )
+		ATOLMN = RTOL * (local_vars.m + local_vars.n)**0.5
+		self.assertCall( lib.set_prev(solver.contents.z) )
+		self.load_all_local(lib, local_vars, solver)
+		self.assertVecEqual( local_vars.z, local_vars.prev, ATOLMN, RTOL )
 
-	def assert_pogs_prox(self, lib, blas_handle, solver_vars, solver_work, rho,
-						 f, f_py, g, g_py, localvars):
+	def assert_pogs_prox(self, lib, blas_handle, solver, f, f_py, g, g_py,
+						 local_vars):
 		"""proximal operator application test
 
 			set
@@ -267,48 +256,30 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		ATOLM = RTOL * m**0.5
 		ATOLN = RTOL * n**0.5
 
-		z = solver_vars
+		z = solver.contents.z
+		rho = solver.contents.rho
 		self.assertCall( lib.prox(blas_handle, f, g, z, rho) )
-		self.load_all_local(lib, localvars, z, solver_work)
+		self.load_all_local(lib, local_vars, solver)
 
 		f_list = [lib.function(*f_) for f_ in f_py]
 		g_list = [lib.function(*f_) for f_ in g_py]
 		for i in xrange(len(f_py)):
-			f_list[i].a *= localvars.d[i]
-			f_list[i].d *= localvars.d[i]
-			f_list[i].e *= localvars.d[i]
+			f_list[i].a *= local_vars.d[i]
+			f_list[i].d *= local_vars.d[i]
+			f_list[i].e *= local_vars.d[i]
 		for j in xrange(len(g_py)):
-			g_list[j].a /= localvars.e[j]
-			g_list[j].d /= localvars.e[j]
-			g_list[j].e /= localvars.e[j]
+			g_list[j].a /= local_vars.e[j]
+			g_list[j].d /= local_vars.e[j]
+			g_list[j].e /= local_vars.e[j]
 
-		x_arg = localvars.x - localvars.xt
-		y_arg = localvars.y - localvars.yt
+		x_arg = local_vars.x - local_vars.xt
+		y_arg = local_vars.y - local_vars.yt
 		x_out = prox_eval_python(g_list, rho, x_arg)
 		y_out = prox_eval_python(f_list, rho, y_arg)
-		self.assertVecEqual( localvars.x12, x_out, ATOLN, RTOL )
-		self.assertVecEqual( localvars.y12, y_out, ATOLM, RTOL )
+		self.assertVecEqual( local_vars.x12, x_out, ATOLN, RTOL )
+		self.assertVecEqual( local_vars.y12, y_out, ATOLM, RTOL )
 
-	def assert_pogs_primal_project(self, lib, blas_handle, projector,
-								   solver_vars, settings, localA,
-								   localvars):
-		"""primal projection test
-			set
-				(x^{k+1}, y^{k+1}) = proj_{y=Ax}(x^{k+1/2}, y^{k+1/2})
-			check that
-				y^{k+1/2} == A * x^{k+1/2}
-			holds to numerical tolerance
-		"""
-		DIGITS = 7 - 2 * lib.FLOAT
-		RTOL = 10**(-DIGITS)
-		ATOLM = RTOL * localvars.m**0.5
-
-		self.assertCall( lib.project_primal(blas_handle, projector, solver_vars,
-											settings.alpha) )
-		self.load_all_local(lib, localvars, solver_vars, None)
-		self.assertVecEqual( localA.dot(localvars.x), localvars.y, ATOLM, RTOL)
-
-	def assert_pogs_dual_update(self, lib, blas_handle, solvervars, localvars):
+	def assert_pogs_dual_update(self, lib, blas_handle, solver, local_vars):
 		"""dual update test
 
 			set
@@ -321,84 +292,24 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		"""
 		DIGITS = 7 - 2 * lib.FLOAT
 		RTOL = 10**(-DIGITS)
-		ATOLMN = RTOL * (localvars.m + localvars.n)**0.5
+		ATOLMN = RTOL * (local_vars.m + local_vars.n)**0.5
 
-		z = solvervars
+		z = solver.contents.z
 
-		self.load_all_local(lib, localvars, z, None)
-		alpha = settings.alpha
-		zt12_py = localvars.z12 - localvars.prev + localvars.zt
-		zt_py = localvars.zt - localvars.z + (
-					alpha * localvars.z12 + (1-alpha) * localvars.prev)
+		self.load_all_local(lib, local_vars, solver)
+		alpha = solver.contents.settings.contents.alpha
+		zt12_py = local_vars.z12 - local_vars.prev + local_vars.zt
+		zt_py = local_vars.zt - local_vars.z + (
+					alpha * local_vars.z12 + (1-alpha) * local_vars.prev)
 
 		self.assertCall(lib.update_dual(blas_handle, z, alpha) )
-		self.load_all_local(lib, localvars, z, None)
-		self.assertVecEqual( localvars.zt12, zt12_py, ATOLMN, RTOL )
-		self.assertVecEqual( localvars.zt, zt_py, ATOLMN, RTOL )
+		self.load_all_local(lib, local_vars, solver)
+		self.assertVecEqual( local_vars.zt12, zt12_py, ATOLMN, RTOL )
+		self.assertVecEqual( local_vars.zt, zt_py, ATOLMN, RTOL )
 
-	def assert_pogs_check_convergence(self, lib, blas_handle, solver, f_list,
-									  g_list, objectives, residuals, tolerances,
-									  localA, localvars):
-		"""convergence test
 
-			(1) set
-
-				obj_primal = f(y^{k+1/2}) + g(x^{k+1/2})
-				obj_gap = <z^{k+1/2}, zt^{k+1/2}>
-				obj_dual = obj_primal - obj_gap
-
-				tol_primal = abstol * sqrt(m) + reltol * ||y^{k+1/2}||
-				tol_dual = abstol * sqrt(n) + reltol * ||xt^{k+1/2}||
-
-				res_primal = ||Ax^{k+1/2} - y^{k+1/2}||
-				res_dual = ||A'yt^{k+1/2} + xt^{k+1/2}||
-
-			in C and Python, check that these quantities agree
-
-			(2) calculate solver convergence,
-
-					res_primal <= tol_primal
-					res_dual <= tol_dual,
-
-				in C and Python, check that the results agree
-		"""
-		DIGITS = 7 - 2 * lib.FLOAT
-		RTOL = 10**(-DIGITS)
-
-		converged = lib.check_convergence(blas_handle, solver, objectives,
-										  residuals, tolerances)
-
-		self.load_all_local(lib, localvars, solver.contents.z, None)
-		obj_py = func_eval_python(g_list, localvars.x12)
-		obj_py += func_eval_python(f_list, localvars.y12)
-		obj_gap_py = abs(np.dot(localvars.z12, localvars.zt12))
-		obj_dua_py = obj_py - obj_gap_py
-
-		tol_primal = tolerances.atolm + (
-				tolerances.reltol * np.linalg.norm(localvars.y12))
-		tol_dual = tolerances.atoln + (
-				tolerances.reltol * np.linalg.norm(localvars.xt12))
-
-		self.assertScalarEqual( objectives.gap, obj_gap_py, RTOL )
-		self.assertScalarEqual( tolerances.primal, tol_primal, RTOL )
-		self.assertScalarEqual( tolerances.dual, tol_dual, RTOL )
-
-		res_primal = np.linalg.norm(
-				localA.dot(localvars.x12) - localvars.y12)
-		res_dual = np.linalg.norm(
-				localA.T.dot(localvars.yt12) + localvars.xt12)
-
-		self.assertScalarEqual( residuals.primal, res_primal, RTOL )
-		self.assertScalarEqual( residuals.dual, res_dual, RTOL )
-		self.assertScalarEqual( residuals.gap, abs(obj_gap_py), RTOL )
-
-		converged_py = res_primal <= tolerances.primal and \
-					   res_dual <= tolerances.dual
-
-		self.assertEqual( converged, converged_py )
-
-	def assert_pogs_adapt_rho(self, lib, solvervars, settings, residuals,
-					   tolerances, localvars):
+	def assert_pogs_adapt_rho(self, lib, solver, residuals, tolerances,
+							  local_vars):
 		"""adaptive rho test
 
 			rho is rescaled
@@ -412,17 +323,24 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		"""
 		DIGITS = 7 - 2 * lib.FLOAT
 		RTOL = 10**(-DIGITS)
-		ATOLMN = RTOL * (localvars.m + localvars.n)**0.5
+		ATOLMN = RTOL * (local_vars.m + local_vars.n)**0.5
 
-		if settings.adaptiverho:
+		rho_p = lib.ok_float_p()
+		rho_p.contents = lib.ok_float(solver.contents.rho)
+
+		z = solver.contents.z
+		settings = solver.contents.settings
+
+		if settings.contents.adaptiverho:
 			rho_params = lib.adapt_params(1.05, 0, 0, 1)
-			zt_before = localvars.zt
+			zt_before = local_vars.zt
 			rho_before = solver.contents.rho
-			self.assertCall( lib.adaptrho(solver, rho_params, residuals,
-										  tolerances, 1) )
-			self.load_all_local(lib, localvars, solvervars, None)
-			zt_after = localvars.zt
-			rho_after = solver.contents.rho
+			self.assertCall( lib.adaptrho(z, solver.contents.settings, rho_p,
+										  rho_params, residuals, tolerances,
+										  1) )
+			self.load_all_local(lib, local_vars, solver)
+			zt_after = local_vars.zt
+			rho_after = rho_p.contents
 			self.assertVecEqual( rho_after * zt_after,
 									   rho_before * zt_before, ATOLMN, RTOL )
 
@@ -434,16 +352,11 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		rtol = settings.reltol
 		atolm = settings.abstol * (m**0.5)
 		atoln = settings.abstol * (n**0.5)
-		y_norm = norm(output.y)
-		mu_norm = norm(output.mu)
 
-		primal_feas = norm(A.dot(output.x) - output.y)
-		dual_feas = norm(A.T.dot(output.nu) + output.mu)
+		self.assertVecEqual(A.dot(output.x), output.y, atolm, 10 * rtol)
+		self.assertVecEqual(A.T.dot(output.nu), -output.mu, atoln, 20*rtol)
 
-		self.assertTrue(primal_feas <= 10 * (atolm + rtol * y_norm))
-		self.assertTrue(dual_feas <= 20 * (atoln + rtol * mu_norm))
-
-	def assert_pogs_unscaling(self, lib, solver, output, localvars):
+	def assert_pogs_unscaling(self, lib, output, solver, local_vars):
 		"""pogs unscaling test
 
 			solver variables are unscaled and copied to output.
@@ -457,8 +370,8 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		"""
 		DIGITS = 2 if lib.FLOAT else 3
 		RTOL = 10**(-DIGITS)
-		ATOLM = RTOL * localvars.m**0.5
-		ATOLN = RTOL * localvars.n**0.5
+		ATOLM = RTOL * local_vars.m**0.5
+		ATOLN = RTOL * local_vars.n**0.5
 
 		if not isinstance(solver, lib.pogs_solver_p):
 			raise TypeError('argument "solver" must be of type {}'.format(
@@ -468,25 +381,34 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 			raise TypeError('argument "output" must be of type {}'.format(
 							self.PogsOutputLocal))
 
-		if not isinstance(localvars, self.PogsVariablesLocal):
-			raise TypeError('argument "localvars" must be of type {}'.format(
+		if not isinstance(local_vars, self.PogsVariablesLocal):
+			raise TypeError('argument "local_vars" must be of type {}'.format(
 							self.PogsVariablesLocal))
 
-		self.load_all_local(lib, localvars, solver)
 		rho = solver.contents.rho
+		suppress = solver.contents.settings.contents.suppress
+		self.load_all_local(lib, local_vars, solver)
 
-		self.assertCall(
-				lib.copy_output(solver, output.ptr, rho,
-								solver.contents.settings.contents.suppress) )
+		if 'pogs_matrix_p' in lib.__dict__:
+			solver_work = solver.contents.M
+		elif 'pogs_work_p' in lib.__dict__:
+			solver_work = solver.contents.W
+		else:
+			raise ValueError('argument "lib" must contain a field named'
+							 '"pogs_matrix_p" or "pogs_work_p"')
+
+		self.assertCall( lib.copy_output(
+				output.ptr, solver.contents.z, solver_work.contents.d,
+				solver_work.contents.e, rho, suppress) )
 
 		self.assertVecEqual(
-				localvars.x12 * localvars.e, output.x, ATOLN, RTOL )
+				local_vars.x12 * local_vars.e, output.x, ATOLN, RTOL )
 		self.assertVecEqual(
-				localvars.y12, localvars.d * output.y, ATOLM, RTOL )
+				local_vars.y12, local_vars.d * output.y, ATOLM, RTOL )
 		self.assertVecEqual(
-				-rho * localvars.xt12, ocalvars.e * output.mu, ATOLN, RTOL )
+				-rho * local_vars.xt12, local_vars.e * output.mu, ATOLN, RTOL )
 		self.assertVecEqual(
-				-rho * localvars.yt12 * localvars.d, output.nu, ATOLM, RTOL )
+				-rho * local_vars.yt12 * local_vars.d, output.nu, ATOLM, RTOL )
 
 	def assert_warmstart_sequence(self, lib, solver, f, g, settings, info,
 								  output):
@@ -494,6 +416,8 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		if not isinstance(solver, lib.pogs_solver_p):
 			raise TypeError('argument "solver" must be of type {}'.format(
 							lib.pogs_solver_p))
+
+		settings.verbose = 1
 
 		# COLD START
 		print "\ncold"

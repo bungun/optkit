@@ -18,12 +18,12 @@ POGS_PRIVATE ok_status pogs_matrix_alloc(pogs_matrix ** M, size_t m, size_t n,
 	ok_status err = OPTKIT_SUCCESS;
 	pogs_matrix * M_ = OK_NULL;
 	ok_alloc(M_, sizeof(*M_));
-	ok_alloc(M_->A, sizeof(matrix));
+	ok_alloc(M_->A, sizeof(*M_->A));
 	OK_CHECK_ERR( err, matrix_calloc(M_->A, m, n, ord) );
 	ok_alloc(M_->P, sizeof(projector_));
 	OK_CHECK_ERR( err, PROJECTOR(alloc)(M_->P, M_->A) );
-	M_->d = malloc(sizeof(vector));
-	M_->e = malloc(sizeof(vector));
+	ok_alloc(M_->d, sizeof(*M_->d));
+	ok_alloc(M_->e, sizeof(*M_->e));
 	OK_CHECK_ERR( err, vector_calloc(M_->d, m) );
 	OK_CHECK_ERR( err, vector_calloc(M_->e, n) );
 	M_->skinny = (m >= n);
@@ -60,10 +60,10 @@ POGS_PRIVATE ok_status pogs_solver_alloc(pogs_solver ** solver, size_t m,
 		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
 
 	ok_alloc(s, sizeof(*s));
-	ok_alloc(s->settings, sizeof(*(s->settings)));
+	ok_alloc(s->settings, sizeof(*s->settings));
 	err = set_default_settings(s->settings);
-	ok_alloc(s->f, sizeof(*(s->f)));
-	ok_alloc(s->g, sizeof(*(s->g)));
+	ok_alloc(s->f, sizeof(*s->f));
+	ok_alloc(s->g, sizeof(*s->g));
 	OK_CHECK_ERR( err, function_vector_calloc(s->f, m) );
 	OK_CHECK_ERR( err, function_vector_calloc(s->g, n) );
 	OK_CHECK_ERR( err, pogs_variables_alloc(&(s->z), m, n) );
@@ -159,8 +159,8 @@ POGS_PRIVATE ok_status update_problem(pogs_solver * solver, function_vector * f,
 POGS_PRIVATE ok_status initialize_variables(pogs_solver * solver)
 {
 	OK_CHECK_PTR(solver);
-
 	pogs_variables * z = solver->z;
+
 	if (solver->settings->x0 != OK_NULL) {
 		vector_memcpy_va(z->temp->x, solver->settings->x0, 1);
 		vector_div(z->temp->x, solver->M->e);
@@ -386,7 +386,7 @@ ok_status pogs_solve(pogs_solver * solver, function_vector * f,
 
 	/* unscale output */
 	OK_CHECK_ERR( err,
-		copy_output(solver->z, solver->M->d, solver->M->e, output,
+		copy_output(output, solver->z, solver->M->d, solver->M->e,
 			solver->rho, settings->suppress) );
 	return err;
 }

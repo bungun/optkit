@@ -2,6 +2,11 @@
 #define OPTKIT_POGS_H_
 
 #include "optkit_timer.h"
+
+#ifndef OPTKIT_POGS_IMPLEMENTATION_
+#define OPTKIT_POGS_IMPLEMENTATION_
+#endif
+
 #include "optkit_pogs_common.h"
 
 #ifdef __cplusplus
