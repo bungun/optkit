@@ -159,7 +159,7 @@ for transpose in ${TRANSPOSE_STATES}; do
 			make libcluster FLOAT=$FLOAT GPU=$GPU
 		fi
 		echo TESTING CLUSTER CALLS: ${msg}
-		nosetests ${testprefix}operator${suffix}
+		nosetests ${testprefix}clustering${suffix}
 	fi
 
 	if [[ ${CG:-0} -eq 1 ]]; then

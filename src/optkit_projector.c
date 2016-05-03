@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-const uint kQuietCG = 1;
+const int kQuietCG = 1;
 const uint kItersCG = 100;
 
 ok_status projector_normalization(projector * P, int * normalized)

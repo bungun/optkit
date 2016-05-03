@@ -278,9 +278,9 @@ POGS_PRIVATE ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 	adapt_params rho_params = (adapt_params){kDELTAMIN, kZero, kZero, kOne};
 	pogs_settings * settings = solver->settings;
 	pogs_variables * z = solver->z;
-	pogs_objectives obj;
-	pogs_residuals res;
-	pogs_tolerances eps;
+	pogs_objectives obj = (pogs_objectives){OK_NAN, OK_NAN, OK_NAN};
+	pogs_residuals res = (pogs_residuals){OK_NAN, OK_NAN, OK_NAN};
+	pogs_tolerances eps = (pogs_tolerances){0, 0, 0, 0, 0, 0, 0, 0};
 	ok_status err = initialize_conditions(&obj, &res, &eps, settings,
 		solver->z->m, solver->z->n);
 

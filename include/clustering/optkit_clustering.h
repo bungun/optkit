@@ -277,7 +277,7 @@ static void get_distance_tolerance(ok_float *tol, const ok_float * maxA,
 	if ((*iter) == 0)
 		*tol = OK_INFINITY;
 	else
-		*tol = (kOne + ((ok_float) (*iter) / (*maxiter)) *
+		*tol = (kOne + ((ok_float)(*iter) / (ok_float)(*maxiter)) *
 			(*reltol - kOne)) * (*maxA);
 }
 
