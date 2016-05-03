@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from ctypes import c_size_t
-from optkit.libs import DenseLinsysLibs
+from optkit.libs.linsys import DenseLinsysLibs
 from optkit.tests.C.base import OptkitCTestCase
 
 class VectorTestCase(OptkitCTestCase):

@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from ctypes import c_void_p, byref
-from optkit.libs import EquilibrationLibs
+from optkit.libs.equilibration import EquilibrationLibs
 from optkit.tests.C.base import OptkitCOperatorTestCase
 
 class EquilLibsTestCase(OptkitCOperatorTestCase):
@@ -216,7 +216,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 			# test norm estimation for each operator type defined in
 			# self.op_keys
 			for op_ in self.op_keys:
-				print "indirect projection, operator type:", op_
+				print "operator norm, operator type:", op_
 				hdl = self.register_blas_handle(lib, 'hdl')
 				A_, A, o = self.register_operator(lib, op_)
 
@@ -234,7 +234,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 					print "norm estimate, C: ", cnorm
 
 				self.assertTrue(
-					cnorm >= ATOL, RTOL )* pynorm or
-					pynorm >= ATOL, RTOL )* cnorm )
+					cnorm >= ATOL + RTOL * pynorm or
+					pynorm >= ATOL + RTOL * cnorm )
 				self.free_vars('A', 'o','hdl')
 				self.assertCall( lib.ok_device_reset() )

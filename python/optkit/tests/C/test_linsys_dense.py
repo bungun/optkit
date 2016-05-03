@@ -2,7 +2,7 @@ import unittest
 import os
 import numpy as np
 from ctypes import c_float, c_int, c_size_t, c_void_p, Structure, byref
-from optkit.libs import DenseLinsysLibs
+from optkit.libs.linsys import DenseLinsysLibs
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.base import OptkitCTestCase
 
@@ -517,10 +517,7 @@ class DenseBLASTestCase(OptkitCTestCase):
 				B, B_py, B_ptr = self.register_matrix(lib, n, n, order, 'B')
 
 				# populate
-				if m >= n:
-					A_py += self.A_test[:n, :]
-				else:
-					A_py[:m, :] += self.A_test
+				A_py += self.A_test[:, :]
 				B_py += B_test
 				self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, order) )
 				self.assertCall( lib.matrix_memcpy_ma(B, B_ptr, order) )

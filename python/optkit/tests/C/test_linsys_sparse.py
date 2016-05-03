@@ -2,7 +2,7 @@ import os
 import numpy as np
 import scipy.sparse as sp
 from ctypes import c_int, c_uint, Structure, byref, c_void_p
-from optkit.libs import SparseLinsysLibs
+from optkit.libs.linsys import SparseLinsysLibs
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.base import OptkitCTestCase
 
@@ -168,7 +168,7 @@ class SparseMatrixTestCase(OptkitCTestCase):
 				# Ax == A_py * x (initalized to rand)
 				Ax_py = A_.dot(x_rand)
 				Ax_c = A_py * x_rand
-				self.assertTrue( Ax_py, Ax_c, ATOLM, RTOL )
+				self.assertVecEqual( Ax_py, Ax_c, ATOLM, RTOL )
 
 				# Test sparse copy optkit->python
 				# A_ * x != A_c * x (calloc to zero)

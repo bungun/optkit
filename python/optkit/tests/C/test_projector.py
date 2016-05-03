@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from ctypes import c_void_p, byref, cast
-from optkit.libs import ProjectorLibs
+from optkit.libs.projector import ProjectorLibs
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.base import OptkitCTestCase, OptkitCOperatorTestCase
 
@@ -262,7 +262,7 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 				continue
 			self.register_exit(lib.ok_device_reset)
 
-			for order in (lib.enums.CblasRowMajor, lib.CblasColMajor):
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
 				A, A_, A_ptr = self.register_matrix(lib, m, n, order, 'A')
 				A_ += self.A_test
 				self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, order) )
@@ -297,7 +297,7 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 
 			# -----------------------------------------
 			# test projection for each matrix layout
-			for order in (lib.enums.CblasRowMajor, lib.CblasColMajor):
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
 
 				x, x_, x_ptr = self.register_vector(lib, n, 'x')
 				y, y_, y_ptr = self.register_vector(lib, m, 'y')
@@ -326,7 +326,7 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 				self.assertCall( lib.vector_memcpy_av(x_p_ptr, x_out, 1) )
 				self.assertCall( lib.vector_memcpy_av(y_p_ptr, y_out, 1) )
 
-				self.assertTrue( A_.dot(x_proj), y_proj, ATOLM, RTOL )
+				self.assertVecEqual( A_.dot(x_proj), y_proj, ATOLM, RTOL )
 
 				self.free_vars('A', 'x', 'y', 'x_out', 'y_out', 'hdl')
 				self.assertCall( lib.ok_device_reset() )

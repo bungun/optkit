@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from optkit.libs import DenseLinsysLibs
+from optkit.libs.linsys import DenseLinsysLibs
 from optkit.tests.C.base import OptkitCTestCase
 
 class MatrixTestCase(OptkitCTestCase):

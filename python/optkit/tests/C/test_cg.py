@@ -5,7 +5,7 @@ from ctypes import c_uint, c_void_p, byref, POINTER
 from optkit.libs.cg import ConjugateGradientLibs
 from optkit.tests.C.base import OptkitCTestCase, OptkitCOperatorTestCase
 
-CG_QUIET = 0
+CG_QUIET = 1
 
 class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 	"""TODO: docstring"""
@@ -280,7 +280,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 				self.assertCall( lib.diagonal_preconditioner(o, p_vec, rho) )
 				self.assertCall( lib.vector_memcpy_av(p_ptr, p_vec, 1) )
-				self.assertVecEqual( p_py, p, ATOLN, RTOL )
+				self.assertVecEqual( p_py, p_, ATOLN, RTOL )
 
 				self.free_vars('o', 'A', 'p_vec')
 				self.assertCall( lib.ok_device_reset() )
@@ -452,7 +452,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 				self.assertVecEqual( T.dot(x_), b_, ATOLN, RTOL )
 
-				self.free_vars('p', 'p_vec', 'o', 'A', 'x', 'b')
+				self.free_vars('h', 'p', 'p_vec', 'o', 'A', 'x', 'b')
 				self.assertCall( lib.ok_device_reset() )
 
 	def test_pcg_easy(self):
@@ -511,5 +511,5 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				print 'warm start iters:', iters2
 				self.assertTrue(iters2 <= iters1)
 
-				self.free_vars('work', 'p', 'p_vec', 'o', 'A', 'x', 'b')
+				self.free_vars('work', 'h', 'p', 'p_vec', 'o', 'A', 'x', 'b')
 				self.assertCall( lib.ok_device_reset() )

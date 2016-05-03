@@ -2,7 +2,7 @@ import unittest
 import os
 import numpy as np
 from ctypes import c_int, byref, c_void_p
-from optkit.libs import ProxLibs
+from optkit.libs.prox import ProxLibs
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.base import OptkitCTestCase
@@ -137,12 +137,12 @@ class ProxTestCase(OptkitCTestCase):
 					f_py[i] = lib.function(hval, a, b, c, d, e)
 
 				f_list = [lib.function(*f_) for f_ in f_py]
-				fh = [f_.h - hval for f_ in f_list]
-				fa = [f_.a - a for f_ in f_list]
-				fb = [f_.b - b for f_ in f_list]
-				fc = [f_.c - c for f_ in f_list]
-				fd = [f_.d - d for f_ in f_list]
-				fe = [f_.e - e for f_ in f_list]
+				fh = np.array([f_.h - hval for f_ in f_list])
+				fa = np.array([f_.a - a for f_ in f_list])
+				fb = np.array([f_.b - b for f_ in f_list])
+				fc = np.array([f_.c - c for f_ in f_list])
+				fd = np.array([f_.d - d for f_ in f_list])
+				fe = np.array([f_.e - e for f_ in f_list])
 				self.assertVecEqual( 0, fh, ATOLM, 0 )
 				self.assertVecEqual( 0, fa, ATOLM, 0 )
 				self.assertVecEqual( 0, fb, ATOLM, 0 )
@@ -154,12 +154,12 @@ class ProxTestCase(OptkitCTestCase):
 				self.assertCall( lib.function_vector_memcpy_av(f_ptr, f) )
 				f_list = [lib.function(*f_) for f_ in f_py]
 
-				fh = [f_.h - hlast for f_ in f_list]
-				fa = [f_.a - alast for f_ in f_list]
-				fb = [f_.b - blast for f_ in f_list]
-				fc = [f_.c - clast for f_ in f_list]
-				fd = [f_.d - dlast for f_ in f_list]
-				fe = [f_.e - elast for f_ in f_list]
+				fh = np.array([f_.h - hlast for f_ in f_list])
+				fa = np.array([f_.a - alast for f_ in f_list])
+				fb = np.array([f_.b - blast for f_ in f_list])
+				fc = np.array([f_.c - clast for f_ in f_list])
+				fd = np.array([f_.d - dlast for f_ in f_list])
+				fe = np.array([f_.e - elast for f_ in f_list])
 				self.assertVecEqual( 0, fh, ATOLM, 0 )
 				self.assertVecEqual( 0, fa, ATOLM, 0 )
 				self.assertVecEqual( 0, fb, ATOLM, 0 )
@@ -175,12 +175,12 @@ class ProxTestCase(OptkitCTestCase):
 				self.assertCall( lib.function_vector_memcpy_av(f_ptr, f) )
 
 				f_list = [lib.function(*f_) for f_ in f_py]
-				fh = [f_.h - hval for f_ in f_list]
-				fa = [f_.a - a for f_ in f_list]
-				fb = [f_.b - b for f_ in f_list]
-				fc = [f_.c - c for f_ in f_list]
-				fd = [f_.d - d for f_ in f_list]
-				fe = [f_.e - e for f_ in f_list]
+				fh = np.array([f_.h - hval for f_ in f_list])
+				fa = np.array([f_.a - a for f_ in f_list])
+				fb = np.array([f_.b - b for f_ in f_list])
+				fc = np.array([f_.c - c for f_ in f_list])
+				fd = np.array([f_.d - d for f_ in f_list])
+				fe = np.array([f_.e - e for f_ in f_list])
 				self.assertVecEqual( 0, fh, ATOLM, 0 )
 				self.assertVecEqual( 0, fa, ATOLM, 0 )
 				self.assertVecEqual( 0, fb, ATOLM, 0 )
@@ -244,12 +244,12 @@ class ProxTestCase(OptkitCTestCase):
 				d[i] *= v_py[i]
 				e[i] *= v_py[i]
 			f_list = [lib.function(*f_) for f_ in f_py]
-			fh = [f_.h - hval for f_ in f_list]
-			fa = [f_.a for f_ in f_list]
-			fb = [f_.b for f_ in f_list]
-			fc = [f_.c for f_ in f_list]
-			fd = [f_.d for f_ in f_list]
-			fe = [f_.e for f_ in f_list]
+			fh = np.array([f_.h - hval for f_ in f_list])
+			fa = np.array([f_.a for f_ in f_list])
+			fb = np.array([f_.b for f_ in f_list])
+			fc = np.array([f_.c for f_ in f_list])
+			fd = np.array([f_.d for f_ in f_list])
+			fe = np.array([f_.e for f_ in f_list])
 			self.assertVecEqual( 0, fh, ATOLM, 0 )
 			self.assertVecEqual( fa, a , ATOLM, RTOL )
 			self.assertVecEqual( fb, b , ATOLM, RTOL )
@@ -264,13 +264,13 @@ class ProxTestCase(OptkitCTestCase):
 				d[i] /= v_py[i]
 				e[i] /= v_py[i]
 			f_list = [lib.function(*f_) for f_ in f_py]
-			fh = [f_.h - hval for f_ in f_list]
-			fa = [f_.a for f_ in f_list]
-			fb = [f_.b for f_ in f_list]
-			fc = [f_.c for f_ in f_list]
-			fd = [f_.d for f_ in f_list]
-			fe = [f_.e for f_ in f_list]
-			self.assertVecEqual( fh) <= ATOLM )
+			fh = np.array([f_.h - hval for f_ in f_list])
+			fa = np.array([f_.a for f_ in f_list])
+			fb = np.array([f_.b for f_ in f_list])
+			fc = np.array([f_.c for f_ in f_list])
+			fd = np.array([f_.d for f_ in f_list])
+			fe = np.array([f_.e for f_ in f_list])
+			self.assertVecEqual( 0, fh, ATOLM, 0)
 			self.assertVecEqual( fa, a , ATOLM, RTOL )
 			self.assertVecEqual( fb, b , ATOLM, RTOL )
 			self.assertVecEqual( fc, c , ATOLM, RTOL )

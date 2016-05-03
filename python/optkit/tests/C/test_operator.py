@@ -2,7 +2,7 @@ import os
 import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix
 from ctypes import c_void_p, byref, CFUNCTYPE
-from optkit.libs import OperatorLibs
+from optkit.libs.operator import OperatorLibs
 from optkit.tests.C.base import OptkitCTestCase
 
 class OperatorLibsTestCase(OptkitCTestCase):
