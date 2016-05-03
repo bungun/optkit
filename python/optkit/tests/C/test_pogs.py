@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from ctypes import c_void_p, byref, cast, addressof
-from optkit.utils.proxutils import func_eval_python, prox_eval_python
+from optkit.utils.proxutils import func_eval_python
 from optkit.libs.pogs import PogsLibs
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.pogs_base import OptkitCPogsTestCase
@@ -176,17 +176,17 @@ class PogsTestCase(OptkitCPogsTestCase):
 		obj_dua_py = obj_py - obj_gap_py
 
 		tol_primal = tolerances.atolm + (
-				tolerances.reltol * norm(local_vars.y12))
+				tolerances.reltol * np.linalg.norm(local_vars.y12))
 		tol_dual = tolerances.atoln + (
-				tolerances.reltol * norm(local_vars.xt12))
+				tolerances.reltol * np.linalg.norm(local_vars.xt12))
 
 		self.assertScalarEqual( objectives.gap, obj_gap_py, RTOL )
 		self.assertScalarEqual( tolerances.primal, tol_primal, RTOL )
 		self.assertScalarEqual( tolerances.dual, tol_dual, RTOL )
 
-		res_primal = norm(
+		res_primal = np.linalg.norm(
 				localA.dot(local_vars.x12) - local_vars.y12)
-		res_dual = norm(
+		res_dual = np.linalg.norm(
 				localA.T.dot(local_vars.yt12) + local_vars.xt12)
 
 		self.assertScalarEqual( residuals.primal, res_primal, RTOL )

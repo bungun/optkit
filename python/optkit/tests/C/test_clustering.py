@@ -6,21 +6,6 @@ from optkit.libs.clustering import ClusteringLibs
 from optkit.tests.C.base import OptkitCTestCase
 
 class ClusterLibsTestCase(OptkitCTestCase):
-	"""
-		Equilibrate input A_in as
-
-			D * A_equil * E
-
-		with D, E, diagonal.
-
-		Test that
-
-			D * A_equil * E == A_in,
-
-		or that
-
-			D^-1 * A_in * E^-1 == A_equil.
-	"""
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')

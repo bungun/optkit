@@ -2,7 +2,7 @@ import os
 import numpy as np
 from scipy.sparse import csc_matrix, csr_matrix
 from ctypes import c_void_p, byref, cast, addressof
-from optkit.utils.proxutils import func_eval_python, prox_eval_python
+from optkit.utils.proxutils import func_eval_python
 from optkit.libs.pogs import PogsAbstractLibs
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.base import OptkitCOperatorTestCase

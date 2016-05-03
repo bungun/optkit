@@ -1,6 +1,7 @@
 from numpy import zeros, array, ndarray
 from numpy.linalg import norm
 from numpy.random import rand
+from optkit.utils.proxutils import prox_eval_python
 from optkit.tests.C.base import OptkitCTestCase
 
 ALPHA_DEFAULT = 1.7
