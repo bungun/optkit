@@ -10,10 +10,10 @@ This library provides:
 	 
 Requirements
 ------------
-optkit's C/CUDA backend libraries has the following dependencies:
+optkit's C/CUDA backend libraries have the following dependencies:
 
 	cBLAS
-	CUDA 
+	CUDA >= 7.5
 
 optkit's Python package has the following additional dependencies:
 
