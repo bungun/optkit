@@ -32,7 +32,7 @@ LDFLAGS_=-lstdc++ -lm
 CXX=g++
 CXXFLAGS= -g -O3 -fPIC -I. -I$(INCLUDE) -I$(INCLUDE)external
 CXXFLAGS+=-I$(INCLUDE)linsys -I$(INCLUDE)operator -I$(INCLUDE)clustering
-CXXFLAGS+=-Wall -Wconversion -Wpedantic -Wno-unused-function
+CXXFLAGS+=-Wall -Wconversion -Wpedantic -Wno-unused-function -std=c++11
 
 # CUDA Flags
 CUXX=nvcc
@@ -254,11 +254,11 @@ equil_dense: $(SRC)optkit_equilibration.c
 
 projector: $(SRC)optkit_projector.c
 	mkdir -p $(OUT)
-	$(CC) $(CXXFLAGS) $< -c -o $(PROJ_OBJ)
+	$(CC) $(CCFLAGS) $< -c -o $(PROJ_OBJ)
 
 projector_direct: $(SRC)optkit_projector.c
 	mkdir -p $(OUT)
-	$(CC) $(CXXFLAGS) $< -c -o $(PROJ_DIRECT_OBJ) -DOPTKIT_NO_INDIRECT_PROJECTOR
+	$(CC) $(CCFLAGS) $< -c -o $(PROJ_DIRECT_OBJ) -DOPTKIT_NO_INDIRECT_PROJECTOR
 
 operator: $(OPERATOR_SRC) 
 	mkdir -p $(OUT)
