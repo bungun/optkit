@@ -288,13 +288,17 @@ __DEVICE__ inline ok_float ProxLogistic(ok_float v, ok_float rho)
 template<typename T>
 __DEVICE__ inline T ProxMaxNeg0(T v, T rho)
 {
-	return v < -1. / rho ? v + 1. / rho : v > 0 ? v : 0;
+	return v < static_cast<T>(-1.) / rho ?
+		v + static_cast<T>(1.) / rho :
+		v > 0 ? v : 0;
 }
 
 template<typename T>
 __DEVICE__ inline T ProxMaxPos0(T v, T rho)
 {
-	return v > 1. / rho ? v - 1. / rho : v < 0 ? v : 0;
+	return v > static_cast<T>(1.) / rho ?
+		v - static_cast<T>(1.) / rho :
+		v < 0 ? v : 0;
 }
 
 template<typename T>
@@ -408,7 +412,7 @@ __DEVICE__ inline T FuncHuber(T x)
 {
 	T xabs = Abs(x);
 	T xabs2 = xabs * xabs;
-	return xabs < 1 ? xabs2 / 2 : xabs - 0.5;
+	return xabs < 1 ? xabs2 / 2 : xabs - static_cast<T>(0.5);
 }
 
 template<typename T>
