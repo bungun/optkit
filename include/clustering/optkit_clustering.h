@@ -46,25 +46,12 @@ static ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	upsamplingvec * a2c, cluster_aid * h, ok_float maxdist);
 
 /* COMMON IMPLEMENTATION */
+
+/* forward declarations */
 static ok_status cluster_aid_subselect(cluster_aid * h, size_t offset_A,
-	size_t offset_C, size_t sub_size_A, size_t sub_size_C)
-{
-	if (!h || !h->indicator)
-		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	size_t offset_C, size_t sub_size_A, size_t sub_size_C);
 
-	h->reassigned = 0;
-
-	OK_RETURNIF_ERR( upsamplingvec_subvector(&h->a2c_tentative,
-		&h->a2c_tentative_full, offset_A, sub_size_A, sub_size_C) );
-
-	OK_RETURNIF_ERR( vector_subvector(&h->c_squared, &h->c_squared_full,
-		offset_C, sub_size_C) );
-	OK_RETURNIF_ERR( vector_subvector(&h->d_min, &h->d_min_full, offset_A,
-		sub_size_A) );
-	return matrix_submatrix(&h->D, &h->D_full, offset_A, offset_C,
-		sub_size_C, sub_size_A);
-}
-
+/* declarations/definitions */
 ok_status cluster_aid_alloc(cluster_aid * h, size_t size_A, size_t size_C,
 	enum CBLAS_ORDER order)
 {
@@ -104,6 +91,25 @@ ok_status cluster_aid_free(cluster_aid * h)
 	/* clear h */
 	memset(h, 0, sizeof(*h));
 	return err;
+}
+
+static ok_status cluster_aid_subselect(cluster_aid * h, size_t offset_A,
+	size_t offset_C, size_t sub_size_A, size_t sub_size_C)
+{
+	if (!h || !h->indicator)
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+
+	h->reassigned = 0;
+
+	OK_RETURNIF_ERR( upsamplingvec_subvector(&h->a2c_tentative,
+		&h->a2c_tentative_full, offset_A, sub_size_A, sub_size_C) );
+
+	OK_RETURNIF_ERR( vector_subvector(&h->c_squared, &h->c_squared_full,
+		offset_C, sub_size_C) );
+	OK_RETURNIF_ERR( vector_subvector(&h->d_min, &h->d_min_full, offset_A,
+		sub_size_A) );
+	return matrix_submatrix(&h->D, &h->D_full, offset_A, offset_C,
+		sub_size_C, sub_size_A);
 }
 
 ok_status kmeans_work_alloc(kmeans_work * w, size_t n_vectors,
@@ -347,7 +353,7 @@ ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
 void * kmeans_easy_init(size_t n_vectors, size_t n_clusters, size_t vec_length)
 {
 	kmeans_work * w = OK_NULL;
-	ok_alloc(w, kmeans_work, sizeof(*w));
+	ok_alloc(w, sizeof(*w));
 	kmeans_work_alloc(w, n_vectors, n_clusters, vec_length);
 	return (void * ) w;
 }
