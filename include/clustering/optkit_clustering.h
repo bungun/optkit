@@ -50,34 +50,40 @@ static ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 /* forward declarations */
 static ok_status cluster_aid_subselect(cluster_aid * h, size_t offset_A,
 	size_t offset_C, size_t sub_size_A, size_t sub_size_C);
+ok_status cluster_aid_free(cluster_aid * h);
+ok_status kmeans_work_free(kmeans_work * w);
 
 /* declarations/definitions */
 ok_status cluster_aid_alloc(cluster_aid * h, size_t size_A, size_t size_C,
 	enum CBLAS_ORDER order)
 {
-	if (!h)
-		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
-	else if (h->indicator)
-		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
+	ok_status err = OPTKIT_SUCCESS;
+	OK_CHECK_PTR(h);
 
 	/* clear h */
 	memset(h, 0, sizeof(*h));
 
-	h->indicator = (int *) malloc(sizeof(int));
-	OK_RETURNIF_ERR( upsamplingvec_alloc(&h->a2c_tentative_full, size_A,
-		size_C) );
-	OK_RETURNIF_ERR( vector_calloc(&h->c_squared_full, size_C) );
-	OK_RETURNIF_ERR( vector_calloc(&h->d_min_full, size_A) );
-	OK_RETURNIF_ERR( matrix_calloc(&h->D_full, size_C, size_A, order) );
-	OK_RETURNIF_ERR( blas_make_handle(&h->hdl) );
-	return cluster_aid_subselect(h, 0, 0, size_A, size_C);
+	OK_CHECK_ERR( err,
+		upsamplingvec_alloc(&h->a2c_tentative_full, size_A, size_C) );
+	OK_CHECK_ERR( err,
+		vector_calloc(&h->c_squared_full, size_C) );
+	OK_CHECK_ERR( err,
+		vector_calloc(&h->d_min_full, size_A) );
+	OK_CHECK_ERR( err,
+		matrix_calloc(&h->D_full, size_C, size_A, order) );
+	OK_CHECK_ERR( err,
+		blas_make_handle(&h->hdl) );
+	OK_CHECK_ERR( err,
+		cluster_aid_subselect(h, 0, 0, size_A, size_C) );
+	if (err)
+		OK_MAX_ERR( err, cluster_aid_free(h) );
+	return err;
 }
 
 ok_status cluster_aid_free(cluster_aid * h)
 {
-	ok_status err = OPTKIT_SUCCESS;;
-	if (!h || !h->indicator)
-		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	ok_status err = OPTKIT_SUCCESS;
+	OK_CHECK_PTR(h);
 
 	OK_MAX_ERR( err, blas_destroy_handle(h->hdl) );
 	if (h->A_reducible.data)
@@ -86,7 +92,6 @@ ok_status cluster_aid_free(cluster_aid * h)
 	OK_MAX_ERR( err, vector_free(&h->d_min_full) );
 	OK_MAX_ERR( err, vector_free(&h->c_squared_full) );
 	OK_MAX_ERR( err, upsamplingvec_free(&h->a2c_tentative_full) );
-	ok_free(h->indicator);
 
 	/* clear h */
 	memset(h, 0, sizeof(*h));
@@ -96,8 +101,7 @@ ok_status cluster_aid_free(cluster_aid * h)
 static ok_status cluster_aid_subselect(cluster_aid * h, size_t offset_A,
 	size_t offset_C, size_t sub_size_A, size_t sub_size_C)
 {
-	if (!h || !h->indicator)
-		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	OK_CHECK_PTR(h);
 
 	h->reassigned = 0;
 
@@ -115,30 +119,33 @@ static ok_status cluster_aid_subselect(cluster_aid * h, size_t offset_A,
 ok_status kmeans_work_alloc(kmeans_work * w, size_t n_vectors,
 	size_t n_clusters, size_t vec_length)
 {
-	if (!w)
-		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
-	else if (w->indicator)
-		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
+	ok_status err = OPTKIT_SUCCESS;
+	OK_CHECK_PTR(w);
 
 	memset(w, 0, sizeof(*w));
-	w->indicator = (int *) malloc(sizeof(int));
 	w->n_vectors = n_vectors;
 	w->n_clusters = n_clusters;
 	w->vec_length = vec_length;
-	OK_RETURNIF_ERR( matrix_alloc(&w->A, n_vectors, vec_length,
-		CblasRowMajor) );
-	OK_RETURNIF_ERR( matrix_alloc(&w->C, n_clusters, vec_length,
-		CblasRowMajor) );
-	OK_RETURNIF_ERR( upsamplingvec_alloc(&w->a2c, n_vectors, n_clusters) );
-	OK_RETURNIF_ERR( vector_alloc(&w->counts, n_clusters) );
-	return cluster_aid_alloc(&w->h, n_vectors, n_clusters, CblasRowMajor);
+	OK_CHECK_ERR( err,
+		matrix_alloc(&w->A, n_vectors, vec_length, CblasRowMajor) );
+	OK_CHECK_ERR( err,
+		matrix_alloc(&w->C, n_clusters, vec_length, CblasRowMajor) );
+	OK_CHECK_ERR( err,
+		upsamplingvec_alloc(&w->a2c, n_vectors, n_clusters) );
+	OK_CHECK_ERR( err,
+		vector_alloc(&w->counts, n_clusters) );
+	OK_CHECK_ERR( err,
+		cluster_aid_alloc(&w->h, n_vectors, n_clusters,
+			CblasRowMajor) );
+	if (err)
+		OK_MAX_ERR( err, kmeans_work_free(w));
+	return err;
 }
 
 ok_status kmeans_work_free(kmeans_work * w)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	if (!w || !w->indicator)
-		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+	OK_CHECK_PTR(w);
 
 	OK_MAX_ERR( err, matrix_free(&w->A) );
 	OK_MAX_ERR( err, matrix_free(&w->C) );
@@ -153,8 +160,7 @@ ok_status kmeans_work_free(kmeans_work * w)
 ok_status kmeans_work_subselect(kmeans_work * w, size_t n_subvectors,
 	size_t n_subclusters, size_t subvec_length)
 {
-	if (!w || !w->indicator)
-		return OPTKIT_ERROR_UNALLOCATED;
+	OK_CHECK_PTR(w);
 
 	if (n_subvectors > w->n_vectors || n_subclusters > w->n_clusters ||
 		subvec_length > w->vec_length)
@@ -176,7 +182,7 @@ ok_status kmeans_work_load(kmeans_work * w, ok_float * A,
 	const enum CBLAS_ORDER orderC, size_t * a2c, size_t stride_a2c,
 	ok_float * counts, size_t stride_counts)
 {
-	if (!w || !w->indicator || !A || !C || !a2c || !counts)
+	if (!w || !A || !C || !a2c || !counts)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
 	OK_RETURNIF_ERR( matrix_memcpy_ma(&w->A, A, orderA) );
@@ -189,7 +195,7 @@ ok_status kmeans_work_extract(ok_float * C,
 	const enum CBLAS_ORDER orderC, size_t * a2c, size_t stride_a2c,
 	ok_float * counts, size_t stride_counts, kmeans_work * w)
 {
-	if (!w || !w->indicator || !C || !a2c || !counts)
+	if (!w || !C || !a2c || !counts)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
 	OK_RETURNIF_ERR( matrix_memcpy_am(C, &w->C, orderC) );
@@ -198,23 +204,13 @@ ok_status kmeans_work_extract(ok_float * C,
 }
 
 ok_status cluster(matrix * A, matrix * C, upsamplingvec * a2c,
-	cluster_aid ** helper, ok_float maxdist)
+	cluster_aid * helper, ok_float maxdist)
 {
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_MATRIX(C);
 	OK_CHECK_UPSAMPLINGVEC(a2c);
-
-	int cluster_aid_provided = (helper != OK_NULL);
-	cluster_aid * h;
-
-	if (!cluster_aid_provided) {
-		h = *helper;
-	} else {
-		h = (cluster_aid *) malloc(sizeof(*h));
-		OK_RETURNIF_ERR(
-			cluster_aid_alloc(h, A->size1, C->size1, A->order));
-		*helper = h;
-	}
+	OK_CHECK_PTR(helper);
+	cluster_aid * h = helper;
 
 	/*
 	 * Prep work: set
@@ -300,7 +296,6 @@ ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
 	char iterfmt[] =
 		"iteration: %u \t changed: %u \t change tol: %u\n";
 	char exitfmt[] = "quitting k-means after %u iterations, error = %u\n";
-	const int cluster_aid_provided = (h != OK_NULL);
 	int valid;
 
 	OK_CHECK_MATRIX(A);
@@ -312,8 +307,9 @@ ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
 	OK_RETURNIF_ERR( upsamplingvec_check_bounds(a2c) );
 	valid = (counts->size == C->size1) && (A->size2 == C->size2);
 	valid &= (A->size1 == a2c->size1) && (C->size2 >= a2c->size2);
+	valid &= (h->D.size1 == C->size1) && (h->D.size2 == A->size1);
 	if (!valid)
-		return OPTKIT_ERROR_DIMENSION_MISMATCH;
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	/* calculate max entry of A */
 	for (iter = 0; iter < A->size1 && !err; ++iter) {
@@ -334,7 +330,7 @@ ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
 			&maxiter);
 		printf("%s %zu %s %f\n", "ITER", iter, "DISTANCE TOLERANCE",
 			tol);
-		OK_CHECK_ERR( err, cluster(A, C, a2c, &h, tol) );
+		OK_CHECK_ERR( err, cluster(A, C, a2c, h, tol) );
 		OK_CHECK_ERR( err, calculate_centroids(A, C, a2c, counts) );
 		if (verbose)
 			printf(iterfmt, iter, h->reassigned, change_abstol);
@@ -343,9 +339,6 @@ ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
 	}
 	if (!err && verbose)
 		printf(exitfmt, iter + 1, err);
-
-	if (!cluster_aid_provided)
-		OK_MAX_ERR( err, k_means_finish(h) );
 
 	return err;
 }
@@ -372,8 +365,6 @@ ok_status kmeans_easy_run(const void * work, const kmeans_settings * const s,
 	if (!work || !s || !io)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	kmeans_work * w = (kmeans_work *) work;
-	if (!w || !w->indicator)
-		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
 	OK_RETURNIF_ERR( kmeans_work_load(w, io->A, io->orderA, io->C,
 		io->orderC, io->a2c, io->stride_a2c, io->counts,

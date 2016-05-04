@@ -140,7 +140,7 @@ def attach_clustering_ccalls(lib, single_precision=False):
 										ok_float_p, c_size_t,
 										kmeans_work_p]
 	lib.cluster.argtypes = [matrix_p, matrix_p, upsamplingvec_p,
-							POINTER(cluster_aid_p), ok_float]
+							cluster_aid_p, ok_float]
 	lib.calculate_centroids.argtypes = [matrix_p, matrix_p,
 										upsamplingvec_p, vector_p]
 	lib.k_means.argtypes = [matrix_p, matrix_p, upsamplingvec_p,

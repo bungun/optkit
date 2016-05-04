@@ -133,6 +133,15 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertCall( lib.indvector_memcpy_va(u.vec, u_ptr, 1) )
 		return u, u_py, u_ptr
 
+	def register_cluster_aid(self, lib, n_vectors, n_clusters, order, name):
+		if not 'cluster_aid_alloc' in lib.__dict__:
+			raise ValueError('library {} cannot allocate a cluster '
+							 'aid'.format(lib))
+
+		h = lib.cluster_aid()
+		self.assertCall( lib.cluster_aid_alloc(h, n_vectors, n_clusters, order) )
+		self.register_var('h', h, lib.cluster_aid_free)
+		return h
 
 	def test_upsamplingvec_alloc_free(self):
 		m, n = self.shape
@@ -289,8 +298,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			T = lib.enums.CblasTrans
 			N = lib.enums.CblasNoTrans
 			alpha = np.random.rand()
-			# beta = np.random.rand()
-			beta = 0
+			beta = np.random.rand()
 
 			# functioning cases
 			self.upsamplingvec_mul('N', 'N', 'N', alpha, u_py, C_py, beta,
@@ -647,31 +655,28 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 				D, dmin, reassigned = self.cluster(A_py, C_py, a2c_py, MAXDIST)
 
-				h = lib.cluster_aid_p()
-				self.assertCall( lib.cluster(A, C, a2c, byref(h), MAXDIST) )
-				self.register_var('h', h, lib.cluster_aid_free)
+				h = self.register_cluster_aid(lib, m, k, orderA, 'h')
+				self.assertCall( lib.cluster(A, C, a2c, h, MAXDIST) )
 
 				# compare number of reassignments, C vs Py
 				ATOL_REASSIGN = int(1 + 0.1 * k)
 				RTOL_REASSIGN = int(1 + 0.1 * reassigned)
-				self.assertTrue( abs(h.contents.reassigned - reassigned) <=
+				self.assertTrue( abs(h.reassigned - reassigned) <=
 								 ATOL_REASSIGN + RTOL_REASSIGN )
 
 				# verify number reassigned
 				self.assertCall( lib.indvector_memcpy_av(a2c_ptr, a2c.vec, 1) )
-				self.assertEqual( h.contents.reassigned,
-								  sum(a2c_py != a2c_orig) )
+				self.assertEqual( h.reassigned, sum(a2c_py != a2c_orig) )
 
 				# verify all distances
-				mvec, mvec_py, mvec_ptr = self.register_vector(lib, m, 'm')
-				kvec, kvec_py, kvec_ptr = self.register_vector(lib, k, 'k')
+				mvec, mvec_py, mvec_ptr = self.register_vector(lib, m, 'mvec')
+				kvec, kvec_py, kvec_ptr = self.register_vector(lib, k, 'kvec')
 
 				mvec_py += np.random.rand(m)
 
 				self.assertCall( lib.vector_memcpy_va(mvec, mvec_ptr, 1) )
 				self.assertCall( lib.blas_gemv(hdl, lib.enums.CblasNoTrans, 1,
-							   				   h.contents.D_full, mvec, 0,
-							   				   kvec) )
+							   				   h.D_full, mvec, 0, kvec) )
 				self.assertCall( lib.vector_memcpy_av(kvec_ptr, kvec, 1) )
 
 				Dmvec = D.dot(mvec_py)
@@ -681,7 +686,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 				dmin_py = np.zeros(m).astype(lib.pyfloat)
 				dmin_ptr = dmin_py.ctypes.data_as(lib.ok_float_p)
 				self.assertCall( lib.vector_memcpy_av(
-							dmin_ptr, h.contents.d_min_full, 1) )
+							dmin_ptr, h.d_min_full, 1) )
 				self.assertVecEqual( dmin_py, dmin, ATOLM, RTOL )
 
 				self.assertCall( lib.cluster_aid_free(h) )
@@ -726,8 +731,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, orderA) )
 
 			counts, _, _ = self.register_vector(lib, k, 'counts')
-			nvec, nvec_py, nvec_ptr = self.register_vector(lib, n, 'n')
-			kvec, kvec_py, kvec_ptr = self.register_vector(lib, k, 'k')
+			nvec, nvec_py, nvec_ptr = self.register_vector(lib, n, 'nvec')
+			kvec, kvec_py, kvec_ptr = self.register_vector(lib, k, 'kvec')
 
 			# C: build centroids
 			self.assertCall( lib.calculate_centroids(A, C, a2c, counts) )
@@ -791,7 +796,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			MAXITER = 500
 			VERBOSE = 1
 
-			h = lib.cluster_aid_p()
+			h = self.register_cluster_aid(lib, m, k, orderA, 'h')
 			self.assertCall( lib.k_means(A, C, a2c, counts, h, DIST_RELTOL,
 										 CHANGE_TOL, MAXITER, VERBOSE) )
 
