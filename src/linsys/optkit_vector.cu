@@ -18,7 +18,7 @@ static ok_status __vector_set_all(vector_<T> * v, T x)
 	uint grid_dim = calc_grid_dim(v->size);
 	__vector_set<T><<<grid_dim, kBlockSize>>>(v->data, x, v->stride, v->size);
 	cudaDeviceSynchronize();
-	return OK_STATUS_CUDA
+	return OK_STATUS_CUDA;
 }
 
 template<typename T>
@@ -35,7 +35,7 @@ ok_status vector_alloc_(vector_<T> * v, size_t n)
 {
 	OK_CHECK_PTR(v);
 	if (v->data)
-		return OK_SCAN_ERR( OPTKT_ERROR_OVERWRITE );
+		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
 	v->size = n;
 	v->stride = 1;
 	return ok_alloc_gpu(v->data, n * sizeof(T));
@@ -126,10 +126,10 @@ ok_status vector_memcpy_va_(vector_<T> * v, const T *y, size_t stride_y)
 template<typename T>
 ok_status vector_memcpy_av_(T *x, const vector_<T> *v, size_t stride_x)
 {
-	ok_status err;
+	ok_status err = OPTKIT_SUCCESS;
 	uint i;
 	OK_CHECK_VECTOR(v);
-	OK_CHECK_PTR(x)
+	OK_CHECK_PTR(x);
 
 	if (v->stride == 1 && stride_x == 1)
 		return ok_memcpy_gpu(x, v->data, v->size * sizeof(T));
@@ -312,13 +312,13 @@ ok_status vector_exp(vector * v)
 }
 
 ok_status vector_indmin(const vector * v, size_t * idx)
-	{ return vector_indmin_<ok_float>(v, OK_FLOAT_MAX, ); }
+	{ return vector_indmin_<ok_float>(v, (ok_float) OK_FLOAT_MAX, idx); }
 
 ok_status vector_min(const vector * v, ok_float * minval)
-	{ return vector_min_<ok_float>(v, OK_FLOAT_MAX); }
+	{ return vector_min_<ok_float>(v, (ok_float) OK_FLOAT_MAX, minval); }
 
 ok_status vector_max(const vector * v, ok_float * maxval)
-	{ return vector_max_<ok_float>(v, -OK_FLOAT_MAX); }
+	{ return vector_max_<ok_float>(v, (ok_float) -OK_FLOAT_MAX, maxval); }
 
 ok_status indvector_alloc(indvector * v, size_t n)
 	{ return vector_alloc_<size_t>(v, n); }
@@ -359,13 +359,13 @@ ok_status indvector_print(const indvector * v)
 	return OPTKIT_SUCCESS;
 }
 
-ok_stauts indvector_indmin(const indvector * v, size_t * idx)
+ok_status indvector_indmin(const indvector * v, size_t * idx)
 	{ return vector_indmin_<size_t>(v, (size_t) INT_MAX, idx); }
 
-ok_stauts indvector_min(const indvector * v, size_t * minval)
+ok_status indvector_min(const indvector * v, size_t * minval)
 	{ return vector_min_<size_t>(v, (size_t) INT_MAX, minval); }
 
-ok_stauts indvector_max(const indvector * v, size_t * maxval)
+ok_status indvector_max(const indvector * v, size_t * maxval)
 	{ return vector_max_<size_t>(v, 0, maxval); }
 
 #ifdef __cplusplus
