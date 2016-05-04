@@ -24,7 +24,7 @@ static ok_status assign_clusters_l2(matrix * A, matrix * C,
 	size_t i;
 	upsamplingvec * u = &h->a2c_tentative;
 
-	if (A->size1 != a2c->size1 || a2c->size2 >= C->size1 ||
+	if (A->size1 != a2c->size1 || a2c->size2 > C->size1 ||
 		A->size2 != C->size2)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
@@ -77,7 +77,7 @@ static ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	OK_CHECK_MATRIX(C);
 	OK_CHECK_UPSAMPLINGVEC(a2c);
 	OK_CHECK_PTR(h);
-	if (A->size1 != a2c->size1 || a2c->size2 >= C->size1 ||
+	if (A->size1 != a2c->size1 || a2c->size2 > C->size1 ||
 		A->size2 != C->size2)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 

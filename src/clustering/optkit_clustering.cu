@@ -31,6 +31,16 @@ static ok_status assign_clusters_l2(matrix * A, matrix * C,
 {
 	ok_status err = OPTKIT_SUCCESS;
 	size_t i, * reassigned;
+
+
+	OK_CHECK_MATRIX(A);
+	OK_CHECK_MATRIX(C);
+	OK_CHECK_UPSAMPLINGVEC(a2c);
+	OK_CHECK_PTR(h);
+	if (A->size1 != a2c->size1 || a2c->size2 > C->size1 ||
+		A->size2 != C->size2)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
 	h->reassigned = 0;
 	ok_alloc_gpu(reassigned, sizeof(size_t));
 	ok_memcpy_gpu(reassigned, &h->reassigned, sizeof(size_t));
@@ -138,7 +148,7 @@ static ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	OK_CHECK_MATRIX(C);
 	OK_CHECK_UPSAMPLINGVEC(a2c);
 	OK_CHECK_PTR(h);
-	if (A->size1 != a2c->size1 || a2c->size2 >= C->size1 ||
+	if (A->size1 != a2c->size1 || a2c->size2 > C->size1 ||
 		A->size2 != C->size2)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
