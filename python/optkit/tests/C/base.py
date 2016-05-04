@@ -69,7 +69,7 @@ class OptkitCTestCase(OptkitTestCase):
 		v_py = zeros(size).astype(lib.pyfloat)
 		v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
 		if random:
-			v_py +=  rand(size)
+			v_py += rand(size)
 		return v_py, v_ptr
 
 	@staticmethod
@@ -85,92 +85,93 @@ class OptkitCTestCase(OptkitTestCase):
 			A_py += rand(size1, size2)
 		return A_py, A_ptr
 
-	def register_vector(self, lib, size, name):
-		if 'vector_calloc' in lib.__dict__:
-			v = lib.vector(0, 0, None)
-			self.assertCall( lib.vector_calloc(v, size) )
-			self.register_var(name, v, lib.vector_free)
-			v_py, v_ptr = self.gen_py_vector(lib, size)
-			return v, v_py, v_ptr
-		else:
+	def register_vector(self, lib, size, name, random=False):
+		if not 'vector_calloc' in lib.__dict__:
 			raise ValueError('library {} cannot allocate a vector'.format(lib))
+
+		v = lib.vector(0, 0, None)
+		self.assertCall( lib.vector_calloc(v, size) )
+		self.register_var(name, v, lib.vector_free)
+		v_py, v_ptr = self.gen_py_vector(lib, size, random)
+		if random:
+			self.assertCall( lib.vector_memcpy_va(v, v_ptr, 1) )
+		return v, v_py, v_ptr
 
 	def register_indvector(self, lib, size, name):
-		if 'indvector_calloc' in lib.__dict__:
-			v = lib.indvector(0, 0, None)
-			self.assertCall( lib.indvector_calloc(v, size) )
-			self.register_var(name, v, lib.indvector_free)
-			v_py = zeros(size).astype(c_size_t)
-			v_ptr = v_py.ctypes.data_as(lib.c_size_t_p)
-			return v, v_py, v_ptr
-		else:
+		if not 'indvector_calloc' in lib.__dict__:
 			raise ValueError('library {} cannot allocate a vector'.format(lib))
 
-	def register_matrix(self, lib, size1, size2, order, name):
-		if 'matrix_calloc' in lib.__dict__:
-			A = lib.matrix(0, 0, 0, None, order)
-			self.assertCall( lib.matrix_calloc(A, size1, size2, order) )
-			self.register_var(name, A, lib.matrix_free)
-			A_py, A_ptr = self.gen_py_matrix(lib, size1, size2, order)
-			return A, A_py, A_ptr
-		else:
+		v = lib.indvector(0, 0, None)
+		self.assertCall( lib.indvector_calloc(v, size) )
+		self.register_var(name, v, lib.indvector_free)
+		v_py = zeros(size).astype(c_size_t)
+		v_ptr = v_py.ctypes.data_as(lib.c_size_t_p)
+		return v, v_py, v_ptr
+
+	def register_matrix(self, lib, size1, size2, order, name, random=False):
+		if not 'matrix_calloc' in lib.__dict__:
 			raise ValueError('library {} cannot allocate a matrix'.format(lib))
 
+		A = lib.matrix(0, 0, 0, None, order)
+		self.assertCall( lib.matrix_calloc(A, size1, size2, order) )
+		self.register_var(name, A, lib.matrix_free)
+		A_py, A_ptr = self.gen_py_matrix(lib, size1, size2, order, random)
+		if random:
+			self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, order) )
+		return A, A_py, A_ptr
+
 	def register_sparsemat(self, lib, Adense, order, name):
-		if 'sp_matrix_calloc' in lib.__dict__:
+		if not 'sp_matrix_calloc' in lib.__dict__:
+			raise ValueError('library {} cannot allocate a sparse '
+							 'matrix'.format(lib))
 
-			A_py = zeros(Adense.shape).astype(lib.pyfloat)
-			A_py += Adense
-			A_sp = csr_matrix(A_py) if order == lib.enums.CblasRowMajor else \
-				   csc_matrix(A_py)
-			A_val = A_sp.data.ctypes.data_as(lib.ok_float_p)
-			A_ind = A_sp.indices.ctypes.data_as(lib.ok_int_p)
-			A_ptr = A_sp.indptr.ctypes.data_as(lib.ok_int_p)
-			m, n = A_sp.shape
-			nnz = A_sp.nnz
+		A_py = zeros(Adense.shape).astype(lib.pyfloat)
+		A_py += Adense
+		A_sp = csr_matrix(A_py) if order == lib.enums.CblasRowMajor else \
+			   csc_matrix(A_py)
+		A_val = A_sp.data.ctypes.data_as(lib.ok_float_p)
+		A_ind = A_sp.indices.ctypes.data_as(lib.ok_int_p)
+		A_ptr = A_sp.indptr.ctypes.data_as(lib.ok_int_p)
+		m, n = A_sp.shape
+		nnz = A_sp.nnz
 
-			A = lib.sparse_matrix(0, 0, 0, 0, None, None, None, order)
-			self.assertCall( lib.sp_matrix_calloc(A, m, n, nnz, order) )
-			self.register_var(name, A, lib.sp_matrix_free)
-			return A, A_py, A_sp, A_val, A_ind, A_ptr
-
-		else:
-			raise ValueError(
-					'library {} cannot allocate a sparse matrix'.format(lib))
+		A = lib.sparse_matrix(0, 0, 0, 0, None, None, None, order)
+		self.assertCall( lib.sp_matrix_calloc(A, m, n, nnz, order) )
+		self.register_var(name, A, lib.sp_matrix_free)
+		return A, A_py, A_sp, A_val, A_ind, A_ptr
 
 	def register_blas_handle(self, lib, name):
-		if 'blas_make_handle' in lib.__dict__:
-			hdl = c_void_p()
-			self.assertCall( lib.blas_make_handle(byref(hdl)) )
-			self.register_var(name, hdl, lib.blas_destroy_handle)
-			return hdl
-		else:
-			raise ValueError(
-					'library {} cannot allocate a BLAS handle'.format(lib))
+		if not 'blas_make_handle' in lib.__dict__:
+			raise ValueError('library {} cannot allocate a BLAS '
+							 'handle'.format(lib))
+
+		hdl = c_void_p()
+		self.assertCall( lib.blas_make_handle(byref(hdl)) )
+		self.register_var(name, hdl, lib.blas_destroy_handle)
+		return hdl
 
 	def register_sparse_handle(self, lib, name):
-		if 'sp_make_handle' in lib.__dict__:
-			hdl = c_void_p()
-			self.assertCall( lib.sp_make_handle(byref(hdl)) )
-			self.register_var(name, hdl, lib.sp_destroy_handle)
-			return hdl
-		else:
-			raise ValueError(
-					'library {} cannot allocate a sparse handle'.format(lib))
+		if not 'sp_make_handle' in lib.__dict__:
+			raise ValueError('library {} cannot allocate a sparse '
+							 'handle'.format(lib))
+
+		hdl = c_void_p()
+		self.assertCall( lib.sp_make_handle(byref(hdl)) )
+		self.register_var(name, hdl, lib.sp_destroy_handle)
+		return hdl
 
 	def register_fnvector(self, lib, size, name):
 		if 'function_vector_calloc' in lib.__dict__:
-			f_ = zeros(size, dtype=lib.function)
-			f_ptr = f_.ctypes.data_as(lib.function_p)
+			raise ValueError('library {} cannot allocate function '
+							 'vector'.format(lib))
 
-			f = lib.function_vector(0, None)
-			self.assertCall( lib.function_vector_calloc(f, size) )
-			self.register_var(name, f, lib.function_vector_free)
-			return f, f_, f_ptr
+		f_ = zeros(size, dtype=lib.function)
+		f_ptr = f_.ctypes.data_as(lib.function_p)
 
-		else:
-			raise ValueError(
-					'library {} cannot allocate function vector'.format(lib))
+		f = lib.function_vector(0, None)
+		self.assertCall( lib.function_vector_calloc(f, size) )
+		self.register_var(name, f, lib.function_vector_free)
+		return f, f_, f_ptr
 
 class OptkitCOperatorTestCase(OptkitCTestCase):
 	# A_test = None
