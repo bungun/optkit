@@ -1,7 +1,9 @@
 from os import getenv
 import gc
 from ctypes import c_int, c_void_p, byref, pointer
-from optkit.libs import *
+from optkit.libs.linsys import DenseLinsysLibs, SparseLinsysLibs
+from optkit.libs.prox import ProxLibs
+from optkit.libs.pogs import PogsLibs
 from optkit.utils.pyutils import version_string
 
 
