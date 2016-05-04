@@ -19,15 +19,14 @@ const unsigned int kMaxGridSize = 65535u;
  * check-for-errors-using-the-cuda-runtime-api
  */
 
-
 #define OK_STATUS_CUDA ok_cuda_status(cudaGetLastError(), __FILE__, __LINE__, \
 		__func__)
 
 #define OK_CHECK_CUDA(err, expr) \
 	do { \
 		if (!err) \
-			expr; \
-			err = OK_STATUS_CUDA; \
+			err = ok_cuda_status(expr, __FILE__, __LINE__, \
+				__func__); \
 	} while (0)
 
 #define OK_SCAN_CUBLAS(call) ok_cublas_status(call, __FILE__, __LINE__, \
@@ -36,14 +35,16 @@ const unsigned int kMaxGridSize = 65535u;
 #define OK_SCAN_CUSPARSE(call) ok_cusparse_status(call, __FILE__, __LINE__, \
 		__func__)
 
-#define ok_alloc_gpu(x, n) ok_cuda_status( cudaMalloc((void **) &x, n) )
+#define ok_alloc_gpu(x, n) ok_cuda_status( cudaMalloc((void **) &x, n), \
+		__FILE__,  __LINE__, __func__)
 
 #define ok_memcpy_gpu(x, y, n) ok_cuda_status( cudaMemcpy( x, y, n, \
-		cudaMemcpyDefault) )
+		cudaMemcpyDefault), __FILE__, __LINE__, __func__ )
 
-#define ok_memset_gpu(x, val, n) ok_cuda_status( cudaMemset( x, y, n) )
+#define ok_memset_gpu(x, val, n) ok_cuda_status( cudaMemset( x, y, n), \
+		__FILE__, __LINE__, __func__ )
 
-#define ok_free_gpu(x) ok_cuda_free(x)
+#define ok_free_gpu(x) ok_cuda_free(x, __FILE__, __LINE__, __func__)
 
 
 #ifndef FLOAT
@@ -151,9 +152,10 @@ inline ok_status ok_cusparse_status(cusparseStatus_t code, const char *file,
 	}
 }
 
-inline ok_status ok_cuda_free(void * x)
+inline ok_status ok_cuda_free(void * x, const char *file, int line,
+	const char *function)
 {
-	ok_status err = ok_cuda_status( cudaFree(x) );
+	ok_status err = ok_cuda_status( cudaFree(x), file, line, function);
 	x = OK_NULL;
 	return err;
 }
@@ -162,6 +164,5 @@ inline ok_status ok_cuda_free(void * x)
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif /* OPTKIT_DEFS_GPU_H_ */
