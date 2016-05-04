@@ -41,7 +41,7 @@ const unsigned int kMaxGridSize = 65535u;
 #define ok_memcpy_gpu(x, y, n) ok_cuda_status( cudaMemcpy( x, y, n, \
 		cudaMemcpyDefault), __FILE__, __LINE__, __func__ )
 
-#define ok_memset_gpu(x, val, n) ok_cuda_status( cudaMemset( x, y, n), \
+#define ok_memset_gpu(x, val, n) ok_cuda_status( cudaMemset( x, val, n), \
 		__FILE__, __LINE__, __func__ )
 
 #define ok_free_gpu(x) ok_cuda_free(x, __FILE__, __LINE__, __func__)

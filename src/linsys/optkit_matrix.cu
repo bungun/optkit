@@ -76,7 +76,7 @@ ok_status matrix_alloc_(matrix_<T> * A, size_t m, size_t n,
 	enum CBLAS_ORDER ord)
 {
 	OK_CHECK_PTR(A);
-	else if (A->data)
+	if (A->data)
 		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
 	A->size1 = m;
 	A->size2 = n;
@@ -192,7 +192,7 @@ ok_status matrix_memcpy_mm_(matrix_<T> * A, const matrix_<T> * B)
 	uint i, j, grid_dim;
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_MATRIX(B);
-	if (A->size1 != B->size1 || (A->size2 != B->size2)
+	if (A->size1 != B->size1 || (A->size2 != B->size2))
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	if (A->order == B->order) {
@@ -230,7 +230,7 @@ template<typename T>
 ok_status matrix_memcpy_ma_(matrix_<T> * A, const T * B,
 	const enum CBLAS_ORDER ord)
 {
-	ok_status err;
+	ok_status err = OPTKIT_SUCCESS;
 	uint i, j, grid_dim;
 	T * row, * col;
 
@@ -287,7 +287,7 @@ template<typename T>
 ok_status matrix_memcpy_am_(T * A, const matrix_<T> * B,
 	const enum CBLAS_ORDER ord)
 {
-	ok_status err;
+	ok_status err = OPTKIT_SUCCESS;
 	uint i, j, grid_dim;
 	T * row, * col;
 
