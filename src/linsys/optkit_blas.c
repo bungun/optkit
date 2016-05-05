@@ -134,7 +134,7 @@ ok_status blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
 		lenA -= ((num_superdiag) * (num_superdiag + 1)) / 2;
 
 	if (x->size != y->size || vecA->size < lenA)
-		return OPTKIT_ERROR_DIMENSION_MISMATCH;
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	CBLAS(sbmv)(order, uplo, (int) y->size, (int) num_superdiag, alpha,
 		vecA->data, (int) num_superdiag + 1, x->data, (int) x->stride,
