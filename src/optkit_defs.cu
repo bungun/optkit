@@ -15,10 +15,10 @@ void optkit_version(int * maj, int * min, int * change, int * status) {
 ok_status ok_device_reset()
 {
 	cudaDeviceReset();
-	CUDA_CHECK_ERR;
-	return OPTKIT_SUCCESS;
+	return OK_STATUS_CUDA;
 }
 
 #ifdef __cplusplus
 }
 #endif
+
