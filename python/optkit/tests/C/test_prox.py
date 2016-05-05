@@ -1,4 +1,3 @@
-import unittest
 import os
 import numpy as np
 from ctypes import c_int, byref, c_void_p
