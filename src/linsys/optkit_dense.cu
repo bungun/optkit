@@ -130,7 +130,7 @@ static __global__ void __block_trsv(ok_float * A, uint iter, uint n, uint ld,
  */
 ok_status linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 {
-	cublasStatus_t err;
+	ok_status err;
 	cudaStream_t stm;
 	uint num_tiles, grid_dim, i;
 	matrix L21, A22;
@@ -155,7 +155,7 @@ ok_status linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 			__block_chol<<<1, block_dim, 0, stm>>>(A->data, i,
 				(uint) A->ld, A->order);
 		cudaDeviceSynchronize();
-		OK_RETURNIF_ERR( OK_STATUS_CUDA )
+		OK_RETURNIF_ERR( OK_STATUS_CUDA );
 
 		if (i == num_tiles - 1u)
 			break;
@@ -170,7 +170,7 @@ ok_status linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 			__block_trsv<<<grid_dim, kTileSize, 0, stm>>>(A->data,
 				i, (uint) A->size1, (uint) A->ld, A->order);
 		cudaDeviceSynchronize();
-		OK_RETURNIF_ERR( OK_STATUS_CUDA )
+		OK_RETURNIF_ERR( OK_STATUS_CUDA );
 
 		/* A22 -= L21 * L21^T */
 		OK_RETURNIF_ERR( matrix_submatrix(&A22, A, (i + 1) * kTileSize,
@@ -195,9 +195,9 @@ ok_status linalg_cholesky_svx(void * linalg_handle, const matrix * L,
 	if (L->size1 != L->size2 || L->size1 != x->size)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	OK_RETURNIF_ERR( err, blas_trsv(linalg_handle, CblasLower, CblasNoTrans,
+	OK_RETURNIF_ERR( blas_trsv(linalg_handle, CblasLower, CblasNoTrans,
 		CblasNonUnit, L, x) );
-	return blas_trsv(linalg_handle, CblasLower, CblasTrans,
+	return OK_SCAN_ERR( blas_trsv(linalg_handle, CblasLower, CblasTrans,
 		CblasNonUnit, L, x) );
 }
 
