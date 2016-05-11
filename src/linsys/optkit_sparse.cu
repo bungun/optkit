@@ -38,13 +38,13 @@ ok_status sp_destroy_handle(void * sparse_handle)
 	ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
 
 	OK_CHECK_PTR(sparse_handle);
-	err = OK_SCAN_CUSPARSE( cusparseDestroy(*(sp_hdl->hdl)) );
+	err = OK_SCAN_CUSPARSE( cusparseDestroy(*sp_hdl->hdl) );
 	OK_CHECK_ERR( err, OK_SCAN_CUSPARSE(
-		cusparseDestroyMatDescr(*(sp_hdl->descr)) ) );
+		cusparseDestroyMatDescr(*sp_hdl->descr) ) );
 
-	OK_CHECK_ERR( err, ok_free(sp_hdl->descr) );
-	OK_CHECK_ERR( err, ok_free(sp_hdl->hdl) );
-	OK_CHECK_ERR( err, ok_free(sparse_handle) );
+	ok_free(sp_hdl->descr);
+	ok_free(sp_hdl->hdl);
+	ok_free(sparse_handle);
 
 	return err;
 }
@@ -110,6 +110,8 @@ ok_status sp_matrix_free_(sp_matrix_<T, I> * A)
 	OK_RETURNIF_ERR( ok_free_gpu(A->val) );
 	OK_RETURNIF_ERR( ok_free_gpu(A->ind) );
 	OK_RETURNIF_ERR( ok_free_gpu(A->ptr) );
+	A->val = OK_NULL;
+	A->ind = A->ptr = OK_NULL;
 	A->size1 = (size_t) 0;
 	A->size2 = (size_t) 0;
 	A->nnz = (size_t) 0;
@@ -143,7 +145,7 @@ ok_status sp_matrix_memcpy_vals_mm_(sp_matrix_<T, I> * A,
 extern "C" {
 #endif
 
-void __transpose_inplace(void * sparse_handle, sp_matrix * A,
+static ok_status __transpose_inplace(void * sparse_handle, sp_matrix * A,
 	SPARSE_TRANSPOSE_DIRECTION dir)
 {
 	OK_CHECK_SPARSEMAT(A);
@@ -202,7 +204,7 @@ ok_status sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A,
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_PTR(sparse_handle);
 	if (!val || !ind || !ptr)
-		return OK_SCAN_ERR( OPT_ERROR_UNALLOCATED );
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
 	OK_RETURNIF_ERR( ok_memcpy_gpu(A->val, val,
 		A->nnz * sizeof(ok_float)) );
@@ -218,12 +220,14 @@ ok_status sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
 {
 	OK_CHECK_SPARSEMAT(A);
 	if (!val || !ind || !ptr)
-		return OK_SCAN_ERR( OPT_ERROR_UNALLOCATED );
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
-	OK_RETURNIF_ERR( ok_memcpy_gpu(val, A->val,
-		A->nnz * sizeof(ok_float)) );
-	OK_RETURNIF_ERR( ok_memcpy_gpu(ind, A->ind, A->nnz * sizeof(ok_int)) );
-	return ok_memcpy_gpu(ptr, A->ptr, A->ptrlen * sizeof(ok_int)) );
+	OK_RETURNIF_ERR(
+		ok_memcpy_gpu(val, A->val, A->nnz * sizeof(ok_float)) );
+	OK_RETURNIF_ERR(
+		ok_memcpy_gpu(ind, A->ind, A->nnz * sizeof(ok_int)) );
+	return OK_SCAN_ERR(
+		ok_memcpy_gpu(ptr, A->ptr, A->ptrlen * sizeof(ok_int)) );
 }
 
 ok_status sp_matrix_memcpy_vals_mm(sp_matrix * A, const sp_matrix * B)
@@ -239,14 +243,16 @@ ok_status sp_matrix_memcpy_vals_ma(void * sparse_handle, sp_matrix * A,
 
 	OK_RETURNIF_ERR( ok_memcpy_gpu(A->val, val,
 		A->nnz * sizeof(ok_float)) );
-	return __transpose_inplace(sparse_handle, A, Forward2Adjoint);
+	return OK_SCAN_ERR(
+		__transpose_inplace(sparse_handle, A, Forward2Adjoint) );
 }
 
 ok_status sp_matrix_memcpy_vals_am(ok_float * val, const sp_matrix * A)
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_PTR(val);
-	return ok_memcpy_gpu(val, A->val, A->nnz * sizeof(ok_float));
+	return OK_SCAN_ERR(
+		ok_memcpy_gpu(val, A->val, A->nnz * sizeof(ok_float)) );
 }
 
 ok_status sp_matrix_abs(sp_matrix * A)
@@ -466,7 +472,7 @@ ok_status sp_blas_gemv(void * sparse_handle, enum CBLAS_TRANSPOSE transA,
 		&alpha, *(sp_hdl->descr), A->val + offset, A->ptr + offset_ptr,
 		A->ind + offset, x->data, &beta, y->data) );
 	cudaDeviceSynchronize();
-	return err;;
+	return err;
 }
 
 #ifdef __cplusplus
