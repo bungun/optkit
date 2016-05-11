@@ -1,7 +1,6 @@
 #include "optkit_defs_gpu.h"
 #include "optkit_dense.h"
 
-
 /* row major data retrieval */
 __device__ inline ok_float& __matrix_get_r(ok_float * A, uint i, uint j,
 	uint stride)
@@ -201,349 +200,767 @@ ok_status linalg_cholesky_svx(void * linalg_handle, const matrix * L,
 		CblasNonUnit, L, x) );
 }
 
-static __global__ void __block_col_squares(const ok_float * A,
-	const size_t size1, const size_t size2, const size_t row_stride,
-	const size_t col_stride, ok_float * v, const size_t stride_v,
-	const size_t i, const size_t j)
-{
-	uint col, row, global_col, global_row;
-	const uint kTileLD = kTileSize + 1u;
-	__shared__ ok_float Asub[kTileLD * kTileSize];
-	__shared__ ok_float vsub[kTileSize];
+#ifdef __cplusplus
+}
+#endif
 
-	row = threadIdx.x;
-	col = threadIdx.y;
-	global_row = i * kTileSize + row;
-	global_col = j * kTileSize + col;
+namespace optkit {
 
-	if (global_row >= size1 || global_col >= size2)
-		return;
+template<typename T>
+static T ok_float_max(void)
+	{ return (sizeof(T) == sizeof(float)) ? FLT_MAX : DBL_MAX; }
 
-	Asub[row * kTileLD + col] = A[global_row * row_stride +
-		global_col * col_stride];
-	if (row == 0)
-		vsub[row] = v[global_row * stride_v];
-	__syncthreads();
+template<typename T>
+static T ok_float_min(void)
+	{ return (sizeof(T) == sizeof(float)) ? -FLT_MAX : -DBL_MAX; }
 
-	vsub[row] += Asub[row * kTileLD + col] * Asub[row * kTileLD + col];
-	__syncthreads();
-
-	v[global_row * stride_v] = vsub[row];
+static  uint calc_block_dim_(uint size) {
+	uint blocksize = kBlockSize;
+	while ( blocksize > size && blocksize > 2 * kWarpSize )
+		blocksize >>= 1;
+	return blocksize;
 }
 
-ok_status linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t,
-	const matrix * A, vector * v)
+static inline uint calc_grid_dim_(uint size, uint block_size)
 {
-	OK_CHECK_MATRIX(A);
-	OK_CHECK_VECTOR(v);
+	uint grid_dim = (size + block_size - 1) / (block_size);
+	return grid_dim < kMaxGridSize ? grid_dim : kMaxGridSize;
+}
 
-	uint i, j;
-	uint block_size = kTiles2D * kTileSize;
+template <typename T>
+static __global__ void strided_memcpy_(T * out, const uint stride_out,
+	const T * in, const uint stride_in, uint size)
+{
+	const uint idx = blockIdx.x * blockDim.x + threadIdx.x;
+	uint i;
+	for (i = idx; i < size; i += gridDim.x * blockDim.x)
+		out[i * stride_out] = in[i * stride_in];
+}
 
-	dim3 grid_dim(kTileSize, kTileSize);
-	dim3 blk_dim(kTiles2D, kTiles2D);
+template<typename T>
+struct opUnaryAdd {
+	T * const offset;
+	opUnaryAdd(T * const offset) : offset(offset)
+		{}
+	__device__ void operator()(T & input)
+		{ input += *offset; }
+};
 
-	int transpose = t == CblasTrans;
-	int rowmajor = A->order == CblasRowMajor;
+template<typename T>
+struct opUnaryMul {
+	T * const scaling;
+	opUnaryMul(T * const scaling) : scaling(scaling)
+		{}
+	__device__ void operator()(T & input)
+		{ input *= *scaling; }
+};
 
-	/*
-	 *	transpose: multiply A^T * A: work with columns of A
-	 *	non-transpose: multiply A * A^T: work with rows of A
-	 *		(columns of A^T)
-	 */
-	size_t size1 = (transpose) ? A->size1 : A->size2;
-	size_t size2 = (transpose) ? A->size2 : A->size1;
-	size_t row_stride = (transpose == rowmajor) ? A->ld : 1;
-	size_t col_stride = (transpose == rowmajor) ? 1 : A->ld;
+template<typename T>
+struct opAdd {
+	__device__ void operator()(T * first, T * const second)
+		{ *first += *second; }
+};
 
-	if (v->size != size1)
-		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+template<typename T>
+struct opAddSquare {
+	__device__ void operator()(T * first, T * const second)
+		{ *first += *second * *second; }
+};
 
-	/* transform one bundle of [block_size] columns x M rows per stream */
-	for (j = 0; j < size2; j += block_size) {
+template<typename T>
+struct opMin {
+	__device__ void operator()(T * first, T * const second)
+		{ *first = *second < *first ? *second : *first; }
+};
+
+template<typename T>
+struct opMax {
+	__device__ void operator()(T * first, T * const second)
+		{ *first = *second > *first ? *second : *first; }
+};
+
+template<typename T>
+struct opMinIdx{
+	__device__ void operator()(T * first, T * const second, size_t * idx1,
+		size_t * const idx2)
+	{
+		if (*second < *first) {
+			*first = *second;
+			*idx1 = *idx2;
+		}
+	}
+};
+
+template <typename T, uint blockSize, typename loadingOp, typename reductionOp>
+static __global__ void row_reduce(T * const in, uint rowstride_in,
+	uint colstride_in, T * out, uint rowstride_out,
+	uint colstride_out, uint row, uint n, loadingOp transform_reduce_,
+	reductionOp reduce_, const T default_value)
+{
+	uint col = threadIdx.x;
+	uint block_stride = blockSize * 2;
+	uint grid_stride = block_stride * gridDim.x;
+	uint global_col = blockIdx.x * block_stride + col;
+	__shared__ T d[blockSize];
+
+	d[col] = default_value;
+
+	/* load and pre-reduce 1 in every <grid_stride> elements */
+	while (global_col < n) {
+		transform_reduce_(d + col, in + row * rowstride_in +
+			global_col * colstride_in);
+		if (global_col + blockSize < n) {
+			transform_reduce_(d + col, in + row * rowstride_in +
+				(global_col + blockSize) * colstride_in);
+		}
+		global_col += grid_stride;
+	}
+	__syncthreads();
+
+	if (blockSize >= 1024) {
+		if (col < 512)
+			reduce_(d + col, d + col + 512);
+		__syncthreads();
+	}
+
+	if (blockSize >= 512) {
+		if (col < 256)
+			reduce_(d + col, d + col + 256);
+		__syncthreads();
+	}
+
+	if (blockSize >= 256) {
+		if (col < 128)
+			reduce_(d + col, d + col + 128);
+		__syncthreads();
+	}
+
+	if (blockSize >= 128) {
+		if (col < 64)
+			reduce_(d + col, d + col + 64);
+		__syncthreads();
+	}
+
+	if (col < 32) {
+		if (blockSize >= 64)
+			reduce_(d + col, d + col + 32);
+		__syncthreads();
+
+		if (blockSize >= 32)
+			reduce_(d + col, d + col + 16);
+		__syncthreads();
+
+		if (blockSize >= 16)
+			reduce_(d + col, d + col + 8);
+		__syncthreads();
+
+		if (blockSize >= 8)
+			reduce_(d + col, d + col + 4);
+		__syncthreads();
+
+		if (blockSize >= 4)
+			reduce_(d + col, d + col + 2);
+		__syncthreads();
+
+		if (blockSize >= 2)
+			reduce_(d + col, d + col + 1);
+		__syncthreads();
+	}
+
+	if (col == 0)
+		out[blockIdx.x * colstride_out + row * rowstride_out] = d[0];
+}
+
+template <typename T, typename loadingOp, typename reductionOp>
+static ok_status reduction_innerloop(T * const A_k, uint rowstride_A,
+	uint colstride_A, T * reduction_k, uint rowstride_r, uint colstride_r,
+	uint nrows, uint cols_k, uint width_k, uint blocksize_k,
+	loadingOp transform_reduce_, reductionOp reduce_, T default_value)
+{
+	uint row;
+
+	for (row = 0; row < nrows; ++row) {
 		cudaStream_t s;
 		cudaStreamCreate(&s);
-		for (i = 0; i < size1; i += block_size)
-			__block_col_squares<<<grid_dim, blk_dim, 0, s>>>(
-				A->data, size1, size2, row_stride, col_stride,
-				v->data, v->stride, i, j);
+		switch(blocksize_k) {
+		case 32:
+			row_reduce<T, 32, loadingOp, reductionOp>
+			<<<width_k, blocksize_k, 0, s>>>(A_k,
+				rowstride_A, colstride_A, reduction_k,
+				rowstride_r, colstride_r, row, cols_k,
+				transform_reduce_, reduce_, default_value);
+			break;
+		case 64:
+			row_reduce<T, 64, loadingOp, reductionOp>
+			<<<width_k, blocksize_k, 0, s>>>(A_k,
+				rowstride_A, colstride_A, reduction_k,
+				rowstride_r, colstride_r, row, cols_k,
+				transform_reduce_, reduce_, default_value);
+			break;
+		case 128:
+			row_reduce<T, 128, loadingOp, reductionOp>
+			<<<width_k, blocksize_k, 0, s>>>(A_k,
+				rowstride_A, colstride_A, reduction_k,
+				rowstride_r, colstride_r, row, cols_k,
+				transform_reduce_, reduce_, default_value);
+			break;
+		case 256:
+			row_reduce<T, 256, loadingOp, reductionOp>
+			<<<width_k, blocksize_k, 0, s>>>(A_k,
+				rowstride_A, colstride_A, reduction_k,
+				rowstride_r, colstride_r, row, cols_k,
+				transform_reduce_, reduce_, default_value);
+			break;
+		case 512:
+			row_reduce<T, 512, loadingOp, reductionOp>
+			<<<width_k, blocksize_k, 0, s>>>(A_k,
+				rowstride_A, colstride_A, reduction_k,
+				rowstride_r, colstride_r, row, cols_k,
+				transform_reduce_, reduce_, default_value);
+			break;
+		default:
+			row_reduce<T, 1024, loadingOp, reductionOp>
+			<<<width_k, blocksize_k, 0, s>>>(A_k,
+				rowstride_A, colstride_A, reduction_k,
+				rowstride_r, colstride_r, row, cols_k,
+				transform_reduce_, reduce_, default_value);
+			break;
+		}
 		cudaStreamDestroy(s);
 	}
 	cudaDeviceSynchronize();
 	return OK_STATUS_CUDA;
 }
 
-static __device__ void __entry_add(ok_float * data, const size_t row,
-	const size_t col, const size_t stride_r, const size_t stride_c,
-	const ok_float value)
+template <typename T, typename loadingOp, typename reductionOp>
+static ok_status matrix_row_reduce(T * const A, size_t nrows, size_t ncols,
+	size_t rowstride_A, size_t colstride_A, T * output, size_t stride_out,
+	loadingOp transform_reduce_, reductionOp reduce_, T default_value)
 {
-	data[row * stride_r + col * stride_c] += value;
+	ok_status err = OPTKIT_SUCCESS;
+	T * A_k;
+	T * reduction, * reduction_k;
+
+	uint nreductions = 0, nlaunches = 0, k;
+	uint width_k, blocksize_k, cols_k;
+	uint rowstride_r = 0, colstride_r = 1;
+	uint grid_dim_copy;
+
+	cols_k = ncols;
+	while (cols_k > 1) {
+		blocksize_k = calc_block_dim_(cols_k);
+		cols_k = calc_grid_dim_(cols_k, 2 * blocksize_k);
+		nreductions += cols_k;
+		++nlaunches;
+	}
+	rowstride_r = nreductions;
+
+	// reduction_host = (T *) malloc(nrows * nreductions * sizeof(T));
+	OK_CHECK_ERR( err,
+		ok_alloc_gpu(reduction, nrows * nreductions * sizeof(T)) );
+
+	A_k = A;
+	reduction_k = reduction;
+	cols_k = ncols;
+
+	for (k = 0; k < nlaunches && !err; ++k) {
+		blocksize_k = calc_block_dim_(cols_k);
+		width_k = calc_grid_dim_(cols_k, 2 * blocksize_k);
+
+		if (k == 0)
+			err = reduction_innerloop<T, loadingOp, reductionOp>(
+				A_k, rowstride_A, colstride_A, reduction_k,
+				rowstride_r, colstride_r, nrows, cols_k,
+				width_k, blocksize_k, transform_reduce_,
+				reduce_, default_value);
+		else
+			err = reduction_innerloop<T, reductionOp, reductionOp >(
+				A_k, rowstride_A, colstride_A, reduction_k,
+				rowstride_r, colstride_r, nrows, cols_k,
+				width_k, blocksize_k, reduce_, reduce_,
+				default_value);
+
+		OK_SCAN_ERR( err );
+
+		A_k = reduction_k;
+		reduction_k += colstride_r * width_k;
+		cols_k = width_k;
+		rowstride_A = rowstride_r;
+		colstride_A = colstride_r;
+	}
+
+	if (!err) {
+		grid_dim_copy = calc_grid_dim_(nrows, kBlockSize);
+		strided_memcpy_<T><<<grid_dim_copy, kBlockSize>>>(output,
+			stride_out, A_k, rowstride_A, nrows);
+		err = OK_STATUS_CUDA;
+	}
+
+	OK_MAX_ERR( err,
+		ok_free_gpu(reduction) );
+
+	return err;
 }
 
-static __device__ void __entry_mul(ok_float * data, const size_t row,
-	const size_t col, const size_t stride_r, const size_t stride_c,
-	const ok_float value)
+template <typename T, typename unaryOp>
+static __global__ void row_transform(T * in, uint rowstride_in,
+	uint colstride_in, uint row, uint n, unaryOp transform_)
 {
-	data[row * stride_r + col * stride_c] *= value;
+	uint block_stride = blockDim.x;
+	uint grid_stride = block_stride * gridDim.x;
+	uint gc, global_col = blockIdx.x * block_stride + threadIdx.x;
+	T * in_ = in + row * rowstride_in;
+
+	/* transform 1 in every <grid_stride> elements */
+	for (gc = global_col; gc < n; gc += grid_stride)
+		transform_(in_[gc * colstride_in]);
 }
 
-static __global__ void __matrix_broadcast_vector(ok_float * A,
-	const size_t size1, const size_t size2, const size_t row_stride,
-	const size_t col_stride, const ok_float * v, const size_t stride_v,
-	const size_t i, const size_t j,
-	void (* inplace_op_)(ok_float * data, const size_t row,
-	const size_t col, const size_t stride_r, const size_t stride_c,
-	const ok_float value))
-{
-	uint col, row, global_col, global_row;
-	const uint kTileLD = kTileSize + 1u;
-	__shared__ ok_float Asub[kTileLD * kTileSize];
-	__shared__ ok_float vsub[kTileSize];
 
-	row = threadIdx.x;
-	col = threadIdx.y;
-	global_row = i * kTileSize + row;
-	global_col = j * kTileSize + col;
-
-	if (global_row >= size1 || global_col >= size2)
-		return;
-
-	Asub[row * kTileLD + col] = A[global_row * row_stride +
-		global_col * col_stride];
-	if (col == 0)
-		vsub[row] = v[global_row * stride_v];
-	__syncthreads();
-
-	inplace_op_(Asub, row, col, kTileLD, 1, vsub[row]);
-	__syncthreads();
-
-	A[global_row * row_stride + global_col * col_stride] =
-		Asub[row * kTileLD + col];
-}
-
-ok_status linalg_matrix_broadcast_vector(matrix * A, const vector * v,
-	const enum OPTKIT_TRANSFORM operation, const enum CBLAS_SIDE side)
+template<typename T>
+static ok_status matrix_vector_op_setdims(const matrix_<T> * A,
+	const vector_<T> * v, size_t * size1, size_t * size2,
+	size_t * stride1, size_t * stride2, const int manipulate_by_row)
 {
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_VECTOR(v);
+	const int rowmajor = A->order == CblasRowMajor;
+	/*
+	 * logic for row/col transformations & reductions:
+	 *	side = left: for each column of A, iterate over rows
+	 *	side = right: for each row of A, iterate over columns
+	 */
+	*size1 = (manipulate_by_row) ? A->size1 : A->size2;
+	*size2 = (manipulate_by_row) ? A->size2 : A->size1;
+	*stride1 = (manipulate_by_row == rowmajor) ? A->ld : 1;
+	*stride2 = (manipulate_by_row == rowmajor) ? 1 : A->ld;
+	if (*size1 != v->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+	return OPTKIT_SUCCESS;
+}
 
-	uint i, j;
-	uint block_size = kTiles2D * kTileSize;
+template <typename T, size_t blockSize>
+static __global__ void row_indmin(T * const in, size_t * const idx_in,
+	size_t rowstride_in, size_t colstride_in, T * out, size_t * idx,
+	size_t rowstride_out, size_t colstride_out, size_t row, size_t n,
+	const T default_value, const int first_pass)
+{
+	size_t col = threadIdx.x;
+	size_t block_stride = blockSize * 2;
+	size_t grid_stride = block_stride * gridDim.x;
+	size_t global_col = blockIdx.x * block_stride + col;
+	size_t global_col_half = global_col + blockSize;
+	__shared__ T d[blockSize];
+	__shared__ size_t id[blockSize];
+	T * in_ = in + row * rowstride_in;
+	size_t * idx_in_ = idx_in + row * rowstride_in;
+	opMinIdx<T> min_;
 
-	dim3 grid_dim(kTileSize, kTileSize);
-	dim3 blk_dim(kTiles2D, kTiles2D);
-	int left = side == CblasLeft;
-	int rowmajor = A->order == CblasRowMajor;
+	d[col] = default_value;
 
+	/* load and pre-reduce 1 in every <grid_stride> elements */
+
+	if (first_pass)
+		while (global_col < n) {
+			min_(d + col, in_ + global_col * colstride_in, id + col,
+				&global_col);
+			if (global_col + blockSize < n) {
+				min_(d + col, in_ + global_col_half *
+					colstride_in, id +col,
+					&global_col_half);
+			}
+			global_col += grid_stride;
+			global_col_half += grid_stride;
+		}
+	else
+		while (global_col < n) {
+			min_(d + col, in_ + global_col * colstride_in, id + col,
+				idx_in_ + global_col * colstride_in);
+			if (global_col + blockSize < n) {
+				min_(d + col, in_ + global_col_half *
+					colstride_in, id + col, idx_in_ +
+					global_col_half * colstride_in);
+			}
+			global_col += grid_stride;
+			global_col_half += grid_stride;
+		}
+	__syncthreads();
+
+	if (blockSize >= 1024) {
+		if (col < 512)
+			min_(d + col, d + col + 512, id + col, id + col + 512);
+		__syncthreads();
+	}
+
+	if (blockSize >= 512) {
+		if (col < 256)
+			min_(d + col, d + col + 256, id + col, id + col + 256);
+		__syncthreads();
+	}
+
+	if (blockSize >= 256) {
+		if (col < 128)
+			min_(d + col, d + col + 128, id + col, id + col + 128);
+		__syncthreads();
+	}
+
+	if (blockSize >= 128) {
+		if (col < 64)
+			min_(d + col, d + col + 64, id + col, id + col + 64);
+		__syncthreads();
+	}
+
+	if (col < 32) {
+		if (blockSize >= 64)
+			min_(d + col, d + col + 32, id + col, id + col + 32);
+		__syncthreads();
+
+		if (blockSize >= 32)
+			min_(d + col, d + col + 16, id + col, id + col + 16);
+		__syncthreads();
+
+		if (blockSize >= 16)
+			min_(d + col, d + col + 8, id + col, id + col + 8);
+		__syncthreads();
+
+		if (blockSize >= 8)
+			min_(d + col, d + col + 4, id + col, id + col + 4);
+		__syncthreads();
+
+		if (blockSize >= 4)
+			min_(d + col, d + col + 2, id + col, id + col + 2);
+		__syncthreads();
+
+		if (blockSize >= 2)
+			min_(d + col, d + col + 1, id + col, id + col + 1);
+		__syncthreads();
+	}
+
+	if (col == 0) {
+		out[blockIdx.x * colstride_out + row * rowstride_out] = d[0];
+		idx[blockIdx.x * colstride_out + row * rowstride_out] = id[0];
+	}
+}
+
+template <typename T>
+static ok_status indmin_innerloop(T * const A_k, size_t * const idx_k,
+	uint rowstride_A, uint colstride_A, T * reduction_k,
+	size_t * idx_reduction_k, uint rowstride_r, uint colstride_r,
+	uint nrows, uint cols_k, uint width_k, uint blocksize_k,
+	T default_value, const int first_pass)
+{
+	uint row;
+
+	for (row = 0; row < nrows; ++row) {
+		cudaStream_t s;
+		cudaStreamCreate(&s);
+		switch(blocksize_k) {
+		case 32:
+			row_indmin<T, 32><<<width_k, blocksize_k, 0, s>>>(A_k,
+				idx_k, rowstride_A, colstride_A, reduction_k,
+				idx_reduction_k, rowstride_r, colstride_r, row,
+				cols_k, default_value, first_pass);
+			break;
+		case 64:
+			row_indmin<T, 64><<<width_k, blocksize_k, 0, s>>>(A_k,
+				idx_k, rowstride_A, colstride_A, reduction_k,
+				idx_reduction_k, rowstride_r, colstride_r, row,
+				cols_k, default_value, first_pass);
+			break;
+		case 128:
+			row_indmin<T, 128><<<width_k, blocksize_k, 0, s>>>(A_k,
+				idx_k, rowstride_A, colstride_A, reduction_k,
+				idx_reduction_k, rowstride_r, colstride_r, row,
+				cols_k, default_value, first_pass);
+			break;
+		case 256:
+			row_indmin<T, 256><<<width_k, blocksize_k, 0, s>>>(A_k,
+				idx_k, rowstride_A, colstride_A, reduction_k,
+				idx_reduction_k, rowstride_r, colstride_r, row,
+				cols_k, default_value, first_pass);
+			break;
+		case 512:
+			row_indmin<T, 512><<<width_k, blocksize_k, 0, s>>>(A_k,
+				idx_k, rowstride_A, colstride_A, reduction_k,
+				idx_reduction_k, rowstride_r, colstride_r, row,
+				cols_k, default_value, first_pass);
+			break;
+		default:
+			row_indmin<T, 1024><<<width_k, blocksize_k, 0, s>>>(A_k,
+				idx_k, rowstride_A, colstride_A, reduction_k,
+				idx_reduction_k, rowstride_r, colstride_r, row,
+				cols_k, default_value, first_pass);
+			break;
+		}
+		cudaStreamDestroy(s);
+	}
+	cudaDeviceSynchronize();
+	return OK_STATUS_CUDA;
+}
+
+template <typename T>
+static ok_status matrix_row_indmin(T * const A, size_t nrows, size_t ncols,
+	size_t rowstride_A, size_t colstride_A, T * minima, size_t stride_min,
+	size_t * indices, size_t stride_idx, T default_value)
+{
+	ok_status err = OPTKIT_SUCCESS;
+	T * A_k;
+	T * reduction, * reduction_k;
+	size_t * idx_k, * idx_reduction, * idx_reduction_k;
+
+	uint nreductions = 0, nlaunches = 0, k;
+	uint width_k, blocksize_k, cols_k;
+	uint rowstride_r = 0, colstride_r = 1;
+	uint grid_dim_copy;
+
+	cols_k = ncols;
+	while (cols_k > 1) {
+		blocksize_k = calc_block_dim_(cols_k);
+		cols_k = calc_grid_dim_(cols_k, 2 * blocksize_k);
+		nreductions += cols_k;
+		++nlaunches;
+	}
+	rowstride_r = nreductions;
+
+	// reduction_host = (T *) malloc(nrows * nreductions * sizeof(T));
+	OK_CHECK_ERR( err,
+		ok_alloc_gpu(reduction, nrows * nreductions * sizeof(T)) );
+	OK_CHECK_ERR( err,
+		ok_alloc_gpu(idx_reduction, nrows * nreductions *
+			sizeof(size_t)) );
+
+	A_k = A;
+	idx_k = OK_NULL;
+	reduction_k = reduction;
+	idx_reduction_k = idx_reduction;
+	cols_k = ncols;
+
+	for (k = 0; k < nlaunches && !err; ++k) {
+		blocksize_k = calc_block_dim_(cols_k);
+		width_k = calc_grid_dim_(cols_k, 2 * blocksize_k);
+
+		OK_CHECK_ERR( err,
+			indmin_innerloop<T>(A_k, idx_k, rowstride_A,
+				colstride_A, reduction_k, idx_reduction_k,
+				rowstride_r, colstride_r, nrows, cols_k,
+				width_k, blocksize_k, default_value, k == 0) );
+
+		A_k = reduction_k;
+		idx_k = idx_reduction_k;
+		reduction_k += colstride_r * width_k;
+		idx_reduction_k += colstride_r * width_k;
+		cols_k = width_k;
+		rowstride_A = rowstride_r;
+		colstride_A = colstride_r;
+	}
+
+	if (!err) {
+		grid_dim_copy = calc_grid_dim_(nrows, kBlockSize);
+		strided_memcpy_<T><<<grid_dim_copy, kBlockSize>>>(minima,
+			stride_min, A_k, rowstride_A, nrows);
+		err = OK_STATUS_CUDA;
+	}
+
+	if (!err) {
+		idx_reduction_k = idx_reduction + (nreductions - 1) *
+			colstride_r;
+		grid_dim_copy = calc_grid_dim_(nrows, kBlockSize);
+		strided_memcpy_<size_t><<<grid_dim_copy, kBlockSize>>>(indices,
+			stride_idx, idx_reduction_k, rowstride_r, nrows);
+		err = OK_STATUS_CUDA;
+	}
+	OK_MAX_ERR( err,
+		ok_free_gpu(reduction) );
+	OK_MAX_ERR( err,
+		ok_free_gpu(idx_reduction) );
+
+	return err;
+}
+
+} /* namespace optkit */
+
+template<typename T>
+static ok_status __linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t,
+	const matrix_<T> * A, vector_<T> * v)
+{
+	/*
+	 *	transpose: v_i = multiply A^T * A: work with columns of A
+	 *	non-transpose: multiply A * A^T: work with rows of A
+	 *		(columns of A^T)
+	 */
+	ok_status err = OPTKIT_SUCCESS;
+	const int square_row_entries = t == CblasNoTrans;
+	size_t size1, size2, row_stride, col_stride;
+
+	OK_RETURNIF_ERR(
+		optkit::matrix_vector_op_setdims<T>(A, v, &size1, &size2,
+			&row_stride, &col_stride, square_row_entries) );
+
+	err = optkit::matrix_row_reduce<T, optkit::opAddSquare<T>,
+		optkit::opAdd<T> >(A->data, size1, size2, row_stride,
+			col_stride, v->data, v->stride,
+			optkit::opAddSquare<T>(), optkit::opAdd<T>(),
+			static_cast<T>(0));
+	return OK_SCAN_ERR( err );
+}
+
+/*
+ * perform
+ *
+ *	A = diag(v) * A, 	operation == OkTransformScale, side = CblasLeft
+ *	A = A * diag(v), 	operation == OkTransformScale, side = CblasRight
+ *
+ *	A += v * 1^T, 		operation == OkTransformAdd, side == CblasLeft
+ *	A += 1 * v^T,		operation == OkTransformAdd, side == CblasRight
+ *
+ */
+template<typename T>
+static ok_status __linalg_matrix_broadcast_vector(matrix_<T> * A,
+	const vector_<T> * v, const enum OPTKIT_TRANSFORM operation,
+	const enum CBLAS_SIDE side)
+{
 	/*
 	 * logic for row/col broadcast:
 	 *	side = left: broadcast to each row of A^T
 	 *	side = right: broadcast to each row of A
 	 */
-	size_t size1 = (left) ? A->size1 : A->size2;
-	size_t size2 = (left) ? A->size2 : A->size1;
-	size_t row_stride = (left == rowmajor) ? A->ld : 1;
-	size_t col_stride = (left == rowmajor) ? 1 : A->ld;
-	void (*transform)(ok_float * data, const size_t row, const size_t col,
-		const size_t stride_r, const size_t stride_c,
-		const ok_float value) = (operation == OkTransformScale) ?
-		__entry_mul : __entry_add;
 
-	if (size1 != v->size)
-		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+	size_t row, grid_dim, size1, size2, row_stride, col_stride;
+	const int broadcast_by_row = side == CblasLeft;
+	OK_RETURNIF_ERR(
+		optkit::matrix_vector_op_setdims<T>(A, v, &size1, &size2,
+			&row_stride, &col_stride, broadcast_by_row) );
 
-	/* transform one bundle of [block_size] rows x N cols per stream */
-	for (i = 0; i < size1; i += block_size) {
-		cudaStream_t s;
-		cudaStreamCreate(&s);
-		for (j = 0; j < size2; j += block_size)
-			__matrix_broadcast_vector<<<grid_dim, blk_dim, 0, s>>>(
-				A->data, size1, size2, row_stride, col_stride,
-				v->data, v->stride, i, j, transform);
-		cudaStreamDestroy(s);
+	grid_dim = calc_grid_dim(size2);
+
+	switch (operation) {
+	case OkTransformScale :
+		for (row = 0; row < size1; ++row) {
+			cudaStream_t s;
+			cudaStreamCreate(&s);
+			optkit::opUnaryMul<T> mul_(v->data + row * v->stride);
+			optkit::row_transform<T, optkit::opUnaryMul<T> >
+			<<<grid_dim, kBlockSize, 0, s>>>(A->data, row_stride,
+				col_stride, row, size2, mul_);
+			cudaStreamDestroy(s);
+		}
+		cudaDeviceSynchronize();
+		break;
+	case OkTransformAdd :
+		for (row = 0; row < size1; ++row) {
+			cudaStream_t s;
+			cudaStreamCreate(&s);
+			optkit::opUnaryAdd<T> add_(v->data + row * v->stride);
+			optkit::row_transform<T, optkit::opUnaryAdd<T> >
+			<<<grid_dim, kBlockSize, 0, s>>>(A->data, row_stride,
+				col_stride, row, size2, add_);
+			cudaStreamDestroy(s);
+		}
+		cudaDeviceSynchronize();
+		break;
+	default :
+		return OK_SCAN_ERR( OPTKIT_ERROR_DOMAIN );
 	}
-	cudaDeviceSynchronize();
+
 	return OK_STATUS_CUDA;
 }
 
-static __global__ void __matrix_row_indmin(size_t * indmin,
-	const size_t stride_indmin, ok_float * minima, const size_t stride_min,
-	const ok_float * A, const size_t size1, const size_t size2,
-	const size_t row_stride, const size_t col_stride, const size_t i,
-	const size_t j)
+template<typename T>
+static ok_status __linalg_matrix_reduce_indmin(vector_<size_t> * indices,
+	vector_<T> * minima, const matrix_<T> * A, const enum CBLAS_SIDE side)
 {
-	uint row = threadIdx.x;
-	uint col = threadIdx.y;
-	uint global_row = i + row;
-	uint global_col = j + col;
-	const uint kTileLD = kTileSize + 1u;
-	__shared__ ok_float Asub[kTileLD * kTileSize];
-	__shared__ ok_float minsub[kTileSize];
-	__shared__ size_t indminsub[kTileSize];
-	ok_float previous;
+	ok_status err = OPTKIT_SUCCESS;
+	const int reduce_by_row = side == CblasRight;
+	size_t size1, size2, row_stride = 0, col_stride = 0;
 
-	if (global_row >= size1 || global_col >= size2)
-		return;
+	OK_CHECK_VECTOR(indices);
+	if (indices->size != minima->size)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	Asub[row * kTileLD + col] = A[global_row * row_stride +
-		global_col * col_stride];
-	__syncthreads();
+	OK_RETURNIF_ERR(
+		optkit::matrix_vector_op_setdims<T>(A, minima, &size1, &size2,
+			&row_stride, &col_stride, reduce_by_row) );
 
-	if (col == 0)
-		minsub[row] = MATH(fmin)(minima[global_row * stride_min],
-			OK_FLOAT_MAX);
-	__syncthreads();
-
-	previous = minsub[row];
-	minsub[row] = MATH(fmin)(minsub[row], Asub[row * kTileLD + col]);
-	if (minsub[row] != previous)
-		indminsub[row] = global_col;
-	__syncthreads();
-
-	if (col == 0)
-		minima[global_row * stride_min] = minsub[row];
-	__syncthreads();
-
-	if (col == 0)
-		indmin[global_row * stride_indmin] = indminsub[row];
+	err = optkit::matrix_row_indmin<T>(A->data, size1, size2, row_stride,
+			col_stride, minima->data, minima->stride, indices->data,
+			indices->stride, optkit::ok_float_max<T>());
+	return OK_SCAN_ERR( err );
 }
 
-static __global__ void __matrix_row_reduce(ok_float * reduced,
-	const size_t stride, const ok_float * A, const size_t size1,
-	const size_t size2, const size_t row_stride, const size_t col_stride,
-	const size_t i, const size_t j, const ok_float default_value,
-	ok_float (* binary_op_)(const ok_float first, const ok_float second))
+template<typename T>
+static ok_status __linalg_matrix_reduce_min(vector_<T> * minima,
+	const matrix_<T> * A, const enum CBLAS_SIDE side)
 {
-	uint row = threadIdx.x;
-	uint col = threadIdx.y;
-	uint global_row = i + row;
-	uint global_col = j + col;
-	const uint kTileLD = kTileSize + 1u;
-	__shared__ ok_float Asub[kTileLD * kTileSize];
-	__shared__ ok_float reduced_sub[kTileSize];
+	ok_status err = OPTKIT_SUCCESS;
+	const int reduce_by_row = side == CblasRight;
+	size_t size1, size2, row_stride, col_stride;
 
-	if (global_row >= size1 || global_col >= size2)
-		return;
+	OK_RETURNIF_ERR(
+		optkit::matrix_vector_op_setdims<T>(A, minima, &size1, &size2,
+			&row_stride, &col_stride, reduce_by_row) );
 
-	Asub[row * kTileLD + col] = A[global_row * row_stride +
-		global_col * col_stride];
-	__syncthreads();
+	err = optkit::matrix_row_reduce<T, optkit::opMin<T>, optkit::opMin<T> >(
+		A->data, size1, size2, row_stride, col_stride, minima->data,
+		minima->stride, optkit::opMin<T>(), optkit::opMin<T>(),
+		optkit::ok_float_max<T>());
+	return OK_SCAN_ERR( err );
+}
 
-	if (col == 0)
-		reduced_sub[row] = binary_op_(reduced[global_row * stride],
-			default_value);
-	__syncthreads();
+template<typename T>
+static ok_status __linalg_matrix_reduce_max(vector_<T> * maxima,
+	const matrix_<T> * A, const enum CBLAS_SIDE side)
+{
+	ok_status err = OPTKIT_SUCCESS;
+	const int reduce_by_row = side == CblasRight;
+	size_t size1, size2, row_stride, col_stride;
 
-	reduced_sub[row] = binary_op_(reduced_sub[row],
-		Asub[row * kTileLD + col]);
-	__syncthreads();
+	OK_RETURNIF_ERR(
+		optkit::matrix_vector_op_setdims<T>(A, maxima, &size1, &size2,
+			&row_stride, &col_stride, reduce_by_row) );
 
-	if (col == 0)
-		reduced[global_row * stride] = reduced_sub[row];
+	err = optkit::matrix_row_reduce<T, optkit::opMax<T> >(A->data, size1,
+		size2, row_stride, col_stride, maxima->data, maxima->stride,
+		optkit::opMax<T>(), optkit::opMax<T>(),
+		optkit::ok_float_min<T>());
+	return OK_SCAN_ERR( err );
+}
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+ok_status linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t,
+	const matrix * A, vector * v)
+{
+	return OK_SCAN_ERR( __linalg_matrix_row_squares<ok_float>(t, A, v) );
+}
+
+ok_status linalg_matrix_broadcast_vector(matrix * A, const vector * v,
+	const enum OPTKIT_TRANSFORM operation, const enum CBLAS_SIDE side)
+{
+	return OK_SCAN_ERR( __linalg_matrix_broadcast_vector<ok_float>(A, v,
+		operation, side) );
 }
 
 ok_status linalg_matrix_reduce_indmin(indvector * indices, vector * minima,
-	matrix * A, const enum CBLAS_SIDE side)
+	const matrix * A, const enum CBLAS_SIDE side)
 {
-	OK_CHECK_VECTOR(indices);
-	OK_CHECK_VECTOR(minima);
-	OK_CHECK_MATRIX(A);
-
-	uint i, j;
-	uint block_size = kTiles2D * kTileSize;
-
-	dim3 grid_dim(kTileSize, kTileSize);
-	dim3 blk_dim(kTiles2D, kTiles2D);
-	int left = side == CblasLeft;
-	int rowmajor = A->order == CblasRowMajor;
-
-	/*
-	 * logic for row/col reduction:
-	 *	side = left: reduce each row of A^T 	(analoguous to A^T * 1)
-	 *	side = right: reduce each row of A 	(analogous to A * 1)
-	 */
-	size_t size1 = (left) ? A->size1 : A->size2;
-	size_t size2 = (left) ? A->size2 : A->size1;
-	size_t row_stride = (left == rowmajor) ? A->ld : 1;
-	size_t col_stride = (left == rowmajor) ? 1 : A->ld;
-
-	if (size2 != minima->size || indices->size != minima->size)
-		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
-
-	OK_RETURNIF_ERR( vector_set_all(minima, OK_FLOAT_MAX) );
-
-	/* reduce one bundle of [block_size] rows x N cols per stream */
-	for (i = 0; i < size1; i += block_size) {
-		cudaStream_t s;
-		cudaStreamCreate(&s);
-		for (j = 0; j < size2; j += block_size)
-			__matrix_row_indmin<<<grid_dim, blk_dim, 0, s>>>(
-				indices->data, indices->stride, minima->data,
-				minima->stride, A->data, size1, size2,
-				row_stride, col_stride, i, j);
-		cudaStreamDestroy(s);
-	}
-	cudaDeviceSynchronize();
-	return OK_STATUS_CUDA;
+	return OK_SCAN_ERR( __linalg_matrix_reduce_indmin<ok_float>(indices,
+		minima, A, side) );
 }
 
-static ok_status __matrix_reduce_binary(vector * reduced, matrix * A,
-	const enum CBLAS_SIDE side, const ok_float default_value,
-	ok_float (* binary_op_)(const ok_float first, const ok_float second))
-{
-	OK_CHECK_VECTOR(reduced);
-	OK_CHECK_MATRIX(A);
-
-	uint i, j;
-	uint block_size = kTiles2D * kTileSize;
-
-	dim3 grid_dim(kTileSize, kTileSize);
-	dim3 blk_dim(kTiles2D, kTiles2D);
-	int left = side == CblasLeft;
-	int rowmajor = A->order == CblasRowMajor;
-
-	/*
-	 * logic for row/col reduction:
-	 *	side = left: reduce each row of A^T 	(analoguous to A^T * 1)
-	 *	side = right: reduce each row of A 	(analogous to A * 1)
-	 */
-	size_t size1 = (left) ? A->size1 : A->size2;
-	size_t size2 = (left) ? A->size2 : A->size1;
-	size_t row_stride = (left == rowmajor) ? A->ld : 1;
-	size_t col_stride = (left == rowmajor) ? 1 : A->ld;
-
-	if (size2 != reduced->size)
-		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
-
-	OK_RETURNIF_ERR( vector_set_all(reduced, default_value) );
-
-	/* reduce one bundle of [block_size] rows x N cols per stream */
-	for (i = 0; i < size1; i += block_size) {
-		cudaStream_t s;
-		cudaStreamCreate(&s);
-		for (j = 0; j < size2; j += block_size)
-			__matrix_row_reduce<<<grid_dim, blk_dim, 0, s>>>(
-				reduced->data, reduced->stride, A->data, size1,
-				size2, row_stride, col_stride, i, j,
-				default_value, binary_op_);
-		cudaStreamDestroy(s);
-	}
-	cudaDeviceSynchronize();
-	return OK_STATUS_CUDA;
-}
-
-ok_status linalg_matrix_reduce_min(vector * minima, matrix * A,
+ok_status linalg_matrix_reduce_min(vector * minima, const matrix * A,
 	const enum CBLAS_SIDE side)
 {
-	return __matrix_reduce_binary(minima, A, side, OK_FLOAT_MAX,
-		MATH(fmin));
+	return OK_SCAN_ERR( __linalg_matrix_reduce_min<ok_float>(minima, A,
+		side) );
 }
 
-ok_status linalg_matrix_reduce_max(vector * maxima, matrix * A,
+ok_status linalg_matrix_reduce_max(vector * maxima, const matrix * A,
 	const enum CBLAS_SIDE side)
 {
-	return __matrix_reduce_binary(maxima, A, side, -OK_FLOAT_MAX,
-		MATH(fmax));
+	return OK_SCAN_ERR( __linalg_matrix_reduce_max<ok_float>(maxima, A,
+		side) );
 }
 
 #ifdef __cplusplus

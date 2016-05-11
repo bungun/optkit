@@ -20,10 +20,10 @@ ok_status linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t,
 ok_status linalg_matrix_broadcast_vector(matrix * A, const vector * v,
 	const enum OPTKIT_TRANSFORM operation, const enum CBLAS_SIDE side);
 ok_status linalg_matrix_reduce_indmin(indvector * indices, vector * minima,
-	matrix * A, const enum CBLAS_SIDE side);
-ok_status linalg_matrix_reduce_min(vector * minima, matrix * A,
+	const matrix * A, const enum CBLAS_SIDE side);
+ok_status linalg_matrix_reduce_min(vector * minima, const matrix * A,
 	const enum CBLAS_SIDE side);
-ok_status linalg_matrix_reduce_max(vector * maxima, matrix * A,
+ok_status linalg_matrix_reduce_max(vector * maxima, const matrix * A,
 	const enum CBLAS_SIDE side);
 
 #ifdef __cplusplus

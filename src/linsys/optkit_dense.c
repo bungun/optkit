@@ -170,9 +170,9 @@ ok_status linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t,
 /*
  * if operation == OkTransformScale:
  * 	if side == CblasLeft, set
- * 		A = A * diag(v)
+ * 		A = diag(v) * A
  *	else, set
- *		A = diag(v) * A
+ *		A = A * diag(v)
  * if operation == OkTransformAdd:
  * 	if side == CblasLeft, perform
  * 		A += v1^T
@@ -187,7 +187,7 @@ ok_status linalg_matrix_broadcast_vector(matrix * A, const vector * v,
 
 	size_t k, nvecs = (side == CblasLeft) ? A->size2 : A->size1;
 	size_t ptrstride = ((side == CblasLeft) == (A->order == CblasRowMajor))
-		? (int) 1 : A->ld;
+		? 1 : A->ld;
 
 	size_t stride = ((side == CblasLeft) == (A->order == CblasRowMajor)) ?
 		A->ld : 1;
@@ -197,14 +197,16 @@ ok_status linalg_matrix_broadcast_vector(matrix * A, const vector * v,
 		((side == CblasRight) && (v->size != A->size2)))
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	if (operation == OkTransformScale) {
+	switch (operation) {
+	case OkTransformScale :
 		#ifdef _OPENMP
 		#pragma omp parallel for
 		#endif
 		for (k = 0; k < v->size; ++k)
 			CBLAS(scal)( (int) nvecs, v->data[k * v->stride],
 				A->data + k * stride, (int) ptrstride);
-	} else {
+		break;
+	case OkTransformAdd :
 		#ifdef _OPENMP
 		#pragma omp parallel for
 		#endif
@@ -212,74 +214,100 @@ ok_status linalg_matrix_broadcast_vector(matrix * A, const vector * v,
 			CBLAS(axpy)((int) v->size, kOne, v->data,
 				(int) v->stride, A->data + k * ptrstride,
 				(int) stride);
+		break;
+	default :
+		return OK_SCAN_ERR( OPTKIT_ERROR_DOMAIN );
 	}
 	return OPTKIT_SUCCESS;
 }
 
 ok_status linalg_matrix_reduce_indmin(indvector * indices, vector * minima,
-	matrix * A, const enum CBLAS_SIDE side)
+	const matrix * A, const enum CBLAS_SIDE side)
 {
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_VECTOR(indices);
 	OK_CHECK_VECTOR(minima);
 
-	int reduce_rows = (side == CblasLeft);
-	size_t output_dim = (reduce_rows) ? A->size2 : A->size1;
-	size_t k;
-	vector a;
-
-	ok_status (* matrix_subvec)(vector * row_col, matrix * A, size_t k) =
-		(reduce_rows) ? matrix_column : matrix_row;
+	const int reduce_by_row = (side == CblasRight);
+	const int rowmajor = (A->order == CblasRowMajor);
+	size_t output_dim = (reduce_by_row) ? A->size1 : A->size2;
+	size_t reduced_dim = (reduce_by_row) ? A->size2 : A->size1;
+	size_t stride_k = (reduce_by_row == rowmajor) ? A->ld : 1;
+	size_t stride_i = (reduce_by_row == rowmajor) ? 1 : A->ld;
+	size_t k, idx;
+	ok_float * min_ = minima->data, * A_ = A->data;
+	size_t * ind_ = indices->data;
 
 	if (output_dim != minima->size || indices->size != minima->size)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
+	#ifdef _OPENMP
+	#pragma omp parallel for
+	#endif
 	for (k = 0; k < output_dim; ++k) {
-		matrix_subvec(&a, A, k);
-		vector_indmin(&a, indices->data + k * indices->stride);
-		minima->data[k * minima->stride] =
-			a.data[indices->data[k * indices->stride] * a.stride];
+		min_[k * minima->stride] = OK_FLOAT_MAX;
+		for (idx = 0; idx < reduced_dim; ++idx)
+			if ( A_[k * stride_k + idx * stride_i] <
+				min_[k * minima->stride] ) {
+				min_[k * minima->stride] = A_[k * stride_k +
+					idx * stride_i];
+				ind_[k * indices->stride] = idx;
+			}
 	}
 	return OPTKIT_SUCCESS;
 }
 
-static ok_status __matrix_extrema(vector * extrema, matrix * A,
+static ok_status __matrix_extrema(vector * extrema, const matrix * A,
 	const enum CBLAS_SIDE side, const int minima)
 {
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_VECTOR(extrema);
 
-	int reduce_rows = (side == CblasLeft);
-	size_t output_dim = (reduce_rows) ? A->size2 : A->size1;
-	size_t k;
-	vector a;
-
-	ok_status (* matrix_subvec)(vector * row_col, matrix * A, size_t k) =
-		(reduce_rows) ? matrix_column : matrix_row;
+	const int reduce_by_row = (side == CblasRight);
+	const int rowmajor = (A->order == CblasRowMajor);
+	size_t output_dim = (reduce_by_row) ? A->size1 : A->size2;
+	size_t reduced_dim = (reduce_by_row) ? A->size2 : A->size1;
+	size_t stride_k = (reduce_by_row == rowmajor) ? A->ld : 1;
+	size_t stride_idx = (reduce_by_row == rowmajor) ? 1 : A->ld;
+	size_t k, idx;
 
 	if (output_dim != extrema->size)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	if (minima)
+		#ifdef _OPENMP
+		#pragma omp parallel for
+		#endif
 		for (k = 0; k < output_dim; ++k) {
-			matrix_subvec(&a, A, k);
-			vector_min(&a, extrema->data + k * extrema->stride);
+			extrema->data[k * extrema->stride] = OK_FLOAT_MAX;
+			for (idx = 0; idx < reduced_dim; ++idx)
+				extrema->data[k * extrema->stride] = MATH(fmin)(
+					extrema->data[k * extrema->stride],
+					A->data[k * stride_k + idx * stride_idx]
+					);
 		}
 	else
+		#ifdef _OPENMP
+		#pragma omp parallel for
+		#endif
 		for (k = 0; k < output_dim; ++k) {
-			matrix_subvec(&a, A, k);
-			vector_max(&a, extrema->data + k * extrema->stride);
+			extrema->data[k * extrema->stride] = -OK_FLOAT_MAX;
+			for (idx = 0; idx < reduced_dim; ++idx)
+				extrema->data[k * extrema->stride] = MATH(fmax)(
+					extrema->data[k * extrema->stride],
+					A->data[k * stride_k + idx * stride_idx]
+					);
 		}
 	return OPTKIT_SUCCESS;
 }
 
-ok_status linalg_matrix_reduce_min(vector * minima, matrix * A,
+ok_status linalg_matrix_reduce_min(vector * minima, const matrix * A,
 	const enum CBLAS_SIDE side)
 {
 	return __matrix_extrema(minima, A, side, 1);
 }
 
-ok_status linalg_matrix_reduce_max(vector * maxima, matrix * A,
+ok_status linalg_matrix_reduce_max(vector * maxima, const matrix * A,
 	const enum CBLAS_SIDE side)
 {
 	return __matrix_extrema(maxima, A, side, 0);

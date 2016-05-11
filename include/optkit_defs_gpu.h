@@ -9,9 +9,9 @@ extern "C" {
 #endif
 
 const unsigned int kTileSize = 32u;
+const unsigned int kWarpSize = 32u;
 const unsigned int kBlockSize = 1024u;
 const unsigned int kBlockSize2D = 32u;
-const unsigned int kTiles2D = 8u;
 const unsigned int kMaxGridSize = 65535u;
 
 /*
