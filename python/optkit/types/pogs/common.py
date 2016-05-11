@@ -1,21 +1,16 @@
 from numpy import zeros, ones, ndarray
-
-def const_iterator(value, iters):
-	for i in xrange(iters):
-		yield value
+from optkit.utils import const_iterator
 
 class PogsTypes(object):
 	def __init__(self, backend):
 		PogsSettings = backend.pogs.pogs_settings
 		PogsInfo = backend.pogs.pogs_info
 		PogsOutput = backend.pogs.pogs_output
-		pogslib = backend.pogs
-		denselib = backend.dense
-		proxlib = backend.prox
+		lib = backend.pogs
 
 		class Objective(object):
 			def __init__(self, n, **params):
-				self.enums = proxlib.enums
+				self.enums = lib.enums
 				self.size = n
 				self.__h = zeros(self.size, dtype=int)
 				self.__a = ones(self.size)
@@ -27,7 +22,6 @@ class PogsTypes(object):
 					self.copy_from(params['f'])
 				else:
 					self.set(**params)
-
 
 			def copy_from(self, obj):
 				if not isinstance(obj, Objective):
@@ -77,7 +71,6 @@ class PogsTypes(object):
 				if start < 0 : start = self.size + start
 				if end < 0 : end = self.size + end
 
-
 				r = params.pop('range', xrange(start,end))
 				range_length = len(r)
 
@@ -96,7 +89,6 @@ class PogsTypes(object):
 										   'requested {} slice [{}:{}]'.format(
 										   	item, type(params[item]),
 										   	Objective, start, end))
-
 
 				if 'h' in params:
 					if isinstance(params['h'], (int, str)):
@@ -193,7 +185,7 @@ class PogsTypes(object):
 			def __init__(self, **options):
 				self.c = PogsSettings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None,
 									  None)
-				pogslib.set_default_settings(self.c)
+				lib.set_default_settings(self.c)
 				self.update(**options)
 
 			def update(self, **options):
@@ -218,11 +210,9 @@ class PogsTypes(object):
 				if 'resume' in options:
 					self.resume = options['resume']
 				if 'x0' in options:
-					self.x0 = options['x0'].ctypes.data_as(
-														denselib.ok_float_p)
+					self.x0 = options['x0'].ctypes.data_as(lib.ok_float_p)
 				if 'nu0' in options:
-					self.nu0 = options['nu0'].ctypes.data_as(
-														denselib.ok_float_p)
+					self.nu0 = options['nu0'].ctypes.data_as(ib.ok_float_p)
 
 			@property
 			def alpha(self):
@@ -374,8 +364,8 @@ class PogsTypes(object):
 					raise TypeError('argument "x0" must be of '
 									'type {}'.format(ndarray))
 				else:
-					self._x0py = x0.astype(denselib.pyfloat)
-					self.c.x0 = self._x0py.ctypes.data_as(denselib.ok_float_p)
+					self._x0py = x0.astype(lib.pyfloat)
+					self.c.x0 = self._x0py.ctypes.data_as(lib.ok_float_p)
 
 			@property
 			def nu0(self):
@@ -387,8 +377,8 @@ class PogsTypes(object):
 					raise TypeError('argument "nu0" must be of '
 									'type {}'.format(ndarray))
 				else:
-					self._n0py = nu0.astype(denselib.pyfloat)
-					self.c.nu0 = self._n0py.ctypes.data_as(denselib.ok_float_p)
+					self._n0py = nu0.astype(lib.pyfloat)
+					self.c.nu0 = self._n0py.ctypes.data_as(lib.ok_float_p)
 
 			def __str__(self):
 				return str(
@@ -456,15 +446,15 @@ class PogsTypes(object):
 
 		class SolverOutput(object):
 			def __init__(self, m, n):
-				self.x = zeros(n, dtype=denselib.pyfloat)
-				self.y = zeros(m, dtype=denselib.pyfloat)
-				self.mu = zeros(n, dtype=denselib.pyfloat)
-				self.nu = zeros(m, dtype=denselib.pyfloat)
+				self.x = zeros(n).astype(lib.pyfloat)
+				self.y = zeros(m).astype(lib.pyfloat)
+				self.mu = zeros(n).astype(lib.pyfloat)
+				self.nu = zeros(m).astype(lib.pyfloat)
 				self.c = PogsOutput(
-						self.x.ctypes.data_as(denselib.ok_float_p),
-						self.y.ctypes.data_as(denselib.ok_float_p),
-						self.mu.ctypes.data_as(denselib.ok_float_p),
-						self.nu.ctypes.data_as(denselib.ok_float_p))
+						self.x.ctypes.data_as(lib.ok_float_p),
+						self.y.ctypes.data_as(lib.ok_float_p),
+						self.mu.ctypes.data_as(lib.ok_float_p),
+						self.nu.ctypes.data_as(lib.ok_float_p))
 
 			def __str__(self):
 				return str(

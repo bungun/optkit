@@ -38,3 +38,7 @@ def var_assert(*var, **vartype):
 		if 'isvalid' in  v.__dict__:
 			assert v.isvalid()
 	return True
+
+def const_iterator(value, iters):
+	for i in xrange(iters):
+		yield value

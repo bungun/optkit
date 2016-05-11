@@ -1,6 +1,7 @@
 from numpy import zeros, ones, ndarray, savez, load as np_load
 from ctypes import c_void_p
 from os import path
+from optkit.types.cbase import OptkitBaseTypeC
 from optkit.types.pogs.common import PogsTypes
 
 class PogsDenseDirectTypes(PogsTypes):
@@ -9,12 +10,11 @@ class PogsDenseDirectTypes(PogsTypes):
 		PogsSettings = backend.pogs.pogs_settings
 		PogsInfo = backend.pogs.pogs_info
 		PogsOutput = backend.pogs.pogs_output
-		pogslib = backend.pogs
-		denselib = backend.dense
-		proxlib = backend.prox
+		lib = backend.pogs
 
-		class Solver(object):
+		class Solver(OptkitBaseTypeC):
 			def __init__(self, A, *args, **options):
+				OptkitBaseTypeC.__init__(self, backend)
 				try:
 					assert isinstance(A, ndarray)
 					assert len(A.shape) == 2
@@ -22,37 +22,57 @@ class PogsDenseDirectTypes(PogsTypes):
 					raise TypeError('input must be a 2-d {}'.format(ndarray))
 
 				self.shape = (self.m, self.n) = (m, n) = A.shape
-				self.A = A.astype(denselib.pyfloat)
-				self.__f = zeros(m).astype(proxlib.function)
-				self.__f_ptr = self.__f.ctypes.data_as(proxlib.function_p)
-				self.__f_c = proxlib.function_vector(self.m, self.__f_ptr)
-				self.__g = zeros(n).astype(proxlib.function)
-				self.__g_ptr = self.__g.ctypes.data_as(proxlib.function_p)
-				self.__g_c = proxlib.function_vector(self.n, self.__g_ptr)
-				self.layout = layout = denselib.enums.CblasRowMajor if \
-					A.flags.c_contiguous else denselib.enums.CblasColMajor
+				self.A = A.astype(lib.pyfloat)
+				self.A_ptr = A_ptr = self.A.ctypes.data_as(lib.ok_float_p)
+				self.__f = zeros(m).astype(lib.function)
+				self.__f_ptr = self.__f.ctypes.data_as(lib.function_p)
+				self.__f_c = lib.function_vector(self.m, self.__f_ptr)
+				self.__g = zeros(n).astype(lib.function)
+				self.__g_ptr = self.__g.ctypes.data_as(lib.function_p)
+				self.__g_c = lib.function_vector(self.n, self.__g_ptr)
+				self.layout = layout = lib.enums.CblasRowMajor if \
+					A.flags.c_contiguous else lib.enums.CblasColMajor
+				self.__c_solver = None
 
 				if 'no_init' not in args:
-					self.c_solver = pogslib.pogs_init(
-							self.A.ctypes.data_as(denselib.ok_float_p), m , n,
-							layout)
-				else:
-					self.c_solver = None
+					A_ptr =
+					self.__register_solver(lib, lib.pogs_init(A_ptr, m , n,
+							layout))
 
 				self.settings = SolverSettings()
 				self.info = SolverInfo()
 				self.output = SolverOutput(m, n)
 				self.settings.update(**options)
 				self.first_run = True
-				backend.increment_cobject_count()
+
+			@property
+			def c_solver(self):
+			    return self.__c_solver
+
+			def __register_solver(self, lib, solver):
+				self.__c_solver = solver
+				self.exit_call = lib.pogs_finish
+				self.exit_arg = solver
+				self.reset_on_exit = True
+				self._OptkitBaseTypeC__register()
+
+			def __unregister_solver(self):
+				if self.c_solver is None:
+					return
+				self.exit_call(self.c_solver, 0)
+				self.__c_solver = None
+				self.exit_call = self._OptkitBaseTypeC__exit_default
+				self.exit_arg = None
+				self.reset_on_exit = False
+				self._OptkitBaseTypeC__unregister()
 
 			def __update_function_vectors(self, f, g):
 				for i in xrange(f.size):
-					self.__f[i] = proxlib.function(f.h[i], f.a[i], f.b[i],
+					self.__f[i] = lib.function(f.h[i], f.a[i], f.b[i],
 												   f.c[i], f.d[i], f.e[i])
 
 				for j in xrange(g.size):
-					self.__g[j] = proxlib.function(g.h[j], g.a[j], g.b[j],
+					self.__g[j] = lib.function(g.h[j], g.a[j], g.b[j],
 												   g.c[j], g.d[j], g.e[j])
 
 			def solve(self, f, g, **options):
@@ -76,7 +96,7 @@ class PogsDenseDirectTypes(PogsTypes):
 
 				self.__update_function_vectors(f, g)
 				self.settings.update(**options)
-				pogslib.pogs_solve(self.c_solver, self.__f_c, self.__g_c,
+				lib.pogs_solve(self.c_solver, self.__f_c, self.__g_c,
 								   self.settings.c, self.info.c, self.output.c)
 				self.first_run = False
 
@@ -93,50 +113,50 @@ class PogsDenseDirectTypes(PogsTypes):
 
 
 				if 'A_equil' in data:
-					A_equil = data['A_equil'].astype(denselib.pyfloat)
+					A_equil = data['A_equil'].astype(lib.pyfloat)
 				elif path.exists(path.join(directory, 'A_equil.npy')):
 					A_equil = np_load(path.join(directory,
-						'A_equil.npy')).astype(denselib.pyfloat)
+						'A_equil.npy')).astype(lib.pyfloat)
 				else:
 					err = 1
 
 
 				if not err and 'LLT' in data:
-					LLT = data['LLT'].astype(denselib.pyfloat)
+					LLT = data['LLT'].astype(lib.pyfloat)
 				elif path.exists(path.join(directory, 'LLT.npy')):
 					LLT = np_load(path.join(directory, 'LLT.npy')).astype(
-								denselib.pyfloat)
-					LLT_ptr = LLT.ctypes.data_as(denselib.ok_float_p)
+								lib.pyfloat)
+					LLT_ptr = LLT.ctypes.data_as(lib.ok_float_p)
 				else:
-					if pogslib.direct:
+					if lib.direct:
 						err = 1
 					else:
 						LLT_ptr = c_void_p()
 
 				if not err:
-					LLT_ptr = LLT.ctypes.data_as(denselib.ok_float_p)
+					LLT_ptr = LLT.ctypes.data_as(lib.ok_float_p)
 				else:
 					LLT_ptr = None
 
 
 				if not err and 'd' in data:
-					d = data['d'].astype(denselib.pyfloat)
+					d = data['d'].astype(lib.pyfloat)
 				elif path.exists(path.join(directory, 'd.npy')):
 					d = np_load(path.join(directory, 'd.npy')).astype(
-								denselib.pyfloat)
+								lib.pyfloat)
 				else:
 					err = 1
 
 				if not err and 'e' in data:
-					e = data['e'].astype(denselib.pyfloat)
+					e = data['e'].astype(lib.pyfloat)
 				elif path.exists(path.join(directory, 'e.npy')):
 					e = np_load(path.join(directory, 'e.npy')).astype(
-								denselib.pyfloat)
+								lib.pyfloat)
 				else:
 					err = 1
 
 				if err:
-					snippet = '`LLT`, ' if pogslib.direct else ''
+					snippet = '`LLT`, ' if lib.direct else ''
 					ValueError('Minimal requirements to load solver '
 							   'not met. Specified file must contain '
 							   'at least one .npz file with entries `A_equil`,'
@@ -145,51 +165,51 @@ class PogsDenseDirectTypes(PogsTypes):
 							   snippet))
 
 				if 'z' in data:
-					z = data['z'].astype(denselib.pyfloat)
+					z = data['z'].astype(lib.pyfloat)
 				else:
-					z = zeros(self.m + self.n, dtype=denselib.pyfloat)
+					z = zeros(self.m + self.n, dtype=lib.pyfloat)
 
 				if 'z12' in data:
-					z12 = data['z12'].astype(denselib.pyfloat)
+					z12 = data['z12'].astype(lib.pyfloat)
 				else:
-					z12 = zeros(self.m + self.n, dtype=denselib.pyfloat)
+					z12 = zeros(self.m + self.n, dtype=lib.pyfloat)
 
 				if 'zt' in data:
-					zt = data['zt'].astype(denselib.pyfloat)
+					zt = data['zt'].astype(lib.pyfloat)
 				else:
-					zt = zeros(self.m + self.n, dtype=denselib.pyfloat)
+					zt = zeros(self.m + self.n, dtype=lib.pyfloat)
 
 				if 'zt12' in data:
-					zt12 = data['zt12'].astype(denselib.pyfloat)
+					zt12 = data['zt12'].astype(lib.pyfloat)
 				else:
-					zt12 = zeros(self.m + self.n, dtype=denselib.pyfloat)
+					zt12 = zeros(self.m + self.n, dtype=lib.pyfloat)
 
 				if 'zprev' in data:
-					zprev = data['zprev'].astype(denselib.pyfloat)
+					zprev = data['zprev'].astype(lib.pyfloat)
 				else:
-					zprev = zeros(self.m + self.n, dtype=denselib.pyfloat)
+					zprev = zeros(self.m + self.n, dtype=lib.pyfloat)
 
 				if 'rho' in data:
-					rho = denselib.pyfloat(data['rho'])
+					rho = lib.pyfloat(data['rho'])
 				else:
 					rho = 1.
 
-				order = denselib.enums.CblasRowMajor if \
-					A_equil.flags.c_contiguous else denselib.enums.CblasColMajor
+				order = lib.enums.CblasRowMajor if \
+					A_equil.flags.c_contiguous else lib.enums.CblasColMajor
 
 				if self.c_solver is not None:
-					pogslib.pogs_finish(self.c_solver)
+					self.__unregister_solver()
 
-				self.c_solver = pogslib.pogs_load_solver(
-						A_equil.ctypes.data_as(denselib.ok_float_p), LLT_ptr,
-						d.ctypes.data_as(denselib.ok_float_p),
-						e.ctypes.data_as(denselib.ok_float_p),
-						z.ctypes.data_as(denselib.ok_float_p),
-						z12.ctypes.data_as(denselib.ok_float_p),
-						zt.ctypes.data_as(denselib.ok_float_p),
-						zt12.ctypes.data_as(denselib.ok_float_p),
-						zprev.ctypes.data_as(denselib.ok_float_p),
-						rho, self.m, self.n, order)
+				self.__register_solver(lib, lib.pogs_load_solver(
+						A_equil.ctypes.data_as(lib.ok_float_p), LLT_ptr,
+						d.ctypes.data_as(lib.ok_float_p),
+						e.ctypes.data_as(lib.ok_float_p),
+						z.ctypes.data_as(lib.ok_float_p),
+						z12.ctypes.data_as(lib.ok_float_p),
+						zt.ctypes.data_as(lib.ok_float_p),
+						zt12.ctypes.data_as(lib.ok_float_p),
+						zprev.ctypes.data_as(lib.ok_float_p),
+						rho, self.m, self.n, order))
 
 			def save(self, directory, name, save_equil=True,
 					 save_factorization=True):
@@ -210,40 +230,40 @@ class PogsDenseDirectTypes(PogsTypes):
 									 'and would be overwritten, aborting.')
 
 				mindim = min(self.m, self.n)
-				A_equil = zeros((self.m, self.n), dtype=denselib.pyfloat)
+				A_equil = zeros((self.m, self.n), dtype=lib.pyfloat)
 
-				if pogslib.direct:
-					LLT = zeros((mindim, mindim), dtype=denselib.pyfloat)
-					LLT_ptr = LLT.ctypes.data_as(denselib.ok_float_p)
+				if lib.direct:
+					LLT = zeros((mindim, mindim), dtype=lib.pyfloat)
+					LLT_ptr = LLT.ctypes.data_as(lib.ok_float_p)
 				else:
 					LLT = c_void_p()
 					LLT_ptr = LLT
 
 				if A_equil.flags.c_contiguous:
-					order = denselib.enums.CblasRowMajor
+					order = lib.enums.CblasRowMajor
 				else:
-					order = denselib.enums.CblasColMajor
+					order = lib.enums.CblasColMajor
 
-				d = zeros(self.m, dtype=denselib.pyfloat)
-				e = zeros(self.n, dtype=denselib.pyfloat)
-				z = zeros(self.m + self.n, dtype=denselib.pyfloat)
-				z12 = zeros(self.m + self.n, dtype=denselib.pyfloat)
-				zt = zeros(self.m + self.n, dtype=denselib.pyfloat)
-				zt12 = zeros(self.m + self.n, dtype=denselib.pyfloat)
-				zprev = zeros(self.m + self.n, dtype=denselib.pyfloat)
-				rho = zeros(1, dtype=denselib.pyfloat)
+				d = zeros(self.m, dtype=lib.pyfloat)
+				e = zeros(self.n, dtype=lib.pyfloat)
+				z = zeros(self.m + self.n, dtype=lib.pyfloat)
+				z12 = zeros(self.m + self.n, dtype=lib.pyfloat)
+				zt = zeros(self.m + self.n, dtype=lib.pyfloat)
+				zt12 = zeros(self.m + self.n, dtype=lib.pyfloat)
+				zprev = zeros(self.m + self.n, dtype=lib.pyfloat)
+				rho = zeros(1, dtype=lib.pyfloat)
 
-				pogslib.pogs_extract_solver(
+				lib.pogs_extract_solver(
 						self.c_solver,
-						A_equil.ctypes.data_as(denselib.ok_float_p), LLT_ptr,
-						d.ctypes.data_as(denselib.ok_float_p),
-						e.ctypes.data_as(denselib.ok_float_p),
-						z.ctypes.data_as(denselib.ok_float_p),
-						z12.ctypes.data_as(denselib.ok_float_p),
-						zt.ctypes.data_as(denselib.ok_float_p),
-						zt12.ctypes.data_as(denselib.ok_float_p),
-						zprev.ctypes.data_as(denselib.ok_float_p),
-						rho.ctypes.data_as(denselib.ok_float_p), order)
+						A_equil.ctypes.data_as(lib.ok_float_p), LLT_ptr,
+						d.ctypes.data_as(lib.ok_float_p),
+						e.ctypes.data_as(lib.ok_float_p),
+						z.ctypes.data_as(lib.ok_float_p),
+						z12.ctypes.data_as(lib.ok_float_p),
+						zt.ctypes.data_as(lib.ok_float_p),
+						zt12.ctypes.data_as(lib.ok_float_p),
+						zprev.ctypes.data_as(lib.ok_float_p),
+						rho.ctypes.data_as(lib.ok_float_p), order)
 
 				if isinstance(LLT, ndarray) and save_factorization:
 					savez(filename, A_equil=A_equil, LLT=LLT, d=d, e=e, z=z,
@@ -254,11 +274,5 @@ class PogsDenseDirectTypes(PogsTypes):
 				else:
 					savez(filename, z=z, z12=z12, zt=zt, zt12=zt12,
 						  zprev=zprev, rho=rho[0])
-
-			def __del__(self):
-				backend.decrement_cobject_count()
-				if self.c_solver is not None:
-					pogslib.pogs_finish(self.c_solver,
-										int(backend.device_reset_allowed))
 
 		self.Solver = Solver
