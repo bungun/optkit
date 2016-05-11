@@ -35,8 +35,8 @@ static __global__ void generate(curandState * globalState, ok_float * data,
 }
 
 
-static ok_status ok_rand(ok_float * x, size_t size) {
-	size_t num_rand = size <= kMaxGridSize ? size : kMaxGridSize;
+static ok_status ok_rand(ok_float * x, const size_t size) {
+	const size_t num_rand = size <= kMaxGridSize ? size : kMaxGridSize;
 	curandState * devStates;
 	int grid_dim;
 
@@ -55,7 +55,7 @@ static ok_status ok_rand(ok_float * x, size_t size) {
 	return ok_free_gpu(devStates);
 }
 #else
-static ok_status ok_rand(ok_float * x, size_t size)
+static ok_status ok_rand(ok_float * x, const size_t size)
 {
 	OK_CHECK_PTR(x);
 	uint i;
@@ -65,7 +65,7 @@ static ok_status ok_rand(ok_float * x, size_t size)
 	#pragma omp parallel for
 	#endif
 	for (i = 0; i < size; ++i)
-		x[i] = (ok_float) rand();
+		x[i] = (ok_float) rand() / (ok_float) RAND_MAX;
 
 	return OPTKIT_SUCCESS;
 }
