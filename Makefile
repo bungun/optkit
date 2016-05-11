@@ -1,4 +1,4 @@
-# Basic definitions
+	# Basic definitions
 OPTKITROOT=./
 OUT=$(OPTKITROOT)build/
 SRC=$(OPTKITROOT)src/
@@ -21,23 +21,24 @@ POGS=pogs/optkit_
 POGSSRC=$(SRC)$(POGS)
 POGSOUT=$(OUT)$(POGS)
 
+
+IFLAGS=-I. -I$(INCLUDE) -I$(INCLUDE)external -I$(INCLUDE)linsys 
+IFLAGS+=-I$(INCLUDE)operator -I$(INCLUDE)clustering
+
 # C Flags
 CC=gcc
-CCFLAGS= -g -O3 -fPIC -I. -I$(INCLUDE) -I$(INCLUDE)external 
-CCFLAGS+=-I$(INCLUDE)linsys -I$(INCLUDE)operator -I$(INCLUDE)clustering
-CCFLAGS+=-Wall -Wconversion -Wpedantic -Wno-unused-function -std=c99
+CCFLAGS=-g -O3 -fPIC $(IFLAGS) -Wall -Wconversion -Wpedantic 
+CCFLAGS+=-Wno-unused-function -std=c99
 LDFLAGS_=-lstdc++ -lm
 
 # C++ Flags
 CXX=g++
-CXXFLAGS= -g -O3 -fPIC -I. -I$(INCLUDE) -I$(INCLUDE)external
-CXXFLAGS+=-I$(INCLUDE)linsys -I$(INCLUDE)operator -I$(INCLUDE)clustering
-CXXFLAGS+=-Wall -Wconversion -Wpedantic -Wno-unused-function -std=c++11
+CXXFLAGS=-g -O3 -fPIC $(IFLAGS) -Wall -Wconversion -Wpedantic 
+CXXFLAGS+=-Wno-unused-function -std=c++11
 
 # CUDA Flags
 CUXX=nvcc
-CUXXFLAGS=-arch=sm_50 -Xcompiler -fPIC -I. -I$(INCLUDE) -I$(INCLUDE)external
-CUXXFLAGS+=-I$(INCLUDE)linsys -I$(INCLUDE)operator -I$(INCLUDE)clustering
+CUXXFLAGS=-arch=sm_50 -Xcompiler -fPIC $(IFLAGS) -std=c++11
 CULDFLAGS_=-lstdc++ -lm
 
 # Darwin / Linux
