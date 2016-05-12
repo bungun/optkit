@@ -1,4 +1,3 @@
-#include "optkit_rand.h"
 #include "optkit_equilibration.h"
 
 #ifdef __cplusplus
