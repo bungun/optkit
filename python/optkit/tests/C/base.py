@@ -1,3 +1,4 @@
+from collections import deque
 from numpy import zeros, array, ndarray
 from numpy.linalg import norm
 from numpy.random import rand
@@ -9,6 +10,7 @@ from optkit.tests.defs import OptkitTestCase
 class OptkitCTestCase(OptkitTestCase):
 	managed_vars = {}
 	free_methods = {}
+	var_stack = deque()
 	libs = None
 
 	@staticmethod
@@ -30,8 +32,9 @@ class OptkitCTestCase(OptkitTestCase):
 		self.assertTrue( abs(first - second) <= tol + tol * abs(second) )
 
 	def register_var(self, name, var, free):
-		self.managed_vars[name] = var;
-		self.free_methods[name] = free;
+		self.managed_vars[name] = var
+		self.free_methods[name] = free
+		self.var_stack.append(name)	# preserve order of variable registration
 
 	def unregister_var(self, name):
 		self.managed_vars.pop(name, None)
@@ -48,8 +51,10 @@ class OptkitCTestCase(OptkitTestCase):
 			self.free_var(name)
 
 	def free_all_vars(self):
-		for varname in self.managed_vars.keys():
-			print 'releasing unfreed C variable {}'.format(varname)
+		for i in xrange(len(self.var_stack)):
+			varname = self.var_stack.pop() # free in reverse of order added
+			if varname in self.managed_vars:
+				print 'releasing unfreed C variable {}'.format(varname)
 			self.free_var(varname)
 
 	# register device_reset() call so GPU is reset when tests error
