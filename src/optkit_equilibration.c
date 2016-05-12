@@ -33,11 +33,9 @@ ok_status regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 	norm_d = norm_e = 1;
 
 	OK_CHECK_ERR( err, matrix_memcpy_ma(A_out, A_in, ord) );
-
-	if (!err)
-		matrix_abs(A_out);
-		vector_set_all(d, kOne);
-		vector_scale(e, kZero);
+	OK_CHECK_ERR( err, matrix_abs(A_out) );
+	OK_CHECK_ERR( err, vector_set_all(d, kOne) );
+	OK_CHECK_ERR( err, vector_scale(e, kZero) );
 
 	/* optional argument ok_float pnorm? */
 	/*
@@ -235,7 +233,7 @@ ok_status operator_estimate_norm(void * linalg_handle, operator * A,
 	vector_calloc(&x, A->size2);
 	vector_calloc(&Ax, A->size1);
 
-	vector_uniform_rand(&x, kZero, kOne;
+	vector_uniform_rand(&x, kZero, kOne);
 
 	for (i = 0; i < kNormIter; ++i) {
 		norm_est_prev = *norm_est;

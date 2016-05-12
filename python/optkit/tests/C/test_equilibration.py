@@ -46,20 +46,23 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 									  gpu=gpu))
 		self.assertTrue(any(libs))
 
-	def equilibrate(self, lib, order, pyorder, A_test):
+	def equilibrate(self, lib, order, A_test):
 		m, n = A_test.shape
 		DIGITS = 7 - 2 * lib.FLOAT - 2 * lib.GPU
 		RTOL = 10**(-DIGITS)
 		ATOLM = RTOL * m**0.5
 
+		pyorder = 'C' if order == lib.enums.CblasRowMajor else 'F'
 		hdl = self.register_blas_handle(lib, 'hdl')
 
 		A, A_py, A_ptr = self.register_matrix(lib, m, n, order, 'A')
 		d, d_py, d_ptr = self.register_vector(lib, m, 'd')
 		e, e_py, e_ptr = self.register_vector(lib, n, 'e')
-		A_in_ptr = A_test.astype(lib.pyfloat).ctypes.data_as(lib.ok_float_p)
 
-		order_in = lib.enums.CblasRowMajor if A_test.flags.c_contiguous else \
+		A_in_py = A_test.astype(lib.pyfloat)
+		A_in_ptr = A_in_py.ctypes.data_as(lib.ok_float_p)
+
+		order_in = lib.enums.CblasRowMajor if A_in_py.flags.c_contiguous else \
 				   lib.enums.CblasColMajor
 
 		self.assertCall( lib.regularized_sinkhorn_knopp(
@@ -84,24 +87,22 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 				continue
 			self.register_exit(lib.ok_device_reset)
 
-			for rowmajor in (True, False):
-				order = lib.enums.CblasRowMajor if rowmajor else \
-						lib.enums.CblasColMajor
-				pyorder = 'C' if rowmajor else 'F'
+			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				print "regularized sinkhorn, CBLAS layout:", order
 
-				self.equilibrate(lib, order, pyorder, self.A_test)
+				self.equilibrate(lib, order, self.A_test)
 
 				A_rowmissing = np.zeros_like(self.A_test)
 				A_rowmissing += self.A_test
 				A_rowmissing[self.shape[0]/2, :] *= 0
 
-				self.equilibrate(lib, order, pyorder, A_rowmissing)
+				self.equilibrate(lib, order, A_rowmissing)
 
 				A_colmissing = np.zeros_like(self.A_test)
 				A_colmissing += self.A_test
 				A_colmissing[:, self.shape[1]/2] *= 0
 
-				self.equilibrate(lib, order, pyorder, A_colmissing)
+				self.equilibrate(lib, order, A_colmissing)
 				self.assertCall( lib.ok_device_reset() )
 
 	def test_operator_sinkhorn_knopp(self):
