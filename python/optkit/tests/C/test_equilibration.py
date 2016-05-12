@@ -221,13 +221,13 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 				A_, A, o = self.register_operator(lib, op_)
 
 				# estimate operator norm
-				normest = np.zeros(1).astype(lib.pyfloat)
-				normest_p = normest.ctypes.data_as(lib.ok_float_p)
+				normest_p = lib.ok_float_p()
+				normest_p.contents = lib.ok_float(0.)
 
 				pynorm = np.linalg.norm(A_)
 				self.assertCall( lib.operator_estimate_norm(hdl, o,
 					normest_p) )
-				cnorm = normest[0]
+				cnorm = normest_p.contents
 
 				if self.VERBOSE_TEST:
 					print "operator norm, Python: ", pynorm
