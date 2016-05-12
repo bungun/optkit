@@ -161,7 +161,7 @@ class OptkitCTestCase(OptkitTestCase):
 		return hdl
 
 	def register_fnvector(self, lib, size, name):
-		if 'function_vector_calloc' in lib.__dict__:
+		if not 'function_vector_calloc' in lib.__dict__:
 			raise ValueError('library {} cannot allocate function '
 							 'vector'.format(lib))
 
