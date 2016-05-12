@@ -84,7 +84,6 @@ class OperatorLibsTestCase(OptkitCTestCase):
 		self.assertVecEqual( x_, Atypx, ATOLN, RTOL )
 
 		self.free_vars('x', 'y')
-		self.assertCall( lib.ok_device_reset() )
 
 	def test_libs_exist(self):
 		libs = []
@@ -100,6 +99,7 @@ class OperatorLibsTestCase(OptkitCTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
+			self.register_exit(lib.ok_device_reset)
 
 			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
 				A, _, _, = self.register_matrix(lib, m, n, order, 'A')
@@ -177,13 +177,13 @@ class OperatorLibsTestCase(OptkitCTestCase):
 			TOL = 10**(-DIGITS)
 
 			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
-				hdl = self.register_blas_handle(lib, 'hdl')
+				hdl = self.register_sparse_handle(lib, 'hdl')
 
 				A, A_, A_sp, A_val, A_ind, A_ptr = self.register_sparsemat(
 						lib, self.A_test_sparse, order, 'A')
 
 				self.assertCall( lib.sp_matrix_memcpy_ma(hdl, A, A_val, A_ind,
-														 A_ptr, order) )
+														 A_ptr) )
 
 				o = lib.sparse_operator_alloc(A)
 				self.register_var('o', o.contents.data, o.contents.free)
