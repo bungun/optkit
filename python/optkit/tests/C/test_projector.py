@@ -195,13 +195,13 @@ class IndirectProjectorTestCase(OptkitCOperatorTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOLM = RTOL * m**0.5
 
-			hdl = self.register_blas_handle(lib, 'hdl')
-
 			# -----------------------------------------
 			# test projection for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				if self.VERBOSE_TEST:
 					print "indirect projection, operator type:", op_
+
+				hdl = self.register_blas_handle(lib, 'hdl')
 
 				# allocate inputs/outputs in python & C
 				x, x_, x_ptr = self.register_vector(lib, n, 'x')
@@ -293,11 +293,10 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 			RTOL = 10**(-DIGITS)
 			ATOLM = RTOL * m**0.5
 
-			hdl = self.register_blas_handle(lib, 'hdl')
-
 			# -----------------------------------------
 			# test projection for each matrix layout
 			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
+				hdl = self.register_blas_handle(lib, 'hdl')
 
 				x, x_, x_ptr = self.register_vector(lib, n, 'x')
 				y, y_, y_ptr = self.register_vector(lib, m, 'y')
