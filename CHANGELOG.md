@@ -10,6 +10,7 @@
 - TODO: license
 - TODO: cite POGS
 - TODO: append version numbers to .so, check version numbers when loading libs in python
+- TODO: add tests for vector_rand, transformable operators, operator export/import 
 
 ###v0.0.4 (beta)
 - Migrate tests to unittests

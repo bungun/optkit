@@ -1,8 +1,57 @@
+#include <curand_kernel.h>
 #include "optkit_defs_gpu.h"
 #include "optkit_thrust.hpp"
 #include "optkit_vector.h"
 
 /* CUDA helper methods */
+
+namespace optkit {
+
+static __global__ void setup_kernel(curandState * state, unsigned long seed)
+{
+	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+	curand_init(seed, tid, 0, &state[tid]);
+}
+
+static __global__ void generate(curandState * globalState, ok_float * data,
+	const size_t size, const size_t stride)
+{
+	int tid = blockIdx.x * blockDim.x + threadIdx.x, i;
+	#ifndef FLOAT
+	for (i = tid; i < size; i += gridDim.x * blockDim.x)
+		data[i * stride] = curand_uniform_double(globalState + tid);
+	#else
+	for (i = tid; i < size; i += gridDim.x * blockDim.x)
+		data[i * stride] = curand_uniform(globalState + tid);
+	#endif
+}
+
+} /* namespace optkit */
+
+static ok_status ok_rand_u01(ok_float * x, const size_t size,
+	const size_t stride)
+{
+	const size_t num_rand = size <= kMaxGridSize ? size : kMaxGridSize;
+	curandState * device_states;
+	int grid_dim;
+
+	OK_CHECK_PTR(x);
+	OK_RETURNIF_ERR( ok_alloc_gpu(device_states, num_rand *
+		sizeof(*device_states)) );
+
+	grid_dim = calc_grid_dim(num_rand);
+
+	optkit::setup_kernel<<<grid_dim, kBlockSize>>>(device_states, 0);
+	OK_RETURNIF_ERR( OK_STATUS_CUDA );
+
+	optkit::generate<<<grid_dim, kBlockSize>>>(device_states, x, size,
+		stride);
+	OK_RETURNIF_ERR( OK_STATUS_CUDA );
+
+	return OK_SCAN_ERR( ok_free_gpu(device_states) );
+}
+
+
 template<typename T>
 static __global__ void __vector_set(T * data, T val, size_t stride,
 	size_t size)
@@ -319,6 +368,14 @@ ok_status vector_min(const vector * v, ok_float * minval)
 
 ok_status vector_max(const vector * v, ok_float * maxval)
 	{ return vector_max_<ok_float>(v, (ok_float) -OK_FLOAT_MAX, maxval); }
+
+ok_status vector_uniform_rand(vector * v, const ok_float minval,
+	const ok_float maxval)
+{
+	OK_RETURNIF_ERR( ok_rand_u01(v->data, v->size, v->stride) );
+	OK_RETURNIF_ERR( vector_scale(v, maxval - minval) );
+	return OK_SCAN_ERR( vector_add_constant(v, minval) );
+}
 
 ok_status indvector_alloc(indvector * v, size_t n)
 	{ return vector_alloc_<size_t>(v, n); }

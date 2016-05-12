@@ -1,4 +1,27 @@
+#include <random>
 #include "optkit_vector.h"
+
+static ok_status ok_rand_u01(ok_float * x, const size_t size,
+	const size_t stride)
+{
+	OK_CHECK_PTR(x);
+	std::random_device rd;
+	#ifdef FLOAT
+	std::mt19937 generator(rd());
+	#else
+	std::mt19937_64 generator(rd());
+	#endif
+	std::uniform_real_distribution<ok_float> dist( (ok_float) 0,
+		(ok_float) 1);
+	uint i;
+
+	#ifdef _OPENMP
+	#pragma omp parallel for
+	#endif
+	for (i = 0; i < size; ++i)
+		x[i * stride] = dist(generator);
+	return OPTKIT_SUCCESS;
+}
 
 template<typename T>
 ok_status vector_alloc_(vector_<T> * v, size_t n)
@@ -438,6 +461,14 @@ ok_status vector_min(const vector * v, ok_float * minval)
 
 ok_status vector_max(const vector * v, ok_float * maxval)
 	{ return vector_max_<ok_float>(v, -OK_FLOAT_MAX, maxval); }
+
+ok_status vector_uniform_rand(vector * v, const ok_float minval,
+	const ok_float maxval)
+{
+	OK_RETURNIF_ERR( ok_rand_u01(v->data, v->size, v->stride) );
+	OK_RETURNIF_ERR( vector_scale(v, maxval - minval) );
+	return OK_SCAN_ERR( vector_add_constant(v, minval) );
+}
 
 ok_status indvector_alloc(indvector * v, size_t n)
 	{ return vector_alloc_<size_t>(v, n); }
