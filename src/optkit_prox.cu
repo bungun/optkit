@@ -2,22 +2,23 @@
 #include "optkit_defs_gpu.h"
 #include "optkit_thrust.hpp"
 
+namespace optkit {
+
 /* CUDA helper kernels */
 template<typename T>
-__global__ void __set_fn_vector(function_t_<T> * objs, const T a, const T b,
-	const T c, const T d, const T e, const enum OPTKIT_SCALAR_FUNCTION h,
-	uint n)
+__global__ static void set_fn_vector(function_t_<T> * objs, const T a,
+	const T b, const T c, const T d, const T e,
+	const enum OPTKIT_SCALAR_FUNCTION h, uint n)
 {
 	uint tid = blockIdx.x * blockDim.x + threadIdx.x;
-	for (uint i = tid; i < n; i += gridDim.x * blockDim.x)
-		objs[i] = (function_t){
-			.a = a,
-			.b = b,
-			.c = c,
-			.d = d,
-			.e = e,
-			.h = h
-		};
+	for (uint i = tid; i < n; i += gridDim.x * blockDim.x) {
+		objs[i].a = a;
+		objs[i].b = b;
+		objs[i].c = c;
+		objs[i].d = d;
+		objs[i].e = e;
+		objs[i].h = h;
+	}
 }
 
 /*
@@ -26,7 +27,7 @@ __global__ void __set_fn_vector(function_t_<T> * objs, const T a, const T b,
  */
 
 /* thrust::binary function defining elementwise prox evaluation*/
-typedef<typename T>
+template<typename T>
 struct ProxEvalF : thrust::binary_function<function_t_<T>, T, T>
 {
 	T rho;
@@ -36,12 +37,14 @@ struct ProxEvalF : thrust::binary_function<function_t_<T>, T, T>
 };
 
 /* thrust::binary function defining elementwise function evaluation*/
-typedef<typename T>
+template<typename T>
 struct FuncEvalF : thrust::binary_function<function_t_<T>, T, T>
 {
 	__device__ T operator()(const function_t_<T> & f_obj, T x)
 		{ return FuncEval<T>(&f_obj, x); }
 };
+
+} /* namespace optkit */
 
 /* vectorwise prox evaluation leveraging thrust::binary function */
 template<typename T>
@@ -61,13 +64,14 @@ void prox_eval_gpu(const function_t_<T> * f, T rho, const T * x_in,
 		thrust::device_pointer_cast(x_out + stride_out * n),
 		stride_out);
 	thrust::transform(thrust::device, f_strided.begin(), f_strided.end(),
-		x_in_strided.begin(), x_out_strided.begin(), ProxEvalF<T>(rho));
+		x_in_strided.begin(), x_out_strided.begin(),
+		optkit::ProxEvalF<T>(rho));
 }
 
 /* vectorwise function evaluation using thrust::binary_function */
 template<typename T>
-T function_eval_gpu(const function_t_<T> * f, const T * x, size_t stride,
-	size_t n, T * fn_val)
+T function_eval_gpu(function_t_<T> * const f, T * const x, size_t stride,
+	size_t n)
 {
 	strided_range<thrust::device_ptr<const function_t_<T> > > f_strided(
 		thrust::device_pointer_cast(f),
@@ -77,13 +81,13 @@ T function_eval_gpu(const function_t_<T> * f, const T * x, size_t stride,
 		thrust::device_pointer_cast(x + stride * n), stride);
 	return thrust::inner_product(f_strided.begin(), f_strided.end(),
 		x_strided.begin(), static_cast<T>(0), thrust::plus<T>(),
-		FuncEvalF<T>());
+		optkit::FuncEvalF<T>());
 }
 
-typedef<typename T>
+template<typename T>
 ok_status function_vector_alloc_(function_vector_<T> * f, size_t n)
 {
-	OK_CHECK_PTR(f)
+	OK_CHECK_PTR(f);
 	if (f->objectives)
 		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
 
@@ -91,22 +95,22 @@ ok_status function_vector_alloc_(function_vector_<T> * f, size_t n)
 	return ok_alloc_gpu(f->objectives, n * sizeof(*f->objectives));
 }
 
-typedef<typename T>
+template<typename T>
 ok_status function_vector_calloc_(function_vector_<T> * f, size_t n)
 {
 	uint grid_dim;
-	ok_status err = OPTKIT_SUCCESS:
 
 	OK_RETURNIF_ERR( function_vector_alloc(f, n) );
 
 	grid_dim = calc_grid_dim(n);
-	__set_fn_vector<<<grid_dim, kBlockSize>>>(f->objectives, 1, 0, 1, 0, 0,
-		FnZero, n);
+	optkit::set_fn_vector<<<grid_dim, kBlockSize>>>(f->objectives,
+		static_cast<T>(1), static_cast<T>(0), static_cast<T>(1),
+		static_cast<T>(0), static_cast<T>(0), FnZero, n);
 	cudaDeviceSynchronize();
 	return OK_STATUS_CUDA;
 }
 
-typedef<typename T>
+template<typename T>
 ok_status function_vector_free_(function_vector_<T> * f)
 {
 	OK_CHECK_FNVECTOR(f);
@@ -114,44 +118,43 @@ ok_status function_vector_free_(function_vector_<T> * f)
 	return ok_free_gpu(f->objectives);
 }
 
-typedef<typename T>
+template<typename T>
 ok_status function_vector_view_array_(function_vector_<T> * f,
 	function_t_<T> * h, size_t n)
 {
-	OK_CHECK_PTR(f)
-	OK_CHECK_PTR(h)
+	OK_CHECK_PTR(f);
+	OK_CHECK_PTR(h);
 	f->size = n;
 	f->objectives = h;
 	return OPTKIT_SUCCESS;
 }
 
-typedef<typename T>
+template<typename T>
 ok_status function_vector_memcpy_va_(function_vector_<T> * f,
 	function_t_<T> * h)
 {
 	return ok_memcpy_gpu(f->objectives, h, f->size * sizeof(function_t));
 }
 
-typedef<typename T>
+template<typename T>
 ok_status function_vector_memcpy_av_(function_t_<T> * h,
 	function_vector_<T> * f)
 {
 	return ok_memcpy_gpu(h, f->objectives, f->size * sizeof(function_t));
 }
 
-typedef<typename T>
+template<typename T>
 ok_status function_vector_mul_(function_vector_<T> * f, const vector_<T> * v)
 {
 	OK_CHECK_FNVECTOR(f);
 	OK_CHECK_VECTOR(v);
 
-	ok_status err = OPTKIT_SUCCESS;
 	vector el;
 
 	if (f->size != v->size)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	el.size = f->size
+	el.size = f->size;
 	el.stride = sizeof(function_t) / sizeof(T);
 
 	el.data = &(f->objectives->a);
@@ -164,12 +167,11 @@ ok_status function_vector_mul_(function_vector_<T> * f, const vector_<T> * v)
 	return OK_SCAN_ERR( vector_mul(&el, v) );
 }
 
-typedef<typename T>
+template<typename T>
 ok_status function_vector_div_(function_vector_<T> * f, const vector_<T> * v)
 {
 	OK_CHECK_FNVECTOR(f);
 	OK_CHECK_VECTOR(v);
-	ok_status err = OPTKIT_SUCCESS;
 	vector el;
 
 	el.size = f->size;
@@ -185,7 +187,7 @@ ok_status function_vector_div_(function_vector_<T> * f, const vector_<T> * v)
 	return OK_SCAN_ERR( vector_div(&el, v) );
 }
 
-typedef<typename T>
+template<typename T>
 ok_status function_vector_print_(function_vector_<T> * f)
 {
 	size_t i;
@@ -204,7 +206,7 @@ ok_status function_vector_print_(function_vector_<T> * f)
 	return err;
 }
 
-typedef<typename T>
+template<typename T>
 ok_status prox_eval_vector_(const function_vector_<T> * f, T rho,
 	const vector_<T> * x_in, vector_<T> * x_out)
 {
@@ -217,10 +219,10 @@ ok_status prox_eval_vector_(const function_vector_<T> * f, T rho,
 		return OK_SCAN_ERR( OPTKIT_ERROR_DOMAIN );
 	prox_eval_gpu<T>(f->objectives, rho, x_in->data, x_in->stride,
 		x_out->data, x_out->stride, f->size);
-	return OK_STATUS_CUDA:
+	return OK_STATUS_CUDA;
 }
 
-typedef<typename T>
+template<typename T>
 ok_status function_eval_vector_(const function_vector_<T> * f,
 	const vector_<T> * x, T * fn_val)
 {
@@ -232,7 +234,7 @@ ok_status function_eval_vector_(const function_vector_<T> * f,
 
 	*fn_val = function_eval_gpu<T>(f->objectives, x->data, x->stride,
 		f->size);
-	return OK_STATUS_CUDA:
+	return OK_STATUS_CUDA;
 }
 
 #ifdef __cplusplus
