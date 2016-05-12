@@ -99,8 +99,8 @@ ok_status sp_matrix_calloc_(sp_matrix_<T, I> * A, size_t m, size_t n,
 	OK_RETURNIF_ERR( (sp_matrix_alloc_<T, I>(A, m, n, nnz, order)) );
 	OK_RETURNIF_ERR( __set_all<T>(A->val, static_cast<T>(0), 1, 2 * nnz) );
 	OK_RETURNIF_ERR( __set_all<I>(A->ind, static_cast<I>(0), 1, 2 * nnz) );
-	return __set_all<I>(A->ptr, static_cast<I>(0), 1,
-		2 + A->size1 + A->size2);
+	return OK_SCAN_ERR( __set_all<I>(A->ptr, static_cast<I>(0), 1,
+		2 + A->size1 + A->size2) );
 }
 
 template <typename T, typename I>
@@ -128,8 +128,9 @@ ok_status sp_matrix_memcpy_mm_(sp_matrix_<T, I> * A, const sp_matrix_<T, I> * B)
 		2 * A->nnz * sizeof(T)) );
 	OK_RETURNIF_ERR( ok_memcpy_gpu(A->ind, B->ind,
 		2 * A->nnz * sizeof(I)) );
-	return ok_memcpy_gpu(A->ptr, B->ptr,
-		(2 + A->size1 + A->size2) * sizeof(I));
+	return OK_SCAN_ERR(
+		ok_memcpy_gpu(A->ptr, B->ptr,
+			(2 + A->size1 + A->size2) * sizeof(I)) );
 }
 
 template <typename T, typename I>
@@ -138,7 +139,8 @@ ok_status sp_matrix_memcpy_vals_mm_(sp_matrix_<T, I> * A,
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_SPARSEMAT(B);
-	return ok_memcpy_gpu(A->val, B->val, 2 * A->nnz * sizeof(T));
+	return OK_SCAN_ERR(
+		ok_memcpy_gpu(A->val, B->val, 2 * A->nnz * sizeof(T)) );
 }
 
 #ifdef __cplusplus
@@ -206,13 +208,12 @@ ok_status sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A,
 	if (!val || !ind || !ptr)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
-	OK_RETURNIF_ERR( ok_memcpy_gpu(A->val, val,
-		A->nnz * sizeof(ok_float)) );
-	OK_RETURNIF_ERR( ok_memcpy_gpu(A->ind, ind,
-		A->nnz * sizeof(ok_int)) );
-	OK_RETURNIF_ERR( ok_memcpy_gpu(A->ptr, ptr,
-		A->ptrlen * sizeof(ok_int)) );
-	return __transpose_inplace(sparse_handle, A, Forward2Adjoint);
+	OK_RETURNIF_ERR( ok_memcpy_gpu(A->val, val, A->nnz * sizeof(*val)) );
+	OK_RETURNIF_ERR( ok_memcpy_gpu(A->ind, ind, A->nnz * sizeof(*ind)) );
+	OK_RETURNIF_ERR( ok_memcpy_gpu(A->ptr, ptr, A->ptrlen * sizeof(*ptr)) );
+
+	return OK_SCAN_ERR(
+		__transpose_inplace(sparse_handle, A, Forward2Adjoint) );
 }
 
 ok_status sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
@@ -222,12 +223,10 @@ ok_status sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
 	if (!val || !ind || !ptr)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
-	OK_RETURNIF_ERR(
-		ok_memcpy_gpu(val, A->val, A->nnz * sizeof(ok_float)) );
-	OK_RETURNIF_ERR(
-		ok_memcpy_gpu(ind, A->ind, A->nnz * sizeof(ok_int)) );
+	OK_RETURNIF_ERR(ok_memcpy_gpu(val, A->val, A->nnz * sizeof(*val)) );
+	OK_RETURNIF_ERR(ok_memcpy_gpu(ind, A->ind, A->nnz * sizeof(*ind)) );
 	return OK_SCAN_ERR(
-		ok_memcpy_gpu(ptr, A->ptr, A->ptrlen * sizeof(ok_int)) );
+		ok_memcpy_gpu(ptr, A->ptr, A->ptrlen * sizeof(*ptr)) );
 }
 
 ok_status sp_matrix_memcpy_vals_mm(sp_matrix * A, const sp_matrix * B)
@@ -241,8 +240,7 @@ ok_status sp_matrix_memcpy_vals_ma(void * sparse_handle, sp_matrix * A,
 	OK_CHECK_PTR(val);
 	OK_CHECK_PTR(sparse_handle);
 
-	OK_RETURNIF_ERR( ok_memcpy_gpu(A->val, val,
-		A->nnz * sizeof(ok_float)) );
+	OK_RETURNIF_ERR( ok_memcpy_gpu(A->val, val, A->nnz * sizeof(*val)) );
 	return OK_SCAN_ERR(
 		__transpose_inplace(sparse_handle, A, Forward2Adjoint) );
 }
@@ -252,7 +250,7 @@ ok_status sp_matrix_memcpy_vals_am(ok_float * val, const sp_matrix * A)
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_PTR(val);
 	return OK_SCAN_ERR(
-		ok_memcpy_gpu(val, A->val, A->nnz * sizeof(ok_float)) );
+		ok_memcpy_gpu(val, A->val, A->nnz * sizeof(*val)) );
 }
 
 ok_status sp_matrix_abs(sp_matrix * A)
