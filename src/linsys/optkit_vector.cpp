@@ -11,8 +11,7 @@ static ok_status ok_rand_u01(ok_float * x, const size_t size,
 	#else
 	std::mt19937_64 generator(rd());
 	#endif
-	std::uniform_real_distribution<ok_float> dist( (ok_float) 0,
-		(ok_float) 1);
+	std::uniform_real_distribution<ok_float> dist(kZero, kOne);
 	uint i;
 
 	#ifdef _OPENMP

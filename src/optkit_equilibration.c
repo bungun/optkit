@@ -114,7 +114,7 @@ ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 	ok_float norm_d, norm_e;
 	ok_status err = OPTKIT_SUCCESS;
 	size_t k;
-	int blas_handle_provided = 1;
+	int blas_handle_provided = (linalg_handle != OK_NULL);
 	vector d_diff, e_diff;
 	d_diff.data = OK_NULL;
 	e_diff.data = OK_NULL;
@@ -122,10 +122,8 @@ ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 	if (A->size1 != d->size || A->size2 != e->size)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	if (!linalg_handle) {
+	if (!blas_handle_provided)
 		OK_RETURNIF_ERR( blas_make_handle(&linalg_handle) );
-		blas_handle_provided = 0;
-	}
 
 	if (A->kind == OkOperatorDense) {
 		transform = dense_operator_to_transformable(A);
@@ -238,7 +236,7 @@ ok_status operator_estimate_norm(void * linalg_handle, operator * A,
 	vector_calloc(&x, A->size2);
 	vector_calloc(&Ax, A->size1);
 
-	OK_RETURNIF_ERR( ok_rand(x.data, x.size) );
+	vector_uniform_rand(&x, kZero, kOne;
 
 	for (i = 0; i < kNormIter; ++i) {
 		norm_est_prev = *norm_est;
