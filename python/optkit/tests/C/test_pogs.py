@@ -317,7 +317,9 @@ class PogsTestCase(OptkitCPogsTestCase):
 				self.free_var('solver')
 
 				if info.converged:
-					self.assert_pogs_convergence(A, settings, output)
+					self.assert_pogs_convergence(
+							A, settings, output, gpu=gpu,
+							single_precision=single_precision)
 
 				self.free_vars('f', 'g')
 				self.assertCall( lib.ok_device_reset() )
@@ -340,13 +342,16 @@ class PogsTestCase(OptkitCPogsTestCase):
 
 				# i/o
 				output, info, settings = self.gen_pogs_params(lib, m, n)
+				settings.verbose = 1
 
 				# pogs
 				self.assertCall( lib.pogs(A_ptr, f, g, settings, info,
 										  output.ptr, order, 0) )
 
 				if info.converged:
-					self.assert_pogs_convergence(A, settings, output)
+					self.assert_pogs_convergence(
+							A, settings, output, gpu=gpu,
+							single_precision=single_precision)
 
 				self.free_vars('f', 'g')
 				self.assertCall( lib.ok_device_reset() )

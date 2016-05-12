@@ -345,7 +345,8 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 			self.assertVecEqual( rho_after * zt_after,
 									   rho_before * zt_before, ATOLMN, RTOL )
 
-	def assert_pogs_convergence(self, A, settings, output):
+	def assert_pogs_convergence(self, A, settings, output, gpu=False,
+								single_precision=False):
 		if not isinstance(A, ndarray):
 			raise TypeError('argument "A" must be of type {}'.format(ndarray))
 
@@ -354,8 +355,11 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		atolm = settings.abstol * (m**0.5)
 		atoln = settings.abstol * (n**0.5)
 
-		self.assertVecEqual(A.dot(output.x), output.y, atolm, 10 * rtol)
-		self.assertVecEqual(A.T.dot(output.nu), -output.mu, atoln, 20*rtol)
+		P = 10 * 1.5**int(single_precision) * 1.5**int(gpu);
+		D = 20 * 1.5**int(single_precision) * 1.5**int(gpu);
+
+		self.assertVecEqual(A.dot(output.x), output.y, atolm, P * rtol)
+		self.assertVecEqual(A.T.dot(output.nu), -output.mu, atoln, D * rtol)
 
 	def assert_pogs_unscaling(self, lib, output, solver, local_vars):
 		"""pogs unscaling test
