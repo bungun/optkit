@@ -121,7 +121,7 @@ void * dense_operator_export(operator * A)
 
 	if (!err) {
 		op_data = (dense_operator_data *) A->data;
-		export = malloc(op_data->A->size1 * op_data->A->size2 *
+		ok_alloc(export, op_data->A->size1 * op_data->A->size2 *
 			sizeof(*export));
 		matrix_memcpy_am(export, op_data->A, op_data->A->order);
 	}

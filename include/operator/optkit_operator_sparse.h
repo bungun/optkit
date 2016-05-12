@@ -10,7 +10,6 @@ extern "C" {
 #endif
 
 typedef struct sparse_operator_data{
-	void * dense_handle;
 	void * sparse_handle;
 	sp_matrix * A;
 } sparse_operator_data;

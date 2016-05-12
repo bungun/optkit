@@ -20,8 +20,6 @@ void * sparse_operator_data_alloc(sp_matrix * A)
 	if (!err) {
 		ok_alloc(op_data, sizeof(*op_data));
 		OK_CHECK_ERR( err,
-			blas_make_handle(&(op_data->sparse_handle)) );
-		OK_CHECK_ERR( err,
 			sp_make_handle(&(op_data->sparse_handle)) );
 		op_data->A = A;
 		if (err) {
@@ -37,7 +35,6 @@ ok_status sparse_operator_data_free(void * data)
 	sparse_operator_data * op_data = (sparse_operator_data *) data;
 	OK_CHECK_PTR( op_data );
 	OK_RETURNIF_ERR( sp_destroy_handle(op_data->sparse_handle) );
-	OK_RETURNIF_ERR( blas_destroy_handle(op_data->sparse_handle) );
 	ok_free(op_data);
 	return OPTKIT_SUCCESS;
 }
@@ -131,10 +128,10 @@ void * sparse_operator_export(operator * A)
 
 	if (!err) {
 		op_data = (sparse_operator_data *) A->data;
-		export = malloc(sizeof(*export));
-		export->val = malloc(op_data->A->nnz * sizeof(ok_float));
-		export->ind = malloc(op_data->A->nnz * sizeof(ok_int));
-		export->ptr = malloc(op_data->A->ptrlen * sizeof(ok_int));
+		ok_alloc(export, sizeof(*export));
+		ok_alloc(export->val, sizeof(*export->val));
+		ok_alloc(export->ind, sizeof(*export->ind));
+		ok_alloc(export->ptr, sizeof(*export->ptr));
 		sp_matrix_memcpy_am(export->val, export->ind, export->ptr,
 			op_data->A);
 	}
