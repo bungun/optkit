@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-struct sparse_operator_export {
+struct sparse_operator_exporter {
 	ok_float * val;
 	ok_int * ind, * ptr;
 };
@@ -124,14 +124,14 @@ void * sparse_operator_export(operator * A)
 {
 	ok_status err = sparse_operator_typecheck(A, "export");
 	sparse_operator_data * op_data = OK_NULL;
-	struct sparse_operator_export * export = OK_NULL;
+	struct sparse_operator_exporter * export = OK_NULL;
 
 	if (!err) {
 		op_data = (sparse_operator_data *) A->data;
 		ok_alloc(export, sizeof(*export));
-		ok_alloc(export->val, sizeof(*export->val));
-		ok_alloc(export->ind, sizeof(*export->ind));
-		ok_alloc(export->ptr, sizeof(*export->ptr));
+		ok_alloc(export->val, op_data->A->nnz * sizeof(*export->val));
+		ok_alloc(export->ind, op_data->A->nnz * sizeof(*export->ind));
+		ok_alloc(export->ptr, op_data->A->ptrlen * sizeof(*export->ptr));
 		sp_matrix_memcpy_am(export->val, export->ind, export->ptr,
 			op_data->A);
 	}
@@ -142,17 +142,17 @@ void * sparse_operator_import(operator * A, void * data)
 {
 	ok_status err = sparse_operator_typecheck(A, "import");
 	sparse_operator_data * op_data = OK_NULL;
-	struct sparse_operator_export * import = OK_NULL;
+	struct sparse_operator_exporter * import = OK_NULL;
 
 	if (!err && data) {
 		op_data = (sparse_operator_data *) A->data;
-		import = (struct sparse_operator_export *) data;
+		import = (struct sparse_operator_exporter *) data;
 		sp_matrix_memcpy_ma(op_data->sparse_handle, op_data->A,
 			import->val, import->ind, import->ptr);
 
 		ok_free(import->val);
-		ok_free(import->val);
-		ok_free(import->val);
+		ok_free(import->ind);
+		ok_free(import->ptr);
 		ok_free(import);
 		data = OK_NULL;
 	}
