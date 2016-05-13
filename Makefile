@@ -128,6 +128,8 @@ OPERATOR_OBJ=$(patsubst $(OPSRC)%.c,$(OPOUT)%_$(LIBCONFIG).o,$(OPERATOR_SRC))
 CLUSTER_CPU_SRC=$(CLUSRC)clustering.c $(CLUSRC)upsampling_vector.c
 CLUSTER_GPU_SRC=$(CLUSRC)clustering.cu $(CLUSRC)upsampling_vector.cu
 CLUSTER_OBJ=$(patsubst $(CLUSRC)%.c,$(CLUOUT)%_$(LIBCONFIG).o,$(CLUSTER_CPU_SRC))
+CLUSTER_OBJ+=$(CLUOUT)upsampling_vector_common_$(LIBCONFIG).o
+CLUSTER_OBJ+=$(CLUOUT)clustering_common_$(LIBCONFIG).o
 
 CG_OBJ=$(PREFIX_OUT)cg_$(LIBCONFIG).o
 PROJ_OBJ=$(PREFIX_OUT)projector_$(LIBCONFIG).o
@@ -150,7 +152,7 @@ PROJ_STATIC_DEPS=$(CG_STATIC_DEPS) $(PROJ_OBJ)
 POGS_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ) $(PROX_OBJ) $(EQUIL_DENSE_OBJ) 
 POGS_STATIC_DEPS+=$(PROJ_DIRECT_OBJ) $(POGS_OBJ) 
 POGS_ABSTRACT_STATIC_DEPS=$(EQUIL_STATIC_DEPS) $(CG_OBJ) $(PROJ_OBJ) $(PROX_OBJ)
-POGS_ABSTRACT_STATIC_DEPS+= $(POGS_ABSTR_OBJ)
+POGS_ABSTRACT_STATIC_DEPS+=$(POGS_ABSTR_OBJ)
 
 POGS_DENSE_LIB_DEPS=equil_dense projector_direct $(DENSE_TARG) $(PROX_TARG)
 POGS_SPARSE_LIB_DEPS=operator cg equil projector $(LINSYS_TARGS) $(PROX_TARG)
@@ -275,7 +277,7 @@ cg: $(SRC)optkit_cg.c
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) $< -c -o $(CG_OBJ)
 
-cpu_cluster: $(CLUSTER_CPU_SRC)
+cpu_cluster: $(CLUSTER_CPU_SRC) cluster_common
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)clustering/
 	$(CC) $(CCFLAGS) $(CLUSRC)upsampling_vector.c -c -o \
@@ -283,13 +285,21 @@ cpu_cluster: $(CLUSTER_CPU_SRC)
 	$(CC) $(CCFLAGS) $(CLUSRC)clustering.c -c -o \
 	$(CLUOUT)clustering_$(LIBCONFIG).o
 
-gpu_cluster: $(CLUSTER_GPU_SRC)
+gpu_cluster: $(CLUSTER_GPU_SRC) cluster_common
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)clustering/
 	$(CUXX) $(CUXXFLAGS) $(CLUSRC)upsampling_vector.cu -c -o \
 	$(CLUOUT)upsampling_vector_$(LIBCONFIG).o
 	$(CUXX) $(CUXXFLAGS) $(CLUSRC)clustering.cu -c -o \
 	$(CLUOUT)clustering_$(LIBCONFIG).o
+
+cluster_common: $(CLUSRC)upsampling_vector_common.c $(CLUSRC)clustering_common.c
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)clustering/
+	$(CC) $(CCFLAGS) $(CLUSRC)upsampling_vector_common.c -c -o \
+	$(CLUOUT)upsampling_vector_common_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) $(CLUSRC)clustering_common.c -c -o \
+	$(CLUOUT)clustering_common_$(LIBCONFIG).o
 
 cpu_prox: $(SRC)optkit_prox.cpp
 	mkdir -p $(OUT)

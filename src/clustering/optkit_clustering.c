@@ -13,7 +13,7 @@ const size_t kBlockSize = 128;
  *
  * tally the number of reassignments.
  */
-static ok_status assign_clusters_l2(matrix * A, matrix * C,
+ok_status assign_clusters_l2(matrix * A, matrix * C,
 	upsamplingvec * a2c, cluster_aid * h)
 {
 	OK_CHECK_MATRIX(A);
@@ -69,7 +69,7 @@ static ok_float __dist_lInf_A_minus_UC_i(const ok_float * A,
  * tally the number of reassignments.
  *
  */
-static ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
+ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	upsamplingvec * a2c, cluster_aid * h, ok_float maxdist)
 {
 	ok_status err = OPTKIT_SUCCESS;

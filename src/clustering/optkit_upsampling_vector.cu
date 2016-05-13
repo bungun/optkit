@@ -1,4 +1,4 @@
-	#include "optkit_defs_gpu.h"
+#include "optkit_defs_gpu.h"
 #include "optkit_upsampling_vector.h"
 
 inline __device__ ok_float& __get(ok_float * data, uint i, uint j,
@@ -10,76 +10,6 @@ inline __device__ ok_float& __get(ok_float * data, uint i, uint j,
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-static inline int upsampling_dims_compatible(const enum CBLAS_TRANSPOSE tU,
-	const upsamplingvec * u, const size_t input_dim1,
-	const size_t input_dim2, const size_t output_dim1,
-	const size_t output_dim2)
-{
-	if (tU == CblasTrans)
-		return (input_dim2 != output_dim2) &&
-			((u->size2 <= output_dim1) && (u->size1 == input_dim1));
-	else
-		return (input_dim2 != output_dim2) &&
-			((u->size1 == output_dim1) && (u->size2 <= input_dim1));
-}
-
-ok_status upsamplingvec_alloc(upsamplingvec * u, size_t size1, size_t size2)
-{
-	if (!u)
-		return OPTKIT_ERROR_UNALLOCATED;
-	else if (u->indices)
-		return OPTKIT_ERROR_OVERWRITE;
-	memset(u, 0, sizeof(*u));
-	u->size1 = size1;
-	u->size2 = size2;
-	OK_RETURNIF_ERR( indvector_calloc(&u->vec, size1) );
-	u->indices = u->vec.data;
-	u->stride = u->vec.stride;
-	return OPTKIT_SUCCESS;
-}
-
-ok_status upsamplingvec_free(upsamplingvec * u)
-{
-	OK_CHECK_UPSAMPLINGVEC(u);
-	ok_free(u->vec.data);
-	memset(u, 0, sizeof(*u));
-	return OPTKIT_SUCCESS;
-}
-
-ok_status upsamplingvec_check_bounds(const upsamplingvec * u)
-{
-	size_t idx;
-	OK_CHECK_UPSAMPLINGVEC(u);
-	OK_RETURNIF_ERR( indvector_max(&u->vec, &idx) );
-	if (idx >= u->size2)
-		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
-	else
-		return OPTKIT_SUCCESS;
-}
-
-ok_status upsamplingvec_update_size(upsamplingvec * u)
-{
-	OK_CHECK_UPSAMPLINGVEC(u);
-	ok_status err = indvector_max(&u->vec, &u->size2);
-	++u->size2;
-	return err;
-}
-
-
-ok_status upsamplingvec_subvector(upsamplingvec * usub, upsamplingvec * u,
-	size_t offset1, size_t length1, size_t size2)
-{
-	if (!u || !u->indices || !usub)
-		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
-
-	OK_RETURNIF_ERR( indvector_subvector(&usub->vec, &u->vec, offset1,
-		length1) );
-	usub->indices = usub->vec.data;
-	usub->size1 = length1;
-	usub->size2 = size2;
-	return OPTKIT_SUCCESS;
-}
 
 static __global__ void __uvec_mul_matrix(const ok_float alpha,
 	ok_float * M_in, size_t * uvec, ok_float * M_out,
@@ -126,20 +56,21 @@ ok_status upsamplingvec_mul_matrix(const enum CBLAS_TRANSPOSE transU,
 	OK_CHECK_MATRIX(M_in);
 	OK_CHECK_MATRIX(M_out);
 
+	const int transpose = transU == CblasTrans;
 	size_t dim_in1 = (transI == CblasNoTrans) ? M_in->size1 : M_in->size2;
 	size_t dim_in2 = (transI == CblasNoTrans) ? M_in->size2 : M_in->size1;
 	size_t dim_out1 = (transO == CblasNoTrans) ? M_out->size1 : M_out->size2;
 	size_t dim_out2 = (transO == CblasNoTrans) ? M_out->size2 : M_out->size1;
 	uint row_stride_in, row_stride_out, col_stride_in, col_stride_out;
 
-	uint grid_dim_x = (transU == CblasNoTrans) ? calc_grid_dim(dim_out1) :
+	uint grid_dim_x = (transpose) ? calc_grid_dim(dim_out1) :
 		calc_grid_dim(dim_in1);
-	uint grid_dim_y = (transU == CblasNoTrans) ? calc_grid_dim(dim_out2) :
+	uint grid_dim_y = (transpose) ? calc_grid_dim(dim_out2) :
 		calc_grid_dim(dim_in2);
 	dim3 grid_dim(grid_dim_x, grid_dim_y, 1u);
 	dim3 block_dim(kBlockSize2D, kBlockSize2D, 1u);
 
-	if (!upsampling_dims_compatible(transU, u, dim_in1, dim_in2,
+	if (!upsampling_dims_compatible(transpose, u, dim_in1, dim_in2,
 		dim_out1, dim_out2))
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
@@ -189,7 +120,7 @@ ok_status upsamplingvec_count(const upsamplingvec * u, vector * counts)
 	if (u->size2 > counts->size)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	OK_RETURNIF_ERR( err, vector_scale(counts, kZero) );
+	OK_RETURNIF_ERR( vector_scale(counts, kZero) );
 
 	__upsampling_count<<<grid_dim, kBlockSize>>>(u->indices, counts->data,
 		u->stride, counts->stride, u->size1);
