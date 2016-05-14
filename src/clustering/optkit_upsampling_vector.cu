@@ -49,7 +49,6 @@ ok_status upsamplingvec_mul_matrix(void * linalg_handle,
 	ptr_stride_out = (stride_out == 1) ? M_out->ld : 1;
 
 	OK_RETURNIF_ERR( matrix_scale(M_out, beta) );
-	OK_RETURNIF_ERR( matrix_scale(M_out, beta) );
 
 	if (!transpose)
 		for (i = 0; i < dim_out1 && !err; ++i) {
