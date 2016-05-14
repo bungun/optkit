@@ -182,9 +182,11 @@ ok_status cluster(matrix * A, matrix * C, upsamplingvec * a2c,
 
 	/* finalize cluster assignements */
 	if (maxdist == OK_INFINITY)
-		return assign_clusters_l2(A, C, a2c, h);
+		return OK_SCAN_ERR(
+			assign_clusters_l2(A, C, a2c, h) );
 	else
-		return assign_clusters_l2_lInf_cap(A, C, a2c, h, maxdist);
+		return OK_SCAN_ERR(
+			assign_clusters_l2_lInf_cap(A, C, a2c, h, maxdist) );
 }
 
 /*
@@ -193,14 +195,15 @@ ok_status cluster(matrix * A, matrix * C, upsamplingvec * a2c,
  *	C = diag(U'1)^{-1} * U'A
  */
 ok_status calculate_centroids(matrix * A, matrix * C, upsamplingvec * a2c,
-	vector * counts, cluster_aid * h)
+	vector * counts, cluster_aid * helper)
 {
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_MATRIX(C);
 	OK_CHECK_UPSAMPLINGVEC(a2c);
 	OK_CHECK_VECTOR(counts);
+	OK_CHECK_PTR(helper);
 
-	OK_RETURNIF_ERR( upsamplingvec_mul_matrix(h->hdl, CblasTrans,
+	OK_RETURNIF_ERR( upsamplingvec_mul_matrix(helper->hdl, CblasTrans,
 		CblasNoTrans, CblasNoTrans, kOne, a2c, A, kZero, C) );
 	OK_RETURNIF_ERR( upsamplingvec_count(a2c, counts) );
 	OK_RETURNIF_ERR( vector_safe_recip(counts) );
@@ -269,7 +272,7 @@ ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
 	}
 
 	/* ensure C is initialized */
-	OK_CHECK_ERR( err, calculate_centroids(A, C, a2c, counts) );
+	OK_CHECK_ERR( err, calculate_centroids(A, C, a2c, counts, h) );
 
 	if (!err && verbose)
 		printf("\nstarting k-means on %zu vectors and %zu centroids\n",
@@ -281,7 +284,7 @@ ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
 		printf("%s %zu %s %f\n", "ITER", iter, "DISTANCE TOLERANCE",
 			tol);
 		OK_CHECK_ERR( err, cluster(A, C, a2c, h, tol) );
-		OK_CHECK_ERR( err, calculate_centroids(A, C, a2c, counts) );
+		OK_CHECK_ERR( err, calculate_centroids(A, C, a2c, counts, h) );
 		if (verbose)
 			printf(iterfmt, iter, h->reassigned, change_abstol);
 		if (h->reassigned < change_abstol)

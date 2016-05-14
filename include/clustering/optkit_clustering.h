@@ -69,7 +69,7 @@ ok_status kmeans_work_extract(ok_float * C,
 ok_status cluster(matrix * A, matrix * C, upsamplingvec * a2c,
 	cluster_aid * helper, ok_float maxdist);
 ok_status calculate_centroids(matrix * A, matrix * C, upsamplingvec * a2c,
-	vector * counts);
+	vector * counts, cluster_aid * helper);
 
 static void get_distance_tolerance(ok_float *tol, const ok_float * maxA,
 	const ok_float * reltol, const size_t * iter, const size_t * maxiter);

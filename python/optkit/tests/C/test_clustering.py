@@ -734,7 +734,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			kvec, kvec_py, kvec_ptr = self.register_vector(lib, k, 'kvec')
 
 			# C: build centroids
-			self.assertCall( lib.calculate_centroids(A, C, a2c, counts) )
+			h = self.register_cluster_aid(lib, m, k, orderA, 'h')
+			self.assertCall( lib.calculate_centroids(A, C, a2c, counts, h) )
 
 			# Py: build centroids
 			self.upsamplingvec_mul('T', 'N', 'N', 1, a2c_py, A_py, 0, C_py)
@@ -757,6 +758,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			# compare C vs. Py
 			self.assertVecEqual( kvec_py, Cnvec, ATOLK, RTOL)
 
+			self.assertCall( lib.cluster_aid_free(h) )
+			self.unregister_var('h')
 			self.free_vars('A', 'C', 'a2c', 'counts', 'nvec', 'kvec', 'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
