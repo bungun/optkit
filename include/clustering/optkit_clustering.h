@@ -46,7 +46,6 @@ ok_status assign_clusters_l2_lInf_cap(matrix * A,
 	matrix * C, upsamplingvec * a2c, cluster_aid * h, ok_float maxdist);
 
 /* COMMON IMPLEMENTATION */
-
 ok_status cluster_aid_alloc(cluster_aid * h, size_t size_A, size_t size_C,
 	enum CBLAS_ORDER order);
 ok_status cluster_aid_free(cluster_aid * h);

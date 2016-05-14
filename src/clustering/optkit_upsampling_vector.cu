@@ -20,7 +20,7 @@ ok_status upsamplingvec_mul_matrix(void * linalg_handle,
 	OK_CHECK_MATRIX(M_in);
 	OK_CHECK_MATRIX(M_out);
 
-	ok_status err = OPTKIT_SUCCESS:
+	ok_status err = OPTKIT_SUCCESS;
 	size_t i, dim_in1, dim_in2, dim_out1, dim_out2;
 	size_t ptr_stride_in, ptr_stride_out;
 	int stride_in, stride_out;
@@ -66,9 +66,9 @@ ok_status upsamplingvec_mul_matrix(void * linalg_handle,
 				cublasSetStream(
 					*(cublasHandle_t *) linalg_handle,
 					s) );
-			OK_CHECK_CUBLAS(
+			OK_CHECK_CUBLAS( err,
 				CUBLAS(axpy)(*(cublasHandle_t *) linalg_handle,
-					dim_in2, alpha,
+					dim_in2, &alpha,
 					M_in->data + row_ * ptr_stride_in,
 					stride_in,
 					M_out->data + i * ptr_stride_out,
@@ -93,7 +93,7 @@ ok_status upsamplingvec_mul_matrix(void * linalg_handle,
 					s) );
 			OK_CHECK_CUBLAS( err,
 				CUBLAS(axpy)(*(cublasHandle_t *) linalg_handle,
-					dim_in2, alpha,
+					dim_in2, &alpha,
 					M_in->data + i * ptr_stride_in,
 					stride_in,
 					M_out->data + row_ * ptr_stride_out,
@@ -103,7 +103,7 @@ ok_status upsamplingvec_mul_matrix(void * linalg_handle,
 		}
 
 	cudaDeviceSynchronize();
-	return OK_MAX_ERR( err, OK_CHECK_CUDA );
+	return err ? err : OK_STATUS_CUDA;
 }
 
 static __global__ void __upsampling_count(size_t * indices,

@@ -27,8 +27,8 @@ static __global__ void __assign_clusters_l2(size_t * a2c_curr,
 	}
 }
 
-ok_status assign_clusters_l2(matrix * A, matrix * C,
-	upsamplingvec * a2c, cluster_aid * h)
+ok_status assign_clusters_l2(matrix * A, matrix * C, upsamplingvec * a2c,
+	cluster_aid * h)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	size_t i, * reassigned;
@@ -134,13 +134,12 @@ static __global__ void __assign_clusters_l2_lInf_cap(size_t * a2c_curr,
  * tally the number of reassignments.
  *
  */
-ok_status assign_clusters_l2_lInf_cap(void * linalg_handle, matrix * A,
-	matrix * C, upsamplingvec * a2c, cluster_aid * h, ok_float maxdist)
+ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
+	upsamplingvec * a2c, cluster_aid * h, ok_float maxdist)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	uint i, grid_dim;
 
-	OK_CHECK_PTR(linalg_handle);
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_MATRIX(C);
 	OK_CHECK_UPSAMPLINGVEC(a2c);
