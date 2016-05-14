@@ -193,14 +193,14 @@ ok_status cluster(matrix * A, matrix * C, upsamplingvec * a2c,
  *	C = diag(U'1)^{-1} * U'A
  */
 ok_status calculate_centroids(matrix * A, matrix * C, upsamplingvec * a2c,
-	vector * counts)
+	vector * counts, cluster_aid * h)
 {
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_MATRIX(C);
 	OK_CHECK_UPSAMPLINGVEC(a2c);
 	OK_CHECK_VECTOR(counts);
 
-	OK_RETURNIF_ERR( upsamplingvec_mul_matrix(CblasTrans,
+	OK_RETURNIF_ERR( upsamplingvec_mul_matrix(h->hdl, CblasTrans,
 		CblasNoTrans, CblasNoTrans, kOne, a2c, A, kZero, C) );
 	OK_RETURNIF_ERR( upsamplingvec_count(a2c, counts) );
 	OK_RETURNIF_ERR( vector_safe_recip(counts) );

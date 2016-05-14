@@ -32,8 +32,22 @@ const unsigned int kMaxGridSize = 65535u;
 #define OK_SCAN_CUBLAS(call) ok_cublas_status(call, __FILE__, __LINE__, \
 		__func__)
 
+#define OK_CHECK_CUBLAS(err, call) \
+	do { \
+		if (!err) \
+			err = ok_cublas_status(call, __FILE__, __LINE__, \
+				__func__); \
+	} while (0)
+
 #define OK_SCAN_CUSPARSE(call) ok_cusparse_status(call, __FILE__, __LINE__, \
 		__func__)
+
+#define OK_CHECK_CUSPARSE(err, call) \
+	do { \
+		if (!err) \
+			err = ok_cusparse_status(call, __FILE__, __LINE__, \
+				__func__); \
+	} while (0)
 
 #define ok_alloc_gpu(x, n) ok_cuda_status( cudaMalloc((void **) &x, n), \
 		__FILE__,  __LINE__, __func__)

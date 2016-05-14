@@ -118,7 +118,7 @@ def attach_clustering_ccalls(lib, single_precision=False):
 	lib.upsamplingvec_subvector.argtypes = [upsamplingvec_p,
 											upsamplingvec_p, c_size_t,
 											c_size_t, c_size_t]
-	lib.upsamplingvec_mul_matrix.argtypes = [c_uint, c_uint, c_uint,
+	lib.upsamplingvec_mul_matrix.argtypes = [c_void_p, c_uint, c_uint, c_uint,
 											 ok_float, upsamplingvec_p,
 											 matrix_p, ok_float,
 											 matrix_p]

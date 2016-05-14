@@ -42,8 +42,8 @@ typedef struct kmeans_io {
 /* CPU/GPU-SPECIFIC IMPLEMENTATION */
 ok_status assign_clusters_l2(matrix * A, matrix * C,
 	upsamplingvec * a2c, cluster_aid * h);
-ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
-	upsamplingvec * a2c, cluster_aid * h, ok_float maxdist);
+ok_status assign_clusters_l2_lInf_cap(matrix * A,
+	matrix * C, upsamplingvec * a2c, cluster_aid * h, ok_float maxdist);
 
 /* COMMON IMPLEMENTATION */
 
