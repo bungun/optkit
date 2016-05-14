@@ -103,6 +103,11 @@ ok_status upsamplingvec_mul_matrix(void * linalg_handle,
 		}
 
 	cudaDeviceSynchronize();
+	err = OK_STATUS_CUDA;
+
+	/* restore CUDA BLAS context to the default stream */
+	OK_MAX_ERR( err, OK_SCAN_CUBLAS(
+		cublasSetStream( *(cublasHandle_t *) linalg_handle, NULL) ));
 	return err ? err : OK_STATUS_CUDA;
 }
 
