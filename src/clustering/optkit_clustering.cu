@@ -12,27 +12,12 @@ extern "C" {
  *
  * tally the number of reassignments.
  */
-static __global__ void __assign_clusters_l2(size_t * a2c_curr,
-	const size_t len_a2c, const size_t stride_curr, size_t * a2c_tentative,
-	const size_t stride_tentative, size_t * reassigned, const size_t i)
-{
-	size_t * new_, * curr;
-	size_t row = i + blockIdx.x * blockDim.x + threadIdx.x;
-	while (row < len_a2c) {
-		new_ = a2c_tentative + row * stride_tentative;
-		curr = a2c_curr + row * stride_curr;
-		*reassigned += (size_t)(*curr != *new_);
-		*curr = *new_;
-		row += blockDim.x * gridDim.x;
-	}
-}
-
 ok_status assign_clusters_l2(matrix * A, matrix * C, upsamplingvec * a2c,
 	cluster_aid * h)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	size_t i, * reassigned;
-	uint grid_dim;
+	size_t i;
+	upsamplingvec * a2c_new = &h->a2c_tentative;
 
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_MATRIX(C);
@@ -42,27 +27,36 @@ ok_status assign_clusters_l2(matrix * A, matrix * C, upsamplingvec * a2c,
 		A->size2 != C->size2)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	grid_dim = calc_grid_dim(A->size1);
 	h->reassigned = 0;
-	OK_CHECK_ERR( err,
-		ok_alloc_gpu(reassigned, sizeof(size_t)) );
-	OK_CHECK_ERR( err,
-		ok_memcpy_gpu(reassigned, &h->reassigned, sizeof(size_t)) );
-
-	for (i = 0; i < A->size1 && !err; i += grid_dim * kBlockSize) {
+	for (i = 0; i < A->size1 && !err; ++i) {
+		size_t assignment_old, assignment_new;
 		cudaStream_t s;
-		cudaStreamCreate(&s);
-		__assign_clusters_l2<<<grid_dim, kBlockSize, 0, s>>>(
-			a2c->indices, a2c->size1, a2c->stride,
-			h->a2c_tentative.indices, h->a2c_tentative.stride,
-			reassigned, i);
-		cudaStreamDestroy(s);
+		OK_CHECK_CUDA( err,
+			cudaStreamCreate(&s) );
+		OK_CHECK_CUDA( err,
+			cudaMemcpyAsync(&assignment_old,
+				a2c->indices + i * a2c->stride,
+				sizeof(assignment_old), cudaMemcpyDeviceToHost,
+				s) );
+		OK_CHECK_CUDA( err,
+			cudaMemcpyAsync(&assignment_new,
+				a2c_new->indices + i * a2c_new->stride,
+				sizeof(assignment_new), cudaMemcpyDeviceToHost,
+				s) );
+		if (assignment_old != assignment_new) {
+			OK_CHECK_CUDA( err,
+				cudaMemcpyAsync(a2c->indices + i *
+					a2c->stride, &assignment_new,
+					sizeof(ok_float),
+					cudaMemcpyHostToDevice, s) );
+			++h->reassigned;
+		}
+		OK_CHECK_CUDA( err,
+			cudaStreamDestroy(s) );
+
 	}
 	cudaDeviceSynchronize();
-	err = OK_STATUS_CUDA;
-
-	OK_CHECK_ERR( err,
-		ok_memcpy_gpu(&h->reassigned, reassigned, sizeof(size_t)) );
+	OK_MAX_ERR( err, OK_STATUS_CUDA );
 	return err;
 }
 
@@ -140,10 +134,9 @@ ok_status assign_inner_loop(matrix * A, matrix * C, upsamplingvec * a2c,
 					sizeof(ok_float),
 					cudaMemcpyDeviceToHost, s) );
 			if (dmax <= maxdist) {
-				assignment_old = assignment_new;
 				OK_CHECK_CUDA( err,
 					cudaMemcpyAsync(a2c->indices + i *
-						a2c->stride, &assignment_old,
+						a2c->stride, &assignment_new,
 						sizeof(ok_float),
 						cudaMemcpyHostToDevice, s) );
 				++h->reassigned;

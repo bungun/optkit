@@ -802,7 +802,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertCall( lib.k_means(A, C, a2c, counts, h, DIST_RELTOL,
 										 CHANGE_TOL, MAXITER, VERBOSE) )
 
-			self.free_vars('A', 'C', 'a2c', 'counts', 'nvec', 'kvec', 'hdl')
+			self.free_vars('h', 'A', 'C', 'a2c', 'counts', 'nvec', 'kvec',
+						   'hdl')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_kmeans_easy_init_free(self):
@@ -820,9 +821,9 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			work = c_void_p(w_int)
 			self.register_var('work', work, lib.kmeans_easy_finish)
 			cwork = cast(work, lib.kmeans_work_p)
-			self.assertEqual(cwork.contents.n_vectors, m)
-			self.assertEqual(cwork.contents.n_clusters, k)
-			self.assertEqual(cwork.contents.vec_length, n)
+			self.assertEqual( cwork.contents.n_vectors, m )
+			self.assertEqual( cwork.contents.n_clusters, k )
+			self.assertEqual( cwork.contents.vec_length, n )
 			self.assertCall( lib.kmeans_easy_finish(work) )
 			self.unregister_var('work')
 			self.assertCall( lib.ok_device_reset() )
@@ -843,9 +844,9 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertCall( lib.kmeans_easy_resize(work, m/2, k/2, n/2) )
 
 			cwork = cast(work, lib.kmeans_work_p)
-			self.assertEqual(cwork.contents.A.size1, m / 2)
-			self.assertEqual(cwork.contents.C.size1, k / 2)
-			self.assertEqual(cwork.contents.A.size2, n / 2)
+			self.assertEqual( cwork.contents.A.size1, m / 2 )
+			self.assertEqual( cwork.contents.C.size1, k / 2 )
+			self.assertEqual( cwork.contents.A.size2, n / 2 )
 
 			self.free_var('work')
 			self.assertCall( lib.ok_device_reset() )
