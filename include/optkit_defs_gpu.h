@@ -63,10 +63,12 @@ const unsigned int kMaxGridSize = 65535u;
 
 #ifndef FLOAT
 	#define CUBLAS(x) cublasD ## x
+	#define CUBLASI(x) cublasId ## x
 	#define CUSPARSE(x) cusparseD ## x
 	#define OK_CUDA_NAN CUDART_NAN
 #else
 	#define CUBLAS(x) cublasS ## x
+	#define CUBLASI(x) cublasIs ## x
 	#define CUSPARSE(x) cusparseS ## x
 	#define OK_CUDA_NAN CUDART_NAN_F
 #endif
@@ -134,7 +136,7 @@ inline ok_status ok_cuda_status(cudaError_t code, const char *file, int line,
 	const char *function)
 {
 	if (code != cudaSuccess) {
-		printf("%s:%d:%s\n ERROR_CUDA: %s\n", file, line, function,
+		printf("%s:%d:%s\n ERROR CUDA: %s\n", file, line, function,
 			cudaGetErrorString(code));
 		return OPTKIT_ERROR_CUDA;
 	} else {
@@ -146,7 +148,7 @@ inline ok_status ok_cublas_status(cublasStatus_t code, const char *file, int lin
 	const char *function)
 {
 	if (code != CUBLAS_STATUS_SUCCESS) {
-		printf("%s:%d:%s\n ERROR_CUDA: %s\n", file, line, function,
+		printf("%s:%d:%s\n ERROR CUBLAS: %s\n", file, line, function,
 	        	cublas_err2string(code));
 		return OPTKIT_ERROR_CUBLAS;
 	} else {
@@ -158,7 +160,7 @@ inline ok_status ok_cusparse_status(cusparseStatus_t code, const char *file,
 	int line, const char *function)
 {
 	if (code != CUSPARSE_STATUS_SUCCESS) {
-		printf("%s:%d:%s\n ERROR_CUDA: %s\n", file, line, function,
+		printf("%s:%d:%s\n ERROR CUSPARSE: %s\n", file, line, function,
 			cusparse_err2string(code));
 		return OPTKIT_ERROR_CUSPARSE;
 	} else {

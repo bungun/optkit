@@ -170,7 +170,7 @@ static ok_status ok_print_status(ok_status err, const char * file,
 	const int line, const char * function)
 {
 	if (err != OPTKIT_SUCCESS)
-		printf("%s:%d:%s\n ERROR_OPTKIT: %s\n", file, line, function,
+		printf("%s:%d:%s\n ERROR OPTKIT: %s\n", file, line, function,
 			ok_err2string(err));
 	return err;
 }

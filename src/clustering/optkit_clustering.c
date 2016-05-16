@@ -43,18 +43,22 @@ ok_status assign_clusters_l2(matrix * A, matrix * C,
 static ok_float __dist_lInf_A_minus_UC_i(const ok_float * A,
 	const int * strideA, const size_t * iterA, const upsamplingvec * u,
 	const ok_float * C, const int * strideC, const size_t * iterC,
-	ok_float * A_blk, const size_t * strideBlk, const size_t * iterBlk,
-	const size_t * blk, const size_t * i, const int * row_length)
+	ok_float * A_blk, const size_t * strideBlk, const size_t * strideIter,
+	const size_t * block, const size_t * i, const int * row_length)
 {
 	ok_float dist;
+	size_t idx;
 	CBLAS(copy)(*row_length, A + (*i) * (*iterA), (*strideA),
-		A_blk + (*i - *blk) * (*iterBlk), (const int) (*strideBlk));
+		A_blk + (*i - *block) * (*strideIter),
+		(const int) (*strideBlk));
 	CBLAS(axpy)(*row_length, -kOne,
 		C + u->indices[(*i) * u->stride] * (*iterC), (*strideC),
-		A_blk + (*i - *blk) * (*iterBlk), (const int) (*strideBlk));
-	dist = A_blk[CBLASI(amax)(*row_length, A_blk + (*i - *blk) * (*iterBlk),
-		(const int) (*strideBlk)) * (*strideBlk) +
-		(*i - *blk) * (*iterBlk)];
+		A_blk + (*i - *block) * (*strideIter),
+		(const int) (*strideBlk));
+	idx = (size_t) CBLASI(amax)(*row_length,
+		A_blk + (*i - *block) * (*strideIter),
+		(const int) (*strideBlk));
+	dist = A_blk[(*i - *block) * (*strideIter) + idx * (*strideBlk)];
 	return MATH(fabs)(dist);
 }
 
@@ -81,7 +85,7 @@ ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 		A->size2 != C->size2)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	size_t i, blk, row_stride, idx_stride, row_strideA, row_strideC;
+	size_t i, block, row_stride, idx_stride, row_strideA, row_strideC;
 	int strideA, strideC;
 	matrix * A_blk;
 	upsamplingvec * u = &h->a2c_tentative;
@@ -100,17 +104,17 @@ ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	strideC = (C->order == CblasRowMajor) ? 1 : (int) C->ld;
 
 	h->reassigned = 0;
-	for (blk = 0; blk < A->size1; blk += kBlockSize)
+	for (block = 0; block < A->size1; block += kBlockSize)
 		#ifdef _OPENMP
 		#pragma omp parallel for
 		#endif
-		for (i = blk; i < blk + kBlockSize && i < A->size1; ++i) {
+		for (i = block; i < block + kBlockSize && i < A->size1; ++i) {
 			if (a2c->indices[i] == u->indices[i]) {
 				continue;
 			} else if (maxdist >= __dist_lInf_A_minus_UC_i(A->data,
 				&strideA, &row_strideA, u, C->data, &strideC,
 				&row_strideC, A_blk->data, &idx_stride,
-				&row_stride, &blk, &i,
+				&row_stride, &block, &i,
 				(const int *) &A->size2)) {
 
 				a2c->indices[i] = u->indices[i];

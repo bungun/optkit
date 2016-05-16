@@ -304,7 +304,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 					hdl, N, N, N, alpha, u, C, beta, A) )
 			self.assertCall( lib.blas_gemv(hdl, N, 1, A, nvec, 0, mvec) )
 			self.assertCall( lib.vector_memcpy_av(mvec_ptr, mvec, 1) )
-			# self.assertVecEqual( mvec_py, result_py, ATOLM, RTOL )
+			self.assertVecEqual( mvec_py, result_py, ATOLM, RTOL )
 
 			self.upsamplingvec_mul(
 					'T', 'N', 'N', alpha, u_py, A_py, beta, C_py)
@@ -658,7 +658,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 				self.assertCall( lib.cluster(A, C, a2c, h, MAXDIST) )
 
 				# compare number of reassignments, C vs Py
-				ATOL_REASSIGN = int(1 + 0.1 * k)
+				ATOL_REASSIGN = int(1 + 0.1 * m)
 				RTOL_REASSIGN = int(1 + 0.1 * reassigned)
 				self.assertTrue( abs(h.reassigned - reassigned) <=
 								 ATOL_REASSIGN + RTOL_REASSIGN )
