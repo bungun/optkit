@@ -1,26 +1,29 @@
 from numpy import zeros, ones, ndarray, savez, load as np_load
 from ctypes import c_void_p
 from os import path
-from optkit.types.cbase import OptkitBaseTypeC
 from optkit.types.pogs.common import PogsTypes
 
 class PogsDenseDirectTypes(PogsTypes):
 	def __init__(self, backend):
 		PogsTypes.__init__(self, backend)
-		PogsSettings = backend.pogs.pogs_settings
-		PogsInfo = backend.pogs.pogs_info
-		PogsOutput = backend.pogs.pogs_output
 		lib = backend.pogs
+		PogsSettings = lib.pogs_settings
+		PogsInfo = lib.pogs_info
+		PogsOutput = lib.pogs_output
+		Objective = self.Objective
+		SolverSettings = self.SolverSettings
+		SolverInfo = self.SolverInfo
+		SolverOutput = self.SolverOutput
 
-		class Solver(OptkitBaseTypeC):
+		class Solver(object):
+			def __del__(self):
+				self.__unregister_solver()
+
 			def __init__(self, A, *args, **options):
-				OptkitBaseTypeC.__init__(self, backend)
-				try:
-					assert isinstance(A, ndarray)
-					assert len(A.shape) == 2
-				except:
+				if not isinstance(A, ndarray) or len(A.shape) != 2:
 					raise TypeError('input must be a 2-d {}'.format(ndarray))
 
+				self.__backend = backend
 				self.shape = (self.m, self.n) = (m, n) = A.shape
 				self.A = A.astype(lib.pyfloat)
 				self.A_ptr = A_ptr = self.A.ctypes.data_as(lib.ok_float_p)
@@ -35,8 +38,7 @@ class PogsDenseDirectTypes(PogsTypes):
 				self.__c_solver = None
 
 				if 'no_init' not in args:
-					A_ptr =
-					self.__register_solver(lib, lib.pogs_init(A_ptr, m , n,
+					self.__register_solver(lib, lib.pogs_init(self.A_ptr, m, n,
 							layout))
 
 				self.settings = SolverSettings()
@@ -50,21 +52,16 @@ class PogsDenseDirectTypes(PogsTypes):
 			    return self.__c_solver
 
 			def __register_solver(self, lib, solver):
+				self.__backend.increment_cobject_count()
 				self.__c_solver = solver
-				self.exit_call = lib.pogs_finish
-				self.exit_arg = solver
-				self.reset_on_exit = True
-				self._OptkitBaseTypeC__register()
 
 			def __unregister_solver(self):
 				if self.c_solver is None:
 					return
-				self.exit_call(self.c_solver, 0)
+				lib.pogs_finish(self.c_solver, 0)
 				self.__c_solver = None
-				self.exit_call = self._OptkitBaseTypeC__exit_default
-				self.exit_arg = None
-				self.reset_on_exit = False
-				self._OptkitBaseTypeC__unregister()
+				self.__backend.decrement_cobject_count()
+
 
 			def __update_function_vectors(self, f, g):
 				for i in xrange(f.size):

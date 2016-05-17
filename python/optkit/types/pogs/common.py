@@ -1,5 +1,5 @@
 from numpy import zeros, ones, ndarray
-from optkit.utils import const_iterator
+from optkit.utils.pyutils import const_iterator
 
 class PogsTypes(object):
 	def __init__(self, backend):
@@ -10,7 +10,7 @@ class PogsTypes(object):
 
 		class Objective(object):
 			def __init__(self, n, **params):
-				self.enums = lib.enums
+				self.enums = lib.function_enums
 				self.size = n
 				self.__h = zeros(self.size, dtype=int)
 				self.__a = ones(self.size)
@@ -398,7 +398,7 @@ class PogsTypes(object):
 
 		class SolverInfo(object):
 			def __init__(self):
-				self.c = PogsInfo(0, 0, 0, 0, 0, 0, 0)
+				self.c = PogsInfo()
 
 			@property
 			def err(self):
