@@ -19,7 +19,6 @@ pogs_types = None
 PogsSolver = None
 PogsObjective = None
 
-
 """
 Backend switching
 """
@@ -44,8 +43,7 @@ def set_backend(gpu=False, double=True):
 	PogsSolver = pogs_types.Solver
 	PogsObjective = pogs_types.Objective
 
-	print "optkit backend set to {}".format(backend.libname)
-
+	print "optkit backend set to {}".format(backend.config)
 
 """
 INITIALIZATION BEHAVIOR:
@@ -53,7 +51,6 @@ INITIALIZATION BEHAVIOR:
 
 default_device = getenv('OPTKIT_DEFAULT_DEVICE', 'cpu')
 default_precision = getenv('OPTKIT_DEFAULT_FLOATBITS', '64')
-
 
 set_backend(gpu=(default_device == 'gpu'),
 			double=(default_precision == '64'))

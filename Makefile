@@ -158,12 +158,13 @@ POGS_DENSE_LIB_DEPS=equil_dense projector_direct $(DENSE_TARG) $(PROX_TARG)
 POGS_SPARSE_LIB_DEPS=operator cg equil projector $(LINSYS_TARGS) $(PROX_TARG)
 POGS_ABSTRACT_LIB_DEPS=operator cg equil projector $(LINSYS_TARGS) $(PROX_TARG)
 
-.PHONY: default, all, libs, libok, libpogs
+.PHONY: default, all, libs, libok, libpogs, pylibs
 default: cpu_dense
 all: libs liboperator libcg libequil libprojector libpogs libcluster
 libs: libok libprox
 libok: libok_dense libok_sparse
 libpogs: libpogs_dense libpogs_abstract
+pylibs: libpogs_dense libcluster
 
 libpogs_abstract: pogs_abstract $(POGS_ABSTRACT_LIB_DEPS) $(BASE_TARG)
 	mkdir -p $(OUT)
