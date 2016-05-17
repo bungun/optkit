@@ -50,7 +50,6 @@
 #ROADMAP:
 ###v0.2
 - CPU EVD
-- Python EVD bindings
 
 ###v0.2.1
 - GPU EVD
@@ -58,8 +57,6 @@
 ###v0.3
 - CPU cone prox
 - CPU block prox
-- Python cone prox bindings
-- Python block prox bindings
 
 ###v0.3.1
 - GPU cone prox
