@@ -8,7 +8,7 @@ def retrieve_libs(lib_prefix):
 	local_c_build = path.abspath(path.join(path.dirname(__file__),
 		'..', '..', '..', 'build'))
 	search_results = '\n'
-	use_local = getenv('OPTKIT_USE_LOCALLIBS', 0)
+	use_local = int(getenv('OPTKIT_USE_LOCALLIBS', 0))
 
 	# NB: no windows support
 	ext = "dylib" if uname()[0] == "Darwin" else "so"
