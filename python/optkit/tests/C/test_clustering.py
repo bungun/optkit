@@ -25,9 +25,9 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 		# construct A_test as a noisy upsampled version of C
 		percent_noise = 0.05
-		scale = 1. / percent_noise
 		for i in xrange(self.shape[0]):
-			self.A_test[i, :] += scale * self.C_test[i % self.k, :]
+			self.A_test[i, :] *= percent_noise
+			self.A_test[i, :] += self.C_test[i % self.k, :]
 
 	def tearDown(self):
 		self.free_all_vars()
