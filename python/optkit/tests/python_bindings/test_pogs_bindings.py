@@ -1,4 +1,3 @@
-import unittest
 import numpy as np
 import gc
 import os
@@ -6,10 +5,9 @@ from subprocess import call
 from os import path
 from optkit import *
 from optkit.api import backend
-from optkit.tests.defs import CONDITIONS, DEFAULT_SHAPE, DEFAULT_MATRIX_PATH
+from optkit.tests.defs import OptkitTestCase
 
-
-class PogsBindingsTestCase(unittest.TestCase):
+class PogsBindingsTestCase(OptkitTestCase):
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
@@ -20,16 +18,7 @@ class PogsBindingsTestCase(unittest.TestCase):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
 	def setUp(self):
-		self.shape = None
-		if DEFAULT_MATRIX_PATH is not None:
-			try:
-				self.A_test = np.load(DEFAULT_MATRIX_PATH)
-				self.shape = A.shape
-			except:
-				pass
-		if self.shape is None:
-			self.shape = DEFAULT_SHAPE
-			self.A_test = np.random.rand(*self.shape)
+		self.A_test = self.A_test_gen
 
 	def test_objective(self):
 		m = self.shape[0]
@@ -72,10 +61,10 @@ class PogsBindingsTestCase(unittest.TestCase):
 
 	def test_solver_object(self):
 		s = PogsSolver(self.A_test)
-		self.assertFalse(backend.device_reset_allowed)
+		self.assertFalse( backend.device_reset_allowed )
 		del s
 		gc.collect()
-		self.assertTrue(backend.device_reset_allowed)
+		self.assertTrue( backend.device_reset_allowed )
 
 	def test_solve_call(self):
 		s = PogsSolver(self.A_test)
@@ -106,7 +95,7 @@ class PogsBindingsTestCase(unittest.TestCase):
 		s3.solve(f, g, resume=1)
 		call(['rm', 'c_solve_test.npz'])
 
-		factor = 30. if backend.dense.pyfloat == np.float32 else 10.
+		factor = 30. if backend.pogs.pyfloat == np.float32 else 10.
 		self.assertTrue(s3.info.c.k <= s2.info.c.k or not s3.info.c.converged)
 
 		diff_12 = abs(s2.info.c.obj - s.info.c.obj)
