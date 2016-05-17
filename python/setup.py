@@ -42,6 +42,7 @@ class OptkitBuild(build):
         devices = ['cpu', 'gpu'] if BUILD_GPU else ['cpu']
         precisions = ['32', '64']
 
+        call([ 'make', 'clean' ], cwd=BASEPATH)
         for prec in precisions:
             for dev in devices:
                 cmd = [ 'make', 'pylibs' ]
@@ -137,7 +138,8 @@ setup(
     packages=['optkit',
               'optkit.libs',
               'optkit.utils',
-              'optkit.types'],
+              'optkit.types',
+              'optkit.types.pogs'],
     license='GPLv3',
     zip_safe=False,
     description='Python optimization toolkit',
