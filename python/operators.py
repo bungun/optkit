@@ -1,12 +1,12 @@
 	class AbstractMatrix(object):
-		pass		
+		pass
 
 class DenseMatrix(AbstractMatrix):
 	def __init__(self, A):
 		(self.m, self.n) = self.shape = A.shape
 		self.mat = A
 		self.equilibrated = False
-		self.normalized = False	
+		self.normalized = False
 
 class SparseMatrix(AbstractMatrix):
 	def __init__(self, A):
@@ -14,7 +14,7 @@ class SparseMatrix(AbstractMatrix):
 		self.mat = A
 		self.tranpose = A.T
 		self.equilibrated = False
-		self.normalized = False	
+		self.normalized = False
 
 class IdentityMatrix(AbstractMatrix):
 	def __init__(self, n):
@@ -24,12 +24,6 @@ class DiagonalMatrix(AbstractMatrix):
 	def __init__(self, x):
 		(self.m, self.n) = self.shape = (len(x),len(x))
 		self.diag = x
-
-
-
-
-
-
 
 
 # class BlockIdentityMatrix(AbstractMatrix):
@@ -61,11 +55,11 @@ class ZeroMatrix(AbstractMatrix):
 
 # class BlockMatrix(object):
 # 	def __init__(self, m, n):
-# 		if isinstance(m,int) and isinstance(n,int): 
+# 		if isinstance(m,int) and isinstance(n,int):
 # 			raise TypeError("At least one argument must be a list")
-# 		if not isinstance(m, (int,list)): 
+# 		if not isinstance(m, (int,list)):
 # 			raise TypeError("Input arguments must be int or list"):
-# 		if not isinstance(m, (int,list)): 	
+# 		if not isinstance(m, (int,list)):
 # 			raise TypeError("Input arguments must be int or list"):
 
 # 		self.m = m if isinstance(m,list) else [m]
@@ -89,7 +83,7 @@ class ZeroMatrix(AbstractMatrix):
 # 							  "incompatible size")
 
 
-# B = 
+# B =
 # [ A 	0
 #   -I    U]
 
@@ -98,7 +92,7 @@ class ZeroMatrix(AbstractMatrix):
 # 		 I 50k x 50k
 # 		 U 50k x 250
 
-# B'B = 
+# B'B =
 
 # [A' -I     [ A   0
 #  0   U']    -I   U ]
@@ -106,7 +100,7 @@ class ZeroMatrix(AbstractMatrix):
 # [A'A + I    -U
 #    -U'	    U'U	 ]
 
-# B'B+I = 
+# B'B+I =
 
 # [A'A + 2I    -U
 #    -U'	    U'U	+ I ]
@@ -140,7 +134,7 @@ class DenseOperator(MatrixOperator):
 			self.mul=None
 			self.mult_t=None
 	def get_adjoint(self):
-		return ArbitraryOperator((self.shape[1],self.shape[0]), self.mul_t, self.mul)	
+		return ArbitraryOperator((self.shape[1],self.shape[0]), self.mul_t, self.mul)
 		# adj = DenseOperator(None)
 		# adj.data = None
 		# adj.shape = (self.shape[1], self.shape[0])
@@ -198,7 +192,7 @@ class SparseOperator(MatrixOperator):
 			self.mul=None
 			self.mult_t=None
 	def get_adjoint(self):
-		return ArbitraryOperator((self.shape[1],self.shape[0]), self.mul_t, self.mul)	
+		return ArbitraryOperator((self.shape[1],self.shape[0]), self.mul_t, self.mul)
 
 
 class ScaledIdentityOperator(MatrixOperator):
@@ -325,7 +319,7 @@ CompositeOperator(*Ops):
 DyadicOperator(Op1, Op2):
 	self.shape = (Op1.shape[0],Op2.shape[1])
 	self.intermediate = Vector(Op1.shape[0])
-	self.mul(a, input, b, output) = 
+	self.mul(a, input, b, output) =
 		Op.1.mul(a, input, 0, self.intermediate)
 		Op.2.mul(1, self.intermediate, 1, output)
 	self.mul_t = self.mul
@@ -347,7 +341,7 @@ UpsamplingOperator(lengths):
 
 
 DownsamplingOperator(lengths):
-	
+
 
 GenericOperator():
 	self.shape
@@ -393,7 +387,7 @@ GenericOperator():
 # 	BB['22']=CompositeOperator(B['22'].AAt + ScaledIdentityOperator(2,nx))
 
 
-# B'B = 
+# B'B =
 
 # [A'A + I    -U
 #    -U'	    U'U	 ]
@@ -423,7 +417,7 @@ GenericOperator():
 
 
 
-CholeskyInverseOperator(A::DenseOperator) 
+CholeskyInverseOperator(A::DenseOperator)
 	self.shape = A.shape
 	self.L = cholesky_factor(A)
 	self.forwardsolve = cholesky_solve(self.L)
@@ -431,7 +425,7 @@ CholeskyInverseOperator(A::DenseOperator)
 	self.mul(a, input, b, output):
 		if b != 0 warn("using b=0")
 		self.forwardsolve(output)
-		self.backsolve(output)		
+		self.backsolve(output)
 	self.mul_t = self.mul
 
 # inv(A).solve(scratch, vector):
@@ -466,7 +460,7 @@ SquareBlockOperator()
 	# OR
 
 	self.SchurD = self.A - self.C * inv(self.A) * self.B
- 
+
 	# // Add(A, Chain(-I, C, inv(D), B))
 
 
@@ -486,11 +480,11 @@ SquareBlockOperator()
 # 	M.C
 
 
-# 	D = BlockDiagonalOperator(2, n1, n2) 
+# 	D = BlockDiagonalOperator(2, n1, n2)
 # 		D.11 = inv(M.A - M.U*inv(M.C)*M.V)
 # 		D.22 = inv(M.C)
 
-# 	# Assuming M.A is dense, 
+# 	# Assuming M.A is dense,
 # 	# D.22 =  inv(M.C)
 # 	# D.11 =  inv(DenseOperator - Op * Op * Op) => inv(DenseOperator)
 # 	# 	   =  CholeskyInverseOperator(M.A + M.U*D.22.M.V)
@@ -570,7 +564,7 @@ BlockInverseOperator(M::BlockOperator)
 # inv(MtMi).solve(scratch, vector):
 #	inv(MtMi).U.mul(1, scratch, 1, vector):
 #		.U12.mul(1, vector.2, 1, vector.1), i.e., sum then scale
-#		
+#
 #	inv(MtMi).D.mul(1, scratch, 1, vector):
 #		.D22.solve(vector.2)
 #		.D11.solve(vector.1)
@@ -579,7 +573,7 @@ BlockInverseOperator(M::BlockOperator)
 #		scratch.2 = copy(vector.2)
 #		.L21.mul(1, vector.1, 0, vector.2), i.e. scale then copy -> WHEN THIS IS ZERO, SHOULD USE MEMSET IN BLOCKS
 #		vector.2 += scratch.2
-#		
+#
 
 
 
@@ -599,7 +593,7 @@ BlockInverseOperator(M::BlockOperator)
 
 # I GUESS WE'LL ALSO NEED HSTACK AND VSTACK FOR NON-INVERTED BLOCKS?
 
-#  DEFINE BLOCK VECTORS WITH VIEWS 
+#  DEFINE BLOCK VECTORS WITH VIEWS
 #  GO THROUGH PARSE TREE TO:
 #	1. see which memory needs to be allocated
 #	2. which memory views need to be allocated /
@@ -620,7 +614,7 @@ BlockInverseOperator(M::BlockOperator)
 #		  A_ntf   -U_y  0
 #         I       0     -U_x ]
 #
-#	
+#
 #  G := Stack{
 #		Dense(A_targ)
 #		Dense(A_ntc)
@@ -644,7 +638,7 @@ BlockInverseOperator(M::BlockOperator)
 #							-U_x'						0  		       U_x'U_x +I ]
 #
 #
-# 	Dense + Dense/Outer + Dense/Outer + 2Id      -Id * Dense * Upsample     -Id*Upsample 				
+# 	Dense + Dense/Outer + Dense/Outer + 2Id      -Id * Dense * Upsample     -Id*Upsample
 #   -Id * Downsample * Dense                          Diag + Id   				  Zero
 #        -Id * Downsample  								Zero  					Diag + Id
 #
@@ -655,7 +649,7 @@ BlockInverseOperator(M::BlockOperator)
 #  	Dense (but don't form)	  	-Id * Dense * Upsample  	-Id*Upsample
 # 	-Id * Downsample * Dense  	Diag 						Zero
 #	-Id * Downsample 			Zero 						Diag
-# 	
+#
 #
 #   Parse 1:
 #   	M.A=Dense, inversion cost = nx^3; inverse apply cost: nx^2
@@ -663,7 +657,7 @@ BlockInverseOperator(M::BlockOperator)
 #       M.C=M.B'
 #       M.D=Block {Diag,Diag}  -> from this, infer SchurD > SchurA
 #		M.SchurD = A -  B invD C ::= Dense - [Dense*Upsample  -Upsample]  [Diag * Downsample * Dense ; Diag * Downsample]
-#       M.L21 = Stack(Downsample*Dense,Downsample)	
+#       M.L21 = Stack(Downsample*Dense,Downsample)
 #       M.L12 = Add(Dense*Upsample,Upsample)
 #
 #  Parse 2:
@@ -673,10 +667,10 @@ BlockInverseOperator(M::BlockOperator)
 #		M.B=Upsample: apply cost: ny
 #		M.C=Downsample = M.B': apply cost: ny
 # 		M.D=Diagonal: apply cost
-#		
+#
 #
 #
 
 class BlockProjector(object):
 	def __init__(self):
-		pass	
+		pass

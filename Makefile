@@ -1,86 +1,88 @@
-# Basic definitions
+	# Basic definitions
 OPTKITROOT=./
 OUT=$(OPTKITROOT)build/
 SRC=$(OPTKITROOT)src/
 INCLUDE=$(OPTKITROOT)include/
 PREFIX_OUT=$(OUT)optkit_
 
-# C++ Flags
-CXX=gcc
-CXXFLAGS= -g -O3 -fPIC -I. -I./include -I./include/external -Wall -Wconversion
+LINSYS=linsys/optkit_
+LASRC=$(SRC)$(LINSYS)
+LAOUT=$(OUT)$(LINSYS)
+
+OPERATOR=operator/optkit_operator_
+OPSRC=$(SRC)$(OPERATOR)
+OPOUT=$(OUT)$(OPERATOR)
+
+CLUSTER=clustering/optkit_
+CLUSRC=$(SRC)$(CLUSTER)
+CLUOUT=$(OUT)$(CLUSTER)
+
+POGS=pogs/optkit_
+POGSSRC=$(SRC)$(POGS)
+POGSOUT=$(OUT)$(POGS)
+
+
+IFLAGS=-I. -I$(INCLUDE) -I$(INCLUDE)external -I$(INCLUDE)linsys 
+IFLAGS+=-I$(INCLUDE)operator -I$(INCLUDE)clustering
+
+# C Flags
+CC=gcc
+CCFLAGS=-g -O3 -fPIC $(IFLAGS) -Wall -Wconversion -Wpedantic 
+CCFLAGS+=-Wno-unused-function -std=c99
 LDFLAGS_=-lstdc++ -lm
+
+# C++ Flags
+CXX=g++
+CXXFLAGS=-g -O3 -fPIC $(IFLAGS) -Wall -Wconversion -Wpedantic 
+CXXFLAGS+=-Wno-unused-function -std=c++11
 
 # CUDA Flags
 CUXX=nvcc
-CUXXFLAGS=-arch=sm_50 -Xcompiler -fPIC -I. -I./include -I./include/external
+CUXXFLAGS=-arch=sm_50 -Xcompiler -fPIC $(IFLAGS) -std=c++11
 CULDFLAGS_=-lstdc++ -lm
 
-# Check system args
+# Darwin / Linux
 ifeq ($(shell uname -s), Darwin)
-LDFLAGS_ += -framework Accelerate
-CULDFLAGS_ += -L/usr/local/cuda/lib 
+LDFLAGS_+=-framework Accelerate
+CULDFLAGS_+=-L/usr/local/cuda/lib 
 SHARED=dylib
 ifdef USE_OPENMP
-CXXFLAGS += -fopenmp=libopenmp
+CCFLAGS+=-fopenmp=libopenmp
+CXXFLAGS+=-fopenmp=libopenmp
 endif
 else
-LDFLAGS_ += -lblas
-CULDFLAGS_ += -L/usr/local/cuda/lib64 
+LDFLAGS_+=-lblas
+CULDFLAGS_+=-L/usr/local/cuda/lib64 
 SHARED=so
 ifdef USE_OPENMP
-CXXFLAGS += -fopenmp
+CCFLAGS+=-fopenmp
+CXXFLAGS+=-fopenmp
 endif
 endif
 
-CULDFLAGS_ += -lcudart -lcublas -lcusparse
-
+CULDFLAGS_+=-lcudart -lcublas -lcusparse
 
 # make options
-ifndef SPARSE
-SPARSE = 0
-endif
-
 ifndef GPU
-GPU = 0
+GPU=0
 endif
 
-# compiler options
 ifndef FLOAT
-FLOAT = 0
+FLOAT=0
 endif
-
-ifndef ROWMAJOR
-ROWMAJOR = 0
-endif
-
-ifndef COLMAJOR
-COLMAJOR = 0
-endif
-
 
 # optional compiler flags 
 OPT_FLAGS=
 ifneq ($(FLOAT), 0)
-OPT_FLAGS += -DFLOAT # use floats rather than doubles
+OPT_FLAGS+=-DFLOAT # use floats rather than doubles
 endif
 ifdef OPTKIT_DEBUG_PYTHON
-OPT_FLAGS += -DOK_DEBUG_PYTHON
+OPT_FLAGS+=-DOK_DEBUG_PYTHON
 endif
 
-ORDER=
-ifneq ($(ROWMAJOR), 0)
-ORDER=row_
-OPT_FLAGS += -DOPTKIT_ROWMAJOR
-else
-ifneq ($(COLMAJOR), 0)
-ORDER=col_
-OPT_FLAGS += -DOPTKIT_COLMAJOR
-endif
-endif
-
-CXXFLAGS += $(OPT_FLAGS)
-CUXXFLAGS += $(OPT_FLAGS)
-
+CCFLAGS+=$(OPT_FLAGS)
+CXXFLAGS+=$(OPT_FLAGS)
+CUXXFLAGS+=$(OPT_FLAGS)
 
 # make switches
 ifneq ($(FLOAT), 0)
@@ -97,134 +99,268 @@ LDFLAGS=$(LDFLAGS_)
 DEVICETAG=cpu
 endif
 
-DENSETARG=$(DEVICETAG)_dense
-SPARSETARG=$(DEVICETAG)_sparse
+LIBCONFIG=$(DEVICETAG)$(PRECISION)
 
+BASE_TARG=$(DEVICETAG)_defs
+VECTOR_TARG=$(DEVICETAG)_vector
+DENSE_TARG=$(DEVICETAG)_dense
+SPARSE_TARG=$(DEVICETAG)_sparse
+PROX_TARG=$(DEVICETAG)_prox
+CLUSTER_TARG=$(DEVICETAG)_cluster
 
-LINSYSLIBS=libok_dense
+LINSYS_TARGS=$(DENSE_TARG) $(SPARSE_TARG)
 POGSLIBS=libpogs_dense
-ifneq ($(SPARSE), 0)
-LINSYSLIBS += libok_sparse
-POGSLIBS += libpogs_sparse
-endif
-PROXTARG=$(DEVICETAG)_prox
 
+BASE_OBJ=$(PREFIX_OUT)defs_$(LIBCONFIG).o
+VECTOR_OBJ=$(OUT)$(LINSYS)vector_$(LIBCONFIG).o
+DENSE_CPU_SRC=$(LASRC)vector.cpp $(LASRC)matrix.cpp $(LASRC)blas.c
+DENSE_CPU_SRC+=$(LASRC)dense.c
+DENSE_GPU_SRC=$(LASRC)vector.cu $(LASRC)matrix.cu $(LASRC)blas.cu 
+DENSE_GPU_SRC+=$(LASRC)dense.cu
+DENSE_OBJ=$(patsubst $(LASRC)%.cu,$(LAOUT)%_$(LIBCONFIG).o,$(DENSE_GPU_SRC))
+SPARSE_OBJ=$(LASRC)sparse_$(LIBCONFIG).o
 
-DENSESTATIC=$(PREFIX_OUT)dense_$(ORDER)$(DEVICETAG)$(PRECISION).o
-SPARSESTATIC=$(PREFIX_OUT)sparse_$(ORDER)$(DEVICETAG)$(PRECISION).o
-PROXSTATIC=$(PREFIX_OUT)$(PROXTARG)$(PRECISION).o
-PROJSTATIC=$(PREFIX_OUT)projector_$(DEVICETAG)$(PRECISION).o$
-EQUILSTATIC=$(PREFIX_OUT)equil_$(DEVICETAG)$(PRECISION).o$
-POGSSTATIC=$(PREFIX_OUT)pogs_$(DEVICETAG)$(PRECISION).o
+PROX_OBJ=$(PREFIX_OUT)prox_$(LIBCONFIG).o
 
-POGS_STATIC_DEPS=$(POGSSTATIC) $(EQUILSTATIC) $(PROJSTATIC)
-POGS_STATIC_DEPS += $(DENSESTATIC) $(PROXSTATIC)
-PROJ_STATIC_DEPS=$(DENSESTATIC) $(PROJSTATIC)
-EQUIL_STATIC_DEPS=$(DENSESTATIC) $(EQUILSTATIC)
-SPARSE_STATIC_DEPS=$(DENSESTATIC)
-ifneq ($(SPARSE), 0)
-PROJ_STATIC_DEPS += $(SPARSESTATIC)
-EQUIL_STATIC_DEPS += $(SPARSESTATIC)
-POGS_STATIC_DEPS += $(SPARSESTATIC) 
-endif
+OPERATOR_SRC=$(OPSRC)dense.c $(OPSRC)sparse.c $(OPSRC)diagonal.c 
+OPERATOR_OBJ=$(patsubst $(OPSRC)%.c,$(OPOUT)%_$(LIBCONFIG).o,$(OPERATOR_SRC))
 
-.PHONY: default, all, libs, libok, libok_dense, libok_sparse, libprox
-.PHONY: libpogs, libpogs_dense, libpogs_sparse, pogs_dense, pogs_sparse
-.PHONY: libequil, equil, libprojector, projector 
+CLUSTER_CPU_SRC=$(CLUSRC)clustering.c $(CLUSRC)upsampling_vector.c
+CLUSTER_GPU_SRC=$(CLUSRC)clustering.cu $(CLUSRC)upsampling_vector.cu
+CLUSTER_OBJ=$(patsubst $(CLUSRC)%.c,$(CLUOUT)%_$(LIBCONFIG).o,$(CLUSTER_CPU_SRC))
+CLUSTER_OBJ+=$(CLUOUT)upsampling_vector_common_$(LIBCONFIG).o
+CLUSTER_OBJ+=$(CLUOUT)clustering_common_$(LIBCONFIG).o
+
+CG_OBJ=$(PREFIX_OUT)cg_$(LIBCONFIG).o
+PROJ_OBJ=$(PREFIX_OUT)projector_$(LIBCONFIG).o
+PROJ_DIRECT_OBJ=$(PREFIX_OUT)projector_direct_$(LIBCONFIG).o
+EQUIL_OBJ=$(PREFIX_OUT)equil_$(LIBCONFIG).o
+EQUIL_DENSE_OBJ=$(PREFIX_OUT)equil_dense_$(LIBCONFIG).o
+
+POGS_SRC=$(POGSSRC)pogs_common.c $(POGSSRC)pogs.c
+POGS_OBJ=$(patsubst $(POGSSRC)%.c,$(POGSOUT)%_$(LIBCONFIG).o,$(POGS_SRC))
+
+POGS_ABSTR_SRC=$(POGSSRC)pogs_common.c $(POGSSRC)pogs_abstract.c
+POGS_ABSTR_OBJ=$(patsubst \
+	$(POGS_ABSTR_SRC)%.c,$(POGSOUT)%_$(LIBCONFIG).o,$(POGS_ABSTR_SRC))
+
+SPARSE_STATIC_DEPS=$(BASE_OBJ) $(VECTOR_OBJ)
+OPERATOR_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ) $(SPARSE_OBJ) $(OPERATOR_OBJ)
+CG_STATIC_DEPS=$(OPERATOR_STATIC_DEPS) $(CG_OBJ)
+EQUIL_STATIC_DEPS=$(OPERATOR_STATIC_DEPS) $(EQUIL_OBJ) 
+PROJ_STATIC_DEPS=$(CG_STATIC_DEPS) $(PROJ_OBJ)
+POGS_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ) $(PROX_OBJ) $(EQUIL_DENSE_OBJ) 
+POGS_STATIC_DEPS+=$(PROJ_DIRECT_OBJ) $(POGS_OBJ) 
+POGS_ABSTRACT_STATIC_DEPS=$(EQUIL_STATIC_DEPS) $(CG_OBJ) $(PROJ_OBJ) $(PROX_OBJ)
+POGS_ABSTRACT_STATIC_DEPS+=$(POGS_ABSTR_OBJ)
+
+POGS_DENSE_LIB_DEPS=equil_dense projector_direct $(DENSE_TARG) $(PROX_TARG)
+POGS_SPARSE_LIB_DEPS=operator cg equil projector $(LINSYS_TARGS) $(PROX_TARG)
+POGS_ABSTRACT_LIB_DEPS=operator cg equil projector $(LINSYS_TARGS) $(PROX_TARG)
+
+.PHONY: default, all, libs, libok, libpogs, pylibs
 default: cpu_dense
-all: libs libequil libprojector libpogs
-
+all: libs liboperator libcg libequil libprojector libpogs libcluster
 libs: libok libprox
-
 libok: libok_dense libok_sparse
+libpogs: libpogs_dense libpogs_abstract
+pylibs: libpogs_dense libcluster
 
-libpogs: $(POGSLIBS)
+libpogs_abstract: pogs_abstract $(POGS_ABSTRACT_LIB_DEPS) $(BASE_TARG)
+	mkdir -p $(OUT)
+	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs -shared -o \
+	$(OUT)$@_$(LIBCONFIG).$(SHARED)  \
+	$(POGS_ABSTRACT_STATIC_DEPS) $(LDFLAGS) 
 
-libpogs_dense: pogs equil projector $(LINSYSLIBS) libprox
+libpogs_sparse: pogs $(POGS_SPARSE_LIB_DEPS) $(BASE_TARG)
 	mkdir -p $(OUT)	
-	$(CXX) $(CXXFLAGS) -shared -o \
-	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED)  \
+	$(CC) $(CCFLAGS) -shared -o \
+	$(OUT)$@_$(LIBCONFIG).$(SHARED)  \
+	$(POGS_STATIC_DEPS) $(SPARSE_OBJ) $(LDFLAGS)
+
+libpogs_dense: pogs $(POGS_DENSE_LIB_DEPS) $(BASE_TARG)
+	mkdir -p $(OUT)	
+	$(CC) $(CCFLAGS) -shared -o \
+	$(OUT)$@_$(LIBCONFIG).$(SHARED)  \
 	$(POGS_STATIC_DEPS) $(LDFLAGS) 
 
-
-libpogs_sparse: 
-	#pogs equil projector $(LINSYSLIBS) libprox
-	# mkdir -p $(OUT) \	
-	# $(CXX) $(CXXFLAGS) -shared -o \
-	# $(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED)  \
-	# $(POGS_STATIC_DEPS) $(LDFLAGS)
-	# $(OUT)$libok_dense_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
-	# $(OUT)$libok_sparse_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
-	# $(OUT)$libprox_$(DEVICETAG)$(PRECISION).$(SHARED) 
-
-libprojector: projector $(DENSETARG) $(SPARSETARG)
+libprojector: projector operator cg $(DENSE_TARG) $(SPARSE_TARG) $(BASE_TARG)
 	mkdir -p $(OUT)	
-	$(CXX) $(CXXFLAGS) -shared -o \
-	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
+	$(CC) $(CCFLAGS) -shared -o \
+	$(OUT)$@_$(LIBCONFIG).$(SHARED) \
 	$(PROJ_STATIC_DEPS) $(LDFLAGS)
 
-
-libequil: equil $(DENSETARG) $(SPARSETARG)
+libequil: equil $(DENSE_TARG) $(SPARSE_TARG) operator $(BASE_TARG)
 	mkdir -p $(OUT)	
-	$(CXX) $(CXXFLAGS) -shared -o \
-	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED)  \
+	$(CC) $(CCFLAGS) -shared -o \
+	$(OUT)$@_$(LIBCONFIG).$(SHARED)  \
 	$(EQUIL_STATIC_DEPS) $(LDFLAGS)
 
-
-libok_dense: $(DENSETARG)
+libcg: cg $(DENSE_TARG) $(SPARSE_TARG) operator $(BASE_TARG)
 	mkdir -p $(OUT)
-	$(CXX) $(CXXFLAGS) -shared -o \
-	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
-	$(DENSESTATIC) $(LDFLAGS)
+	$(CC) $(CCFLAGS) -shared -o\
+	$(OUT)$@_$(LIBCONFIG).$(SHARED)  \
+	$(CG_STATIC_DEPS) $(LDFLAGS) 
 
-libok_sparse: $(SPARSETARG)
+liboperator: operator $(DENSE_TARG) $(SPARSE_TARG) $(BASE_TARG)
 	mkdir -p $(OUT)
-	$(CXX) $(CXXFLAGS) -shared -o \
-	$(OUT)$@_$(ORDER)$(DEVICETAG)$(PRECISION).$(SHARED) \
-	$(SPARSESTATIC) $(SPARSE_STATIC_DEPS ) $(LDFLAGS) 
+	$(CC) $(CCFLAGS) -shared -o \
+	$(OUT)$@_$(LIBCONFIG).$(SHARED) \
+	$(OPERATOR_STATIC_DEPS) $(LDFLAGS)
 
-
-libprox: $(PROXTARG)
+libcluster: $(CLUSTER_TARG) $(DENSE_TARG) $(BASE_TARG)
 	mkdir -p $(OUT)
-	$(CXX) $(CXXFLAGS) -shared -o $(OUT)$@_$(DEVICETAG)$(PRECISION).$(SHARED) $(PROXSTATIC) $(LDFLAGS)
+	$(CC) $(CCFLAGS) -shared -o \
+	$(OUT)$@_$(LIBCONFIG).$(SHARED) \
+	$(CLUSTER_OBJ) $(DENSE_OBJ) $(BASE_OBJ) $(LDFLAGS)	
 
-cpu_dense: $(SRC)optkit_dense.c $(INCLUDE)optkit_dense.h
+libprox: $(PROX_TARG) $(VECTOR_TARG) $(BASE_TARG)
 	mkdir -p $(OUT)
-	$(CXX) $(CXXFLAGS) $< -c -o $(DENSESTATIC)	
+	$(CC) $(CCFLAGS) -shared -o \
+	$(OUT)$@_$(LIBCONFIG).$(SHARED) \
+	$(PROX_OBJ) $(VECTOR_OBJ) $(BASE_OBJ) $(LDFLAGS)
 
-gpu_dense: $(SRC)optkit_dense.cu $(INCLUDE)optkit_dense.h
+libok_sparse: $(SPARSE_TARG) $(BASE_TARG)
 	mkdir -p $(OUT)
-	$(CUXX) $(CUXXFLAGS) $< -c -o $(DENSESTATIC)
+	$(CC) $(CCFLAGS) -shared -o \
+	$(OUT)$@_$(LIBCONFIG).$(SHARED) \
+	$(SPARSE_OBJ) $(SPARSE_STATIC_DEPS) $(LDFLAGS) 
 
-cpu_sparse: $(SRC)optkit_sparse.c $(INCLUDE)optkit_sparse.h
+libok_dense: $(DENSE_TARG) $(BASE_TARG)
 	mkdir -p $(OUT)
-	$(CXX) $(CXXFLAGS) $< -c -o $(SPARSESTATIC)	
+	$(CC) $(CCFLAGS) -shared -o \
+	$(OUT)$@_$(LIBCONFIG).$(SHARED) \
+	$(DENSE_OBJ) $(BASE_OBJ) $(LDFLAGS)
 
-gpu_sparse: $(SRC)optkit_sparse.cu $(INCLUDE)optkit_sparse.h
-	mkdir -p $(OUT)
-	$(CUXX) $(CUXXFLAGS) $< -c -o $(SPARSESTATIC)
-
-cpu_prox: $(SRC)optkit_prox.cpp $(INCLUDE)optkit_prox.hpp
-	mkdir -p $(OUT)
-	g++ $(CXXFLAGS) $< -c -o $(PROXSTATIC)
-
-gpu_prox: $(SRC)optkit_prox.cu $(INCLUDE)optkit_prox.hpp
-	mkdir -p $(OUT)
-	$(CUXX) $(CUXXFLAGS) $< -c -o $(PROXSTATIC)
-
-pogs: $(SRC)optkit_pogs.c $(INCLUDE)optkit_pogs.h
+pogs_abstract: $(POGS_ABSTR_SRC)
 	mkdir -p $(OUT) 
-	$(CXX) $(CXXFLAGS) $< -c -o $(POGSSTATIC)
-	
-equil: $(SRC)optkit_equilibration.c $(INCLUDE)optkit_equilibration.h
+	mkdir -p $(OUT)/pogs 	
+	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $(POGSSRC)pogs_common.c -c -o \
+	$(POGSOUT)pogs_common_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $(POGSSRC)pogs_abstract.c -c -o \
+	$(POGSOUT)$pogs_abstract_$(LIBCONFIG).o
+
+pogs: $(POGS_SRC)
+	mkdir -p $(OUT) 
+	mkdir -p $(OUT)/pogs 	
+	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $(POGSSRC)pogs_common.c -c -o \
+	$(POGSOUT)pogs_common_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $(POGSSRC)pogs.c -c -o \
+	$(POGSOUT)pogs_$(LIBCONFIG).o
+
+equil: $(SRC)optkit_equilibration.c 
 	mkdir -p $(OUT)
-	$(CXX) $(CXXFLAGS) $< -c -o $(EQUILSTATIC)
+	$(CC) $(CCFLAGS) $< -c -o $(EQUIL_OBJ)
 
-projector: $(SRC)optkit_projector.c $(INCLUDE)optkit_projector.h
+equil_dense: $(SRC)optkit_equilibration.c
 	mkdir -p $(OUT)
-	$(CXX) $(CXXFLAGS) $< -c -o $(PROJSTATIC)
+	$(CC) $(CCFLAGS) $< -c -o $(EQUIL_DENSE_OBJ) -DOPTKIT_NO_OPERATOR_EQUIL
 
+projector: $(SRC)optkit_projector.c
+	mkdir -p $(OUT)
+	$(CC) $(CCFLAGS) $< -c -o $(PROJ_OBJ)
 
+projector_direct: $(SRC)optkit_projector.c
+	mkdir -p $(OUT)
+	$(CC) $(CCFLAGS) $< -c -o $(PROJ_DIRECT_OBJ) -DOPTKIT_NO_INDIRECT_PROJECTOR
+
+operator: $(OPERATOR_SRC) 
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)/operator
+	$(CC) $(CCFLAGS) $(OPSRC)dense.c  -c -o \
+	$(OUT)$(OPERATOR)dense_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) $(OPSRC)sparse.c  -c -o \
+	$(OUT)$(OPERATOR)sparse_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) $(OPSRC)diagonal.c -c -o \
+	$(OUT)$(OPERATOR)diagonal_$(LIBCONFIG).o
+
+cg: $(SRC)optkit_cg.c
+	mkdir -p $(OUT)
+	$(CC) $(CCFLAGS) $< -c -o $(CG_OBJ)
+
+cpu_cluster: $(CLUSTER_CPU_SRC) cluster_common
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)clustering/
+	$(CC) $(CCFLAGS) $(CLUSRC)upsampling_vector.c -c -o \
+	$(CLUOUT)upsampling_vector_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) $(CLUSRC)clustering.c -c -o \
+	$(CLUOUT)clustering_$(LIBCONFIG).o
+
+gpu_cluster: $(CLUSTER_GPU_SRC) cluster_common
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)clustering/
+	$(CUXX) $(CUXXFLAGS) $(CLUSRC)upsampling_vector.cu -c -o \
+	$(CLUOUT)upsampling_vector_$(LIBCONFIG).o
+	$(CUXX) $(CUXXFLAGS) $(CLUSRC)clustering.cu -c -o \
+	$(CLUOUT)clustering_$(LIBCONFIG).o
+
+cluster_common: $(CLUSRC)upsampling_vector_common.c $(CLUSRC)clustering_common.c
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)clustering/
+	$(CC) $(CCFLAGS) $(CLUSRC)upsampling_vector_common.c -c -o \
+	$(CLUOUT)upsampling_vector_common_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) $(CLUSRC)clustering_common.c -c -o \
+	$(CLUOUT)clustering_common_$(LIBCONFIG).o
+
+cpu_prox: $(SRC)optkit_prox.cpp
+	mkdir -p $(OUT)
+	$(CXX) $(CXXFLAGS) $< -c -o $(PROX_OBJ)
+
+gpu_prox: $(SRC)optkit_prox.cu
+	mkdir -p $(OUT)
+	$(CUXX) $(CUXXFLAGS) $< -c -o $(PROX_OBJ)
+
+cpu_sparse: $(LASRC)sparse.cpp cpu_vector
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)/linsys
+	$(CXX) $(CXXFLAGS) $< -c -o $(SPARSE_OBJ)	
+
+gpu_sparse: $(LASRC)sparse.cu gpu_vector
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)/linsys
+	$(CUXX) $(CUXXFLAGS) $< -c -o $(SPARSE_OBJ)
+
+cpu_dense: $(DENSE_CPU_SRC)
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)/linsys
+	$(CXX) $(CXXFLAGS) $(LASRC)vector.cpp -c -o \
+	$(OUT)$(LINSYS)vector_$(LIBCONFIG).o
+	$(CXX) $(CXXFLAGS) $(LASRC)matrix.cpp -c -o \
+	$(OUT)$(LINSYS)matrix_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) $(LASRC)blas.c -c -o \
+	$(OUT)$(LINSYS)blas_$(LIBCONFIG).o
+	$(CC) $(CCFLAGS) $(LASRC)dense.c -c -o \
+	$(OUT)$(LINSYS)dense_$(LIBCONFIG).o
+
+gpu_dense: $(DENSE_GPU_SRC)
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)/linsys
+	$(CUXX) $(CUXXFLAGS) $(LASRC)vector.cu -c -o \
+	$(OUT)$(LINSYS)vector_$(LIBCONFIG).o
+	$(CUXX) $(CUXXFLAGS) $(LASRC)matrix.cu -c -o \
+	$(OUT)$(LINSYS)matrix_$(LIBCONFIG).o
+	$(CUXX) $(CUXXFLAGS) $(LASRC)blas.cu -c -o \
+	$(OUT)$(LINSYS)blas_$(LIBCONFIG).o
+	$(CUXX) $(CUXXFLAGS) $(LASRC)dense.cu -c -o \
+	$(OUT)$(LINSYS)dense_$(LIBCONFIG).o
+
+cpu_vector: $(LASRC)vector.cpp
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)/linsys
+	$(CXX) $(CXXFLAGS) $< -c -o $(VECTOR_OBJ)
+
+gpu_vector: $(LASRC)vector.cu
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)/linsys
+	$(CUXX) $(CUXXFLAGS) $< -c -o $(VECTOR_OBJ)
+
+cpu_defs: $(SRC)optkit_defs.c
+	mkdir -p $(OUT)
+	$(CC) $(CCFLAGS) $< -c -o $(BASE_OBJ)
+
+gpu_defs: $(SRC)optkit_defs.cu	
+	mkdir -p $(OUT)
+	$(CUXX) $(CUXXFLAGS) $< -c -o $(BASE_OBJ)
 
 .PHONY: clean
 clean:

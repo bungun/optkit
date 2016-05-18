@@ -13,8 +13,6 @@ test
 
 *.pyc
 
-python/*operator*
+*cython*
 include/*graph*
-include/*cluster*
 src/*graph*
-src/*cluster*

@@ -1,33 +1,21 @@
 from os import getenv
 
+if int(getenv('OPTKIT_C_TESTING', 0)) == 0:
+	from optkit.api import OPTKIT_VERSION
 
-from optkit.api import OPTKIT_VERSION 
+	# Backend
+	from optkit.api import set_backend
+	if int(getenv('OPTKIT_IMPORT_BACKEND', 0)) > 1:
+		from optkit.api import backend
 
-# -------------------------------------------------	#
-#					   Backend 						#
-# ------------------------------------------------- #
-from optkit.api import set_backend
-if getenv('OPTKIT_IMPORT_BACKEND', 0) > 1:
-	from optkit.api import backend
+	# C implementations
+	from optkit.api import PogsSolver, PogsObjective
+	from optkit.api import Clustering, ClusteringSettings
 
-# -------------------------------------------------	#
-#						Types 						#
-# ------------------------------------------------- #
-from optkit.api import Vector
-from optkit.api import Matrix
-from optkit.api import FunctionVector
+	del utils
+	del libs
+	del types
+	del backends
+	del api
 
-
-# -------------------------------------------------	#
-#				Python implementations				#
-# ------------------------------------------------- #
-from optkit.api import linsys
-from optkit.api import prox
-from optkit.api import DirectProjector
-from optkit.api import equil
-from optkit.api import pogs
-
-# -------------------------------------------------	#
-#				  C implementations					#
-# ------------------------------------------------- #
-from optkit.api import PogsSolver
+del getenv

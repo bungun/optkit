@@ -1,4 +1,3 @@
-
 # optkit
 
 ## About `optkit`
@@ -11,10 +10,10 @@ This library provides:
 	 
 Requirements
 ------------
-optkit's C/CUDA backend libraries has the following dependencies:
+optkit's C/CUDA backend libraries have the following dependencies:
 
 	cBLAS
-	CUDA 
+	CUDA >= 7.5
 
 optkit's Python package has the following additional dependencies:
 
@@ -126,4 +125,3 @@ The projection, matrix equilibration, and POGS solver algorithms are Python adap
 The following people have been, and are, involved in the development and maintenance of optkit
 + Baris Ungun (principal developer)
 + Stephen Boyd (methods and math)
-

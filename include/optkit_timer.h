@@ -1,5 +1,5 @@
-#ifndef OPTKIT_TIMER_H_GUARD
-#define OPTKIT_TIMER_H_GUARD
+#ifndef OPTKIT_TIMER_H_
+#define OPTKIT_TIMER_H_
 
 #include "optkit_defs.h"
 #include <unistd.h>
@@ -32,4 +32,4 @@ ok_float toc(OK_TIMER timer){
 }
 #endif
 
-#endif /* OPTKIT_TIMER_H_GUARD */
+#endif /* OPTKIT_TIMER_H_ */

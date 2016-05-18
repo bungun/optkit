@@ -1,80 +1,90 @@
-from ctypes import CDLL, c_int, c_uint, c_size_t, c_void_p
-from subprocess import check_output
-from os import path, uname, getenv
+from ctypes import Structure, POINTER, c_int, c_uint, c_size_t, c_void_p
 from numpy import float32
 from site import getsitepackages
+from optkit.libs.loader import OptkitLibs
+from optkit.libs.enums import OKFunctionEnums
+from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\
+	attach_sparse_linsys_ctypes, attach_base_ccalls, attach_vector_ccalls, \
+	attach_dense_linsys_ccalls, attach_sparse_linsys_ccalls
 
-class ProxLibs(object):
+class ProxLibs(OptkitLibs):
 	def __init__(self):
-		self.libs = {}
-		local_c_build = path.abspath(path.join(path.dirname(__file__),
-			'..', '..', '..', 'build'))
-		search_results = ""
-		use_local = getenv('OPTKIT_USE_LOCALLIBS', 0)
+		OptkitLibs.__init__(self, 'libprox_')
+		self.attach_calls.append(attach_base_ctypes)
+		self.attach_calls.append(attach_dense_linsys_ctypes)
+		self.attach_calls.append(attach_base_ccalls)
+		self.attach_calls.append(attach_vector_ccalls)
+		self.attach_calls.append(attach_prox_ctypes)
+		self.attach_calls.append(attach_prox_ccalls)
 
-		# NB: no windows support
-		ext = "dylib" if uname()[0] == "Darwin" else "so"
-		for device in ['gpu', 'cpu']:
-			for precision in ['32', '64']:
-				lib_tag = '{}{}'.format(device, precision)
-				lib_name = 'libprox_{}{}.{}'.format(device, precision, ext)
-				lib_path = getsitepackages()[0]
-				if not use_local and path.exists(path.join(lib_path, lib_name)):
-					lib_path = path.join(lib_path, lib_name)
-				else:
-					lib_path = path.join(local_c_build, lib_name)
+def attach_prox_ctypes(lib, single_precision=False):
+	if 'ok_float' not in lib.__dict__:
+		attach_base_ctypes(lib, single_precision)
 
-				try:
-					lib = CDLL(lib_path)
-					self.libs[lib_tag]=lib
-				except (OSError, IndexError):
-					search_results += str("library {} not found at {}.\n".format(
-						lib_name, lib_path))
-					self.libs[lib_tag]=None
+	ok_float = lib.ok_float
 
-		if all([self.libs[k] is None for k in self.libs]):
-			raise ValueError('No backend libraries were located:\n{}'.format(
-				search_results))
+	# function struct
+	class ok_function(Structure):
+		_fields_ = [('h', c_uint),
+					('a', ok_float),
+					('b', ok_float),
+					('c', ok_float),
+					('d', ok_float),
+					('e', ok_float)]
+	lib.function = ok_function
+	lib.function_p = POINTER(lib.function)
 
-	def get(self, lowtypes, GPU=False):
-		device = 'gpu' if GPU else 'cpu'
-		precision = '32' if lowtypes.FLOAT_CAST == float32 else '64'
-		lib_key = '{}{}'.format(device, precision)
+	# function vector struct
+	class ok_function_vector(Structure):
+		_fields_ = [('size', c_size_t),
+					('objectives', lib.function_p)]
+	lib.function_vector = ok_function_vector
+	lib.function_vector_p = POINTER(lib.function_vector)
 
-		if self.libs[lib_key] is not None:
-			lib = self.libs[lib_key]
-			ok_float = lowtypes.ok_float
-			ok_float_p = lowtypes.ok_float_p
-			vector_p = lowtypes.vector_p
-			function_p = lowtypes.function_p
-			function_vector_p = lowtypes.function_vector_p
+	lib.function_enums = OKFunctionEnums()
 
-			# Function Vector 
-			# ------
-			## arguments
-			lib.function_vector_alloc.argtypes=[function_vector_p, c_size_t]
-			lib.function_vector_calloc.argtypes=[function_vector_p, c_size_t]
-			lib.function_vector_free.argtypes=[function_vector_p]
-			lib.function_vector_memcpy_va.argtypes=[function_vector_p, function_p]
-			lib.function_vector_memcpy_av.argtypes=[function_p, function_vector_p]			
-			lib.function_vector_print.argtypes=[function_vector_p]
+def attach_prox_ccalls(lib, single_precision=False):
+	if not 'vector_p' in lib.__dict__:
+		attach_dense_linsys_ctypes(lib, single_precision)
+	if not 'function_vector_p' in lib.__dict__:
+		attach_prox_ctypes(lib, single_precision)
 
-			## return values
-			lib.function_vector_alloc.restype=None
-			lib.function_vector_calloc.restype=None
-			lib.function_vector_free.restype=None
-			lib.function_vector_memcpy_va.restype = None
-			lib.function_vector_memcpy_av.restype = None			
-			lib.function_vector_print.restype=None
+	ok_float = lib.ok_float
+	ok_float_p = lib.ok_float_p
+	vector_p = lib.vector_p
+	function_p = lib.function_p
+	function_vector_p = lib.function_vector_p
 
-			# Prox & Function evaluation
-			# --------------------------
-			## arguments
-			lib.ProxEvalVector.argtypes=[function_vector_p, ok_float, vector_p, vector_p]
-			lib.FuncEvalVector.argtypes=[function_vector_p, vector_p]
+	# Function Vector
+	# ------
+	## arguments
+	lib.function_vector_alloc.argtypes = [function_vector_p, c_size_t]
+	lib.function_vector_calloc.argtypes = [function_vector_p, c_size_t]
+	lib.function_vector_free.argtypes = [function_vector_p]
+	lib.function_vector_memcpy_va.argtypes = [function_vector_p, function_p]
+	lib.function_vector_memcpy_av.argtypes = [function_p, function_vector_p]
+	lib.function_vector_mul.argtypes = [function_vector_p, vector_p]
+	lib.function_vector_div.argtypes = [function_vector_p, vector_p]
+	lib.function_vector_print.argtypes = [function_vector_p]
 
-			## return values
-			lib.ProxEvalVector.restype=None
-			lib.FuncEvalVector.restype=ok_float
+	## return values
+	lib.function_vector_alloc.restype = c_uint
+	lib.function_vector_calloc.restype = c_uint
+	lib.function_vector_free.restype = c_uint
+	lib.function_vector_memcpy_va.restype = c_uint
+	lib.function_vector_memcpy_av.restype = c_uint
+	lib.function_vector_mul.restype = c_uint
+	lib.function_vector_div.restype = c_uint
+	lib.function_vector_print.restype = c_uint
 
-			return lib
+	# Prox & Function evaluation
+	# --------------------------
+	## arguments
+	lib.prox_eval_vector.argtypes = [function_vector_p, ok_float, vector_p,
+									 vector_p]
+	lib.function_eval_vector.argtypes = [function_vector_p, vector_p,
+										 ok_float_p]
+
+	## return values
+	lib.prox_eval_vector.restype = c_uint
+	lib.function_eval_vector.restype = c_uint
