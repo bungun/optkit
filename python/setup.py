@@ -1,4 +1,4 @@
-from os import path, popen, uname
+from os import path, popen, uname, getenv
 from setuptools import setup
 from setuptools.command.install import   install
 from distutils.command.build import build
@@ -7,7 +7,8 @@ from subprocess import call
 # TODO: use this for OMP thread #?
 # from multiprocessing import cpu_count
 
-BUILD_GPU = False
+RECOMPILE_LIBS = bool(getenv('OPTKIT_RECOMPILE_LIBS', True))
+BUILD_GPU = bool(getenv('OPTKIT_BUILD_GPU', False))
 USE_OPENMP = False
 SPARSE_POGS = False
 ABSTRACT_POGS = False
@@ -20,6 +21,7 @@ LONG_DESC= str('optkit provides a Python interface for CPU and GPU '
 
 class OptkitBuild(build):
     def run(self):
+        global RECOMPILE_LIBS
         global BUILD_GPU
         global USE_OPENMP
         global SPARSE_POGS
@@ -32,6 +34,9 @@ class OptkitBuild(build):
 
         # run original build code
         build.run(self)
+
+        if not RECOMPILE_LIBS:
+            return
 
         # build optkit
         BUILD_GPU &= NVCC
