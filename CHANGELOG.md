@@ -11,8 +11,10 @@
 - TODO: cite POGS
 - TODO: append version numbers to .so, check version numbers when loading libs in python
 - TODO: add tests for vector_rand, transformable operators, operator export/import 
+- TODO: improve modularity in Makefile
+- TODO: sparse POGS (entails sparse CG, equil, projection: performance vs. abstract??)
 
-###v0.0.4 (beta)
+###v0.0.4 (current)
 - Migrate tests to unittests
 - Eliminate slow Python implementations (to be replaced with Cython implementations in future, potentially)
 - Abstract linear operators
@@ -26,7 +28,7 @@
 - K-means clustering on rows of dense matrices
 - Error checking throughout C libraries (all calls that don't return a pointer return an error code)
 
-###v0.0.3 (current)
+###v0.0.3
 - CPU Sparse Linear Algebra
 - GPU Sparse Linear Algebra
 - Python Sparse Linear Algebra bindings
