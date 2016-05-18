@@ -7,8 +7,8 @@ from subprocess import call
 # TODO: use this for OMP thread #?
 # from multiprocessing import cpu_count
 
-RECOMPILE_LIBS = bool(getenv('OPTKIT_RECOMPILE_LIBS', True))
-BUILD_GPU = bool(getenv('OPTKIT_BUILD_GPU', False))
+RECOMPILE_LIBS = int(getenv('OPTKIT_RECOMPILE_LIBS', 0)) == 1
+BUILD_GPU = int(getenv('OPTKIT_BUILD_GPU', 0)) == 1
 USE_OPENMP = False
 SPARSE_POGS = False
 ABSTRACT_POGS = False
