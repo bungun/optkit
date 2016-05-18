@@ -102,7 +102,6 @@ ok_status kmeans_work_free(kmeans_work * w)
 	OK_MAX_ERR( err, upsamplingvec_free(&w->a2c) );
 	OK_MAX_ERR( err, vector_free(&w->counts) );
 	OK_MAX_ERR( err, cluster_aid_free(&w->h) );
-	ok_free(w->indicator);
 	memset(w, 0, sizeof(*w));
 	return err;
 }
@@ -167,26 +166,29 @@ ok_status cluster(matrix * A, matrix * C, upsamplingvec * a2c,
 	 *	h->c_squared_k = c_k'c_k,
 	 *	D_ki = - 2 * c_k'a_i
 	 */
-	OK_RETURNIF_ERR( linalg_matrix_row_squares(CblasNoTrans, C,
-		&h->c_squared) );
-	OK_RETURNIF_ERR( blas_gemm(h->hdl, CblasNoTrans, CblasTrans, -2 * kOne,
+	OK_RETURNIF_ERR(
+		linalg_matrix_row_squares(CblasNoTrans, C, &h->c_squared) );
+	OK_RETURNIF_ERR(
+		blas_gemm(h->hdl, CblasNoTrans, CblasTrans, -2 * kOne,
 		C, A, kZero, &h->D) );
 
 	/* Form D_{ki} = - 2 * c_k'a_i + c_k^2 */
-	OK_RETURNIF_ERR( linalg_matrix_broadcast_vector(&h->D, &h->c_squared,
-		OkTransformAdd, CblasLeft) );
+	OK_RETURNIF_ERR(
+		linalg_matrix_broadcast_vector(&h->D, &h->c_squared,
+			OkTransformAdd, CblasLeft) );
 
 	/* set tentative cluster assigment of vector i argmin_k {D_ki} */
-	OK_RETURNIF_ERR( linalg_matrix_reduce_indmin(&h->a2c_tentative.vec,
-		&h->d_min, &h->D, CblasLeft) );
+	OK_RETURNIF_ERR(
+		linalg_matrix_reduce_indmin(&h->a2c_tentative.vec, &h->d_min,
+			&h->D, CblasLeft) );
 
 	/* finalize cluster assignements */
-	if (maxdist == OK_INFINITY)
+	// if (maxdist == OK_INFINITY)
 		return OK_SCAN_ERR(
 			assign_clusters_l2(A, C, a2c, h) );
-	else
-		return OK_SCAN_ERR(
-			assign_clusters_l2_lInf_cap(A, C, a2c, h, maxdist) );
+	// else
+		// return OK_SCAN_ERR(
+			// assign_clusters_l2_lInf_cap(A, C, a2c, h, maxdist) );
 }
 
 /*
@@ -259,7 +261,7 @@ ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
 	/* bounds/dimension checks */
 	OK_RETURNIF_ERR( upsamplingvec_check_bounds(a2c) );
 	valid = (counts->size == C->size1) && (A->size2 == C->size2);
-	valid &= (A->size1 == a2c->size1) && (C->size2 >= a2c->size2);
+	valid &= (A->size1 == a2c->size1) && (C->size1 >= a2c->size2);
 	valid &= (h->D.size1 == C->size1) && (h->D.size2 == A->size1);
 	if (!valid)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );

@@ -39,8 +39,7 @@ def attach_clustering_ctypes(lib, single_precision=False):
 	lib.upsamplingvec_p = POINTER(lib.upsamplingvec)
 
 	class cluster_aid(Structure):
-		_fields_ = [('indicator', POINTER(c_int)),
-					('hdl', c_void_p),
+		_fields_ = [('hdl', c_void_p),
 					('a2c_tentative_full', upsamplingvec),
 					('a2c_tentative', upsamplingvec),
 					('d_min_full', vector),
@@ -56,8 +55,7 @@ def attach_clustering_ctypes(lib, single_precision=False):
 	lib.cluster_aid_p = POINTER(lib.cluster_aid)
 
 	class kmeans_work(Structure):
-		_fields_ = [('indicator', POINTER(c_int)),
-					('n_vectors', c_size_t),
+		_fields_ = [('n_vectors', c_size_t),
 					('n_clusters', c_size_t),
 					('vec_length', c_size_t),
 					('A', matrix),

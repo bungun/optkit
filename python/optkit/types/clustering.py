@@ -149,6 +149,10 @@ class UpsamplingVector(object):
 
 	def recalculate_size(self):
 		self.__size2 = self.max_assignment + 1
+		if self.__size2 > len(self.__counts):
+			self.__counts = zeros(self.__size2, dtype=int)
+		else:
+			self.__counts = self.__counts[:self.__size2]
 
 	@property
 	def counts(self):

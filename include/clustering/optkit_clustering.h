@@ -9,7 +9,6 @@ extern "C" {
 #endif
 
 typedef struct cluster_aid {
-	int * indicator;
 	void * hdl; /* linalg handle */
 	upsamplingvec a2c_tentative_full, a2c_tentative;
 	vector d_min_full, d_min, c_squared_full, c_squared;
@@ -18,7 +17,6 @@ typedef struct cluster_aid {
 } cluster_aid;
 
 typedef struct kmeans_work {
-	int * indicator;
 	size_t n_vectors, n_clusters, vec_length;
 	matrix A, C;
 	upsamplingvec a2c;
