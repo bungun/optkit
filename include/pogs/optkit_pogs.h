@@ -2,6 +2,8 @@
 #define OPTKIT_POGS_H_
 
 #include "optkit_timer.h"
+#include "optkit_equilibration.h"
+#include "optkit_projector.h"
 
 #ifndef OPTKIT_POGS_IMPLEMENTATION_
 #define OPTKIT_POGS_IMPLEMENTATION_

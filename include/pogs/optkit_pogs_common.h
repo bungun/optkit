@@ -3,8 +3,6 @@
 
 #include "optkit_dense.h"
 #include "optkit_prox.hpp"
-#include "optkit_equilibration.h"
-#include "optkit_projector.h"
 
 #ifdef __cplusplus
 extern "C" {

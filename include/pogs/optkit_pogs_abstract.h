@@ -1,11 +1,12 @@
 #ifndef OPTKIT_POGS_ABSTRACT_H_
 #define OPTKIT_POGS_ABSTRACT_H_
 
-#include "optkit_abstract_operator.h"
 #include "optkit_operator_dense.h"
 #include "optkit_operator_sparse.h"
 #include "optkit_operator_typesafe.h"
 #include "optkit_timer.h"
+#include "optkit_equilibration.h"
+#include "optkit_projector.h"
 
 #ifndef OPTKIT_POGS_IMPLEMENTATION_
 #define OPTKIT_POGS_IMPLEMENTATION_

@@ -11,7 +11,6 @@
 - TODO: cite POGS
 - TODO: append version numbers to .so, check version numbers when loading libs in python
 - TODO: add tests for vector_rand, transformable operators, operator export/import 
-- TODO: improve modularity in Makefile
 - TODO: sparse POGS (entails sparse CG, equil, projection: performance vs. abstract??)
 
 ###v0.0.4 (current)
