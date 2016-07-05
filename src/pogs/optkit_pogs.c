@@ -477,6 +477,14 @@ ok_status pogs_extract_solver(pogs_solver * solver, ok_float * A_equil,
 	return OPTKIT_SUCCESS;
 }
 
+ok_status pogs_solver_exists(pogs_solver * solver)
+{
+	if (solver)
+		return OPTKIT_SUCCESS;
+	else
+		return OK_SCAN_ERR(OPTKIT_ERROR_UNALLOCATED);
+}
+
 #ifdef __cplusplus
 }
 #endif

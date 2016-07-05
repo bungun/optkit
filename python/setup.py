@@ -92,7 +92,7 @@ class OptkitBuild(build):
                     # device, precision))
                 # libs.append('libprox_{}{}.{}'.format(device, precision, EXT))
                 print('making pogs libraries for:'
-                    '\n\tDEVICE: {}\n\tPRECISION: {}\n\t MATRICES {}'.format(
+                    '\n\tDEVICE: {}\n\tPRECISION: {}\n\tMATRICES {}'.format(
                             device, precision, pogs_matrices))
                 for matrix in pogs_matrices:
                     libs.append('libpogs_{}_{}{}.{}'.format(

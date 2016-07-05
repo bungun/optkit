@@ -5,6 +5,8 @@
 - TODO: Cython bindings
 - TODO: operator typesafe equilibration
 - TODO: operator IO
+- TODO: fix GPU allocation issues for large problems
+- TODO: (3 jun 2016) fix broken backend switching
 
 ###v0.0.5 (next release)
 - TODO: license

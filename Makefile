@@ -28,7 +28,6 @@ POGSINC=$(INCLUDE)$(POGS)
 POGSSRC=$(SRC)$(POGS)
 POGSOUT=$(OUT)$(POGS)
 
-
 IFLAGS=-I. -I$(INCLUDE) -I$(INCLUDE)external -I$(INCLUDE)linsys 
 IFLAGS+=-I$(INCLUDE)operator -I$(INCLUDE)clustering
 
