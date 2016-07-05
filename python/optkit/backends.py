@@ -11,6 +11,10 @@ from optkit.utils.pyutils import version_string
 # CPU32, CPU64, GPU32, GPU64
 class OKBackend(object):
 	def __init__(self, gpu=False, single_precision=False):
+		self.__clear()
+		self.__set_lib()
+
+	def __clear(self):
 		self.version = None
 		self.__device = None
 		self.__precision = None
@@ -37,7 +41,6 @@ class OKBackend(object):
 
 		self.__LIBGUARD_ON = False
 		self.__COBJECT_COUNT = 0
-		self.__set_lib()
 
 	@property
 	def config(self):

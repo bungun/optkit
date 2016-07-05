@@ -363,6 +363,8 @@ def attach_pogs_ccalls(lib, single_precision=False):
 										ok_float_p, ok_float_p, ok_float_p,
 										ok_float_p, ok_float_p, ok_float_p,
 										ok_float_p, ok_float_p, c_uint]
+	lib.pogs_solver_exists.argtypes = [pogs_solver_p]
+
 
 	## return types
 	lib.pogs_init.restype = pogs_solver_p
@@ -371,6 +373,7 @@ def attach_pogs_ccalls(lib, single_precision=False):
 	lib.pogs.restype = c_uint
 	lib.pogs_load_solver.restype = pogs_solver_p
 	lib.pogs_extract_solver.restype = c_uint
+	lib.pogs_solver_exists.restype = c_uint
 
 	# Private API
 	if lib.full_api_accessible:

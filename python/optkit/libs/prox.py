@@ -1,6 +1,5 @@
 from ctypes import Structure, POINTER, c_int, c_uint, c_size_t, c_void_p
 from numpy import float32
-from site import getsitepackages
 from optkit.libs.loader import OptkitLibs
 from optkit.libs.enums import OKFunctionEnums
 from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\

@@ -1,7 +1,8 @@
 from numpy import zeros, ones, ndarray
 from optkit.utils.pyutils import const_iterator
+from optkit.utils.proxutils import func_eval_python
 
-class PogsTypes(object):
+class PogsCommonTypes(object):
 	def __init__(self, backend):
 		PogsSettings = backend.pogs.pogs_settings
 		PogsInfo = backend.pogs.pogs_info
@@ -23,6 +24,19 @@ class PogsTypes(object):
 				else:
 					self.set(**params)
 
+			def eval(self, vec):
+				if not isinstance(vec, ndarray):
+					raise TypeError('argument "vec" must be of type {}'.format(
+									ndarray))
+				elif len(vec) != self.size:
+					raise ValueError('argument "vec" must have same length as '
+									 'this {} object.\nlength {}: {}\nlength '
+									 'vec: {}'.format(Objective, Objective,
+									 self.size, len(vec)))
+
+				return func_eval_python(self.list(lib.function), vec)
+
+
 			def copy_from(self, obj):
 				if not isinstance(obj, Objective):
 					raise TypeError('argument "obj" must be of type {}'.format(
@@ -32,7 +46,9 @@ class PogsTypes(object):
 				self.__h[:] = obj.__h[:]
 
 			def list(self, function_t):
-				return [function_t(*t) for t in self.terms]
+				return [function_t(self.__h[t], self.__a[t], self.__b[t],
+						self.__c[t], self.__d[t], self.__e[t]) for t in
+						xrange(self.size)]
 
 			@property
 			def arrays(self):

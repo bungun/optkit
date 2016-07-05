@@ -1,16 +1,18 @@
 from numpy import zeros, ones, ndarray, savez, load as np_load
+from numpy.linalg import cholesky
 from ctypes import c_void_p
 from os import path
-from optkit.types.pogs.common import PogsTypes
+from optkit.types.pogs.common import PogsCommonTypes
 
-class PogsDenseDirectTypes(PogsTypes):
+class PogsDenseDirectTypes(PogsCommonTypes):
 	def __init__(self, backend):
-		PogsTypes.__init__(self, backend)
+		PogsCommonTypes.__init__(self, backend)
 		lib = backend.pogs
 		PogsSettings = lib.pogs_settings
 		PogsInfo = lib.pogs_info
 		PogsOutput = lib.pogs_output
 		Objective = self.Objective
+
 		SolverSettings = self.SolverSettings
 		SolverInfo = self.SolverInfo
 		SolverOutput = self.SolverOutput
@@ -52,13 +54,17 @@ class PogsDenseDirectTypes(PogsTypes):
 			    return self.__c_solver
 
 			def __register_solver(self, lib, solver):
+				err = self.__backend.pogs.pogs_solver_exists(solver)
+				if err > 0:
+					raise RuntimeError('solver allocation failed')
+
 				self.__backend.increment_cobject_count()
 				self.__c_solver = solver
 
 			def __unregister_solver(self):
 				if self.c_solver is None:
 					return
-				lib.pogs_finish(self.c_solver, 0)
+				self.__backend.pogs.pogs_finish(self.c_solver, 0)
 				self.__c_solver = None
 				self.__backend.decrement_cobject_count()
 
@@ -97,7 +103,7 @@ class PogsDenseDirectTypes(PogsTypes):
 								   self.settings.c, self.info.c, self.output.c)
 				self.first_run = False
 
-			def load(self, directory, name):
+			def load(self, directory, name, allow_cholesky=True):
 				filename = path.join(directory, name)
 				if not '.npz' in name:
 					filename += '.npz'
@@ -117,28 +123,9 @@ class PogsDenseDirectTypes(PogsTypes):
 				else:
 					err = 1
 
-
-				if not err and 'LLT' in data:
-					LLT = data['LLT'].astype(lib.pyfloat)
-				elif path.exists(path.join(directory, 'LLT.npy')):
-					LLT = np_load(path.join(directory, 'LLT.npy')).astype(
-								lib.pyfloat)
-					LLT_ptr = LLT.ctypes.data_as(lib.ok_float_p)
-				else:
-					if lib.direct:
-						err = 1
-					else:
-						LLT_ptr = c_void_p()
-
-				if not err:
-					LLT_ptr = LLT.ctypes.data_as(lib.ok_float_p)
-				else:
-					LLT_ptr = None
-
-
 				if not err and 'd' in data:
 					d = data['d'].astype(lib.pyfloat)
-				elif path.exists(path.join(directory, 'd.npy')):
+				elif not err and path.exists(path.join(directory, 'd.npy')):
 					d = np_load(path.join(directory, 'd.npy')).astype(
 								lib.pyfloat)
 				else:
@@ -146,20 +133,44 @@ class PogsDenseDirectTypes(PogsTypes):
 
 				if not err and 'e' in data:
 					e = data['e'].astype(lib.pyfloat)
-				elif path.exists(path.join(directory, 'e.npy')):
+				elif not err and path.exists(path.join(directory, 'e.npy')):
 					e = np_load(path.join(directory, 'e.npy')).astype(
 								lib.pyfloat)
 				else:
 					err = 1
 
+				if not err and 'LLT' in data:
+					LLT = data['LLT'].astype(lib.pyfloat)
+				elif not err and path.exists(path.join(directory, 'LLT.npy')):
+					LLT = np_load(path.join(directory, 'LLT.npy')).astype(
+								lib.pyfloat)
+				elif not err and allow_cholesky:
+					m, n = A_equil.shape
+					mindim = min(m, n)
+					if m >= n:
+						AA = A_equil.T.dot(A_equil)
+					else:
+						AA = A_equil.dot(A_equil.T)
+
+
+					mean_diag = 0
+					for i in xrange(mindim):
+						mean_diag += AA[i, i]
+
+					mean_diag /= AA.shape[0]
+					normA = sqrt()
+					LLT = cholesky(AA)
+
+				else:
+					err = 1
+
 				if err:
 					snippet = '`LLT`, ' if lib.direct else ''
-					ValueError('Minimal requirements to load solver '
+					raise ValueError('Minimal requirements to load solver '
 							   'not met. Specified file must contain '
-							   'at least one .npz file with entries `A_equil`,'
-							   ' {}`d`, and `e`, or the specified folder must'
-							   ' contain .npy files of the same names.'.format(
-							   snippet))
+							   'at least one .npz file with entries "A_equil",'
+							   ' "LLT", "d", and "e", or the specified folder '
+							   'must contain .npy files of the same names.')
 
 				if 'z' in data:
 					z = data['z'].astype(lib.pyfloat)
@@ -198,7 +209,8 @@ class PogsDenseDirectTypes(PogsTypes):
 					self.__unregister_solver()
 
 				self.__register_solver(lib, lib.pogs_load_solver(
-						A_equil.ctypes.data_as(lib.ok_float_p), LLT_ptr,
+						A_equil.ctypes.data_as(lib.ok_float_p),
+						LLT.ctypes.data_as(lib.ok_float_p),
 						d.ctypes.data_as(lib.ok_float_p),
 						e.ctypes.data_as(lib.ok_float_p),
 						z.ctypes.data_as(lib.ok_float_p),
@@ -229,12 +241,8 @@ class PogsDenseDirectTypes(PogsTypes):
 				mindim = min(self.m, self.n)
 				A_equil = zeros((self.m, self.n), dtype=lib.pyfloat)
 
-				if lib.direct:
-					LLT = zeros((mindim, mindim), dtype=lib.pyfloat)
-					LLT_ptr = LLT.ctypes.data_as(lib.ok_float_p)
-				else:
-					LLT = c_void_p()
-					LLT_ptr = LLT
+				LLT = zeros((mindim, mindim), dtype=lib.pyfloat)
+				LLT_ptr = LLT.ctypes.data_as(lib.ok_float_p)
 
 				if A_equil.flags.c_contiguous:
 					order = lib.enums.CblasRowMajor
