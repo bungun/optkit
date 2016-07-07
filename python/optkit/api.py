@@ -42,7 +42,10 @@ def set_backend(gpu=False, double=True):
 	global Clustering
 
 	# change backend
-	backend_name=backend.change(gpu=gpu, double=double)
+	backend_name = backend.change(gpu=gpu, double=double)
+	device = 'gpu' if gpu else 'cpu'
+	precision = '64' if double else '32'
+	requested_config = '{}{}'.format(device, precision)
 
 	OPTKIT_VERSION = backend.version
 
@@ -55,7 +58,8 @@ def set_backend(gpu=False, double=True):
 	ClusteringSettings = clustering_types.ClusteringSettings
 	Clustering = clustering_types.Clustering
 
-	print "optkit backend set to {}".format(backend.config)
+	print 'optkit backend set to {}'.format(backend.config)
+	return bool(requested_config != backend.config)
 
 """
 INITIALIZATION BEHAVIOR:
@@ -66,3 +70,6 @@ default_precision = getenv('OPTKIT_DEFAULT_FLOATBITS', '64')
 
 set_backend(gpu=(default_device == 'gpu'),
 			double=(default_precision == '64'))
+
+del OKBackend
+del getenv

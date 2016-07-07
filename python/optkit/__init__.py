@@ -16,6 +16,6 @@ if int(getenv('OPTKIT_C_TESTING', 0)) == 0:
 	del libs
 	del types
 	del backends
-	del api
+	# del api
 
 del getenv

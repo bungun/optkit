@@ -10,20 +10,13 @@ from optkit.utils.pyutils import version_string
 
 # CPU32, CPU64, GPU32, GPU64
 class OKBackend(object):
-	def __init__(self, gpu=False, single_precision=False):
-		self.__clear()
-		self.__set_lib()
+	__LIBNAMES = ['pogs', 'cluster']
 
-	def __clear(self):
-		self.version = None
+	def __init__(self, gpu=False, single_precision=False):
+		self.__version = None
 		self.__device = None
 		self.__precision = None
-		self.__config = "(No libraries selected)"
-
-		self.lowtypes = None
-		self.dimcheck = getenv('OPTKIT_CHECKDIM', 0)
-		self.typecheck = getenv('OPTKIT_CHECKTYPE', 0)
-		self.devicecheck = getenv('OPTKIT_CHECKDEVICE', 0)
+		self.__config = None
 
 		# library loaders
 		# self.dense_lib_loader = DenseLinsysLibs()
@@ -38,9 +31,29 @@ class OKBackend(object):
 		# self.prox = None
 		self.pogs = None
 		self.cluster = None
+		self.__active_libs = []
+
+		self.__set_lib()
+
+	def __clear(self):
+		self.__version = None
+		self.__device = None
+		self.__precision = None
+		self.__config = '(No libraries selected)'
+
+		# library instances
+		# self.dense = None
+		# self.sparse = None
+		# self.prox = None
+		self.pogs = None
+		self.cluster = None
 
 		self.__LIBGUARD_ON = False
 		self.__COBJECT_COUNT = 0
+
+	@property
+	def version(self):
+		return self.__version
 
 	@property
 	def config(self):
@@ -75,7 +88,7 @@ class OKBackend(object):
 
 	def decrement_cobject_count(self):
 		self.__COBJECT_COUNT -= 1
-		self.__LIBGUARD_ON = self.__COBJECT_COUNT == 0
+		self.__LIBGUARD_ON = self.__COBJECT_COUNT > 0
 
 	def __get_version(self):
 		major = c_int()
@@ -86,14 +99,14 @@ class OKBackend(object):
 			self.pogs.optkit_version(byref(major), byref(minor), byref(change),
 									 byref(status))
 
-			self.version = "Optkit v{}".format(
+			self.__version = 'Optkit v{}'.format(
 					version_string(major.value, minor.value, change.value,
 								   status.value))
 		except:
-			self.version = "Optkit: version unknown"
+			self.__version = 'Optkit: version unknown'
 
 	def load_lib(self, name, override=False):
-		if name not in ['pogs', 'cluster']:
+		if name not in self.__LIBNAMES:
 			raise ValueError('invalid library name')
 		elif self.__dict__[name] is not None:
 			if not override:
@@ -104,26 +117,27 @@ class OKBackend(object):
 			self.pogs = self.pogs_lib_loader.get(
 					single_precision=self.precision_is_32bit,
 					gpu=self.device_is_gpu)
+			self.__active_libs.append(self.pogs)
 		elif name == 'cluster':
 			self.cluster = self.cluster_lib_loader.get(
 					single_precision=self.precision_is_32bit,
 					gpu=self.device_is_gpu)
+			self.__active_libs.append(self.cluster)
+
 
 	def load_libs(self, *names):
 		for name in names:
 			self.load_lib(name)
 
 	def __set_lib(self, device=None, precision=None, order=None):
+		self.__clear()
+
 		devices = ['gpu', 'cpu'] if device == 'gpu' else ['cpu', 'gpu']
 		precisions = ['32', '64'] if precision == '32' else ['64', '32']
 
  		for dev in devices:
 			for prec in precisions:
 				lib_key ='{}{}'.format(dev, prec)
-				# lib_key_prox = '{}{}'.format(dev, prec)
-				# valid = self.dense_lib_loader.libs[lib_key] is not None
-				# valid &= self.prox_lib_loader.libs[lib_key] is not None
-				# valid &= self.sparse_lib_loader.libs[lib_key] is not None
 				valid = self.pogs_lib_loader.libs[lib_key] is not None
 				if valid:
 					self.__device = dev
@@ -131,12 +145,6 @@ class OKBackend(object):
 					self.__config = lib_key
 					self.load_lib('pogs', override=True)
 					self.load_lib('cluster', override=True)
-					# self.dense = self.dense_lib_loader.get(
-							# single_precision=single, gpu=gpu)
-					# self.prox = self.prox_lib_loader.get(
-							# single_precision=single, gpu=gpu)
-					# self.sparse = self.sparse_lib_loader.get(
-							# single_precision=single, gpu=gpu)
 					return
 				else:
 					print str('Libraries for configuration {} '
@@ -145,9 +153,7 @@ class OKBackend(object):
 
 		raise RuntimeError('No libraries found for backend.')
 
-	def change(self, gpu=False, double=True, checktypes=None, checkdims=None,
-			   checkdevices=None):
-
+	def change(self, gpu=False, double=True):
 		if self.__LIBGUARD_ON:
 			print str('Backend cannot be changed once C objects have been '
 					  'created.\n')
@@ -159,18 +165,14 @@ class OKBackend(object):
 		self.__set_lib(device=device, precision=precision)
 		self.__get_version()
 
-		if checktypes is not None: self.typecheck = checktypes
-		if checkdims is not None: self.dimcheck = checkdims
-		if checkdevices is not None: self.devicecheck = checkdevices
-
 	def reset_device(self):
 		if self.device_reset_allowed:
-			for item in self.__dict__:
-				if isinstance(item, CDLL):
-					if 'ok_device_reset' in item.__dict__:
+			for lib in self.__active_libs:
+				if isinstance(lib, CDLL):
+					if 'ok_device_reset' in lib.__dict__:
 						if self.pogs.ok_device_reset():
 							raise RuntimeError('device reset failed')
-						return
+						return 0
 			raise RuntimeError('device reset not possible: '
 							   'no libraries loaded')
 		else:

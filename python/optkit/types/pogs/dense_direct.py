@@ -62,7 +62,7 @@ class PogsDenseDirectTypes(PogsCommonTypes):
 				self.__c_solver = solver
 
 			def __unregister_solver(self):
-				if self.c_solver is None:
+				if self.__c_solver is None:
 					return
 				self.__backend.pogs.pogs_finish(self.c_solver, 0)
 				self.__c_solver = None
