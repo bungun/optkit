@@ -36,12 +36,15 @@ install:
       conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc openblas;
     fi
   - source activate test-environment
-  - echo $LD_LIBRARY_PATH  
-  - sudo ln -s /usr/lib/libblas.so.3gf /usr/lib/libblas.so
+  - if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
+      sudo ln -s /usr/lib/libblas.so.3gf /usr/lib/libblas.so
+    end
   - ./install
 
 script:
   - export OPTKIT_TEST_FLOAT=1 && export OPTKIT_TEST_TRANSPOSE=1
+  - pwd
+  - ls .
   - ./test 5 && nosetests python/optkit/tests/python_bindings/ --nocapture
 
 branches:
