@@ -37,7 +37,7 @@ install:
     fi
   - source activate test-environment
   - echo $LD_LIBRARY_PATH  
-  - alias /usr/lib/libblas.so.3gf /usr/lib/libblas.so
+  - ln -s /usr/lib/libblas.so.3gf /usr/lib/libblas.so
   - ./install
 
 script:
