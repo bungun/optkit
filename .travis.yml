@@ -25,10 +25,9 @@ install:
   - if [[ "$PYTHON_VERSION" == "2.6" ]]; then
       conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy=0.14 nose gcc argparse;
     else
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc;
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc openblas;
     fi
   - source activate test-environment
-  - conda install openblas
   - ./install
 
 script:
