@@ -182,7 +182,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 
 		cg_status=1
 		# CG test success numerically sensitive. give it 3 chances to pass
-		for cg_counter in `seq 0 2`
+		for cg_counter in `seq 0 4`
 		do
 			nosetests ${testprefix}cg${suffix}
 			cg_status=$(( $? && cg_status ))

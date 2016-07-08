@@ -60,6 +60,10 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 		# 2. KKT condition A'(Ax - b) + rho (x) == 0 (within tol)
 		self.assertTrue( flag == 0 )
 		KKT = A.T.dot(A.dot(x) - b) + rho * x
+		if np.linalg.norm(KKT) > tol:
+			print 'KKT conditions violated:'
+			print 'norm KKT conditions:', np.linalg.norm(KKT)
+			print 'tolerance:', tol
 		self.assertTrue( np.linalg.norm(KKT) <= tol )
 
 	def test_cgls_helper_alloc_free(self):

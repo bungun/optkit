@@ -33,8 +33,11 @@ install:
   - if [[ "$PYTHON_VERSION" == "2.6" ]]; then
       conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy=0.14 nose gcc argparse;
     else
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc openblas;
-    fi
+      if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
+        conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc openblas;
+      else
+        conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc;      
+      fi
   - source activate test-environment
   - if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
       sudo ln -s /usr/lib/libblas.so.3gf /usr/lib/libblas.so;
