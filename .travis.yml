@@ -36,9 +36,8 @@ install:
       conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc openblas;
     fi
   - source activate test-environment
-  - ls $HOME/miniconda/bin/
-  - locate libblas.so
-  - locate libopenblas.so
+  - echo $LD_LIBRARY_PATH  
+  - sudo alias /usr/lib/libblas.so.3gf /usr/lib/libblas.so
   - ./install
 
 script:
