@@ -44,7 +44,9 @@ install:
 script:
   - export OPTKIT_TEST_FLOAT=1 && export OPTKIT_TEST_TRANSPOSE=1
   - ./test 5
-  - nosetests python/optkit/tests/python_bindings/ --nocapture
+  - nosetests python/optkit/tests/python_bindings/test_pogs_bindings.py --nocapture
+  - nosetests python/optkit/tests/python_bindings/test_clustering_bindings.py --nocapture
+  - nosetests python/optkit/tests/python_bindings/test_backend.py --nocapture
 
 branches:
   only:
