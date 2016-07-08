@@ -2,7 +2,6 @@ os:
   - linux
   - osx
 
-language: C++
 env:
   # - PYTHON_VERSION="2.6"
   - PYTHON_VERSION="2.7"
@@ -24,9 +23,9 @@ install:
   - conda info -a
 
   - if [[ "$PYTHON_VERSION" == "2.6" ]]; then
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy=0.14 nose gcc g++ argparse;
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy=0.14 nose gcc argparse;
     else
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc g++;
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc;
     fi
   - source activate test-environment
   - conda install openblas
