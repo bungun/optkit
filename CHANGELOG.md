@@ -13,6 +13,7 @@
 - TODO: append version numbers to .so, check version numbers when loading libs in python (?)
 - TODO: add tests for vector_rand, transformable operators, operator export/import 
 - TODO: sparse POGS (entails sparse CG, equil, projection: performance vs. abstract??)
+- Add .travis.yml for CI testing
 
 ###v0.0.4 (current)
 - Migrate tests to unittests
