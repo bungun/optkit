@@ -28,6 +28,7 @@ install:
       conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc openblas;
     fi
   - source activate test-environment
+  - echo $PATH
   - locate libblas.so
   - locate libopenblas.so
   - ./install
