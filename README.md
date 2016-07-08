@@ -3,10 +3,10 @@
 ## About `optkit`
 
 This library provides:
-+ a unified Python interface for (standard) CPU and GPU BLAS dense linear algebra libraries
-+ a unified Python interface for (custom) CPU and GPU proximal operator libraries
-+ Python implementations of projection and matrix equilibration routines 
-+ a Python implementation of the ADMM solver POGS, based on Chris Fougner's convex optimization solver library (http:/github.com/foges/pogs).
+<!-- + a unified Python interface for (standard) CPU and GPU BLAS dense linear algebra libraries -->
+<!-- + a unified Python interface for (custom) CPU and GPU proximal operator libraries -->
+<!-- + Python implementations of projection and matrix equilibration routines  -->
+<!-- + a Python implementation of the ADMM solver POGS, based on Chris Fougner's convex optimization solver library (http:/github.com/foges/pogs). -->
 	 
 Requirements
 ------------
@@ -25,7 +25,6 @@ optkit's Python package has the following additional dependencies:
 
 Installation
 ------------
-
 
 ###<u> Building from source
 
@@ -67,16 +66,16 @@ $ [sudo] PATH=$PATH python setup.py install
 Usage
 -----
 
-After installing, import the package `pogs` to use it in a script, e.g.:
+After installing, import the package `optkit` to use it in a script, e.g.:
 
 ```python
-> import optkit as ok
+>>>> import optkit as ok
 ```
 
 The import should print a success messages:
 ```python
 
-> optkit backend set to cpu64
+optkit backend set to cpu64
 ```
 
 (TODO: further explanation)
@@ -85,30 +84,21 @@ The import should print a success messages:
 Default Settings 
 ----------------
 
-To change the default backend for the optkit module to attempt to bind upon import, set the following environment variables:
+To change the default backend for the optkit module to attempt to bind upon 
+import, set the following environment variables:
 
 ```bash
-$ export OPTKIT_DEFAULT_DEVICE=<device>
+$ export OPTKIT\_DEFAULT\_DEVICE=<device>
 ```
 
-(values = `cpu` or `gpu`; optkit defaults to CPU if environment variable not set)
+(values = `cpu` or `gpu`; optkit defaults to CPU if environment variable 
+not set), and 
 
 ```
-$ export OPTKIT_DEFAULT_FLOATBITS=<bits>
+$ export OPTKIT\_DEFAULT\_FLOATBITS=<bits>
 ```
 
 (values = `64` or `32`; optkit defaults to 64-bit floating point precision if environment variable not set).
-
-
-By default, optkit's linear algebra and proximal operator Python methods check argument types, dimensions and device (i.e., CPU- vs GPU-allocated pointers) before calling the optkit C/CUDA libraries. To suppress one or more of these behaviors (e.g., for debugged Python scripts), set the following environment variables:
-
-
-```bash 
-$ export OPTKIT_CHECK_TYPE=0
-$ export OPTKIT_CHECK_DIM=0
-$ export OPTKIT_CHECK_DEVICE=0
-```
-
 
 
 Credits

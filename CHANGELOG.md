@@ -6,12 +6,11 @@
 - TODO: operator typesafe equilibration
 - TODO: operator IO
 - TODO: fix GPU allocation issues for large problems
-- TODO: (3 jun 2016) fix broken backend switching
 
 ###v0.0.5 (next release)
 - TODO: license
 - TODO: cite POGS
-- TODO: append version numbers to .so, check version numbers when loading libs in python
+- TODO: append version numbers to .so, check version numbers when loading libs in python (?)
 - TODO: add tests for vector_rand, transformable operators, operator export/import 
 - TODO: sparse POGS (entails sparse CG, equil, projection: performance vs. abstract??)
 
