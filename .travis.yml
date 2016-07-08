@@ -33,8 +33,8 @@ install:
   - ./install
 
 script:
-  - ./test && nosetests python/optkit/tests/python_bindings/ --nocapture
-
+  - export OPTKIT_TEST_FLOAT=1 && export OPTKIT_TEST_TRANSPOSE=1 && 
+  ./test 5 && nosetests python/optkit/tests/python_bindings/ --nocapture
 
 branches:
   only:
