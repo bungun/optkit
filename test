@@ -185,7 +185,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		for cg_counter in `seq 0 2`
 		do
 			nosetests ${testprefix}cg${suffix}
-			cg_status=(( $? && cg_status ))
+			cg_status=$(( $? && cg_status ))
 			if (( cg_status == 0  )); then
 				break;
 			else
