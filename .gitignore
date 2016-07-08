@@ -4,7 +4,6 @@ python/build/
 *.egg-info
 
 *.DS_Store
-test
 
 *.o
 *.so
