@@ -1,5 +1,8 @@
 # optkit
 
+[![Build Status](https://travis-ci.org/bungun/optkit.svg?branch=master)](https://travis-ci.org/bungun/optkit)
+
+
 ## About `optkit`
 
 This library provides:

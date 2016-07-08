@@ -2,6 +2,8 @@
 FLOAT=${OPTKIT_TEST_FLOAT:-0}
 GPU=${OPTKIT_TEST_GPU:-0}
 TEST_TRANSPOSE=${OPTKIT_TEST_TRANSPOSE:-0}
+TEST_FAILURE=0
+
 
 # get script directory
 HOME=`dirname $0`
@@ -106,6 +108,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		fi
 		echo TESTING VECTOR CALLS
 		nosetests ${testprefix}vector${suffix}
+		TEST_FAILURE=$(($? || $TEST_FAILURE))
 	fi 
 
 	if [[ ${MATRIX:-0} -eq 1 ]]; then
@@ -115,6 +118,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		fi
 		echo TESTING MATRIX CALLS: ${msg}
 		nosetests ${testprefix}matrix${suffix}
+		TEST_FAILURE=$(($? || $TEST_FAILURE))
 	fi
 
 	if [[ ${DENSE:-0} -eq 1 ]]; then
@@ -124,6 +128,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		fi
 		echo TESTING \(DENSE\) LINSYS CALLS: ${msg}
 		nosetests ${testprefix}linsys_dense${suffix}
+		TEST_FAILURE=$(($? || $TEST_FAILURE))
 	fi
 
 	if [[ ${SPARSE:-0} -eq 1 ]]; then
@@ -133,6 +138,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		fi
 		echo TESTING \(SPARSE\) LINSYS CALLS: ${msg}
 		nosetests ${testprefix}linsys_sparse${suffix}
+		TEST_FAILURE=$(($? || $TEST_FAILURE))
 	fi
 
 	if [[ ${PROX:-0} -eq 1 ]]; then
@@ -142,6 +148,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		fi
 		echo TESTING PROX CALLS
 		nosetests ${testprefix}prox${suffix}
+		TEST_FAILURE=$(($? || $TEST_FAILURE))
 	fi
 
 	if [[ ${OPERATOR:-0} -eq 1 ]]; then
@@ -151,6 +158,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		fi
 		echo TESTING OPERATOR CALLS: ${msg}
 		nosetests ${testprefix}operator${suffix}
+		TEST_FAILURE=$(($? || $TEST_FAILURE))
 	fi
 
 	if [[ ${CLUSTER:-0} -eq 1 ]]; then
@@ -160,6 +168,8 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		fi
 		echo TESTING CLUSTER CALLS: ${msg}
 		nosetests ${testprefix}clustering${suffix}
+		# Non-essential test, status does not contribute to overall status
+		# TEST_FAILURE=$(($? + $TEST_FAILURE))
 	fi
 
 	if [[ ${CG:-0} -eq 1 ]]; then
@@ -169,6 +179,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		fi
 		echo TESTING CG CALLS: ${msg}
 		nosetests ${testprefix}cg${suffix}
+		TEST_FAILURE=$(($? || $TEST_FAILURE))
 	fi
 
 	if [[ ${EQUIL:-0} -eq 1 ]]; then	
@@ -178,6 +189,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		fi
 		echo TESTING EQUILIBRATION CALLS: ${msg}
 		nosetests ${testprefix}equilibration${suffix}
+		TEST_FAILURE=$(($? || $TEST_FAILURE))
 	fi 
 
 	if [[ ${PROJECTOR:-0} -eq 1 ]]; then
@@ -187,6 +199,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		fi
 		echo TESTING PROJECTOR CALLS: ${msg}
 		nosetests ${testprefix}projector${suffix}
+		TEST_FAILURE=$(($? || $TEST_FAILURE))
 	fi
 				
 	if [[ ${POGS_DENSE:-0} -eq 1 ]]; then
@@ -198,6 +211,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		export OPTKIT_DEBUG_PYTHON=0
 		echo TESTING \(DENSE\) POGS CALLS: ${msg}
 		nosetests ${testprefix}pogs${suffix}
+		TEST_FAILURE=$(($? || $TEST_FAILURE))
 	fi
 
 	if [[ ${POGS_ABSTRACT:-0} -eq 1 ]]; then
@@ -209,7 +223,15 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		export OPTKIT_DEBUG_PYTHON=0
 		echo TESTING \(ABSTRACT\) POGS CALLS: ${msg}
 		nosetests ${testprefix}abstract_pogs${suffix}
+		# Non-essential test, status does not contribute to overall status
+		# TEST_FAILURE=$(($? || $TEST_FAILURE))
 	fi
 
 done
 export OPTKIT_C_TESTING=0
+
+if (( TEST_FAILURE == 0 )); then
+	exit 0;
+else
+	exit 1;
+fi

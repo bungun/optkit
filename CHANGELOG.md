@@ -1,11 +1,11 @@
 ###v0.1 (targets)
 - TODO: OMP parallelization for C vector operations
 - TODO: documentation
-- TODO: continuous integration
 - TODO: Cython bindings
 - TODO: operator typesafe equilibration
 - TODO: operator IO
-- TODO: fix GPU allocation issues for large problems
+- TODO: fix GPU allocation issues for large problems (i.e., poll available memory,
+check problem size? or...handle allocation failures in python?)
 
 ###v0.0.5 (next release)
 - TODO: license
