@@ -38,7 +38,7 @@ install:
   - source activate test-environment
   - if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
       sudo ln -s /usr/lib/libblas.so.3gf /usr/lib/libblas.so
-    end
+    fi
   - ./install
 
 script:
