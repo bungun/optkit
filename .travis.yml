@@ -64,6 +64,13 @@ branches:
     - master
     - dev
 
+matrix:
+  exclude:
+    - branch: dev 
+      env: PYTHON_VERSION="3.3"
+    - branch: dev 
+      env: PYTHON_VERSION="3.4"
+
 notifications:
   email:
     - ungun@stanford.edu
