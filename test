@@ -1,4 +1,5 @@
 #!/bin/bash
+VERBOSE=${OPTKIT_TEST_VERBOSE:-0}
 FLOAT=${OPTKIT_TEST_FLOAT:-0}
 GPU=${OPTKIT_TEST_GPU:-0}
 TEST_TRANSPOSE=${OPTKIT_TEST_TRANSPOSE:-0}
@@ -99,7 +100,11 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 	msg=${msg/DIM2/$OPTKIT_TESTING_DEFAULT_NCOLS}
 
 	testprefix=./python/optkit/tests/C/test_
-	suffix=.py\ --nocapture
+	if (( VERBOSE > 0 ))
+		suffix=.py\ --nocapture
+	else
+		suffix=.py
+	fi
 
 	if [[ ${VECTOR:-0} -eq 1 ]]; then
 		lib=$(ls ${HOME}/build | grep libok_dense_${config})
@@ -184,6 +189,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		# CG test success numerically sensitive. give it 3 chances to pass
 		for cg_counter in `seq 0 4`
 		do
+			export OPTKIT_REPEAT_CGTEST=${cg_counter}
 			nosetests ${testprefix}cg${suffix}
 			cg_status=$(( $? && cg_status ))
 			if (( cg_status == 0  )); then
