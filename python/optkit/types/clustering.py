@@ -35,9 +35,9 @@ def regcluster(sample_dims, full_dims):
 	nx, ny, nz = sample_dims
 	xmax, ymax, zmax = full_dims
 
-	x_blocks = int((xmax % nx)!=0) + xmax / nx
-	y_blocks = int((ymax % ny)!=0) + ymax / ny
-	z_blocks = int((zmax % nz)!=0) + zmax / nz
+	x_blocks = int(int((xmax % nx)!=0) + xmax / nx)
+	y_blocks = int(int((ymax % ny)!=0) + ymax / ny)
+	z_blocks = int(int((zmax % nz)!=0) + zmax / nz)
 
 	xceil = nx * x_blocks
 	yceil = ny * y_blocks
@@ -388,9 +388,31 @@ class ClusteringTypes(object):
 			def blockwise_kmeans_inplace(self, A_blocks, C_blocks,
 										 assignment_blocks, settings_blocks=None):
 
+				"""
+				blockwish kmeans inplace:
+
+				operates inplace on "C-blocks" variable
+
+				A_blocks: iterable container of matrices for clustering input
+				C_blocks: iterable container of matrices for clustering output
+				assignment_blocks: iterable container of vectors for
+								   clustering assignments
+				settings_blocks (optional): iterable container
+				"""
+
+				if bool(
+					len(A_blocks) != len(C_blocks) or
+					len(A_blocks) != len(assignment_blocks)):
+					raise ValueError('Input variables must have matching '
+									 'numbers of blocks')
+				elif len(A_blocks) == 0:
+					raise ValueError('Cannot perform blockwise kmeans with '
+									 'zero blocks')
+
+
 				max_A = array([A.shape[0] for A in A_blocks]).max()
 				max_C = array([C.shape[0] for C in C_blocks]).max()
-				n = A.shape[1]
+				n = A_blocks[0].shape[1]
 
 				assignments_final = []
 				counts_final = []

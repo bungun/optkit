@@ -50,7 +50,7 @@ class PogsBindingsTestCase(OptkitTestCase):
 		indices = []
 		threshold = lambda i: i if np.random.rand() > 0.75 else False
 		while len(indices) == 0:
-			indices = filter(None, map(threshold, xrange(m)))
+			indices = listfilter(None, listmap(threshold, xrange(m)))
 		f.set(range=indices, e=0.1)
 		for idx in indices:
 			self.assertAlmostEqual(f.e[idx], 0.1)
