@@ -1,3 +1,4 @@
+import os
 from numpy import zeros, array, ndarray
 from numpy.linalg import norm
 from numpy.random import rand
@@ -351,10 +352,18 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		if not isinstance(A, ndarray):
 			raise TypeError('argument "A" must be of type {}'.format(ndarray))
 
+
+		repeat = int(os.getenv('OPTKIT_REPEAT_NUMERICALTEST', '0'))
+		repeat_factor = 1.
+		if repeat > 0:
+			repeat_factor *= 2.
+		if repeat > 1:
+			repeat_factor *= 2.
+
 		m, n = A.shape
-		rtol = settings.reltol
-		atolm = settings.abstol * (m**0.5)
-		atoln = settings.abstol * (n**0.5)
+		rtol = settings.reltol * repeat_factor
+		atolm = settings.abstol * (m**0.5) * repeat_factor
+		atoln = settings.abstol * (n**0.5) * repeat_factor
 
 		P = 10 * 1.5**int(single_precision) * 1.5**int(gpu);
 		D = 20 * 1.5**int(single_precision) * 1.5**int(gpu);

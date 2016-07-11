@@ -1,6 +1,6 @@
 os:
   - linux
-  # - osx
+  - osx
 
 env:
   - PYTHON_VERSION="2.7"

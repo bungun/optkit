@@ -296,10 +296,17 @@ class ProxTestCase(OptkitCTestCase):
 				continue
 			self.register_exit(lib.ok_device_reset)
 
+			repeat = int(os.getenv('OPTKIT_REPEAT_NUMERICALTEST', '0'))
+			repeat_factor = 1.
+			if repeat > 0:
+				repeat_factor *= 2.
+			if repeat > 1:
+				repeat_factor *= 2.
+
 			DIGITS = 7 - 2 * single_precision
-			RTOL = 10**(-DIGITS)
-			ATOLM = RTOL * m**0.5
-			ATOLN = RTOL * n**0.5
+			RTOL = 10**(-DIGITS) * repeat_factor
+			ATOLM = RTOL * m**0.5 * repeat_factor
+			ATOLN = RTOL * n**0.5 * repeat_factor
 
 			f, f_py, f_ptr = self.register_fnvector(lib, m, 'f')
 			x, x_py, x_ptr = self.register_vector(lib, m, 'x')

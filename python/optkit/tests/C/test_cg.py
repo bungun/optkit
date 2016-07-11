@@ -56,7 +56,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 		self.assertTrue(any(libs))
 
 	def assert_cgls_exit(self, A, x, b, rho, flag, tol):
-		repeat = int(os.getenv('OPTKIT_REPEAT_CGTEST', '0'))
+		repeat = int(os.getenv('OPTKIT_REPEAT_NUMERICALTEST', '0'))
 		repeat_factor = 1.
 		if repeat > 0:
 			repeat_factor *= 5.
