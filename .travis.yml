@@ -11,11 +11,14 @@ env:
 sudo: required
 
 before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y mlocate 
+  - if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
+      sudo apt-get -qq update && sudo apt-get install -y mlocate;
+    fi
 
 install:
-  - sudo updatedb
+  - if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
+      sudo updatedb
+    fi 
   - if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
       wget http://repo.continuum.io/miniconda/Miniconda-latest-MacOSX-x86_64.sh 
       -O miniconda.sh;
@@ -29,15 +32,10 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-
-  - if [[ "$PYTHON_VERSION" == "2.6" ]]; then
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy=0.14 nose gcc argparse;
+  - if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc openblas;
     else
-      if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
-        conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc openblas;
-      else
-        conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc;      
-      fi
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc;      
     fi
   - source activate test-environment
   - if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
@@ -63,6 +61,7 @@ script:
 
 branches:
   only:
+    - master
     - dev
 
 notifications:
