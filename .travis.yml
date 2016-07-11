@@ -17,7 +17,7 @@ before_install:
 
 install:
   - if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
-      sudo updatedb
+      sudo updatedb;
     fi 
   - if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
       wget http://repo.continuum.io/miniconda/Miniconda-latest-MacOSX-x86_64.sh 
