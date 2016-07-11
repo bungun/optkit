@@ -100,7 +100,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 	msg=${msg/DIM2/$OPTKIT_TESTING_DEFAULT_NCOLS}
 
 	testprefix=./python/optkit/tests/C/test_
-	if (( VERBOSE > 0 ))
+	if (( VERBOSE > 0 )); then
 		suffix=.py\ --nocapture
 	else
 		suffix=.py
