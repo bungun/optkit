@@ -3,7 +3,6 @@ from setuptools import setup
 from setuptools.command.install import   install
 from distutils.command.build import build
 from subprocess import call
-from optkit.compat import *
 
 # TODO: use this for OMP thread #?
 # from multiprocessing import cpu_count
