@@ -160,7 +160,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		do
 			export OPTKIT_REPEAT_NUMERICALTEST=${test_counter}
 			nosetests ${testprefix}prox${suffix}
-			proj_status=$(( $? && repeated_test_status ))
+			repeated_test_status=$(( $? && repeated_test_status ))
 			if (( repeated_test_status == 0  )); then
 				break;
 			else
@@ -214,7 +214,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 				echo "CG test failed (attempt of" $((test_counter + 1)) "of 5)";
 			fi
 		done 
-		TEST_FAILURE=$(($cg_status || $TEST_FAILURE))
+		TEST_FAILURE=$(($repeated_test_status || $TEST_FAILURE))
 		export OPTKIT_REPEAT_NUMERICALTEST=0
 	fi
 
@@ -242,7 +242,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		do
 			export OPTKIT_REPEAT_NUMERICALTEST=${test_counter}
 			nosetests ${testprefix}projector${suffix}
-			proj_status=$(( $? && repeated_test_status ))
+			repeated_test_status=$(( $? && repeated_test_status ))
 			if (( repeated_test_status == 0  )); then
 				break;
 			else
@@ -269,7 +269,7 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		do
 			export OPTKIT_REPEAT_NUMERICALTEST=${test_counter}
 			nosetests ${testprefix}pogs${suffix}
-			proj_status=$(( $? && repeated_test_status ))
+			repeated_test_status=$(( $? && repeated_test_status ))
 			if (( repeated_test_status == 0  )); then
 				break;
 			else
