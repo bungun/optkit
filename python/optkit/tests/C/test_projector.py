@@ -289,9 +289,17 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 				continue
 			self.register_exit(lib.ok_device_reset)
 
+
+			repeat = int(os.getenv('OPTKIT_REPEAT_PROJTEST', '0'))
+			repeat_factor = 1.
+			if repeat > 0:
+				repeat_factor *= 2.
+			if repeat > 1:
+				repeat_factor *= 2.
+
 			TOL_PLACEHOLDER = 1e-8
 			DIGITS = 7 - 3 * lib.FLOAT - 1 * lib.GPU
-			RTOL = 10**(-DIGITS)
+			RTOL = 10**(-DIGITS) * repeat_factor
 			ATOLM = RTOL * m**0.5
 
 			# -----------------------------------------

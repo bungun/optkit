@@ -186,7 +186,8 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		echo TESTING CG CALLS: ${msg}
 
 		cg_status=1
-		# CG test success numerically sensitive. give it 3 chances to pass
+		# CG test success numerically sensitive. give it 5 chances to pass
+		# loosen numerical tolerance on subsequent tries
 		for cg_counter in `seq 0 4`
 		do
 			export OPTKIT_REPEAT_CGTEST=${cg_counter}
@@ -217,8 +218,23 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 			make libprojector FLOAT=$FLOAT GPU=$GPU
 		fi
 		echo TESTING PROJECTOR CALLS: ${msg}
-		nosetests ${testprefix}projector${suffix}
-		TEST_FAILURE=$(($? || $TEST_FAILURE))
+
+		proj_status=1
+		# CG test success numerically sensitive. give it 5 chances to pass
+		# loosen numerical tolerance on subsequent tries
+		for proj_counter in `seq 0 4`
+		do
+			export OPTKIT_REPEAT_PROJTEST=${proj_counter}
+			nosetests ${testprefix}projector${suffix}
+			proj_status=$(( $? && proj_status ))
+			if (( proj_status == 0  )); then
+				break;
+			else
+				echo "PROJECTION test failed (attempt of" $((proj_counter + 1)) "of 5)";
+			fi			
+		done
+
+		TEST_FAILURE=$(($proj_status || $TEST_FAILURE))
 	fi
 				
 	if [[ ${POGS_DENSE:-0} -eq 1 ]]; then

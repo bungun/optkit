@@ -24,10 +24,6 @@ class OptkitCTestCase(OptkitTestCase):
 		self.assertEqual( PRINTERR(call), 0 )
 
 	def assertVecEqual(self, first, second, atol, rtol):
-		if norm(first - second) > atol + rtol * norm(second):
-			print('VEC EQUAL VIOLATED: vec1 != vec2:')
-			print('||first - second||:', norm(first - second))
-			print('TOLERANCE:', atol + rtol * norm(second))
 		self.assertTrue( norm(first - second) <= atol + rtol * norm(second) )
 
 	def assertVecNotEqual(self, first, second, atol, rtol):
