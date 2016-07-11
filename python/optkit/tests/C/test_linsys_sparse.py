@@ -5,6 +5,7 @@ from ctypes import c_int, c_uint, Structure, byref, c_void_p
 from optkit.libs.linsys import SparseLinsysLibs
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.base import OptkitCTestCase
+from optkit.compat import *
 
 class SparseLibsTestCase(OptkitCTestCase):
 	@classmethod

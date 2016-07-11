@@ -1,5 +1,7 @@
 from numpy import log, exp, cos, arccos, sign, inf, nan,\
 					 zeros, copy as np_copy
+from optkit.compat import *
+
 
 # """
 # low-level utilities
@@ -141,7 +143,7 @@ def func_eval_python(f, x):
 	fields a, b, c, d and e of type float32/64 and a field h of type uint
 	"""
 	def ffunc(h, xi):
-	 	func = enum_to_func(h)
+		func = enum_to_func(h)
 		if func == 'Abs':
 			return abs(xi)
 		elif func == 'NegEntr':
@@ -184,7 +186,7 @@ def prox_eval_python(f, rho, x):
 	fields a, b, c, d and e of type float32/64 and a field h of type uint
 	"""
 	def pfunc(h, xi, rhoi):
-	 	func = enum_to_func(h)
+		func = enum_to_func(h)
 		if func =='Abs':
 			return max(xi - 1./rhoi, 0) + min(xi + 1./rhoi, 0)
 		elif func == 'NegEntr':
@@ -221,12 +223,13 @@ def prox_eval_python(f, rho, x):
 		return fprox
 
 	def fprox(f_, x_):
+		x_ = float(x_)
 		x_ = f_.a * (x_ * rho - f_.d) / (f_.e + rho) - f_.b
 		rho_ = (f_.e + rho) / (f_.c * f_.a * f_.a)
 		x_ = pfunc(f_.h, x_, rho_)
 		return (x_ + f_.b) / f_.a
 
 	x_out = zeros(len(f))
-	x_out[:] = map(fprox, f, x)
+	x_out[:] = listmap(fprox, f, x)
 
 	return x_out

@@ -1,7 +1,7 @@
 # from ctypes import c_uint
 # from numpy import ones, zeros, ndarray
 # from optkit.utils import UtilMakeCFunctionVector, UtilReleaseCFunctionVector
-
+# from optkit.compat import *
 
 # class ProxTypes(object):
 # 	def __init__(self, backend):

@@ -3,6 +3,7 @@ import numpy as np
 from ctypes import c_void_p, byref
 from optkit.libs.equilibration import EquilibrationLibs
 from optkit.tests.C.base import OptkitCOperatorTestCase
+from optkit.compat import *
 
 class EquilLibsTestCase(OptkitCOperatorTestCase):
 	"""
@@ -88,19 +89,19 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 			self.register_exit(lib.ok_device_reset)
 
 			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
-				print "regularized sinkhorn, CBLAS layout:", order
+				print('regularized sinkhorn, CBLAS layout:', order)
 
 				self.equilibrate(lib, order, self.A_test)
 
 				A_rowmissing = np.zeros_like(self.A_test)
 				A_rowmissing += self.A_test
-				A_rowmissing[self.shape[0]/2, :] *= 0
+				A_rowmissing[int(self.shape[0]/2), :] *= 0
 
 				self.equilibrate(lib, order, A_rowmissing)
 
 				A_colmissing = np.zeros_like(self.A_test)
 				A_colmissing += self.A_test
-				A_colmissing[:, self.shape[1]/2] *= 0
+				A_colmissing[:, int(self.shape[1]/2)] *= 0
 
 				self.equilibrate(lib, order, A_colmissing)
 				self.assertCall( lib.ok_device_reset() )
@@ -122,7 +123,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 			# test equilibration for each operator type defined in
 			# self.op_keys
 			for op_ in self.op_keys:
-				print "operator sinkhorn, operator type:", op_
+				print('operator sinkhorn, operator type:', op_)
 				hdl = self.register_blas_handle(lib, 'hdl')
 				x, x_py, x_ptr = self.register_vector(lib, n, 'x')
 				y, y_py, y_ptr = self.register_vector(lib, m, 'y')
@@ -168,7 +169,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 			# test equilibration for each operator type defined in
 			# self.op_keys
 			for op_ in self.op_keys:
-				print "operator equil generic operator type:", op_
+				print('operator equil generic operator type:', op_)
 				hdl = self.register_blas_handle(lib, 'hdl')
 				x, x_py, x_ptr = self.register_vector(lib, n, 'x')
 				y, y_py, y_ptr = self.register_vector(lib, m, 'y')
@@ -217,7 +218,7 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 			# test norm estimation for each operator type defined in
 			# self.op_keys
 			for op_ in self.op_keys:
-				print "operator norm, operator type:", op_
+				print('operator norm, operator type:', op_)
 				hdl = self.register_blas_handle(lib, 'hdl')
 				A_, A, o = self.register_operator(lib, op_)
 
@@ -231,8 +232,8 @@ class EquilLibsTestCase(OptkitCOperatorTestCase):
 				cnorm = normest_p.contents
 
 				if self.VERBOSE_TEST:
-					print "operator norm, Python: ", pynorm
-					print "norm estimate, C: ", cnorm
+					print('operator norm, Python: ', pynorm)
+					print('norm estimate, C: ', cnorm)
 
 				self.assertTrue(
 					cnorm >= ATOL + RTOL * pynorm or

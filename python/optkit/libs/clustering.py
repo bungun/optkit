@@ -4,6 +4,7 @@ from optkit.libs.loader import OptkitLibs
 from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\
 	attach_sparse_linsys_ctypes, attach_base_ccalls, attach_vector_ccalls, \
 	attach_dense_linsys_ccalls, attach_sparse_linsys_ccalls
+from optkit.compat import *
 
 class ClusteringLibs(OptkitLibs):
 	def __init__(self):

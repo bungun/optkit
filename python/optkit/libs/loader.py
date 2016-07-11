@@ -1,30 +1,29 @@
 from os import path, uname, getenv
 from ctypes import CDLL
+from subprocess import check_output
+from sys import version_info
 from optkit.libs.enums import OKEnums
+from optkit.compat import *
 
 def get_optkit_libdir():
-	try:
-		from site import sitepackages
-		return path.join(sitepackages()[0], '_optkit_libs')
-	except ImportError:
-		from subprocess import check_output
-		from sys import version_info
-		p = path.dirname(check_output(['which', 'python']))
-		p = path.abspath(path.join(p, '..', 'lib'))
+	p = path.dirname(str(check_output(['which', 'python'])))
 
-		py_v = 'python{}.{}'.format(version_info.major, version_info.minor)
+	if p[:2] == 'b\'':
+		p = p[2:]
 
-		p = path.join(p, py_v)
+	p = path.abspath(path.join(p, '..', 'lib'))
+	py_version = 'python{}.{}'.format(version_info.major, version_info.minor)
+	p = path.join(p, py_version)
 
-		if 	path.exists(path.join(p, 'dist-packages')):
-			p = path.join(p, 'dist-packages')
-		elif path.exists(path.join(p, 'site-packages')):
-			p = path.join(p, 'site-packages')
-		else:
-			raise ImportError('cannot locate site-packages/dist-packages to '
-							  'import optkit C libraries')
+	if 	path.exists(path.join(p, 'dist-packages')):
+		p = path.join(p, 'dist-packages')
+	elif path.exists(path.join(p, 'site-packages')):
+		p = path.join(p, 'site-packages')
+	else:
+		raise ImportError('cannot locate site-packages/dist-packages to '
+						  'import optkit C libraries')
 
-		return path.join(p, '_optkit_libs')
+	return path.join(p, '_optkit_libs')
 
 def retrieve_libs(lib_prefix):
 	libs = {}
@@ -47,7 +46,7 @@ def retrieve_libs(lib_prefix):
 				lib_path = path.join(local_c_build, lib_name)
 
 			if path.exists(lib_path):
-				print "loading lib: {} at {}".format(lib_name, lib_path)
+				print('loading lib: {} at {}'.format(lib_name, lib_path))
 				libs[lib_tag] = CDLL(lib_path)
 				libs[lib_tag].INITIALIZED = False
 			else:

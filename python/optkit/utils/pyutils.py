@@ -1,6 +1,7 @@
 from ctypes import c_uint
 from operator import and_, add as op_add
 from numpy import ndarray, squeeze, abs as np_abs, max as np_max
+from optkit.compat import *
 
 def version_string(major, minor, change, status):
 	v = "{}.{}.{}".format(major, minor, change)
@@ -16,13 +17,13 @@ def istypedtuple(x,n, type_):
 	return valid
 
 def println(*args):
-	for arg in args: print arg
+	for arg in args: print(arg)
 
 def pretty_print(msg, sym='-'):
 	line = reduce(op_add, [sym for char in msg])
-	print line
+	print(line)
 	println(msg)
-	print line
+	print(line)
 
 def printvoid(*args):
 	pass

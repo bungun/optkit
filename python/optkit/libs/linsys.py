@@ -2,6 +2,7 @@ from numpy import float32, float64
 from ctypes import c_int, c_uint, c_size_t, c_void_p, c_float, c_double, \
 	POINTER, Structure
 from optkit.libs.loader import OptkitLibs
+from optkit.compat import *
 
 class DenseLinsysLibs(OptkitLibs):
 	def __init__(self):

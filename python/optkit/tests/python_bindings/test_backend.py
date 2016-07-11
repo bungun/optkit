@@ -3,7 +3,7 @@ import numpy as np
 import optkit
 from optkit.api import backend
 from optkit import set_backend
-
+from optkit.compat import *
 
 class BackendTestCase(unittest.TestCase):
 	def test_libs(self):
@@ -21,10 +21,10 @@ class BackendTestCase(unittest.TestCase):
 			if backend.cluster_lib_loader.libs[libkey] is not None:
 				cluster_libnames.append(libkey)
 
-		print 'available libs, POGS:', pogs_libnames
+		print('available libs, POGS:', pogs_libnames)
 		self.assertTrue( len(pogs_libnames) > 0 )
 
-		print 'avaialable libs, clustering:', cluster_libnames
+		print('avaialable libs, clustering:', cluster_libnames)
 		self.assertTrue( len(cluster_libnames) > 0 )
 
 		configs = []

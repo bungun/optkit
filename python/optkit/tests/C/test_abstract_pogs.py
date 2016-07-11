@@ -7,6 +7,7 @@ from optkit.libs.pogs import PogsAbstractLibs
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.base import OptkitCOperatorTestCase
 from optkit.tests.C.pogs_base import OptkitCPogsTestCase
+from optkit.compat import *
 
 class PogsAbstractLibsTestCase(OptkitTestCase):
 	"""TODO: docstring"""
@@ -285,7 +286,7 @@ class PogsAbstractTestCases(OptkitCPogsTestCase, OptkitCOperatorTestCase):
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
- 			self.assert_default_settings(lib)
+			self.assert_default_settings(lib)
 
 	def test_operator_gen_free(self):
 		for (gpu, single_precision) in self.CONDITIONS:
@@ -516,7 +517,7 @@ class PogsAbstractTestCases(OptkitCPogsTestCase, OptkitCOperatorTestCase):
 					settings.nu0 = nu0_ptr
 					settings.warmstart = 1
 
-					print "\nwarm start variable loading test (0 iters)"
+					print('\nwarm start variable loading test (0 iters)')
 					self.assertCall( lib.pogs_solve(solver, f, g, settings,
 													info, output.ptr) )
 					self.assertEqual( info.err, 0 )

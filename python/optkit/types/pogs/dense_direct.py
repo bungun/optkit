@@ -3,6 +3,7 @@ from numpy.linalg import cholesky
 from ctypes import c_void_p
 from os import path
 from optkit.types.pogs.common import PogsCommonTypes
+from optkit.compat import *
 
 class PogsDenseDirectTypes(PogsCommonTypes):
 	def __init__(self, backend):

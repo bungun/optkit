@@ -5,6 +5,7 @@ from optkit.utils.proxutils import func_eval_python
 from optkit.libs.pogs import PogsLibs
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.pogs_base import OptkitCPogsTestCase
+from optkit.compat import *
 
 class PogsLibsTestCase(OptkitTestCase):
 	"""TODO: docstring"""
@@ -392,7 +393,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 				settings.maxiter = 0
 
 				if self.VERBOSE_TEST:
-					print "\nwarm start variable loading test (0 iters)"
+					print('\nwarm start variable loading test (0 iters)')
 				self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
 												output.ptr) )
 				self.assertEqual( info.err, 0 )
@@ -442,7 +443,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 				settings.verbose = 1
 
 				# solve
-				print 'initial solve -> export data'
+				print('initial solve -> export data')
 				self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
 								 output.ptr) )
 				k_orig = info.k
@@ -477,7 +478,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 				self.register_solver('solver', solver, lib.pogs_finish)
 
 				settings.resume = 1
-				print 'import data -> solve again'
+				print('import data -> solve again')
 				self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
 												output.ptr) )
 				self.assertTrue(info.k <= k_orig or not info.converged)

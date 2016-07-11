@@ -4,6 +4,7 @@ from ctypes import c_void_p, byref, cast
 from optkit.libs.projector import ProjectorLibs
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.base import OptkitCTestCase, OptkitCOperatorTestCase
+from optkit.compat import *
 
 class ProjectorLibsTestCase(OptkitTestCase):
 	"""
@@ -170,7 +171,7 @@ class IndirectProjectorTestCase(OptkitCOperatorTestCase):
 			# self.op_keys
 			for op_ in self.op_keys:
 				if self.VERBOSE_TEST:
-					print "test indirect projector alloc, operator type:", op_
+					print('test indirect projector alloc, operator type:', op_)
 				A_, A, o = self.register_operator(lib, op_)
 
 				p = lib.indirect_projector(None, None)
@@ -199,7 +200,7 @@ class IndirectProjectorTestCase(OptkitCOperatorTestCase):
 			# test projection for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				if self.VERBOSE_TEST:
-					print "indirect projection, operator type:", op_
+					print('indirect projection, operator type:', op_)
 
 				hdl = self.register_blas_handle(lib, 'hdl')
 
@@ -363,7 +364,7 @@ class GenericIndirectProjectorTestCase(OptkitCOperatorTestCase):
 			# test projection for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				if self.VERBOSE_TEST:
-					print "test indirect projector alloc, operator type:", op_
+					print('test indirect projector alloc, operator type:', op_)
 				_, A, o = self.register_operator(lib, op_)
 
 				p = lib.indirect_projector_generic_alloc(o)
@@ -395,7 +396,7 @@ class GenericIndirectProjectorTestCase(OptkitCOperatorTestCase):
 			# test projection for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
 				if self.VERBOSE_TEST:
-					print "indirect projection, operator type:", op_
+					print('indirect projection, operator type:', op_)
 
 				hdl = self.register_blas_handle(lib, 'hdl')
 

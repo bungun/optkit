@@ -13,6 +13,7 @@ from optkit.libs.equilibration import attach_equilibration_ccalls, \
 	attach_operator_equilibration_ccalls
 from optkit.libs.projector import attach_projector_ctypes, \
 	attach_projector_ccalls, attach_operator_projector_ctypes_ccalls
+from optkit.compat import *
 
 class PogsLibs(OptkitLibs):
 	def __init__(self):
@@ -219,7 +220,6 @@ def attach_pogs_ctypes(lib, single_precision=False):
 	if not 'function_vector_p' in lib.__dict__:
 		attach_prox_ctypes(lib, single_precision)
 	if not 'pogs_settings_p' in lib.__dict__:
-		print "HERE"
 		attach_pogs_common_ctypes(lib, single_precision)
 
 	ok_float = lib.ok_float

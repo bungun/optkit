@@ -7,6 +7,7 @@ from ctypes import CDLL, c_size_t
 from optkit.api import backend
 from optkit.types.clustering import *
 from optkit.tests.defs import OptkitTestCase
+from optkit.compat import *
 
 class ClusteringBindingsTestCase(OptkitTestCase):
 	@classmethod
@@ -147,10 +148,10 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 		self.assertEqual( w.m, m )
 		self.assertEqual( w.k, k )
 		self.assertEqual( w.n, n )
-		err = w.resize(m / 2, k / 2)
+		err = w.resize(int(m / 2), int(k / 2))
 		self.assertEqual( err, 0 )
-		self.assertEqual( w.m, m / 2 )
-		self.assertEqual( w.k, k / 2 )
+		self.assertEqual( w.m, int(m / 2) )
+		self.assertEqual( w.k, int(k / 2) )
 		self.assertEqual( w.n, n )
 
 	def test_clustering_object(self):

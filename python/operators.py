@@ -1,4 +1,6 @@
-	class AbstractMatrix(object):
+from optkit.compat import *
+
+class AbstractMatrix(object):
 		pass
 
 class DenseMatrix(AbstractMatrix):

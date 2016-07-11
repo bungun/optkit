@@ -1,6 +1,7 @@
 from os import getenv, path
 import numpy as np
 import unittest
+from optkit.compat import *
 
 DEFAULT_SHAPE = (500, 800)
 # DEFAULT_SHAPE = (10, 15)
@@ -76,7 +77,7 @@ class OptkitTestCase(unittest.TestCase):
 
 	@staticmethod
 	def version_string(major, minor, change, status):
-		v = "{}.{}.{}".format(major, minor, change)
+		v = '{}.{}.{}'.format(major, minor, change)
 		if status:
-			v.join("-{}".format(chr(status)))
+			v.join('-{}'.format(chr(status)))
 		return v

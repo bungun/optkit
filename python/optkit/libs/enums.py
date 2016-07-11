@@ -1,4 +1,5 @@
 from ctypes import c_uint
+from optkit.compat import *
 
 class OKEnums(object):
 	# C BLAS

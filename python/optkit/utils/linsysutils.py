@@ -2,6 +2,7 @@
 # from numpy import ndarray, float32, float64
 # from scipy.sparse import csr_matrix, csc_matrix
 # from toolz import curry
+# from optkit.compat import *
 
 # # low-level utilities
 # @curry

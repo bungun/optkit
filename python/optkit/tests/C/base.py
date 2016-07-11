@@ -6,6 +6,7 @@ from ctypes import c_void_p, c_size_t, byref
 from scipy.sparse import csc_matrix, csr_matrix
 from optkit.libs.error import optkit_print_error as PRINTERR
 from optkit.tests.defs import OptkitTestCase
+from optkit.compat import *
 
 class OptkitCTestCase(OptkitTestCase):
 	managed_vars = {}
@@ -54,7 +55,7 @@ class OptkitCTestCase(OptkitTestCase):
 		for i in xrange(len(self.var_stack)):
 			varname = self.var_stack.pop() # free in reverse of order added
 			if varname in self.managed_vars:
-				print 'releasing unfreed C variable {}'.format(varname)
+				print('releasing unfreed C variable {}'.format(varname))
 			self.free_var(varname)
 
 	# register device_reset() call so GPU is reset when tests error

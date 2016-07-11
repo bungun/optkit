@@ -6,6 +6,7 @@ from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\
 	attach_dense_linsys_ccalls, attach_sparse_linsys_ccalls
 from optkit.libs.operator import attach_operator_ctypes, attach_operator_ccalls
 from optkit.libs.cg import attach_cg_ctypes, attach_cg_ccalls
+from optkit.compat import *
 
 class ProjectorLibs(OptkitLibs):
 	def __init__(self):

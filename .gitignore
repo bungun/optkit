@@ -11,6 +11,7 @@ python/build/
 *.dll
 
 *.pyc
+*__pycache__
 
 *cython*
 include/*graph*

@@ -1,4 +1,5 @@
 from os import getenv
+from optkit.compat import *
 
 if int(getenv('OPTKIT_C_TESTING', 0)) == 0:
 	from optkit.api import OPTKIT_VERSION

@@ -4,6 +4,7 @@ from ctypes import c_void_p
 from os import path
 from optkit.types.operator import OperatorTypes
 from optkit.types.pogs.common import PogsTypes
+from optkit.compat import *
 
 class PogsOperatorTypes(PogsTypes):
 	def __init__(self, backend):

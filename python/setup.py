@@ -3,6 +3,7 @@ from setuptools import setup
 from setuptools.command.install import   install
 from distutils.command.build import build
 from subprocess import call
+from optkit.compat import *
 
 # TODO: use this for OMP thread #?
 # from multiprocessing import cpu_count
@@ -149,8 +150,8 @@ setup(
     zip_safe=False,
     description='Python optimization toolkit',
     long_description=LONG_DESC,
-    install_requires=["numpy >= 1.8",
-                      "scipy >= 0.13",
-                      "toolz"],
+    install_requires=['numpy >= 1.8',
+                      'scipy >= 0.13',
+                      'toolz'],
     cmdclass={'build' : OptkitBuild, 'install' : OptkitInstall}
 )

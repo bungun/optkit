@@ -1,6 +1,7 @@
 # from numpy import zeros, ndarray
 # from scipy.sparse import csr_matrix, csc_matrix
 # from optkit.utils import istypedtuple
+# from optkit.compat import *
 
 # class LinsysTypes(object):
 # 	def __init__(self, backend):

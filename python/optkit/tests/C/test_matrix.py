@@ -2,6 +2,7 @@ import os
 import numpy as np
 from optkit.libs.linsys import DenseLinsysLibs
 from optkit.tests.C.base import OptkitCTestCase
+from optkit.compat import *
 
 class MatrixTestCase(OptkitCTestCase):
 	@classmethod
@@ -138,10 +139,10 @@ class MatrixTestCase(OptkitCTestCase):
 				self.assertCall( lib.matrix_memcpy_ma(A, A_ptr, order) )
 
 				# submatrix
-				m0 = m / 4
-				n0 = n / 4
-				msub = m / 2
-				nsub = n / 2
+				m0 = int(m / 4)
+				n0 = int(n / 4)
+				msub = int(m / 2)
+				nsub = int(n / 2)
 				Asub = lib.matrix(0, 0, 0, None, order)
 				Asub_py = np.zeros(
 						(msub, nsub), order=pyorder).astype(lib.pyfloat)

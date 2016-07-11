@@ -4,6 +4,7 @@ from scipy.sparse import csr_matrix, csc_matrix
 from ctypes import c_uint, c_void_p, byref, POINTER
 from optkit.libs.cg import ConjugateGradientLibs
 from optkit.tests.C.base import OptkitCTestCase, OptkitCOperatorTestCase
+from optkit.compat import *
 
 CG_QUIET = 1
 
@@ -61,9 +62,9 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 		self.assertTrue( flag == 0 )
 		KKT = A.T.dot(A.dot(x) - b) + rho * x
 		if np.linalg.norm(KKT) > tol:
-			print 'KKT conditions violated:'
-			print 'norm KKT conditions:', np.linalg.norm(KKT)
-			print 'tolerance:', tol
+			print('KKT conditions violated:')
+			print('norm KKT conditions:', np.linalg.norm(KKT))
+			print('tolerance:', tol)
 		self.assertTrue( np.linalg.norm(KKT) <= tol )
 
 	def test_cgls_helper_alloc_free(self):
@@ -113,7 +114,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			# -----------------------------------------
 			# test cgls for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
-				print "test cgls (nonallocating), operator type:", op_
+				print('test cgls (nonallocating), operator type:', op_)
 				x, x_, x_ptr = self.register_vector(lib, n, 'x')
 				b, b_, b_ptr = self.register_vector(lib, m, 'b')
 
@@ -165,7 +166,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			# -----------------------------------------
 			# test cgls for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
-				print "test cgls (allocating), operator type:", op_
+				print('test cgls (allocating), operator type:', op_)
 				x, x_, x_ptr = self.register_vector(lib, n, 'x')
 				b, b_, b_ptr = self.register_vector(lib, m, 'b')
 
@@ -206,7 +207,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			# -----------------------------------------
 			# test cgls for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
-				print "test cgls (easy), operator type:", op_
+				print('test cgls (easy), operator type:', op_)
 				x, x_, x_ptr = self.register_vector(lib, n, 'x')
 				b, b_, b_ptr = self.register_vector(lib, m, 'b')
 
@@ -269,7 +270,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			# -----------------------------------------
 			# test pcg for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
-				print "test pcg (nonallocating), operator type:", op_
+				print('test pcg (nonallocating), operator type:', op_)
 				A_, A, o = self.register_operator(lib, op_)
 
 				T = rho * np.eye(n)
@@ -330,7 +331,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			# -----------------------------------------
 			# test pcg for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
-				print "test pcg (nonallocating), operator type:", op_
+				print('test pcg (nonallocating), operator type:', op_)
 				x, x_, x_ptr = self.register_vector(lib, n, 'x')
 				b, b_, b_ptr = self.register_vector(lib, n, 'b')
 
@@ -375,7 +376,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			# -----------------------------------------
 			# test pcg for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
-				print "test pcg (nonallocating) warmstart, operator type:", op_
+				print('test pcg (nonallocating) warmstart, operator type:', op_)
 				x, x_, x_ptr = self.register_vector(lib, n, 'x')
 				b, b_, b_ptr = self.register_vector(lib, n, 'b')
 
@@ -405,8 +406,8 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 				self.assertVecEqual( T.dot(x_), b_, ATOLN, RTOL )
 
-				print 'cold start iters:', iters1
-				print 'warm start iters:', iters2
+				print('cold start iters:', iters1)
+				print('warm start iters:', iters2)
 				self.assertTrue(iters1 <= maxiter)
 				self.assertTrue(iters2 <= maxiter)
 				self.assertTrue(iters2 <= iters1)
@@ -434,7 +435,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			# -----------------------------------------
 			# test pcg for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
-				print "test pcg (allocating), operator type:", op_
+				print('test pcg (allocating), operator type:', op_)
 				x, x_, x_ptr = self.register_vector(lib, n, 'x')
 				b, b_, b_ptr = self.register_vector(lib, n, 'b')
 
@@ -479,7 +480,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 			# -----------------------------------------
 			# test pcg for each operator type defined in self.op_keys
 			for op_ in self.op_keys:
-				print "test pcg (easy), operator type:", op_
+				print('test pcg (easy), operator type:', op_)
 				x, x_, x_ptr = self.register_vector(lib, n, 'x')
 				b, b_, b_ptr = self.register_vector(lib, n, 'b')
 
@@ -511,8 +512,8 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
 				self.assertVecEqual( T.dot(x_), b_, ATOLN, RTOL )
 
-				print 'cold start iters:', iters1
-				print 'warm start iters:', iters2
+				print('cold start iters:', iters1)
+				print('warm start iters:', iters2)
 				self.assertTrue(iters2 <= iters1)
 
 				self.free_vars('work', 'h', 'p', 'p_vec', 'o', 'A', 'x', 'b')

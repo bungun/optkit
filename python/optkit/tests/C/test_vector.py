@@ -3,6 +3,7 @@ import numpy as np
 from ctypes import c_size_t
 from optkit.libs.linsys import DenseLinsysLibs
 from optkit.tests.C.base import OptkitCTestCase
+from optkit.compat import *
 
 class VectorTestCase(OptkitCTestCase):
 	@classmethod
@@ -91,7 +92,7 @@ class VectorTestCase(OptkitCTestCase):
 				self.assertCall( lib.vector_view_array(u, u_ptr,
 													   u_rand.size) )
 				self.assertCall( lib.vector_memcpy_av(v_ptr, u, 1) )
-	 			self.assertVecEqual( v_py, u_rand, ATOL, RTOL )
+				self.assertVecEqual( v_py, u_rand, ATOL, RTOL )
 
 				# DON'T FREE u, DATA OWNED BY PYTHON
 

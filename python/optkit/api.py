@@ -1,6 +1,7 @@
+from os import getenv
 from optkit.backends import OKBackend
 from optkit.types import PogsTypes, ClusteringTypes
-from os import getenv
+from optkit.compat import *
 
 """
 Version query
@@ -58,7 +59,7 @@ def set_backend(gpu=False, double=True):
 	ClusteringSettings = clustering_types.ClusteringSettings
 	Clustering = clustering_types.Clustering
 
-	print 'optkit backend set to {}'.format(backend.config)
+	print('optkit backend set to {}'.format(backend.config))
 	return bool(requested_config != backend.config)
 
 """

@@ -3,6 +3,7 @@ from numpy.linalg import norm
 from numpy.random import rand
 from optkit.utils.proxutils import prox_eval_python
 from optkit.tests.C.base import OptkitCTestCase
+from optkit.compat import *
 
 ALPHA_DEFAULT = 1.7
 RHO_DEFAULT = 1
@@ -425,7 +426,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		settings.verbose = 1
 
 		# COLD START
-		print "\ncold"
+		print('\ncold')
 		settings.warmstart = 0
 		settings.maxiter = MAXITER_DEFAULT
 		self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
@@ -434,14 +435,14 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		self.assertTrue( info.converged or info.k >= settings.maxiter )
 
 		# REPEAT
-		print "\nrepeat"
+		print('\nrepeat')
 		self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
 						 output.ptr) )
 		self.assertEqual( info.err, 0 )
 		self.assertTrue( info.converged or info.k >= settings.maxiter )
 
 		# RESUME
-		print "\nresume"
+		print('\nresume')
 		settings.resume = 1
 		settings.rho = info.rho
 		self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
@@ -450,7 +451,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		self.assertTrue( info.converged or info.k >= settings.maxiter )
 
 		# WARM START: x0
-		print "\nwarm start x0"
+		print('\nwarm start x0')
 		settings.resume = 0
 		settings.rho = 1
 		settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)
@@ -461,7 +462,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		self.assertTrue( info.converged or info.k >= settings.maxiter )
 
 		# WARM START: x0, rho
-		print "\nwarm start x0, rho"
+		print('\nwarm start x0, rho')
 		settings.resume = 0
 		settings.rho = info.rho
 		settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)
@@ -472,7 +473,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		self.assertTrue( info.converged or info.k >= settings.maxiter )
 
 		# WARM START: x0, nu0
-		print "\nwarm start x0, nu0"
+		print('\nwarm start x0, nu0')
 		settings.resume = 0
 		settings.rho = 1
 		settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)
@@ -484,7 +485,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		self.assertTrue( info.converged or info.k >= settings.maxiter )
 
 		# WARM START: x0, nu0
-		print "\nwarm start x0, nu0, rho"
+		print('\nwarm start x0, nu0, rho')
 		settings.resume = 0
 		settings.rho = info.rho
 		settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)

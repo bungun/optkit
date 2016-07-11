@@ -5,6 +5,7 @@ from optkit.libs.prox import ProxLibs
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.base import OptkitCTestCase
+from optkit.compat import *
 
 class ProxLibsTestCase(OptkitTestCase):
 	@classmethod
@@ -130,7 +131,7 @@ class ProxTestCase(OptkitCTestCase):
 
 			for hkey, hval in lib.function_enums.dict.items():
 				if self.VERBOSE_TEST:
-					print hkey
+					print(hkey)
 
 				for i in xrange(m):
 					f_py[i] = lib.function(hval, a, b, c, d, e)
@@ -310,9 +311,8 @@ class ProxTestCase(OptkitCTestCase):
 
 			for hkey, hval in lib.function_enums.dict.items():
 				if self.VERBOSE_TEST:
-					print hkey
+					print(hkey)
 
-				print hkey
 				# avoid domain errors with randomly generated data
 				if 'Log' in hkey or 'Exp' in hkey or 'Entr' in hkey:
 					continue

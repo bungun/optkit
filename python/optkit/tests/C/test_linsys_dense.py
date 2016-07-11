@@ -4,6 +4,7 @@ from ctypes import c_float, c_int, c_size_t, c_void_p, Structure, byref
 from optkit.libs.linsys import DenseLinsysLibs
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.base import OptkitCTestCase
+from optkit.compat import *
 
 class DenseLibsTestCase(OptkitCTestCase):
 	@classmethod

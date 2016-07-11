@@ -6,6 +6,7 @@ from os import path
 from optkit import *
 from optkit.api import backend
 from optkit.tests.defs import OptkitTestCase
+from optkit.compat import *
 
 class PogsBindingsTestCase(OptkitTestCase):
 	@classmethod
@@ -34,14 +35,15 @@ class PogsBindingsTestCase(OptkitTestCase):
 			self.assertAlmostEqual(e[i], 3)
 
 		# set block by scalar
-		f.set(end=m/2, b=0.5)
-		for i in xrange(m / 2):
+		f.set(end=int(m / 2), b=0.5)
+		for i in xrange(int(m / 2)):
 			self.assertEqual(f.b[i], 0.5)
 
 		# set block by vector
-		c = np.random.rand(m/4)
-		f.set(start=m/2, end=m/2+m/4, c=c)
-		for i, idx in enumerate(xrange(m/2, m/2 + m/4)):
+		c = np.random.rand(int(m / 4))
+		f.set(start=int(m / 2), end=int(m / 2) + int(m / 4), c=c)
+		for i, idx in enumerate(
+				xrange(int(m / 2), int(m / 2) + int(m / 4))):
 			self.assertAlmostEqual(f.c[idx], c[i])
 
 		# set indices by scalar

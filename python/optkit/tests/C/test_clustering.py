@@ -4,6 +4,7 @@ from numpy import ndarray
 from ctypes import c_void_p, c_size_t, byref, cast
 from optkit.libs.clustering import ClusteringLibs
 from optkit.tests.C.base import OptkitCTestCase
+from optkit.compat import *
 
 class ClusterLibsTestCase(OptkitCTestCase):
 	@classmethod
@@ -183,7 +184,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertCall( lib.indvector_memcpy_va(u.vec, u_ptr, 1) )
 
 			# expect error
-			print '\nexpect dimension mismatch error:'
+			print('\nexpect dimension mismatch error:')
 			err = lib.upsamplingvec_check_bounds(u)
 			self.assertEqual( err, lib.enums.OPTKIT_ERROR_DIMENSION_MISMATCH )
 
@@ -206,8 +207,8 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertCall( lib.upsamplingvec_check_bounds(u) )
 
 			# incorrect size
-			print '\nexpect dimension mismatch error:'
-			u.size2 = k / 2
+			print('\nexpect dimension mismatch error:')
+			u.size2 = int(k / 2)
 			err = lib.upsamplingvec_check_bounds(u)
 			self.assertEqual( err, lib.enums.OPTKIT_ERROR_DIMENSION_MISMATCH )
 
@@ -229,9 +230,9 @@ class ClusterLibsTestCase(OptkitCTestCase):
 				continue
 			self.register_exit(lib.ok_device_reset)
 
-			offset = m / 4
-			msub = m / 2
-			ksub = k / 2
+			offset = int(m / 4)
+			msub = int(m / 2)
+			ksub = int(k / 2)
 
 			u, u_py, u_ptr = self.register_upsamplingvec(lib, m, k, 'u',
 														 random=True)
@@ -370,17 +371,17 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertVecEqual( nvec_py, result_py, ATOLN, RTOL)
 
 			# reject: dimension mismatch
-			print '\nexpect dimension mismatch error:'
+			print('\nexpect dimension mismatch error:')
 			err = lib.upsamplingvec_mul_matrix(
 					hdl, N, N, N, alpha, u, C, beta, B)
 			self.assertEqual( err, lib.enums.OPTKIT_ERROR_DIMENSION_MISMATCH )
-			print '\nexpect dimension mismatch error:'
+			print('\nexpect dimension mismatch error:')
 			err = lib.upsamplingvec_mul_matrix(
 					hdl, T, N, N, alpha, u, A, beta, D)
 			self.assertEqual( err, lib.enums.OPTKIT_ERROR_DIMENSION_MISMATCH )
 
 			# reject: unallocated
-			print '\nexpect unallocated error:'
+			print('\nexpect unallocated error:')
 			err = lib.upsamplingvec_mul_matrix(
 					hdl, T, N, N, alpha, u, E, beta, C)
 			self.assertEqual( err, lib.enums.OPTKIT_ERROR_UNALLOCATED )
@@ -529,18 +530,19 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertEqual( w.a2c.size1, m )
 			self.assertEqual( w.a2c.size2, k )
 
-			self.assertCall( lib.kmeans_work_subselect(w, m/2, k/2, n/2) )
+			self.assertCall( lib.kmeans_work_subselect(w, int(m/2), int(k/2),
+													   int(n/2)) )
 
 			self.assertEqual( w.n_vectors, m )
 			self.assertEqual( w.n_clusters, k )
 			self.assertEqual( w.vec_length, n )
-			self.assertEqual( w.A.size1, m / 2 )
-			self.assertEqual( w.A.size2, n / 2 )
-			self.assertEqual( w.C.size1, k / 2 )
-			self.assertEqual( w.C.size2, n / 2 )
-			self.assertEqual( w.counts.size, k / 2 )
-			self.assertEqual( w.a2c.size1, m / 2 )
-			self.assertEqual( w.a2c.size2, k / 2 )
+			self.assertEqual( w.A.size1, int(m / 2) )
+			self.assertEqual( w.A.size2, int(n / 2) )
+			self.assertEqual( w.C.size1, int(k / 2) )
+			self.assertEqual( w.C.size2, int(n / 2) )
+			self.assertEqual( w.counts.size, int(k / 2) )
+			self.assertEqual( w.a2c.size1, int(m / 2) )
+			self.assertEqual( w.a2c.size2, int(k / 2) )
 
 			self.free_var('w')
 			self.assertCall( lib.ok_device_reset() )
@@ -841,12 +843,13 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			work = lib.kmeans_easy_init(m, k, n)
 			self.register_var('work', work, lib.kmeans_easy_finish)
 
-			self.assertCall( lib.kmeans_easy_resize(work, m/2, k/2, n/2) )
+			self.assertCall( lib.kmeans_easy_resize(work, int(m/2), int(k/2),
+													int(n/2)) )
 
 			cwork = cast(work, lib.kmeans_work_p)
-			self.assertEqual( cwork.contents.A.size1, m / 2 )
-			self.assertEqual( cwork.contents.C.size1, k / 2 )
-			self.assertEqual( cwork.contents.A.size2, n / 2 )
+			self.assertEqual( cwork.contents.A.size1, int(m / 2) )
+			self.assertEqual( cwork.contents.C.size1, int(k / 2) )
+			self.assertEqual( cwork.contents.A.size2, int(n / 2) )
 
 			self.free_var('work')
 			self.assertCall( lib.ok_device_reset() )

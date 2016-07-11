@@ -6,6 +6,7 @@ from ctypes import c_int, c_void_p, byref, pointer, CDLL
 from optkit.libs.pogs import PogsLibs
 from optkit.libs.clustering import ClusteringLibs
 from optkit.utils.pyutils import version_string
+from optkit.compat import *
 
 
 # CPU32, CPU64, GPU32, GPU64
@@ -110,7 +111,7 @@ class OKBackend(object):
 			raise ValueError('invalid library name')
 		elif self.__dict__[name] is not None:
 			if not override:
-				print str('\nlibrary {} already loaded; call with keyword arg '
+				print('\nlibrary {} already loaded; call with keyword arg '
 					  '"override"=True to bypass this check\n'.format(name))
 
 		if name == 'pogs':
@@ -135,7 +136,7 @@ class OKBackend(object):
 		devices = ['gpu', 'cpu'] if device == 'gpu' else ['cpu', 'gpu']
 		precisions = ['32', '64'] if precision == '32' else ['64', '32']
 
- 		for dev in devices:
+		for dev in devices:
 			for prec in precisions:
 				lib_key ='{}{}'.format(dev, prec)
 				valid = self.pogs_lib_loader.libs[lib_key] is not None
@@ -147,16 +148,16 @@ class OKBackend(object):
 					self.load_lib('cluster', override=True)
 					return
 				else:
-					print str('Libraries for configuration {} '
-							  'not found. Trying next configuration.'.format(
-							  lib_key))
+					print ('Libraries for configuration {} '
+						   'not found. Trying next configuration.'.format(
+						   	lib_key))
 
 		raise RuntimeError('No libraries found for backend.')
 
 	def change(self, gpu=False, double=True):
 		if self.__LIBGUARD_ON:
-			print str('Backend cannot be changed once C objects have been '
-					  'created.\n')
+			print('Backend cannot be changed once C objects have been '
+				  'created.\n')
 			return
 
 		precision = '64' if double else '32'

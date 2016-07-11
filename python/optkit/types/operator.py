@@ -1,6 +1,7 @@
 # from numpy import ndarray
 # from scipy import csr_matrix, csc_matrix, coo_matrix
 # from ctypes import c_void_p, byref
+# from optkit.compat import *
 
 # class OperatorTypes(object):
 # 	def __init__(self, backend):

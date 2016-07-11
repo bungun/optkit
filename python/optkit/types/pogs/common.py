@@ -1,6 +1,7 @@
 from numpy import zeros, ones, ndarray
 from optkit.utils.pyutils import const_iterator
 from optkit.utils.proxutils import func_eval_python
+from optkit.compat import *
 
 class PogsCommonTypes(object):
 	def __init__(self, backend):

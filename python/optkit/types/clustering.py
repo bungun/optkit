@@ -1,5 +1,6 @@
 from numpy import array, ndarray, zeros, ceil
 from ctypes import c_size_t
+from optkit.compat import *
 
 def nearest_triple(factor):
 	if not isinstance(factor, int):
