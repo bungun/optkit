@@ -94,6 +94,13 @@ class OptkitCTestCase(OptkitTestCase):
 		A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
 		if random:
 			A_py += rand(size1, size2)
+
+			# attempt some matrix conditioning: normalize columns and
+			# divide by sqrt(# columns)
+			factor = size2**0.5
+			for j in xrange(size2):
+				A_py[:, j] /= factor * A_py[:, j].dot(A_py[:, j])
+
 		return A_py, A_ptr
 
 	def register_vector(self, lib, size, name, random=False):
