@@ -1,12 +1,12 @@
 os:
-  # - linux
-  - osx
+  - linux
+  # - osx
 
 env:
   - PYTHON_VERSION="2.7"
   # - PYTHON_VERSION="3.3"
   # - PYTHON_VERSION="3.4"
-  # - PYTHON_VERSION="3.5"
+  - PYTHON_VERSION="3.5"
 
 sudo: required
 
@@ -63,13 +63,6 @@ branches:
   only:
     - master
     - dev
-
-matrix:
-  exclude:
-    - branches: dev 
-      env: PYTHON_VERSION="3.3"
-    - branches: dev 
-      env: PYTHON_VERSION="3.4"
 
 notifications:
   email:
