@@ -361,7 +361,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		atoln = settings.abstol * (n**0.5) * repeat_factor
 
 		P = 10 * 1.5**int(single_precision) * 1.5**int(gpu);
-		D = 20 * 1.5**int(single_precision) * 1.5**int(gpu);
+		D = 20 * 1.5**int(single_precision) * 1.5**int(gpu) * repeat_factor;
 
 		self.assertVecEqual(A.dot(output.x), output.y, atolm, P * rtol)
 		self.assertVecEqual(A.T.dot(output.nu), -output.mu, atoln, D * rtol)
