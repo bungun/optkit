@@ -24,6 +24,8 @@ class OptkitCTestCase(OptkitTestCase):
 		self.assertEqual( PRINTERR(call), 0 )
 
 	def assertVecEqual(self, first, second, atol, rtol):
+		print('||a - b||: {}'.format(norm(first - second)))
+		print('atol + rtol||b||'.format(atol + rtol * norm(second)))
 		self.assertTrue( norm(first - second) <= atol + rtol * norm(second) )
 
 	def assertVecNotEqual(self, first, second, atol, rtol):

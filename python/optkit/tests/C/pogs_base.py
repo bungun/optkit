@@ -361,10 +361,11 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		atoln = settings.abstol * (n**0.5) * repeat_factor
 
 		P = 10 * 1.5**int(single_precision) * 1.5**int(gpu);
-		D = 20 * 1.5**int(single_precision) * 1.5**int(gpu) * repeat_factor;
+		D = 20 * 1.5**int(single_precision) * 1.5**int(gpu);
 
 		self.assertVecEqual(A.dot(output.x), output.y, atolm, P * rtol)
-		self.assertVecEqual(A.T.dot(output.nu), -output.mu, atoln, D * rtol)
+		self.assertVecEqual(A.T.dot(output.nu), -output.mu,
+							repeat_factor * atoln, repeat_factor * D * rtol)
 
 	def assert_pogs_unscaling(self, lib, output, solver, local_vars):
 		"""pogs unscaling test
