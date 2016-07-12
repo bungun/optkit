@@ -1,4 +1,4 @@
-		# Basic definitions
+# Basic definitions
 OPTKITROOT=./
 OUT=$(OPTKITROOT)build/
 SRC=$(OPTKITROOT)src/
