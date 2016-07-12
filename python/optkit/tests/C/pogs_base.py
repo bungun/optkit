@@ -353,19 +353,21 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		if not isinstance(A, ndarray):
 			raise TypeError('argument "A" must be of type {}'.format(ndarray))
 
-		repeat_factor = 2.**(TEST_ITERATE > 0)
+		RFP = repeat_factor_primal = 2.**(TEST_ITERATE)
+		RFD = repeat_factor_dual = 3.**(TEST_ITERATE)
 
 		m, n = A.shape
-		rtol = settings.reltol * repeat_factor
-		atolm = settings.abstol * (m**0.5) * repeat_factor
-		atoln = settings.abstol * (n**0.5) * repeat_factor
+		rtol = settings.reltol
+		atolm = settings.abstol * (m**0.5)
+		atoln = settings.abstol * (n**0.5)
 
 		P = 10 * 1.5**int(single_precision) * 1.5**int(gpu);
 		D = 20 * 1.5**int(single_precision) * 1.5**int(gpu);
 
-		self.assertVecEqual(A.dot(output.x), output.y, atolm, P * rtol)
-		self.assertVecEqual(A.T.dot(output.nu), -output.mu,
-							repeat_factor * atoln, repeat_factor * D * rtol)
+		self.assertVecEqual(A.dot(output.x), output.y, RFP * atolm,
+							RFP * P * rtol)
+		self.assertVecEqual(A.T.dot(output.nu), -output.mu, RFD * atoln,
+							RFD * D * rtol)
 
 	def assert_pogs_unscaling(self, lib, output, solver, local_vars):
 		"""pogs unscaling test
