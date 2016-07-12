@@ -5,7 +5,7 @@ from subprocess import call
 from os import path
 from optkit import *
 from optkit.api import backend
-from optkit.tests.defs import OptkitTestCase
+from optkit.tests.defs import OptkitTestCase, TEST_ITERATE
 from optkit.compat import *
 
 class PogsBindingsTestCase(OptkitTestCase):
@@ -98,6 +98,7 @@ class PogsBindingsTestCase(OptkitTestCase):
 		call(['rm', 'c_solve_test.npz'])
 
 		factor = 30. if backend.pogs.pyfloat == np.float32 else 10.
+		factor *= 2.**TEST_ITERATE
 		self.assertTrue(s3.info.c.k <= s2.info.c.k or not s3.info.c.converged)
 
 		diff_12 = abs(s2.info.c.obj - s.info.c.obj)
