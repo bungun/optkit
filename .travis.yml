@@ -66,9 +66,9 @@ branches:
 
 matrix:
   exclude:
-    - branch: dev 
+    - branches: dev 
       env: PYTHON_VERSION="3.3"
-    - branch: dev 
+    - branches: dev 
       env: PYTHON_VERSION="3.4"
 
 notifications:
