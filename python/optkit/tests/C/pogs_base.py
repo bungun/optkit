@@ -3,6 +3,7 @@ from numpy import zeros, array, ndarray
 from numpy.linalg import norm
 from numpy.random import rand
 from optkit.utils.proxutils import prox_eval_python
+from optkit.tests.defs import TEST_ITERATE
 from optkit.tests.C.base import OptkitCTestCase
 from optkit.compat import *
 
@@ -352,13 +353,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		if not isinstance(A, ndarray):
 			raise TypeError('argument "A" must be of type {}'.format(ndarray))
 
-
-		repeat = int(os.getenv('OPTKIT_REPEAT_NUMERICALTEST', '0'))
-		repeat_factor = 1.
-		if repeat > 0:
-			repeat_factor *= 2.
-		if repeat > 1:
-			repeat_factor *= 2.
+		repeat_factor = 2.**(TEST_ITERATE > 0)
 
 		m, n = A.shape
 		rtol = settings.reltol * repeat_factor

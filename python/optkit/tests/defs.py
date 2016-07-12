@@ -3,6 +3,8 @@ import numpy as np
 import unittest
 from optkit.compat import *
 
+TEST_ITERATE = int(getenv('OPTKIT_REPEAT_NUMERICALTEST', '0'))
+
 DEFAULT_SHAPE = (500, 800)
 # DEFAULT_SHAPE = (10, 15)
 

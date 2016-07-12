@@ -3,7 +3,7 @@ import numpy as np
 from ctypes import c_int, byref, c_void_p
 from optkit.libs.prox import ProxLibs
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
-from optkit.tests.defs import OptkitTestCase
+from optkit.tests.defs import OptkitTestCase, TEST_ITERATE
 from optkit.tests.C.base import OptkitCTestCase
 from optkit.compat import *
 
@@ -296,13 +296,7 @@ class ProxTestCase(OptkitCTestCase):
 				continue
 			self.register_exit(lib.ok_device_reset)
 
-			repeat = int(os.getenv('OPTKIT_REPEAT_NUMERICALTEST', '0'))
-			repeat_factor = 1.
-			if repeat > 0:
-				repeat_factor *= 2.
-			if repeat > 1:
-				repeat_factor *= 2.
-
+			repeat_factor = 2**(TEST_ITERATE > 0) * 2**(TEST_ITERATE > 1)
 			DIGITS = 7 - 2 * single_precision
 			RTOL = 10**(-DIGITS) * repeat_factor
 			ATOLM = RTOL * m**0.5 * repeat_factor

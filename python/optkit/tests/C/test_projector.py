@@ -2,7 +2,7 @@ import os
 import numpy as np
 from ctypes import c_void_p, byref, cast
 from optkit.libs.projector import ProjectorLibs
-from optkit.tests.defs import OptkitTestCase
+from optkit.tests.defs import OptkitTestCase, TEST_ITERATE
 from optkit.tests.C.base import OptkitCTestCase, OptkitCOperatorTestCase
 from optkit.compat import *
 
@@ -289,14 +289,7 @@ class DenseDirectProjectorTestCase(OptkitCTestCase):
 				continue
 			self.register_exit(lib.ok_device_reset)
 
-
-			repeat = int(os.getenv('OPTKIT_REPEAT_NUMERICALTEST', '0'))
-			repeat_factor = 1.
-			if repeat > 0:
-				repeat_factor *= 2.
-			if repeat > 1:
-				repeat_factor *= 2.
-
+			repeat_factor = 2**(TEST_ITERATE > 0) * 2**(TEST_ITERATE > 1)
 			TOL_PLACEHOLDER = 1e-8
 			DIGITS = 7 - 3 * lib.FLOAT - 1 * lib.GPU
 			RTOL = 10**(-DIGITS) * repeat_factor

@@ -3,6 +3,7 @@ import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix
 from ctypes import c_uint, c_void_p, byref, POINTER
 from optkit.libs.cg import ConjugateGradientLibs
+from optkit.tests.defs import TEST_ITERATE
 from optkit.tests.C.base import OptkitCTestCase, OptkitCOperatorTestCase
 from optkit.compat import *
 
@@ -56,12 +57,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 		self.assertTrue(any(libs))
 
 	def assert_cgls_exit(self, A, x, b, rho, flag, tol):
-		repeat = int(os.getenv('OPTKIT_REPEAT_NUMERICALTEST', '0'))
-		repeat_factor = 1.
-		if repeat > 0:
-			repeat_factor *= 5.
-		if repeat > 1:
-			repeat_factor *= 2.
+		repeat_factor = 5**(TEST_ITERATE > 0) * 2**(TEST_ITERATE > 1)
 
 		# checks:
 		# 1. exit flag == 0

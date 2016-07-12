@@ -2,7 +2,7 @@ import os
 import numpy as np
 from ctypes import c_float, c_int, c_size_t, c_void_p, Structure, byref
 from optkit.libs.linsys import DenseLinsysLibs
-from optkit.tests.defs import OptkitTestCase
+from optkit.tests.defs import OptkitTestCase, TEST_ITERATE
 from optkit.tests.C.base import OptkitCTestCase
 from optkit.compat import *
 
@@ -561,9 +561,10 @@ class DenseBLASTestCase(OptkitCTestCase):
 				continue
 			self.register_exit(lib.ok_device_reset)
 
+			repeat_factor = 2**(TEST_ITERATE > 0) * 2**(TEST_ITERATE > 1)
 			DIGITS = 7 - 2 * single_precision
-			RTOL = 10**(-DIGITS)
-			ATOLMN = RTOL * (m * n)**0.5
+			RTOL = 10**(-DIGITS) * repeat_factor
+			ATOLMN = RTOL * (m * n)**0.5 * repeat_factor
 
 			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
 				hdl = self.register_blas_handle(lib, 'hdl')
