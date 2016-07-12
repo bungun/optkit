@@ -59,11 +59,26 @@ In the shell, navigate to the directory:
 $ cd <path-to-optkit>/python
 ```
 
-If desired, create a virtual environment before the installation step (https://virtualenv.pypa.io/en/latest/).
+(Optional, recommended.) If desired, create a virtual environment before the installation step (e.g., see https://virtualenv.pypa.io/en/latest/ or http://conda.pydata.org/docs/using/envs.html#create-an-environment). For instance:
 
 ```bash
-$ [sudo] PATH=$PATH python setup.py install
+$ conda create -n <optkit-environment-name> numpy scipy toolz nose
+$ source activate <optkit-environment-name>
+``` 
+
+Finally, to install:
+
+```bash
+$ python setup.py install
 ```
+
+(If installing as root with `sudo`, the contents of `PATH` need to be passed
+through
+
+```bash
+$ sudo PATH=$PATH python setup.py install
+```
+for the install to succeed. This is not needed when using a virtual environment.)
 
 
 Usage
@@ -72,13 +87,18 @@ Usage
 After installing, import the package `optkit` to use it in a script, e.g.:
 
 ```python
->>>> import optkit as ok
+> import optkit as ok
 ```
 
-The import should print a success messages:
+The import should print a success message:
 ```python
 
-optkit backend set to cpu64
+"optkit backend set to cpu64"
+```
+
+To change the backend, call:
+```python
+> ok.set_backend(double=True, gpu=False)
 ```
 
 (TODO: further explanation)
@@ -94,26 +114,31 @@ import, set the following environment variables:
 $ export OPTKIT\_DEFAULT\_DEVICE=<device>
 ```
 
-(values = `cpu` or `gpu`; optkit defaults to CPU if environment variable 
+(values: `cpu` or `gpu`; optkit defaults to CPU if environment variable 
 not set), and 
 
-```
+```bash
 $ export OPTKIT\_DEFAULT\_FLOATBITS=<bits>
 ```
 
-(values = `64` or `32`; optkit defaults to 64-bit floating point precision if environment variable not set).
+(values: `64` or `32`; optkit defaults to 64-bit floating point precision if environment variable not set).
 
 
 Credits
 -------
 
-optkit's dense linear algebra libraries wrap GNU CBlas and cudaBLAS.
+`optkit`'s dense linear algebra libraries wrap GNU CBlas and cudaBLAS.
 
 Most of the linear algebra libraries, proximal operator libraries are C/CUDA adaptations of libraries implemented in C++/CUDA in POGS.
 
-The projection, matrix equilibration, and POGS solver algorithms are Python adaptations of the corresponding C++ versions implemented in POGS.
+The conjugate gradient-least squares, projection, matrix equilibration, and POGS solver algorithms are C adaptations of the corresponding C++ versions implemented in POGS.
 
-**Visit http://foges.github.io/pogs/ for detailed information on POGS**
++ **Visit http://foges.github.io/pogs/ for detailed information on POGS**
+
+The preconditioned conguate gradient algorithm is adapted from the implementation
+in SCS.
+
++ **Visit https://github.com/cvxgrp/scs for detailed information on SCS**
 
 The following people have been, and are, involved in the development and maintenance of optkit
 + Baris Ungun (principal developer)
