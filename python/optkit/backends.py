@@ -171,7 +171,7 @@ class OKBackend(object):
 			for lib in self.__active_libs:
 				if isinstance(lib, CDLL):
 					if 'ok_device_reset' in lib.__dict__:
-						if self.pogs.ok_device_reset():
+						if self.lib.ok_device_reset():
 							raise RuntimeError('device reset failed')
 						return 0
 			raise RuntimeError('device reset not possible: '

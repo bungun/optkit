@@ -142,4 +142,5 @@ in SCS.
 
 The following people have been, and are, involved in the development and maintenance of optkit
 + Baris Ungun (principal developer)
++ Chris Fougner (POGS, CGLS, proximal operators)
 + Stephen Boyd (methods and math)

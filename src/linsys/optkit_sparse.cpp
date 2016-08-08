@@ -90,12 +90,15 @@ void __csr2csc(size_t m, size_t n, size_t nnz, ok_float * csr_val,
 	ok_int i, j, k, l;
 	memset(col_ptr, 0, (n + 1) * sizeof(ok_int));
 
+	/* count nonzeros in each column */
 	for (i = 0; i < (ok_int) nnz; i++)
 		col_ptr[col_ind[i] + 1]++;
 
+	/* cumulative sum of column counts = pointer offsets */
 	for (i = 0; i < (ok_int) n; i++)
 		col_ptr[i + 1] += col_ptr[i];
 
+	/* copy data row-wise by using pointer offsets as write heads */
 	for (i = 0; i < (ok_int) m; i++) {
 		for (j = row_ptr[i]; j < row_ptr[i + 1]; j++) {
 			k = col_ind[j];
@@ -105,6 +108,7 @@ void __csr2csc(size_t m, size_t n, size_t nnz, ok_float * csr_val,
 		}
 	}
 
+	/* return write heads back to pointer offsets */
 	for (i = (ok_int) n; i > 0; i--)
 	    col_ptr[i] = col_ptr[i - 1];
 
