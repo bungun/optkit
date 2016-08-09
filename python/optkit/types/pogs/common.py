@@ -216,6 +216,8 @@ class PogsCommonTypes(object):
 					self.reltol = options['reltol']
 				if 'maxiter' in options:
 					self.maxiter = options['maxiter']
+				elif 'maxiters' in options:
+					self.maxiter = options['maxiters']
 				if 'verbose' in options:
 					self.verbose = options['verbose']
 				if 'suppress' in options:

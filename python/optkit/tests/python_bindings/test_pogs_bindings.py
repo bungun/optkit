@@ -84,17 +84,17 @@ class PogsBindingsTestCase(OptkitTestCase):
 		s = PogsSolver(self.A_test)
 
 		s.save(path.abspath('.'), 'c_solve_test')
-		s.solve(f, g, resume=0)
+		s.solve(f, g, resume=0, maxiter=10000)
 
 		s2 = PogsSolver(self.A_test, 'no_init')
 		s2.load(path.abspath('.'), 'c_solve_test')
-		s2.solve(f, g, resume=0)
+		s2.solve(f, g, resume=0, maxiter=10000)
 		call(['rm', 'c_solve_test.npz'])
 		s2.save(path.abspath('.'),'c_solve_test')
 
 		s3 = PogsSolver(self.A_test, 'no_init')
 		s3.load(path.abspath('.'), 'c_solve_test')
-		s3.solve(f, g, resume=1)
+		s3.solve(f, g, resume=1, maxiter=10000)
 		call(['rm', 'c_solve_test.npz'])
 
 		factor = 30. if backend.pogs.pyfloat == np.float32 else 10.
