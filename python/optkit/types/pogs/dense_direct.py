@@ -20,6 +20,8 @@ class DoubleCache(object):
 	def set_file(self, npz_file):
 		if isinstance(npz_file, np.lib.npyio.NpzFile):
 			self.__npz_cache = npz_file
+		elif isinstance(npz_file, dict):
+			self.update(npz_file)
 
 	def update(self, dictionary):
 		if isinstance(dictionary, dict):
