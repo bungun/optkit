@@ -77,11 +77,15 @@ class PogsDenseDirectTypes(PogsCommonTypes):
 					A.flags.c_contiguous else lib.enums.CblasColMajor
 				self.__c_solver = None
 				self.__cache = None
-				self.__state = None
 
-				if 'no_init' not in args:
+
+				if not options.pop('bypass_initialization', 'no_init' in args):
 					self.__register_solver(lib, lib.pogs_init(self.A_ptr, m, n,
 							layout))
+				else:
+					cache = options.pop('solver_cache', None)
+					if cache is not None:
+						self.load(cache, **options)
 
 				self.settings = SolverSettings()
 				self.info = SolverInfo()
