@@ -1,25 +1,32 @@
-import numpy as np
+from optkit.compat import *
+
 import gc
 import os
-from subprocess import call
-from os import path
+import numpy as np
 from optkit import *
 from optkit.api import backend
 from optkit.tests.defs import OptkitTestCase, TEST_ITERATE
-from optkit.compat import *
 
 class PogsBindingsTestCase(OptkitTestCase):
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
+		self.__files = []
 
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
+		for f in self.__files:
+			if os.path.exists(f):
+				os.remove(f)
 
 	def setUp(self):
 		self.A_test = self.A_test_gen
+
+	def register_file(self, file):
+		if os.path.exists(file):
+			self.__files.append(file)
 
 	def test_objective(self):
 		m = self.shape[0]
@@ -83,19 +90,21 @@ class PogsBindingsTestCase(OptkitTestCase):
 
 		s = PogsSolver(self.A_test)
 
-		s.save(path.abspath('.'), 'c_solve_test')
+		cache_file = s.save(os.path.abspath('.'), 'c_solve_test')
+		self.register_file(cache_file)
+
 		s.solve(f, g, resume=0, maxiter=10000)
 
 		s2 = PogsSolver(self.A_test, 'no_init')
-		s2.load(path.abspath('.'), 'c_solve_test')
+		s2.load(os.path.abspath('.'), 'c_solve_test')
 		s2.solve(f, g, resume=0, maxiter=10000)
-		call(['rm', 'c_solve_test.npz'])
-		s2.save(path.abspath('.'),'c_solve_test')
+
+		cache_file = s2.save(os.path.abspath('.'),'c_solve_test2')
+		self.register_file(cache_file)
 
 		s3 = PogsSolver(self.A_test, 'no_init')
-		s3.load(path.abspath('.'), 'c_solve_test')
+		s3.load(os.path.abspath('.'), 'c_solve_test2')
 		s3.solve(f, g, resume=1, maxiter=10000)
-		call(['rm', 'c_solve_test.npz'])
 
 		factor = 30. if backend.pogs.pyfloat == np.float32 else 10.
 		factor *= 2.**TEST_ITERATE
