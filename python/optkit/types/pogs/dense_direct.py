@@ -37,7 +37,7 @@ class DoubleCache(object):
 		if key in self.__npz_cache:
 			return self.__npz_cache[key]
 		elif key in self.__dictionary:
-			return self.__dictionary
+			return self.__dictionary[key]
 		else:
 			raise KeyError(
 					'{} has no entry for key=`{}`'.format(DoubleCache, key))
@@ -78,14 +78,15 @@ class PogsDenseDirectTypes(PogsCommonTypes):
 				self.__c_solver = None
 				self.__cache = None
 
-
-				if not options.pop('bypass_initialization', 'no_init' in args):
+				bypass_init = options.pop('bypass_initialization', False)
+				bypass_init |= 'no_init' in args
+				if not bypass_init:
 					self.__register_solver(lib, lib.pogs_init(self.A_ptr, m, n,
 							layout))
 				else:
 					cache = options.pop('solver_cache', None)
 					if cache is not None:
-						self.load(cache, **options)
+						self.load_cache(cache, **options)
 
 				self.settings = SolverSettings()
 				self.info = SolverInfo()
