@@ -12,8 +12,8 @@ class BackendTestCase(unittest.TestCase):
 		pogs_libnames = []
 		cluster_libnames = []
 
-		self.assertNotEqual(backend.pogs_lib_loader, None)
-		self.assertNotEqual(backend.cluster_lib_loader, None)
+		self.assertIsNotNone( backend.pogs_lib_loader )
+		self.assertIsNotNone( backend.cluster_lib_loader )
 
 		for libkey in backend.pogs_lib_loader.libs:
 			if backend.pogs_lib_loader.libs[libkey] is not None:
@@ -37,8 +37,8 @@ class BackendTestCase(unittest.TestCase):
 			self.assertEqual( backend.reset_device(), 0 )
 			self.assertEqual( set_backend(gpu=gpu, double=double), 0 )
 
-			self.assertNotEqual( backend.pogs, None )
-			self.assertNotEqual( backend.cluster, None )
+			self.assertIsNone( backend.pogs )
+			self.assertIsNotNone( backend.cluster )
 
 			self.assertEqual( backend.device_is_gpu, gpu )
 			self.assertNotEqual( backend.precision_is_32bit, double )

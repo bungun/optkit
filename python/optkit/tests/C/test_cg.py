@@ -63,7 +63,7 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 		# checks:
 		# 1. exit flag == 0
 		# 2. KKT condition A'(Ax - b) + rho (x) == 0 (within tol)
-		self.assertTrue( flag == 0 )
+		self.assertEqual( flag, 0 )
 		KKT = A.T.dot(A.dot(x) - b) + rho * x
 		if np.linalg.norm(KKT) > tol:
 			print('KKT conditions violated:')
@@ -81,10 +81,10 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 			h = lib.cgls_helper_alloc(self.shape[0], self.shape[1])
 			self.register_var('h', h, lib.cgls_helper_free)
-			self.assertTrue( isinstance(h.contents.p, lib.vector_p) )
-			self.assertTrue( isinstance(h.contents.q, lib.vector_p) )
-			self.assertTrue( isinstance(h.contents.r, lib.vector_p) )
-			self.assertTrue( isinstance(h.contents.s, lib.vector_p) )
+			self.assertIsInstance( h.contents.p, lib.vector_p )
+			self.assertIsInstance( h.contents.q, lib.vector_p )
+			self.assertIsInstance( h.contents.r, lib.vector_p )
+			self.assertIsInstance( h.contents.s, lib.vector_p )
 			self.assertCall( lib.cgls_helper_free(h) )
 			self.unregister_var('h')
 
@@ -247,11 +247,11 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 			h = lib.pcg_helper_alloc(self.shape[0], self.shape[1])
 			self.register_var('h', h, lib.pcg_helper_free)
-			self.assertTrue( isinstance(h.contents.p, lib.vector_p) )
-			self.assertTrue( isinstance(h.contents.q, lib.vector_p) )
-			self.assertTrue( isinstance(h.contents.r, lib.vector_p) )
-			self.assertTrue( isinstance(h.contents.z, lib.vector_p) )
-			self.assertTrue( isinstance(h.contents.temp, lib.vector_p) )
+			self.assertIsInstance( h.contents.p, lib.vector_p )
+			self.assertIsInstance( h.contents.q, lib.vector_p )
+			self.assertIsInstance( h.contents.r, lib.vector_p )
+			self.assertIsInstance( h.contents.z, lib.vector_p )
+			self.assertIsInstance( h.contents.temp, lib.vector_p )
 			self.assertCall( lib.pcg_helper_free(h) )
 			self.unregister_var('h')
 

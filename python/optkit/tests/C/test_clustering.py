@@ -251,14 +251,14 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertCall( lib.upsamplingvec_subvector(usub, u, offset, msub,
 									k) )
 			self.assertCall( lib.indvector_memcpy_av(usub_ptr, usub.vec, 1) )
-			self.assertTrue( usub.size1 == msub )
-			self.assertTrue( usub.size2 == k )
-			self.assertTrue( sum(usub_py - u_py[offset : offset + msub]) == 0 )
+			self.assertEqual( usub.size1, msub )
+			self.assertEqual( usub.size2, k )
+			self.assertEqual( sum(usub_py - u_py[offset : offset + msub]), 0 )
 
 			self.assertCall( lib.upsamplingvec_subvector(usub, u, offset, msub,
 									ksub) )
-			self.assertTrue( usub.size1 == msub )
-			self.assertTrue( usub.size2 == ksub )
+			self.assertEqual( usub.size1, msub )
+			self.assertEqual( usub.size2, ksub )
 
 			self.assertCall( lib.upsamplingvec_free(u) )
 			self.unregister_var('u')

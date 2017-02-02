@@ -41,8 +41,8 @@ class DenseLibsTestCase(OptkitCTestCase):
 			self.assertTrue( 'vector_p' in dir(lib) )
 			self.assertTrue( 'matrix' in dir(lib) )
 			self.assertTrue( 'matrix_p' in dir(lib) )
-			self.assertTrue( single_precision == (lib.ok_float == ct.c_float) )
-			self.assertTrue( lib.ok_int == ct.c_int )
+			self.assertEqual( single_precision, (lib.ok_float == ct.c_float) )
+			self.assertEqual( lib.ok_int, ct.c_int )
 
 	def test_blas_handle(self):
 		for (gpu, single_precision) in self.CONDITIONS:

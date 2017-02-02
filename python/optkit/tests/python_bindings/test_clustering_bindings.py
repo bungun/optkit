@@ -110,7 +110,7 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 		m = 500
 
 		s = ct.ClusteringSettings(m)
-		self.assertTrue( isinstance(backend.cluster, ct.CDLL ))
+		self.assertIsInstance( backend.cluster, ct.CDLL )
 
 		self.assertEqual( type(s.pointer), backend.cluster.kmeans_settings )
 		self.assertEqual( s.distance_tol, s.DISTANCE_RTOL_DEFAULT )
@@ -168,33 +168,33 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 		clu.kmeans_work_finish()
 		self.assertTrue( backend.device_reset_allowed )
 
-		self.assertTrue( clu.A is None )
-		self.assertTrue( clu.A_ptr is None )
+		self.assertIsNone( clu.A )
+		self.assertIsNone( clu.A_ptr )
 		clu.A = np.random.rand(m, n)
-		self.assertFalse( clu.A is None )
-		self.assertTrue( clu.A.dtype == backend.cluster.pyfloat )
-		self.assertTrue( isinstance(clu.A_ptr, backend.cluster.ok_float_p) )
+		self.assertIsNotNone( clu.A )
+		self.assertEqual( clu.A.dtype, backend.cluster.pyfloat )
+		self.assertIsInstance( clu.A_ptr, backend.cluster.ok_float_p )
 
-		self.assertTrue( clu.C is None )
-		self.assertTrue( clu.C_ptr is None )
-		self.assertTrue( clu.counts is None )
-		self.assertTrue( clu.counts_ptr is None )
+		self.assertIsNone( clu.C )
+		self.assertIsNone( clu.C_ptr )
+		self.assertIsNone( clu.counts )
+		self.assertIsNone( clu.counts_ptr )
 		clu.C = np.random.rand(k, n)
-		self.assertFalse( clu.C is None )
-		self.assertTrue( clu.C.dtype == backend.cluster.pyfloat )
-		self.assertTrue( isinstance(clu.C_ptr, backend.cluster.ok_float_p) )
-		self.assertFalse( clu.counts is None )
-		self.assertTrue( clu.counts.dtype == backend.cluster.pyfloat )
-		self.assertTrue( isinstance(clu.counts_ptr, backend.cluster.ok_float_p) )
+		self.assertIsNotNone( clu.C )
+		self.assertEqual( clu.C.dtype, backend.cluster.pyfloat )
+		self.assertIsInstance( clu.C_ptr, backend.cluster.ok_float_p )
+		self.assertIsNotNone( clu.counts )
+		self.assertEqual( clu.counts.dtype, backend.cluster.pyfloat )
+		self.assertIsInstance( clu.counts_ptr, backend.cluster.ok_float_p )
 
-		self.assertTrue( clu.a2c is None )
-		self.assertTrue( clu.a2c_ptr is None )
+		self.assertIsNone( clu.a2c )
+		self.assertIsNone( clu.a2c_ptr )
 		clu.a2c = k * np.random.rand(m)
-		self.assertFalse( clu.a2c is None )
-		self.assertTrue( clu.a2c.dtype == ct.c_size_t )
-		self.assertTrue( isinstance(clu.a2c_ptr, backend.cluster.ct.c_size_t_p) )
+		self.assertIsNotNone( clu.a2c )
+		self.assertEqual( clu.a2c.dtype, ct.c_size_t )
+		self.assertIsInstance( clu.a2c_ptr, backend.cluster.ct.c_size_t_p )
 
-		self.assertTrue( isinstance(clu.io, backend.cluster.kmeans_io) )
+		self.assertIsInstance( clu.io, backend.cluster.kmeans_io )
 
 	def test_kmeans_inplace(self):
 		ct = ClusteringTypes(backend)
@@ -202,7 +202,7 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 
 		C, a2c, counts = clu.kmeans_inplace(self.A_test, self.C_test,
 										 self.assignments_test)
-		self.assertTrue( sum(counts) == self.shape[0] )
+		self.assertEqual( sum(counts), self.shape[0] )
 
 	def test_kmeans_inplace(self):
 		ct = ClusteringTypes(backend)
@@ -210,7 +210,7 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 
 		C, a2c, counts = clu.kmeans(self.A_test, self.k,
 									   self.assignments_test)
-		self.assertTrue( sum(counts) == self.shape[0] )
+		self.assertEqual( sum(counts), self.shape[0] )
 
 	def test_blockwise_kmeans_inplace(self):
 		ct = ClusteringTypes(backend)
@@ -224,12 +224,12 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 		C, a2c, counts = clu.blockwise_kmeans_inplace(A_array, C_array,
 													  a2c_array)
 
-		self.assertTrue( len(C) == b )
-		self.assertTrue( len(a2c) == b )
-		self.assertTrue( len(counts) == b )
+		self.assertEqual( len(C), b )
+		self.assertEqual( len(a2c), b )
+		self.assertEqual( len(counts), b )
 
 		for i in xrange(b):
-			self.assertTrue( sum(counts[i]) == self.shape[0] )
+			self.assertEqual( sum(counts[i]), self.shape[0] )
 
 	def test_blockwise_kmeans(self):
 		ct = ClusteringTypes(backend)
@@ -241,11 +241,11 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 
 		C, a2c, counts = clu.blockwise_kmeans(A_array, a2c_array)
 
-		self.assertTrue( len(C) == b )
-		self.assertTrue( len(a2c) == b )
-		self.assertTrue( len(counts) == b )
+		self.assertEqual( len(C), b )
+		self.assertEqual( len(a2c), b )
+		self.assertEqual( len(counts), b )
 
 		for i in xrange(b):
-			self.assertTrue( sum(counts[i]) == self.shape[0] )
+			self.assertEqual( sum(counts[i]), self.shape[0] )
 
 
