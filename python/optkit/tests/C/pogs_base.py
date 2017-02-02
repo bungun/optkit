@@ -1,11 +1,11 @@
+from optkit.compat import *
+
 import os
-from numpy import zeros, array, ndarray
-from numpy.linalg import norm
-from numpy.random import rand
+import numpy as np
+
 from optkit.utils.proxutils import prox_eval_python
 from optkit.tests.defs import TEST_ITERATE
 from optkit.tests.C.base import OptkitCTestCase
-from optkit.compat import *
 
 ALPHA_DEFAULT = 1.7
 RHO_DEFAULT = 1
@@ -24,13 +24,13 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		def __init__(self, m, n, pytype):
 			self.m = m
 			self.n = n
-			self.z = zeros(m + n).astype(pytype)
-			self.z12 = zeros(m + n).astype(pytype)
-			self.zt = zeros(m + n).astype(pytype)
-			self.zt12 = zeros(m + n).astype(pytype)
-			self.prev = zeros(m + n).astype(pytype)
-			self.d = zeros(m).astype(pytype)
-			self.e = zeros(n).astype(pytype)
+			self.z = np.zeros(m + n).astype(pytype)
+			self.z12 = np.zeros(m + n).astype(pytype)
+			self.zt = np.zeros(m + n).astype(pytype)
+			self.zt12 = np.zeros(m + n).astype(pytype)
+			self.prev = np.zeros(m + n).astype(pytype)
+			self.d = np.zeros(m).astype(pytype)
+			self.e = np.zeros(n).astype(pytype)
 
 		@property
 		def x(self):
@@ -66,10 +66,10 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 
 	class PogsOutputLocal():
 		def __init__(self, lib, m, n):
-			self.x = zeros(n).astype(lib.pyfloat)
-			self.y = zeros(m).astype(lib.pyfloat)
-			self.mu = zeros(n).astype(lib.pyfloat)
-			self.nu = zeros(m).astype(lib.pyfloat)
+			self.x = np.zeros(n).astype(lib.pyfloat)
+			self.y = np.zeros(m).astype(lib.pyfloat)
+			self.mu = np.zeros(n).astype(lib.pyfloat)
+			self.nu = np.zeros(m).astype(lib.pyfloat)
 			self.ptr = lib.pogs_output(self.x.ctypes.data_as(lib.ok_float_p),
 									   self.y.ctypes.data_as(lib.ok_float_p),
 									   self.mu.ctypes.data_as(lib.ok_float_p),
@@ -170,12 +170,12 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 
 		def fv_list2arrays(function_vector_list):
 			fv = function_vector_list
-			fvh = array([fv_.h for fv_ in fv])
-			fva = array([fv_.a for fv_ in fv])
-			fvb = array([fv_.b for fv_ in fv])
-			fvc = array([fv_.c for fv_ in fv])
-			fvd = array([fv_.d for fv_ in fv])
-			fve = array([fv_.e for fv_ in fv])
+			fvh = np.array([fv_.h for fv_ in fv])
+			fva = np.array([fv_.a for fv_ in fv])
+			fvb = np.array([fv_.b for fv_ in fv])
+			fvc = np.array([fv_.c for fv_ in fv])
+			fvd = np.array([fv_.d for fv_ in fv])
+			fve = np.array([fv_.e for fv_ in fv])
 			return fvh, fva, fvb, fvc, fvd, fve
 
 		# record original function vector parameters
@@ -350,8 +350,8 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 
 	def assert_pogs_convergence(self, A, settings, output, gpu=False,
 								single_precision=False):
-		if not isinstance(A, ndarray):
-			raise TypeError('argument "A" must be of type {}'.format(ndarray))
+		if not isinstance(A, np.ndarray):
+			raise TypeError('argument "A" must be of type {}'.format(np.ndarray))
 
 		RFP = repeat_factor_primal = 2.**(TEST_ITERATE)
 		RFD = repeat_factor_dual = 3.**(TEST_ITERATE)

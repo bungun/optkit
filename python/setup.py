@@ -1,19 +1,21 @@
-from os import path, popen, uname, getenv
+import os
+
 from setuptools import setup
-from setuptools.command.install import   install
+from setuptools.command.install import install
 from distutils.command.build import build
 from subprocess import call
 
 # TODO: use this for OMP thread #?
 # from multiprocessing import cpu_count
 
-RECOMPILE_LIBS = int(getenv('OPTKIT_RECOMPILE_LIBS', 1)) == 1
-BUILD_GPU = int(getenv('OPTKIT_BUILD_GPU', 0)) == 1
+RECOMPILE_LIBS = int(os.getenv('OPTKIT_RECOMPILE_LIBS', 1)) == 1
+BUILD_GPU = int(os.getenv('OPTKIT_BUILD_GPU', 0)) == 1
 USE_OPENMP = False
 SPARSE_POGS = False
 ABSTRACT_POGS = False
-BASEPATH = path.abspath(path.join(path.dirname(path.abspath(__file__)),'..'))
-LIBPATH = path.join(BASEPATH, 'build')
+BASEPATH = os.path.abspath(os.path.join(os.path.dirname(
+        os.path.abspath(__file__)),'..'))
+LIBPATH = os.path.join(BASEPATH, 'build')
 LONG_DESC= str('optkit provides a Python interface for CPU and GPU '
                '(dense/sparse) linear algebra, enabling the composition '
                'of C- or CUDA C-based optimization routines in a Python '
@@ -29,8 +31,8 @@ class OptkitBuild(build):
         global BASEPATH
         global LIBPATH
 
-        NVCC = popen("which nvcc").read() != ""
-        EXT = "dylib" if uname()[0] == "Darwin" else "so"
+        NVCC = os.popen("which nvcc").read() != ""
+        EXT = "dylib" if os.uname()[0] == "Darwin" else "so"
 
         # run original build code
         build.run(self)
@@ -151,6 +153,6 @@ setup(
     long_description=LONG_DESC,
     install_requires=['numpy >= 1.8',
                       'scipy >= 0.13',
-                      'toolz'],
+                      'six',],
     cmdclass={'build' : OptkitBuild, 'install' : OptkitInstall}
 )

@@ -1,9 +1,11 @@
+from optkit.compat import *
+
 import unittest
 import numpy as np
+
 import optkit
 from optkit.api import backend
 from optkit import set_backend
-from optkit.compat import *
 
 class BackendTestCase(unittest.TestCase):
 	def test_libs(self):
@@ -53,4 +55,3 @@ class BackendTestCase(unittest.TestCase):
 			del c
 			self.assertTrue( backend.device_reset_allowed )
 			backend.reset_device()
-

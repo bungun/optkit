@@ -1,8 +1,10 @@
+from optkit.compat import *
+
 import os
 import numpy as np
+
 from optkit.libs.linsys import DenseLinsysLibs
 from optkit.tests.C.base import OptkitCTestCase
-from optkit.compat import *
 
 class MatrixTestCase(OptkitCTestCase):
 	@classmethod

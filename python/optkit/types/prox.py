@@ -1,7 +1,8 @@
-# from ctypes import c_uint
-# from numpy import ones, zeros, ndarray
-# from optkit.utils import UtilMakeCFunctionVector, UtilReleaseCFunctionVector
 # from optkit.compat import *
+
+# import numpy
+
+# from optkit.utils import UtilMakeCFunctionVector, UtilReleaseCFunctionVector
 
 # class ProxTypes(object):
 # 	def __init__(self, backend):
@@ -23,7 +24,7 @@
 # 				self.on_gpu = ON_GPU
 # 				self.size = n;
 # 				self.c = backend.make_cfunctionvector(self.size)
-# 				self.py = zeros(n, dtype=backend.lowtypes.function)
+# 				self.py = np.zeros(n, dtype=backend.lowtypes.function)
 # 				for i in xrange(n):
 # 					self.py[i]= backend.lowtypes.function(0, 1, 0, 1, 0, 0)
 # 				self.set(**params)
@@ -45,12 +46,12 @@
 
 # 			def toarrays(self):
 # 				l = self.tolist()
-# 				h = zeros(self.size, int)
-# 				a = zeros(self.size)
-# 				b = zeros(self.size)
-# 				c = zeros(self.size)
-# 				d = zeros(self.size)
-# 				e = zeros(self.size)
+# 				h = np.zeros(self.size, int)
+# 				a = np.zeros(self.size)
+# 				b = np.zeros(self.size)
+# 				c = np.zeros(self.size)
+# 				d = np.zeros(self.size)
+# 				e = np.zeros(self.size)
 
 # 				for i in xrange(self.size):
 # 					h[i] = l[i].h
@@ -76,7 +77,7 @@
 # 						' of length {}.'.format(start,end,self.size))
 # 				for item in ['a', 'b', 'c', 'd', 'e', 'h']:
 # 					if item in params:
-# 						if isinstance(params[item],(list, ndarray)):
+# 						if isinstance(params[item],(list, np.ndarray)):
 # 							if len(params[item]) != range_length:
 # 								raise ValueError('keyword argument {} of type {} '
 # 									'is incomptably sized with the requested '
@@ -94,7 +95,7 @@
 # 					if isinstance(params['h'],(int, str)):
 # 						for i in xrange(start, end):
 # 							objectives[i].h = fcn_enums.safe_enum(params['h'])
-# 					elif isinstance(params['h'],(list, ndarray)):
+# 					elif isinstance(params['h'],(list, np.ndarray)):
 # 						for i in xrange(start, end):
 # 							objectives[i].h = fcn_enums.safe_enum(params['h'][i])
 
@@ -102,7 +103,7 @@
 # 					if isinstance(params['a'],(int, float)):
 # 						for i in xrange(start, end):
 # 							objectives[i].a = params['a']
-# 					elif isinstance(params['a'],(list, ndarray)):
+# 					elif isinstance(params['a'],(list, np.ndarray)):
 # 						for i in xrange(start, end):
 # 							objectives[i].a = params['a'][i - start]
 
@@ -110,7 +111,7 @@
 # 					if isinstance(params['b'],(int, float)):
 # 						for i in xrange(start, end):
 # 							objectives[i].b = params['b']
-# 					elif isinstance(params['b'],(list, ndarray)):
+# 					elif isinstance(params['b'],(list, np.ndarray)):
 # 						for i in xrange(start, end):
 # 							objectives[i].b = params['b'][i - start]
 
@@ -118,7 +119,7 @@
 # 					if isinstance(params['c'],(int,float)):
 # 						for i in xrange(start, end):
 # 							objectives[i].c = max(params['c'], 0)
-# 					elif isinstance(params['c'],(list, ndarray)):
+# 					elif isinstance(params['c'],(list, np.ndarray)):
 # 						for i in xrange(start, end):
 # 							objectives[i].c = max(params['c'][i - start], 0)
 
@@ -126,7 +127,7 @@
 # 					if isinstance(params['d'],(int, float)):
 # 						for i in xrange(start, end):
 # 							objectives[i].d = params['d']
-# 					elif isinstance(params['d'],(list, ndarray)):
+# 					elif isinstance(params['d'],(list, np.ndarray)):
 # 						for i in xrange(start, end):
 # 							objectives[i].d = params['d'][i - start]
 
@@ -134,7 +135,7 @@
 # 					if isinstance(params['e'],(int,float)):
 # 						for i in xrange(start, end):
 # 							objectives[i].e = max(params['e'], 0)
-# 					elif isinstance(params['e'],(list, ndarray)):
+# 					elif isinstance(params['e'],(list, np.ndarray)):
 # 						for i in xrange(start, end):
 # 							objectives[i].e = max(params['e'][i - start], 0)
 
@@ -143,21 +144,21 @@
 # 				self.push()
 
 # 			def push(self):
-# 				function_vector_memcpy_va(self.c, ndarray_pointer(self.py))
+# 				function_vector_memcpy_va(self.c, np.ndarray_pointer(self.py))
 
 # 			def pull(self):
-# 				function_vector_memcpy_av(ndarray_pointer(self.py), self.c)
+# 				function_vector_memcpy_av(np.ndarray_pointer(self.py), self.c)
 
 
 # 			def __str__(self):
 # 				self.pull()
 # 				obj = self.tolist()
-# 				h_ = zeros(self.size, dtype=int)
-# 				a_ = zeros(self.size)
-# 				b_ = zeros(self.size)
-# 				c_ = zeros(self.size)
-# 				d_ = zeros(self.size)
-# 				e_ = zeros(self.size)
+# 				h_ = np.zeros(self.size, dtype=int)
+# 				a_ = np.zeros(self.size)
+# 				b_ = np.zeros(self.size)
+# 				c_ = np.zeros(self.size)
+# 				d_ = np.zeros(self.size)
+# 				e_ = np.zeros(self.size)
 
 # 				for i in xrange(self.size):
 # 					h_[i] = obj[i].h
@@ -180,7 +181,7 @@
 # 				for item in ['c','py','size','on_gpu']:
 # 					assert self.__dict__.has_key(item)
 # 					assert self.__dict__[item] is not None
-# 				assert isinstance(self.py, ndarray)
+# 				assert isinstance(self.py, np.ndarray)
 # 				assert len(self.py.shape) == 1
 # 				assert self.py.size == self.size
 # 				assert self.size == self.c.size

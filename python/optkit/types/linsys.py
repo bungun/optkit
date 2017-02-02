@@ -1,7 +1,9 @@
-# from numpy import zeros, ndarray
-# from scipy.sparse import csr_matrix, csc_matrix
-# from optkit.utils import istypedtuple
 # from optkit.compat import *
+
+# import numpy as np
+# import scipy.sparse as sp
+
+# from optkit.utils import istypedtuple
 
 # class LinsysTypes(object):
 # 	def __init__(self, backend):
@@ -15,10 +17,10 @@
 
 # 				valid = istypedtuple(x, 1, int)
 # 				if len(x) == 1:
-# 					if isinstance(x[0], ndarray):
+# 					if isinstance(x[0], np.ndarray):
 # 						valid |= len(x[0].shape) == 1
 # 				elif len(x) == 2:
-# 					if ( isinstance(x[0], ndarray) and
+# 					if ( isinstance(x[0], np.ndarray) and
 # 					   	 isinstance(x[1], backend.dense.vector) ):
 
 # 						valid |= ( len(x[0].shape) == 1 and
@@ -28,8 +30,8 @@
 # 					data = None
 # 					print ("optkit.Vector must be initialized with:\n"
 # 							"-one `int` OR\n"
-# 							"-one 1-dimensional `numpy.ndarray`, OR\n"
-# 							"-one 1-dimensional `numpy.ndarray` and"
+# 							"-one 1-dimensional `numpy.np.ndarray`, OR\n"
+# 							"-one 1-dimensional `numpy.np.ndarray` and"
 # 							" one `optkit.types.lowlevel.ok_vector` with"
 # 							" compatible dimensions)")
 # 					self.is_view = None
@@ -47,9 +49,9 @@
 
 # 				if len(x) == 1:
 # 					if istypedtuple(x, 1, int):
-# 						data = zeros(x, dtype=backend.dense.pyfloat)
+# 						data = np.zeros(x, dtype=backend.dense.pyfloat)
 # 					else:
-# 						data = zeros(len(x[0]), dtype=backend.dense.pyfloat)
+# 						data = np.zeros(len(x[0]), dtype=backend.dense.pyfloat)
 # 						data[:] = x[0][:]
 
 # 					self.py = data
@@ -83,7 +85,7 @@
 # 					assert self.__dict__[item] is not None
 # 				if self.on_gpu:
 # 					assert self.sync_required
-# 				assert isinstance(self.py, ndarray)
+# 				assert isinstance(self.py, np.ndarray)
 # 				assert len(self.py.shape) == 1
 # 				assert self.py.size == self.size
 # 				assert isinstance(self.c, backend.dense.vector)
@@ -103,17 +105,17 @@
 # 				valid = istypedtuple(A,2,int)
 # 				if not valid:
 # 					if len(A)==1:
-# 						# args are (ndarray)
-# 						if isinstance(A[0],ndarray):
-# 							# ndarray is matrix
+# 						# args are (np.ndarray)
+# 						if isinstance(A[0],np.ndarray):
+# 							# np.ndarray is matrix
 # 							valid |= len(A[0].shape)==2
 # 					elif len(A)==2:
-# 						# args are (ndarray, ok_matrix)
-# 						if isinstance(A[0],ndarray) and isinstance(A[1],
+# 						# args are (np.ndarray, ok_matrix)
+# 						if isinstance(A[0],np.ndarray) and isinstance(A[1],
 # 							backend.dense.matrix):
-# 							# ndarray is matrix
+# 							# np.ndarray is matrix
 # 							if len(A[0].shape)==2:
-# 								# ndarray and ok-matrix compatibly sized
+# 								# np.ndarray and ok-matrix compatibly sized
 # 								valid |= A[0].shape[0] == A[1].size1 and \
 # 										 A[0].shape[1] == A[1].size2
 
@@ -121,8 +123,8 @@
 # 				if not valid:
 # 					print ("optkit.Matrix must be initialized with\n"
 # 							"-two `int` arguments OR\n"
-# 							"-one 2-dimensional `numpy.ndarray` OR\n"
-# 							"-one 2-dimensional `numpy.ndarray` and"
+# 							"-one 2-dimensional `numpy.np.ndarray` OR\n"
+# 							"-one 2-dimensional `numpy.np.ndarray` and"
 # 							" one `optkit.types.lowlevel.ok_matrix`"
 # 							" of compatible sizes.")
 # 					self.is_view = None
@@ -144,11 +146,11 @@
 # 				self.sync_required = ON_GPU
 # 				if len(A)==1 or istypedtuple(A,2,int):
 # 					if len(A)==1:
-# 						data = zeros(A[0].shape,dtype=backend.dense.pyfloat,
+# 						data = np.zeros(A[0].shape,dtype=backend.dense.pyfloat,
 # 							order=order)
 # 						data[:]=A[0][:]
 # 					else:
-# 						data = zeros(A,dtype=backend.dense.pyfloat,
+# 						data = np.zeros(A,dtype=backend.dense.pyfloat,
 # 							order=order)
 
 # 					self.py = data
@@ -194,7 +196,7 @@
 # 				assert self.shape == (self.size1, self.size2)
 # 				assert self.skinny == (self.size1 >= self.size2)
 # 				assert self.mindim == min(self.size1, self.size2)
-# 				assert isinstance(self.py, ndarray)
+# 				assert isinstance(self.py, np.ndarray)
 # 				assert self.py.shape == self.shape
 # 				assert isinstance(self.c, backend.matrix)
 # 				assert self.c.size1 == self.size1
@@ -216,23 +218,23 @@
 # 				valid = istypedtuple(A, 3, int)
 # 				if not valid:
 # 					if len(A)==1:
-# 						# args are (ndarray)
-# 						if isinstance(A[0], (csr_matrix, csc_matrix)):
-# 							# ndarray is matrix
+# 						# args are (np.ndarray)
+# 						if isinstance(A[0], (sp.csr_matrix, sp.csc_matrix)):
+# 							# np.ndarray is matrix
 # 							valid |= len(A[0].shape)==2
 # 					elif len(A)==2:
 # 						# args are (scipy.sparse matrix, ok_sparse_matrix)
-# 						if isinstance(A[0], (csr_matrix, csc_matrix)) and \
+# 						if isinstance(A[0], (sp.csr_matrix, sp.csc_matrix)) and \
 # 							isinstance(A[1], backend.sparse.sparse_matrix):
-# 							# ndarray and ok-matrix compatibly sized
+# 							# np.ndarray and ok-matrix compatibly sized
 # 							valid |= A[0].shape[0] == A[1].size1 and \
 # 									 A[0].shape[1] == A[1].size2
 
 # 				if not valid:
 # 					print ("optkit.SparseMatrix must be initialized with\n"
 # 						"-three `int` arguments OR\n"
-# 						"-one `scipy.sparse.csc_matrix` (or csr_matrix) OR\n"
-# 						"-one `scipy.sparse.csc_matrix` (or csr_matrix) and"
+# 						"-one `scipy.sparse.sp.csc_matrix` (or sp.csr_matrix) OR\n"
+# 						"-one `scipy.sparse.sp.csc_matrix` (or sp.csr_matrix) and"
 # 						" one `optkit.types.lowlevel.ok_matrix`"
 # 						" of compatible sizes.")
 # 					self.on_gpu = None
@@ -248,14 +250,14 @@
 # 					self.ptrlen = None
 # 					return
 
-# 				spmat_constructor = csc_matrix if backend.layout == 'col' else \
-# 					csr_matrix
+# 				spmat_constructor = sp.csc_matrix if backend.layout == 'col' else \
+# 					sp.csr_matrix
 
 # 				self.on_gpu = ON_GPU
 # 				self.sync_required = ON_GPU
 # 				if istypedtuple(A, 3, int) or \
-# 					istypedtuple(A, 1, csc_matrix) or \
-# 					istypedtuple(A, 1, csr_matrix):
+# 					istypedtuple(A, 1, sp.csc_matrix) or \
+# 					istypedtuple(A, 1, sp.csr_matrix):
 
 # 					if len(A)==1:
 # 						data = spmat_constructor(A[0].astype(
@@ -263,26 +265,26 @@
 # 					else:
 # 						(m, n, nnz) = A
 # 						if nnz > m * n:
-# 							print str("# nonzeros nnz exceeds "
+# 							print str("# nonnp.zeros nnz exceeds "
 # 								"matrix dimensions m * n, using  "
 # 								"nnz = m * n instead")
 # 							nnz = m * n
 
 # 						shape = (m, n)
 # 						ptrlen = n + 1 if backend.layout == 'col' else m + 1
-# 						ptr = zeros(ptrlen, dtype=int)
-# 						ind = zeros(nnz, dtype=int)
+# 						ptr = np.zeros(ptrlen, dtype=int)
+# 						ind = np.zeros(nnz, dtype=int)
 
 
-# 						val = zeros(nnz, dtype=lowtypes.backend.dense.pyfloat)
+# 						val = np.zeros(nnz, dtype=lowtypes.backend.dense.pyfloat)
 # 						ptr_idx = 0
 # 						# get size of complementary (non-compressed) dimension
 # 						modbase = n + m + 1 - ptrlen
 
 # 						# create a default sequentially filled initialization of
-# 						# the sparse matrix so that the csc_matrix() or
-# 						# csr_matrix() constructor allocates & returns
-# 						# something with nnz nonzeros
+# 						# the sparse matrix so that the sp.csc_matrix() or
+# 						# sp.csr_matrix() constructor allocates & returns
+# 						# something with nnz nonnp.zeros
 # 						for i in xrange(nnz):
 # 							ind[i] = i % modbase
 # 							ptr_idx = i / modbase
@@ -338,7 +340,7 @@
 # 				assert self.shape == (self.size1, self.size2)
 # 				assert self.skinny == (self.size1 >= self.size2)
 # 				assert self.mindim == min(self.size1, self.size2)
-# 				assert isinstance(self.py, (csr_matrix, csc_matrix))
+# 				assert isinstance(self.py, (sp.csr_matrix, sp.csc_matrix))
 # 				assert self.py.shape == self.shape
 # 				assert isinstance(self.c, lowtypes.sparse_matrix)
 # 				assert self.c.size1 == self.size1

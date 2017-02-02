@@ -1,11 +1,13 @@
+from optkit.compat import *
+
 import os
 import numpy as np
 import scipy.sparse as sp
-from ctypes import c_int, c_uint, Structure, byref, c_void_p
+import ctypes as ct
+
 from optkit.libs.linsys import SparseLinsysLibs
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.base import OptkitCTestCase
-from optkit.compat import *
 
 class SparseLibsTestCase(OptkitCTestCase):
 	@classmethod
@@ -42,8 +44,8 @@ class SparseLibsTestCase(OptkitCTestCase):
 			if lib is None:
 				continue
 
-			hdl = c_void_p()
-			self.assertCall( lib.sp_make_handle(byref(hdl)) )
+			hdl = ct.c_void_p()
+			self.assertCall( lib.sp_make_handle(ct.byref(hdl)) )
 			self.assertCall( lib.sp_destroy_handle(hdl) )
 
 	def test_version(self):
@@ -52,13 +54,14 @@ class SparseLibsTestCase(OptkitCTestCase):
 			if lib is None:
 				continue
 
-			major = c_int()
-			minor = c_int()
-			change = c_int()
-			status = c_int()
+			major = ct.c_int()
+			minor = ct.c_int()
+			change = ct.c_int()
+			status = ct.c_int()
 
-			lib.optkit_version(byref(major), byref(minor), byref(change),
-								  byref(status))
+			lib.optkit_version(
+					ct.byref(major), ct.byref(minor), ct.byref(change),
+					ct.byref(status))
 
 			version = self.version_string(major.value, minor.value,
 										 change.value, status.value)

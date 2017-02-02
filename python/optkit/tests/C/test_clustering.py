@@ -1,10 +1,11 @@
+from optkit.compat import *
+
 import os
 import numpy as np
-from numpy import ndarray
-from ctypes import c_void_p, c_size_t, byref, cast
+import ctypes as ct
+
 from optkit.libs.clustering import ClusteringLibs
 from optkit.tests.C.base import OptkitCTestCase
-from optkit.compat import *
 
 class ClusterLibsTestCase(OptkitCTestCase):
 	@classmethod
@@ -43,11 +44,13 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 	@staticmethod
 	def upsamplingvec_mul(tU, tA, tB, alpha, u, A, beta, B):
-		if not bool(isinstance(u, ndarray) and isinstance(A, ndarray)
-					and isinstance(B, ndarray)):
-			raise TypeError('u, A, and B must be of type {}'.format(ndarray))
+		if not bool(isinstance(u, np.ndarray) and isinstance(A, np.ndarray)
+					and isinstance(B, np.ndarray)):
+			raise TypeError(
+					'u, A, and B must be of type {}'.format(np.ndarray))
 		if not (len(A.shape) == 2 and len(B.shape) == 2):
-			raise ValueError('A and B must be 2-d {}s'.format(ndarray))
+			raise ValueError(
+					'A and B must be 2-d {}s'.format(np.ndarray))
 
 		umax = int(u.max()) + 1
 		u_dim1 = umax if tU == 'T' else len(u)
@@ -70,11 +73,13 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 	@staticmethod
 	def cluster(A, C, a2c, maxdist):
-		if not bool(isinstance(a2c, ndarray) and isinstance(A, ndarray)
-					and isinstance(C, ndarray)):
-			raise TypeError('a2c, A, and C must be of type {}'.format(ndarray))
+		if not bool(isinstance(a2c, np.ndarray) and isinstance(A, np.ndarray)
+					and isinstance(C, np.ndarray)):
+			raise TypeError(
+					'a2c, A, and C must be of type {}'.format(np.ndarray))
 		if not (len(A.shape) == 2 and len(C.shape) == 2):
-			raise ValueError('A and C must be 2-d {}s'.format(ndarray))
+			raise ValueError(
+					'A and C must be 2-d {}s'.format(np.ndarray))
 		if not bool(A.shape[1] == C.shape[1] and A.shape[0] == len(a2c) and
 					a2c.max() <= C.shape[0]):
 			raise ValueError('incompatible dimensions')
@@ -110,21 +115,23 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		return D, dmin, reassigned
 
 	def gen_py_upsamplingvec(self, lib, size1, size2, random=False):
-		if 'c_size_t_p' not in lib.__dict__:
-			raise ValueError('symbol "c_size_t_p" undefined in '
-							 'library {}'.format(lib))
+		if 'ct.c_size_t_p' not in lib.__dict__:
+			raise ValueError(
+					'symbol "ct.c_size_t_p" undefined in library {}'
+					''.format(lib))
 
-		u_py = np.zeros(size1).astype(c_size_t)
-		u_ptr = u_py.ctypes.data_as(lib.c_size_t_p)
+		u_py = np.zeros(size1).astype(ct.c_size_t)
+		u_ptr = u_py.ctypes.data_as(lib.ct.c_size_t_p)
 		if random:
-			u_py += (size2 * np.random.rand(size1)).astype(c_size_t)
+			u_py += (size2 * np.random.rand(size1)).astype(ct.c_size_t)
 			u_py[-1] = size2 - 1
 		return u_py, u_ptr
 
 	def register_upsamplingvec(self, lib, size1, size2, name, random=False):
 		if not 'upsamplingvec_alloc' in lib.__dict__:
-			raise ValueError('library {} cannot allocate an '
-							 'upsamplingvec'.format(lib))
+			raise ValueError(
+					'library {} cannot allocate an upsamplingvec'
+					''.format(lib))
 
 		u = lib.upsamplingvec()
 		self.assertCall( lib.upsamplingvec_alloc(u, size1, size2) )
@@ -136,11 +143,13 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 	def register_cluster_aid(self, lib, n_vectors, n_clusters, order, name):
 		if not 'cluster_aid_alloc' in lib.__dict__:
-			raise ValueError('library {} cannot allocate a cluster '
-							 'aid'.format(lib))
+			raise ValueError(
+					'library {} cannot allocate a cluster aid'
+					''.format(lib))
 
 		h = lib.cluster_aid()
-		self.assertCall( lib.cluster_aid_alloc(h, n_vectors, n_clusters, order) )
+		self.assertCall(
+				lib.cluster_aid_alloc(h, n_vectors, n_clusters, order) )
 		self.register_var('h', h, lib.cluster_aid_free)
 		return h
 
@@ -393,7 +402,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 	def test_upsamplingvec_count(self):
 		m, n = self.shape
 		k = self.k
-		hdl = c_void_p()
+		hdl = ct.c_void_p()
 
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
@@ -646,7 +655,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 													  random=True)
 				a2c, a2c_py, a2c_ptr = self.register_upsamplingvec(
 						lib, m, k, 'a2c', random=True)
-				a2c_orig = np.zeros(m).astype(c_size_t)
+				a2c_orig = np.zeros(m).astype(ct.c_size_t)
 				a2c_orig += a2c_py
 
 				A_py += self.A_test
@@ -820,9 +829,9 @@ class ClusterLibsTestCase(OptkitCTestCase):
 
 			w_int = lib.kmeans_easy_init(m, k, n)
 			self.assertNotEqual(w_int, 0 )
-			work = c_void_p(w_int)
+			work = ct.c_void_p(w_int)
 			self.register_var('work', work, lib.kmeans_easy_finish)
-			cwork = cast(work, lib.kmeans_work_p)
+			cwork = ct.cast(work, lib.kmeans_work_p)
 			self.assertEqual( cwork.contents.n_vectors, m )
 			self.assertEqual( cwork.contents.n_clusters, k )
 			self.assertEqual( cwork.contents.vec_length, n )
@@ -846,7 +855,7 @@ class ClusterLibsTestCase(OptkitCTestCase):
 			self.assertCall( lib.kmeans_easy_resize(work, int(m/2), int(k/2),
 													int(n/2)) )
 
-			cwork = cast(work, lib.kmeans_work_p)
+			cwork = ct.cast(work, lib.kmeans_work_p)
 			self.assertEqual( cwork.contents.A.size1, int(m / 2) )
 			self.assertEqual( cwork.contents.C.size1, int(k / 2) )
 			self.assertEqual( cwork.contents.A.size2, int(n / 2) )

@@ -1,6 +1,7 @@
-from numpy import array, ndarray, zeros, ceil
-from ctypes import c_size_t
 from optkit.compat import *
+
+import numpy as np
+import ctypes as ct
 
 def nearest_triple(factor):
 	if not isinstance(factor, int):
@@ -43,7 +44,7 @@ def regcluster(sample_dims, full_dims):
 	yceil = ny * y_blocks
 	zceil = nz * z_blocks
 
-	grid = zeros((xceil, yceil, zceil), dtype=int)
+	grid = np.zeros((xceil, yceil, zceil), dtype=int)
 
 	for k in xrange(zceil):
 		for j in xrange(yceil):
@@ -90,8 +91,8 @@ class UpsamplingVector(object):
 		elif size1 is not None and size2 is not None:
 			self.__size1 = int(size1)
 			self.__size2 = int(size2)
-			self.__indices = zeros(size1, dtype=int)
-			self.__counts = zeros(size2, dtype=int)
+			self.__indices = np.zeros(size1, dtype=int)
+			self.__counts = np.zeros(size2, dtype=int)
 		else:
 			raise ValueError('initialization requires arguments "indices" or '
 							 '"size1" AND "size2" to be provided')
@@ -110,14 +111,14 @@ class UpsamplingVector(object):
 
 	@indices.setter
 	def indices(self, indices):
-		if not isinstance(indices, ndarray):
+		if not isinstance(indices, np.ndarray):
 			raise TypeError('argument "indices" must be of type {}'
-							''.format(ndarray))
+							''.format(np.ndarray))
 
 		self.__size1 = len(indices)
 		self.__size2 = int(indices.max()) + 1
 		self.__indices = indices.astype(int)
-		self.__counts = zeros(self.__size2, dtype=int)
+		self.__counts = np.zeros(self.__size2, dtype=int)
 
 	@property
 	def min_assignment(self):
@@ -151,7 +152,7 @@ class UpsamplingVector(object):
 	def recalculate_size(self):
 		self.__size2 = self.max_assignment + 1
 		if self.__size2 > len(self.__counts):
-			self.__counts = zeros(self.__size2, dtype=int)
+			self.__counts = np.zeros(self.__size2, dtype=int)
 		else:
 			self.__counts = self.__counts[:self.__size2]
 
@@ -177,14 +178,15 @@ class ClusteringTypes(object):
 			def __init__(self, m, distance_tol=2e-2, assignment_tol=1e-2,
 						 maxiter=500, verbose=1):
 				self.distance_tol = float(distance_tol)
-				self.assignment_tol = int(ceil(assignment_tol * m))
+				self.assignment_tol = int(np.ceil(assignment_tol * m))
 				self.maxiter = int(maxiter)
 				self.verbose = abs(int(verbose))
 
 			@property
 			def pointer(self):
-				return lib.kmeans_settings(self.distance_tol, self.assignment_tol,
-										   self.maxiter, self.verbose)
+				return lib.kmeans_settings(
+						self.distance_tol, self.assignment_tol, self.maxiter,
+						self.verbose)
 
 		self.ClusteringSettings = ClusteringSettings
 
@@ -223,9 +225,10 @@ class ClusteringTypes(object):
 				K = self.k_max
 				N = self.n_max
 				if m > M or k > K or n > N:
-					return ValueError('resize dimensions exceed maximum size of '
-									  'm={}, k={}, n={} as determined by size at '
-									  'initialization'.format(M, K, N))
+					return ValueError(
+							'resize dimensions exceed maximum size of '
+							'm={}, k={}, n={} as determined by size at '
+							'initialization'.format(M, K, N))
 
 				self.n = n
 				self.k = k
@@ -275,9 +278,9 @@ class ClusteringTypes(object):
 
 			@A.setter
 			def A(self, A):
-				if not isinstance(A, ndarray) and len(A.shape) != 2:
-					raise ValueError('argument "A" must be a 2-D {}'.format(
-						ndarray))
+				if not isinstance(A, np.ndarray) and len(A.shape) != 2:
+					raise ValueError(
+							'argument `A` must be a 2-D {}'.format(np.ndarray))
 				self.__A = A.astype(lib.pyfloat)
 				self.__A_ptr = self.A.ctypes.data_as(lib.ok_float_p)
 				self.__order_A = self.__get_order(self.A)
@@ -296,14 +299,14 @@ class ClusteringTypes(object):
 
 			@C.setter
 			def C(self, C):
-				if not isinstance(C, ndarray) or len(C.shape) != 2:
-					raise ValueError('argument "C" must be a 2-D {}'.format(
-						ndarray))
+				if not isinstance(C, np.ndarray) or len(C.shape) != 2:
+					raise ValueError(
+							'argument `C` must be a 2-D {}'.format(np.ndarray))
 
 				self.__C = C.astype(lib.pyfloat)
 				self.__C_ptr = self.C.ctypes.data_as(lib.ok_float_p)
 				self.__order_C = self.__get_order(self.C)
-				self.__counts = zeros(self.C.shape[0], dtype=lib.pyfloat)
+				self.__counts = np.zeros(self.C.shape[0], dtype=lib.pyfloat)
 				self.__counts_ptr = self.counts.ctypes.data_as(lib.ok_float_p)
 
 			@property
@@ -320,9 +323,11 @@ class ClusteringTypes(object):
 
 			@a2c.setter
 			def a2c(self, assignments):
-				if isinstance(assignments, ndarray) and len(assignments.shape) == 1:
-					self.__a2c = assignments.astype(c_size_t)
-					self.__a2c_ptr = self.a2c.ctypes.data_as(lib.c_size_t_p)
+				if bool(
+						isinstance(assignments, np.ndarray) and
+						len(assignments.shape) == 1):
+					self.__a2c = assignments.astype(ct.c_size_t)
+					self.__a2c_ptr = self.a2c.ctypes.data_as(lib.ct.c_size_t_p)
 
 			@property
 			def a2c_ptr(self):
@@ -381,12 +386,13 @@ class ClusteringTypes(object):
 				return C[:k_out, :], u.indices, u.counts[:k_out]
 
 			def kmeans(self, A, k, assignments, settings=None):
-				C = zeros((k, A.shape[1]), dtype=lib.pyfloat)
+				C = np.zeros((k, A.shape[1]), dtype=lib.pyfloat)
 				return self.kmeans_inplace(A, C, assignments,
 										   settings=settings)
 
 			def blockwise_kmeans_inplace(self, A_blocks, C_blocks,
-										 assignment_blocks, settings_blocks=None):
+										 assignment_blocks,
+										 settings_blocks=None):
 
 				"""
 				blockwish kmeans inplace:
@@ -410,8 +416,8 @@ class ClusteringTypes(object):
 									 'zero blocks')
 
 
-				max_A = array([A.shape[0] for A in A_blocks]).max()
-				max_C = array([C.shape[0] for C in C_blocks]).max()
+				max_A = np.array([A.shape[0] for A in A_blocks]).max()
+				max_C = np.array([C.shape[0] for C in C_blocks]).max()
 				n = A_blocks[0].shape[1]
 
 				assignments_final = []
@@ -421,7 +427,8 @@ class ClusteringTypes(object):
 				self.kmeans_work_init(max_A, max_C, n)
 
 				if settings_blocks is None:
-					settings_blocks = [ClusteringSettings(A.shape[0]) for A in A_blocks]
+					settings_blocks = [
+							ClusteringSettings(A.shape[0]) for A in A_blocks]
 
 				for b in xrange(len(A_blocks)):
 					A = A_blocks[b]
@@ -446,7 +453,7 @@ class ClusteringTypes(object):
 				for b in xrange(len(A_blocks)):
 					size1 = assignment_blocks[b].max() + 1
 					size2 = A_blocks[b].shape[1]
-					C_blocks.append(zeros((size1, size2), dtype=lib.pyfloat))
+					C_blocks.append(np.zeros((size1, size2), dtype=lib.pyfloat))
 
 				return self.blockwise_kmeans_inplace(
 						A_blocks, C_blocks, assignment_blocks,

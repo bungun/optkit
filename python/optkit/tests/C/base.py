@@ -1,17 +1,18 @@
-from collections import deque
-from numpy import zeros, array, ndarray
-from numpy.linalg import norm
-from numpy.random import rand
-from ctypes import c_void_p, c_size_t, byref
-from scipy.sparse import csc_matrix, csr_matrix
+from optkit.compat import *
+
+import collections
+import numpy as np
+import numpy.linalg as la
+import scipy.sparse as sp
+import ctypes as ct
+
 from optkit.libs.error import optkit_print_error as PRINTERR
 from optkit.tests.defs import OptkitTestCase
-from optkit.compat import *
 
 class OptkitCTestCase(OptkitTestCase):
 	managed_vars = {}
 	free_methods = {}
-	var_stack = deque()
+	var_stack = collections.deque()
 	libs = None
 
 	@staticmethod
@@ -24,15 +25,16 @@ class OptkitCTestCase(OptkitTestCase):
 		self.assertEqual( PRINTERR(call), 0 )
 
 	def assertVecEqual(self, first, second, atol, rtol):
-		condition = norm(first - second) <= atol + rtol * norm(second)
+		condition = la.norm(first - second) <= atol + rtol * la.norm(second)
 		if not condition:
 			print('vector comparison failure:')
-			print('||a - b||: {}'.format(norm(first - second)))
-			print('atol + rtol||b||: {}'.format(atol + rtol * norm(second)))
+			print('||a - b||: {}'.format(la.norm(first - second)))
+			print('atol + rtol||b||: {}'.format(atol + rtol * la.norm(second)))
 		self.assertTrue( condition )
 
 	def assertVecNotEqual(self, first, second, atol, rtol):
-		self.assertFalse( norm(first - second) <= atol + rtol * norm(second) )
+		self.assertFalse(
+				la.norm(first - second) <= atol + rtol * la.norm(second) )
 
 	def assertScalarEqual(self, first, second, tol):
 		self.assertTrue( abs(first - second) <= tol + tol * abs(second) )
@@ -77,10 +79,10 @@ class OptkitCTestCase(OptkitTestCase):
 			raise ValueError(
 				'symbol "ok_float_p" undefined in library {}'.format(lib))
 
-		v_py = zeros(size).astype(lib.pyfloat)
+		v_py = np.zeros(size).astype(lib.pyfloat)
 		v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
 		if random:
-			v_py += rand(size)
+			v_py += np.random.rand(size)
 		return v_py, v_ptr
 
 	@staticmethod
@@ -90,10 +92,10 @@ class OptkitCTestCase(OptkitTestCase):
 				'symbol "ok_float_p" undefined in library {}'.format(lib))
 
 		pyorder = 'C' if order == lib.enums.CblasRowMajor else 'F'
-		A_py = zeros((size1, size2), order=pyorder).astype(lib.pyfloat)
+		A_py = np.zeros((size1, size2), order=pyorder).astype(lib.pyfloat)
 		A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
 		if random:
-			A_py += rand(size1, size2)
+			A_py += np.random.rand(size1, size2)
 
 			# attempt some matrix conditioning: normalize columns and
 			# divide by sqrt(# columns)
@@ -122,8 +124,8 @@ class OptkitCTestCase(OptkitTestCase):
 		v = lib.indvector(0, 0, None)
 		self.assertCall( lib.indvector_calloc(v, size) )
 		self.register_var(name, v, lib.indvector_free)
-		v_py = zeros(size).astype(c_size_t)
-		v_ptr = v_py.ctypes.data_as(lib.c_size_t_p)
+		v_py = np.zeros(size).astype(ct.c_size_t)
+		v_ptr = v_py.ctypes.data_as(lib.ct.c_size_t_p)
 		return v, v_py, v_ptr
 
 	def register_matrix(self, lib, size1, size2, order, name, random=False):
@@ -143,10 +145,10 @@ class OptkitCTestCase(OptkitTestCase):
 			raise ValueError('library {} cannot allocate a sparse '
 							 'matrix'.format(lib))
 
-		A_py = zeros(Adense.shape).astype(lib.pyfloat)
+		A_py = np.zeros(Adense.shape).astype(lib.pyfloat)
 		A_py += Adense
-		A_sp = csr_matrix(A_py) if order == lib.enums.CblasRowMajor else \
-			   csc_matrix(A_py)
+		A_sp = sp.csr_matrix(A_py) if order == lib.enums.CblasRowMajor else \
+			   sp.csc_matrix(A_py)
 		A_val = A_sp.data.ctypes.data_as(lib.ok_float_p)
 		A_ind = A_sp.indices.ctypes.data_as(lib.ok_int_p)
 		A_ptr = A_sp.indptr.ctypes.data_as(lib.ok_int_p)
@@ -163,8 +165,8 @@ class OptkitCTestCase(OptkitTestCase):
 			raise ValueError('library {} cannot allocate a BLAS '
 							 'handle'.format(lib))
 
-		hdl = c_void_p()
-		self.assertCall( lib.blas_make_handle(byref(hdl)) )
+		hdl = ct.c_void_p()
+		self.assertCall( lib.blas_make_handle(ct.byref(hdl)) )
 		self.register_var(name, hdl, lib.blas_destroy_handle)
 		return hdl
 
@@ -173,8 +175,8 @@ class OptkitCTestCase(OptkitTestCase):
 			raise ValueError('library {} cannot allocate a sparse '
 							 'handle'.format(lib))
 
-		hdl = c_void_p()
-		self.assertCall( lib.sp_make_handle(byref(hdl)) )
+		hdl = ct.c_void_p()
+		self.assertCall( lib.sp_make_handle(ct.byref(hdl)) )
 		self.register_var(name, hdl, lib.sp_destroy_handle)
 		return hdl
 
@@ -183,7 +185,7 @@ class OptkitCTestCase(OptkitTestCase):
 			raise ValueError('library {} cannot allocate function '
 							 'vector'.format(lib))
 
-		f_ = zeros(size, dtype=lib.function)
+		f_ = np.zeros(size, dtype=lib.function)
 		f_ptr = f_.ctypes.data_as(lib.function_p)
 
 		f = lib.function_vector(0, None)
@@ -203,7 +205,8 @@ class OptkitCOperatorTestCase(OptkitCTestCase):
 		if opkey == 'dense':
 			return self.register_dense_operator(lib, self.A_test, rowmajor)
 		elif opkey == 'sparse':
-			return self.register_sparse_operator(lib, self.A_test_sparse, rowmajor)
+			return self.register_sparse_operator(
+					lib, self.A_test_sparse, rowmajor)
 		else:
 			raise ValueError('invalid operator type')
 

@@ -1,7 +1,8 @@
-# from numpy import ndarray
-# from scipy import csr_matrix, csc_matrix, coo_matrix
-# from ctypes import c_void_p, byref
 # from optkit.compat import *
+
+# import numpy as np
+# import scipy.sparse as sp
+# import ctypes as ct
 
 # class OperatorTypes(object):
 # 	def __init__(self, backend):
@@ -10,8 +11,8 @@
 # 		sparselib = backend.sparse
 # 		operatorlib = backend.operator
 
-# 		accepted_operators = [str(ndarray), str(csr_matrix), str(csc_matrix),
-# 							  str(coo_matrix)]
+# 		accepted_operators = [str(np.ndarray), str(np.csr_matrix), str(np.csc_matrix),
+# 							  str(np.coo_matrix)]
 
 # 		def AbstractLinearOperator(object):
 # 			def __init__(self, py_operator):
@@ -21,14 +22,14 @@
 # 				self.__free_data = lambda op : None
 # 				self.shape = None
 
-# 				input_is_sparse = isinstance(py_operator, (csr_matrix,
-# 											 csc_matrix, coo_matrix))
+# 				input_is_sparse = isinstance(py_operator, (np.csr_matrix,
+# 											 np.csc_matrix, np.coo_matrix))
 
-# 				if isinstance(py_operator, ndarray):
+# 				if isinstance(py_operator, np.ndarray):
 # 					if len(py_operator.shape) != 2:
 # 						raise ValueError('argument "py_operator" must be a 2-D'
 # 										 '{} when provided as a {}'.format(
-# 										 ndarray, ndarray))
+# 										 np.ndarray, np.ndarray))
 
 # 					m, n = self.shape = self.py.shape
 # 					order = denselib.enums.CblasRowMajor if \
@@ -50,14 +51,14 @@
 # 					self.__free_data = denselib.matrix_free
 
 # 				elif input_is_sparse:
-# 					if isinstance(py_operator, coo_matrix):
+# 					if isinstance(py_operator, np.coo_matrix):
 # 						print "sparse matrix: converting COO input to CSR"
-# 						self.py = csr_matrix(self.py)
+# 						self.py = np.csr_matrix(self.py)
 
 # 					m, n = self.shape = self.py.shape
 
-# 					hdl = c_void_p()
-# 					denselib.blas_make_handle(byref(hdl))
+# 					hdl = ct.c_void_p()
+# 					denselib.blas_make_handle(ct.byref(hdl))
 # 					self.__c_data = sparselib.sparse_matrix(
 # 							0, 0, 0, 0, None, None, None, 0)
 # 					A_ptr_p = self.py.indptr.ctypes.data_as(denselib.ok_int_p)

@@ -3,6 +3,7 @@ from optkit.compat import *
 import gc
 import os
 import numpy as np
+
 from optkit import *
 from optkit.api import backend
 from optkit.tests.defs import OptkitTestCase, TEST_ITERATE

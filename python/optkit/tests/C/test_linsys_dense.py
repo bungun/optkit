@@ -1,10 +1,12 @@
+from optkit.compat import *
+
 import os
 import numpy as np
-from ctypes import c_float, c_int, c_size_t, c_void_p, Structure, byref
+import ctypes as ct
+
 from optkit.libs.linsys import DenseLinsysLibs
 from optkit.tests.defs import OptkitTestCase, TEST_ITERATE
 from optkit.tests.C.base import OptkitCTestCase
-from optkit.compat import *
 
 class DenseLibsTestCase(OptkitCTestCase):
 	@classmethod
@@ -39,8 +41,8 @@ class DenseLibsTestCase(OptkitCTestCase):
 			self.assertTrue( 'vector_p' in dir(lib) )
 			self.assertTrue( 'matrix' in dir(lib) )
 			self.assertTrue( 'matrix_p' in dir(lib) )
-			self.assertTrue( single_precision == (lib.ok_float == c_float) )
-			self.assertTrue( lib.ok_int == c_int )
+			self.assertTrue( single_precision == (lib.ok_float == ct.c_float) )
+			self.assertTrue( lib.ok_int == ct.c_int )
 
 	def test_blas_handle(self):
 		for (gpu, single_precision) in self.CONDITIONS:
@@ -48,9 +50,9 @@ class DenseLibsTestCase(OptkitCTestCase):
 			if lib is None:
 				continue
 
-			handle = c_void_p()
+			handle = ct.c_void_p()
 			# create
-			self.assertCall( lib.blas_make_handle(byref(handle)) )
+			self.assertCall( lib.blas_make_handle(ct.byref(handle)) )
 			# destroy
 			self.assertCall( lib.blas_destroy_handle(handle) )
 
@@ -64,8 +66,8 @@ class DenseLibsTestCase(OptkitCTestCase):
 			self.assertCall( lib.ok_device_reset() )
 
 			# allocate - deallocate - reset
-			handle = c_void_p()
-			self.assertCall( lib.blas_make_handle(byref(handle)) )
+			handle = ct.c_void_p()
+			self.assertCall( lib.blas_make_handle(ct.byref(handle)) )
 			self.assertCall( lib.blas_destroy_handle(handle) )
 			self.assertCall( lib.ok_device_reset() )
 
@@ -75,13 +77,14 @@ class DenseLibsTestCase(OptkitCTestCase):
 			if lib is None:
 				continue
 
-			major = c_int()
-			minor = c_int()
-			change = c_int()
-			status = c_int()
+			major = ct.c_int()
+			minor = ct.c_int()
+			change = ct.c_int()
+			status = ct.c_int()
 
-			lib.optkit_version(byref(major), byref(minor), byref(change),
-							   byref(status))
+			lib.optkit_version(
+					ct.byref(major), ct.byref(minor), ct.byref(change),
+					ct.byref(status))
 
 			version = self.version_string(major.value, minor.value,
 										  change.value, status.value)

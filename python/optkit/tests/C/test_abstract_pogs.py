@@ -1,13 +1,15 @@
+from optkit.compat import *
+
 import os
 import numpy as np
-from scipy.sparse import csc_matrix, csr_matrix
-from ctypes import c_void_p, byref, cast, addressof
+import scipy.sparse as sp
+import ctypes as ct
+
 from optkit.utils.proxutils import func_eval_python
 from optkit.libs.pogs import PogsAbstractLibs
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.base import OptkitCOperatorTestCase
 from optkit.tests.C.pogs_base import OptkitCPogsTestCase
-from optkit.compat import *
 
 class PogsAbstractLibsTestCase(OptkitTestCase):
 	"""TODO: docstring"""
@@ -65,7 +67,7 @@ class PogsAbstractTestCases(OptkitCPogsTestCase, OptkitCOperatorTestCase):
 			free_o = lib.pogs_dense_operator_free
 		elif type_ == 'sparse':
 			A_ = self.A_test_sparse
-			A_sp = csr_matrix(A_.astype(lib.pyfloat))
+			A_sp = sp.csr_matrix(A_.astype(lib.pyfloat))
 			A_ptr = A_sp.indptr.ctypes.data_as(lib.ok_int_p)
 			A_ind = A_sp.indices.ctypes.data_as(lib.ok_int_p)
 			A_val = A_sp.data.ctypes.data_as(lib.ok_float_p)
@@ -74,8 +76,9 @@ class PogsAbstractTestCases(OptkitCPogsTestCase, OptkitCOperatorTestCase):
 												 self.nnz, order)
 			free_o = lib.pogs_sparse_operator_free
 		else:
-			raise RuntimeError('this should be unreachable due to ValueError '
-							   'raised above')
+			raise RuntimeError(
+					'this should be unreachable due to ValueError '
+					'raised above')
 
 		self.register_var(name, o.contents.data, o.contents.free)
 		return A_, o
@@ -390,7 +393,7 @@ class PogsAbstractTestCases(OptkitCPogsTestCase, OptkitCOperatorTestCase):
 
 						self.assertCall( lib.update_settings(
 								solver.contents.settings,
-								byref(settings)) )
+								ct.byref(settings)) )
 						self.assertCall( lib.initialize_variables(solver) )
 						self.assert_pogs_warmstart(lib, solver, local_vars, x0,
 												   nu0)

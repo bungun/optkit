@@ -1,11 +1,13 @@
+from optkit.compat import *
+
 import os
 import numpy as np
-from ctypes import c_void_p, byref, cast, addressof
+import ctypes as ct
+
 from optkit.utils.proxutils import func_eval_python
 from optkit.libs.pogs import PogsLibs
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests.C.pogs_base import OptkitCPogsTestCase
-from optkit.compat import *
 
 class PogsLibsTestCase(OptkitTestCase):
 	"""TODO: docstring"""
@@ -114,7 +116,8 @@ class PogsTestCase(OptkitCPogsTestCase):
 		self.assertCall( lib.project_primal(blas_handle, projector,
 				solver.contents.z, solver.contents.settings.contents.alpha) )
 		self.load_all_local(lib, local_vars, solver)
-		self.assertVecEqual( localA.dot(local_vars.x), local_vars.y, ATOLM, RTOL)
+		self.assertVecEqual(
+				localA.dot(local_vars.x), local_vars.y, ATOLM, RTOL)
 
 	def assert_pogs_warmstart(self, lib, solver, A_equil, local_vars, x0, nu0):
 		m, n = A_equil.shape
@@ -139,8 +142,8 @@ class PogsTestCase(OptkitCPogsTestCase):
 				ATOLN, RTOL )
 
 	def assert_pogs_check_convergence(self, lib, blas_handle, solver, f_list,
-									  g_list, objectives, residuals, tolerances,
-									  localA, local_vars):
+									  g_list, objectives, residuals,
+									  tolerances, localA, local_vars):
 		"""convergence test
 
 			(1) set
@@ -283,7 +286,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 				settings.x0 = x0_ptr
 				settings.nu0 = nu0_ptr
 				self.assertCall( lib.update_settings(solver.contents.settings,
-													 byref(settings)) )
+													 ct.byref(settings)) )
 				self.assertCall( lib.initialize_variables(solver) )
 
 				self.assert_pogs_warmstart(lib, solver, localA, local_vars, x0,
@@ -454,7 +457,7 @@ class PogsTestCase(OptkitCPogsTestCase):
 					k = min(m, n)
 					LLT, LLT_ptr = self.gen_py_matrix(lib, k, k, order)
 				else:
-					LLT_ptr = LLT = c_void_p()
+					LLT_ptr = LLT = ct.c_void_p()
 
 				d, d_ptr = self.gen_py_vector(lib, m)
 				e, e_ptr = self.gen_py_vector(lib, n)

@@ -1,7 +1,9 @@
-from numpy import zeros, ones, ndarray
+from optkit.compat import *
+
+import numpy as np
+
 from optkit.utils.pyutils import const_iterator
 from optkit.utils.proxutils import func_eval_python
-from optkit.compat import *
 
 class PogsCommonTypes(object):
 	def __init__(self, backend):
@@ -14,36 +16,40 @@ class PogsCommonTypes(object):
 			def __init__(self, n, **params):
 				self.enums = lib.function_enums
 				self.size = n
-				self.__h = zeros(self.size, dtype=int)
-				self.__a = ones(self.size)
-				self.__b = zeros(self.size)
-				self.__c = ones(self.size)
-				self.__d = zeros(self.size)
-				self.__e = zeros(self.size)
+				self.__h = np.zeros(self.size, dtype=int)
+				self.__a = np.ones(self.size)
+				self.__b = np.zeros(self.size)
+				self.__c = np.ones(self.size)
+				self.__d = np.zeros(self.size)
+				self.__e = np.zeros(self.size)
 				if 'f' in params:
 					self.copy_from(params['f'])
 				else:
 					self.set(**params)
 
 			def eval(self, vec):
-				if not isinstance(vec, ndarray):
-					raise TypeError('argument "vec" must be of type {}'.format(
-									ndarray))
+				if self.size == 0:
+					return 0
+				vec = np.squeeze(np.array(vec))
 				elif len(vec) != self.size:
-					raise ValueError('argument "vec" must have same length as '
-									 'this {} object.\nlength {}: {}\nlength '
-									 'vec: {}'.format(Objective, Objective,
-									 self.size, len(vec)))
+					raise ValueError(
+							'argument `vec` must have same length as '
+							'this {} object.\nlength {}: {}\nlength '
+							'vec: {}'
+							''.format(
+									Objective, Objective, self.size,
+									len(vec)))
 
 				return func_eval_python(self.list(lib.function), vec)
 
 
 			def copy_from(self, obj):
 				if not isinstance(obj, Objective):
-					raise TypeError('argument "obj" must be of type {}'.format(
-									 Objective))
+					raise TypeError(
+							'argument `obj` must be of type {}'
+							''.format(Objective))
 				if not obj.size == self.size:
-					raise ValueError("Incompatible dimensions")
+					raise ValueError('Incompatible dimensions')
 				self.__h[:] = obj.__h[:]
 
 			def list(self, function_t):
@@ -91,32 +97,36 @@ class PogsCommonTypes(object):
 				r = params.pop('range', xrange(start,end))
 				range_length = len(r)
 
-				if  range_length == 0:
-					ValueError('index range [{}:{}] results in length-0 array '
-							   'when python array slicing applied to an '
-							   '{} of length {}.'.format(start, end, Objective,
-							   	self.size))
+				if range_length == 0:
+					raise ValueError(
+							'index range [{}:{}] results in length-0 '
+							'array when python array slicing applied '
+							'to an {} of length {}.'
+							''.format(start, end, Objective, self.size))
 
 				for item in ['a', 'b', 'c', 'd', 'e', 'h']:
 					if item in params:
-						if isinstance(params[item],(list, ndarray)):
+						if isinstance(params[item],(list, np.ndarray)):
 							if len(params[item]) != range_length:
-								ValueError('keyword argument {} of type {} '
-										   'is incomptably sized with the '
-										   'requested {} slice [{}:{}]'.format(
-										   	item, type(params[item]),
-										   	Objective, start, end))
+								raise ValueError(
+										'keyword argument {} of type '
+										'{} is incomptably sized with '
+										'the requested {} slice [{}:{}]'
+										''.format(
+												item, type(params[item]),
+												Objective, start, end))
 
 				if 'h' in params:
 					if isinstance(params['h'], (int, str)):
 						hval = const_iterator(self.enums.validate(params['h']),
 											  range_length)
-					elif isinstance(params['h'], (list, ndarray)):
+					elif isinstance(params['h'], (list, np.ndarray)):
 						hval = map(self.enums.validate, params['h'])
 					else:
-						raise TypeError('if specified, argument "h" must be '
-										'one of {}, {}, {} or {}'.format(
-										int, str, list, ndarray))
+						raise TypeError(
+								'if specified, argument `h` must be '
+								'one of {}, {}, {} or {}'
+								''.format(int, str, list, np.ndarray))
 
 					for idx, val in enumerate(hval):
 						self.__h[r[idx]] = val
@@ -124,12 +134,13 @@ class PogsCommonTypes(object):
 				if 'a' in params:
 					if isinstance(params['a'], (int, float)):
 						aval = const_iterator(params['a'], range_length)
-					elif isinstance(params['a'], (list, ndarray)):
+					elif isinstance(params['a'], (list, np.ndarray)):
 						aval = params['a']
 					else:
-						raise TypeError('if specified, argument "a" must be '
-										'one of {}, {}, {} or {}'.format(
-										int, float, list, ndarray))
+						raise TypeError(
+								'if specified, argument `a` must be '
+								'one of {}, {}, {} or {}'
+								''.format(int, float, list, np.ndarray))
 
 					for idx, val in enumerate(aval):
 						self.__a[r[idx]] = val
@@ -137,12 +148,13 @@ class PogsCommonTypes(object):
 				if 'b' in params:
 					if isinstance(params['b'], (int, float)):
 						bval = const_iterator(params['b'], range_length)
-					elif isinstance(params['b'], (list, ndarray)):
+					elif isinstance(params['b'], (list, np.ndarray)):
 						bval = params['b']
 					else:
-						raise TypeError('if specified, argument "b" must be '
-										'one of {}, {}, {} or {}'.format(
-										int, float, list, ndarray))
+						raise TypeError(
+								'if specified, argument `b` must be '
+								'one of {}, {}, {} or {}'
+								''.format(int, float, list, np.ndarray))
 
 					for idx, val in enumerate(bval):
 						self.__b[r[idx]] = val
@@ -152,12 +164,13 @@ class PogsCommonTypes(object):
 						cval = const_iterator(
 								self.enums.validate_ce(params['c']),
 								range_length)
-					elif isinstance(params['c'], (list, ndarray)):
+					elif isinstance(params['c'], (list, np.ndarray)):
 						cval = params['c']
 					else:
-						raise TypeError('if specified, argument "c" must be '
-										'one of {}, {}, {} or {}'.format(
-										int, float, list, ndarray))
+						raise TypeError(
+								'if specified, argument `c` must be '
+								'one of {}, {}, {} or {}'
+								''.format(int, float, list, np.ndarray))
 
 					for idx, val in enumerate(cval):
 						self.__c[r[idx]] = val
@@ -165,12 +178,13 @@ class PogsCommonTypes(object):
 				if 'd' in params:
 					if isinstance(params['d'], (int, float)):
 						dval = const_iterator(params['d'], range_length)
-					elif isinstance(params['d'], (list, ndarray)):
+					elif isinstance(params['d'], (list, np.ndarray)):
 						dval = params['d']
 					else:
-						raise TypeError('if specified, argument "d" must be '
-										'one of {}, {}, {} or {}'.format(
-										int, float, list, ndarray))
+						raise TypeError(
+								'if specified, argument `d` must be '
+								'one of {}, {}, {} or {}'
+								''.format(int, float, list, np.ndarray))
 
 					for idx, val in enumerate(dval):
 						self.__d[r[idx]] = val
@@ -180,28 +194,30 @@ class PogsCommonTypes(object):
 						e_val = const_iterator(
 								self.enums.validate_ce(params['e']),
 								range_length)
-					elif isinstance(params['e'], (list, ndarray)):
+					elif isinstance(params['e'], (list, np.ndarray)):
 						e_val = params['e']
 					else:
-						raise TypeError('if specified, argument "e" must be '
-										'one of {}, {}, {} or {}'.format(
-										int, float, list, ndarray))
+						raise TypeError(
+								'if specified, argument `e` must be '
+								'one of {}, {}, {} or {}'
+								''.format(int, float, list, np.ndarray))
 
 					for idx, val in enumerate(e_val):
 						self.__e[r[idx]] = val
 
 			def __str__(self):
-				return str("size:\nh: {}\na: {}\nb: {}\n"
-					"c: {}\nd: {}\ne: {}".format(self.size,
-					self.h, self.a, self.b, self.c, self.d, self.e))
-
+				return str(
+						'size: {}\nh: {}\na: {}\nb: {}\nc: {}\nd: {}\ne: {}'
+						''.format(
+								self.size, self.h, self.a, self.b, self.c,
+								self.d, self.e))
 
 		self.Objective = Objective
 
 		class SolverSettings(object):
 			def __init__(self, **options):
-				self.c = PogsSettings(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None,
-									  None)
+				self.c = PogsSettings(
+						0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None, None)
 				lib.set_default_settings(self.c)
 				self.update(**options)
 
@@ -240,10 +256,11 @@ class PogsCommonTypes(object):
 			@alpha.setter
 			def alpha(self, alpha):
 				if not isinstance(alpha, (float, int)):
-					raise TypeError('argument "alpha" must be {} or {}'.format(
-									float, int))
+					raise TypeError(
+							'argument `alpha` must be {} or {}'
+							''.format(float, int))
 				elif alpha < 0:
-					raise ValueError('argument "alpha" must be >= 0')
+					raise ValueError('argument `alpha` must be >= 0')
 				else:
 					self.c.alpha = alpha
 
@@ -254,10 +271,11 @@ class PogsCommonTypes(object):
 			@rho.setter
 			def rho(self, rho):
 				if not isinstance(rho, (float, int)):
-					raise TypeError('argument "rho" must be {} or {}'.format(
-									float, int))
+					raise TypeError(
+							'argument `rho` must be {} or {}'
+							''.format(float, int))
 				elif rho < 0:
-					raise ValueError('argument "rho" must be >= 0')
+					raise ValueError('argument `rho` must be >= 0')
 				else:
 					self.c.rho = rho
 
@@ -268,10 +286,11 @@ class PogsCommonTypes(object):
 			@abstol.setter
 			def abstol(self, abstol):
 				if not isinstance(abstol, (float, int)):
-					raise TypeError('argument "abstol" must be {} or '
-									'{}'.format(float, int))
+					raise TypeError(
+							'argument `abstol` must be {} or {}'
+							''.format(float, int))
 				elif abstol < 0:
-					raise ValueError('argument "abstol" must be >= 0')
+					raise ValueError('argument `abstol` must be >= 0')
 				else:
 					self.c.abstol = abstol
 
@@ -282,10 +301,11 @@ class PogsCommonTypes(object):
 			@reltol.setter
 			def reltol(self, reltol):
 				if not isinstance(reltol, (float, int)):
-					raise TypeError('argument "reltol" must be {} or '
-									'{}'.format(float, int))
+					raise TypeError(
+							'argument `reltol` must be {} or {}'
+							''.format(float, int))
 				elif reltol < 0:
-					raise ValueError('argument "reltol" must be >= 0')
+					raise ValueError('argument `reltol` must be >= 0')
 				else:
 					self.c.reltol = reltol
 
@@ -296,10 +316,11 @@ class PogsCommonTypes(object):
 			@maxiter.setter
 			def maxiter(self, maxiter):
 				if not isinstance(maxiter, int):
-					raise TypeError('argument "maxiter" must be of '
-									'type {}'.format(int))
+					raise TypeError(
+							'argument `maxiter` must be of type {}'
+							''.format(int))
 				elif maxiter < 0:
-					raise ValueError('argument "maxiter" must be >= 0')
+					raise ValueError('argument `maxiter` must be >= 0')
 				else:
 					self.c.maxiter = maxiter
 
@@ -310,10 +331,11 @@ class PogsCommonTypes(object):
 			@verbose.setter
 			def verbose(self, verbose):
 				if not isinstance(verbose, int):
-					raise TypeError('argument "verbose" must be of '
-									'type {}'.format(int))
+					raise TypeError(
+							'argument `verbose` must be of type {}'
+							''.format(int))
 				elif verbose < 0:
-					raise ValueError('argument "verbose" must be >= 0')
+					raise ValueError('argument `verbose` must be >= 0')
 				else:
 					self.c.verbose = verbose
 
@@ -324,10 +346,12 @@ class PogsCommonTypes(object):
 			@suppress.setter
 			def suppress(self, suppress):
 				if not isinstance(suppress, int):
-					raise TypeError('argument "suppress" must be of '
-									'type {}'.format(int))
+					raise TypeError(
+							'argument `suppress` must be of type {}'
+							''.format(int))
 				elif suppress < 0:
-					raise ValueError('argument "suppress" must be >= 0')
+					raise ValueError(
+							'argument `suppress` must be >= 0')
 				else:
 					self.c.suppress = suppress
 
@@ -338,10 +362,12 @@ class PogsCommonTypes(object):
 			@adaptiverho.setter
 			def adaptiverho(self, adaptiverho):
 				if not isinstance(adaptiverho, (int, bool)):
-					raise TypeError('argument "adaptiverho" must be of '
-									'type {} or {}'.format(int, bool))
+					raise TypeError(
+							'argument `adaptiverho` must be of type {} '
+							'or {}'.format(int, bool))
 				elif adaptiverho not in (0, 1, True, False):
-					raise ValueError('argument "adaptiverho" must be 0 or 1')
+					raise ValueError(
+							'argument `adaptiverho` must be 0 or 1')
 				else:
 					self.c.adaptiverho = int(adaptiverho)
 
@@ -352,10 +378,12 @@ class PogsCommonTypes(object):
 			@gapstop.setter
 			def gapstop(self, gapstop):
 				if not isinstance(gapstop, (int, bool)):
-					raise TypeError('argument "gapstop" must be of '
-									'type {} or {}'.format(int, bool))
+					raise TypeError(
+							'argument `gapstop` must be of type {} or '
+							'{}'.format(int, bool))
 				elif gapstop not in (0, 1, True, False):
-					raise ValueError('argument "gapstop" must be 0 or 1')
+					raise ValueError(
+							'argument `gapstop` must be 0 or 1')
 				else:
 					self.c.gapstop = int(gapstop)
 
@@ -366,10 +394,11 @@ class PogsCommonTypes(object):
 			@resume.setter
 			def resume(self, resume):
 				if not isinstance(resume, (int, bool)):
-					raise TypeError('argument "resume" must be of '
-									'type {} or {}'.format(int, bool))
+					raise TypeError(
+							'argument `resume` must be of type {} or {}'
+							''.format(int, bool))
 				elif resume not in (0, 1, True, False):
-					raise ValueError('argument "resume" must be 0 or 1')
+					raise ValueError('argument `resume` must be 0 or 1')
 				else:
 					self.c.resume = int(resume)
 
@@ -379,9 +408,10 @@ class PogsCommonTypes(object):
 
 			@x0.setter
 			def x0(self, x0):
-				if not isinstance(x0, ndarray):
-					raise TypeError('argument "x0" must be of '
-									'type {}'.format(ndarray))
+				if not isinstance(x0, np.ndarray):
+					raise TypeError(
+							'argument `x0` must be of type {}'
+							''.format(np.ndarray))
 				else:
 					self._x0py = x0.astype(lib.pyfloat)
 					self.c.x0 = self._x0py.ctypes.data_as(lib.ok_float_p)
@@ -392,9 +422,10 @@ class PogsCommonTypes(object):
 
 			@nu0.setter
 			def nu0(self, nu0):
-				if not isinstance(x0, ndarray):
-					raise TypeError('argument "nu0" must be of '
-									'type {}'.format(ndarray))
+				if not isinstance(x0, np.ndarray):
+					raise TypeError(
+							'argument `nu0` must be of type {}'
+							''.format(np.ndarray))
 				else:
 					self._n0py = nu0.astype(lib.pyfloat)
 					self.c.nu0 = self._n0py.ctypes.data_as(lib.ok_float_p)
@@ -465,10 +496,10 @@ class PogsCommonTypes(object):
 
 		class SolverOutput(object):
 			def __init__(self, m, n):
-				self.x = zeros(n).astype(lib.pyfloat)
-				self.y = zeros(m).astype(lib.pyfloat)
-				self.mu = zeros(n).astype(lib.pyfloat)
-				self.nu = zeros(m).astype(lib.pyfloat)
+				self.x = np.zeros(n).astype(lib.pyfloat)
+				self.y = np.zeros(m).astype(lib.pyfloat)
+				self.mu = np.zeros(n).astype(lib.pyfloat)
+				self.nu = np.zeros(m).astype(lib.pyfloat)
 				self.c = PogsOutput(
 						self.x.ctypes.data_as(lib.ok_float_p),
 						self.y.ctypes.data_as(lib.ok_float_p),

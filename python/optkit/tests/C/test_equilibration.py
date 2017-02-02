@@ -1,9 +1,10 @@
+from optkit.compat import *
+
 import os
 import numpy as np
-from ctypes import c_void_p, byref
+
 from optkit.libs.equilibration import EquilibrationLibs
 from optkit.tests.C.base import OptkitCOperatorTestCase
-from optkit.compat import *
 
 class EquilLibsTestCase(OptkitCOperatorTestCase):
 	"""

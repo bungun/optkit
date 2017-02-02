@@ -1,5 +1,5 @@
 from optkit.utils.pyutils import istypedtuple, println, printvoid, \
-	pretty_print, var_assert
+								 pretty_print, var_assert
 # from optkit.utils.linsysutils import UtilMakeCVector, UtilMakeCMatrix, \
 	# UtilMakeCSparseMatrix, UtilReleaseCVector, \
 	# UtilReleaseCMatrix, UtilReleaseCSparseMatrix

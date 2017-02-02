@@ -1,13 +1,14 @@
-import numpy as np
+from optkit.compat import *
+
 import gc
 import os
-from os import path
-from ctypes import CDLL, c_size_t
+import numpy as np
+import ctypes as ct
+
 # from optkit import *
 from optkit.api import backend
 from optkit.types.clustering import *
 from optkit.tests.defs import OptkitTestCase
-from optkit.compat import *
 
 class ClusteringBindingsTestCase(OptkitTestCase):
 	@classmethod
@@ -23,7 +24,8 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 		self.k = int(self.shape[0]**0.5)
 		self.C_test = np.random.rand(self.k, self.shape[1])
 		self.A_test = np.random.rand(*self.shape)
-		self.assignments_test = (self.k * np.random.rand(self.shape[0])).astype(int)
+		self.assignments_test = (self.k * np.random.rand(
+				self.shape[0])).astype(int)
 
 		# construct A_test as a noisy upsampled version of C
 		percent_noise = 0.05
@@ -108,7 +110,7 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 		m = 500
 
 		s = ct.ClusteringSettings(m)
-		self.assertTrue( isinstance(backend.cluster, CDLL ))
+		self.assertTrue( isinstance(backend.cluster, ct.CDLL ))
 
 		self.assertEqual( type(s.pointer), backend.cluster.kmeans_settings )
 		self.assertEqual( s.distance_tol, s.DISTANCE_RTOL_DEFAULT )
@@ -189,8 +191,8 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 		self.assertTrue( clu.a2c_ptr is None )
 		clu.a2c = k * np.random.rand(m)
 		self.assertFalse( clu.a2c is None )
-		self.assertTrue( clu.a2c.dtype == c_size_t )
-		self.assertTrue( isinstance(clu.a2c_ptr, backend.cluster.c_size_t_p) )
+		self.assertTrue( clu.a2c.dtype == ct.c_size_t )
+		self.assertTrue( isinstance(clu.a2c_ptr, backend.cluster.ct.c_size_t_p) )
 
 		self.assertTrue( isinstance(clu.io, backend.cluster.kmeans_io) )
 

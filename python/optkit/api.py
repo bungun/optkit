@@ -1,7 +1,9 @@
-from os import getenv
+from optkit.compat import *
+
+import os
+
 from optkit.backends import OKBackend
 from optkit.types import PogsTypes, ClusteringTypes
-from optkit.compat import *
 
 """
 Version query
@@ -66,11 +68,10 @@ def set_backend(gpu=False, double=True):
 INITIALIZATION BEHAVIOR:
 """
 
-default_device = getenv('OPTKIT_DEFAULT_DEVICE', 'cpu')
-default_precision = getenv('OPTKIT_DEFAULT_FLOATBITS', '64')
+default_device = os.getenv('OPTKIT_DEFAULT_DEVICE', 'cpu')
+default_precision = os.getenv('OPTKIT_DEFAULT_FLOATBITS', '64')
 
 set_backend(gpu=(default_device == 'gpu'),
 			double=(default_precision == '64'))
 
 del OKBackend
-del getenv

@@ -1,10 +1,11 @@
+from optkit.compat import *
+
 import os
 import numpy as np
-from ctypes import c_void_p, byref, cast
+
 from optkit.libs.projector import ProjectorLibs
 from optkit.tests.defs import OptkitTestCase, TEST_ITERATE
 from optkit.tests.C.base import OptkitCTestCase, OptkitCOperatorTestCase
-from optkit.compat import *
 
 class ProjectorLibsTestCase(OptkitTestCase):
 	"""

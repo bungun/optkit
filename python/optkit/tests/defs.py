@@ -1,22 +1,23 @@
-from os import getenv, path
-import numpy as np
-import unittest
 from optkit.compat import *
 
-TEST_ITERATE = int(getenv('OPTKIT_REPEAT_NUMERICALTEST', '0'))
+import os
+import numpy as np
+import unittest
+
+TEST_ITERATE = int(os.getenv('OPTKIT_REPEAT_NUMERICALTEST', '0'))
 
 DEFAULT_SHAPE = (500, 800)
 # DEFAULT_SHAPE = (10, 15)
 
 # todo: modify test code to use env specified test conditions if availabe
-DEFAULT_ROWS = getenv('OPTKIT_TESTING_DEFAULT_NROWS', None)
-DEFAULT_COLS = getenv('OPTKIT_TESTING_DEFAULT_NCOLS', None)
-DEFAULT_MATRIX_PATH = getenv('OPTKIT_TESTING_DEFAULT_MATRIX', None)
-DEFAULT_SPARSE_OCCUPANCY = getenv('OPTKIT_TESTING_DEFAULT_SPARSE_OCCUPANCY',
+DEFAULT_ROWS = os.getenv('OPTKIT_TESTING_DEFAULT_NROWS', None)
+DEFAULT_COLS = os.getenv('OPTKIT_TESTING_DEFAULT_NCOLS', None)
+DEFAULT_MATRIX_PATH = os.getenv('OPTKIT_TESTING_DEFAULT_MATRIX', None)
+DEFAULT_SPARSE_OCCUPANCY = os.getenv('OPTKIT_TESTING_DEFAULT_SPARSE_OCCUPANCY',
 								  0.4)
 
 if DEFAULT_MATRIX_PATH is not None:
-	if not path.exsists(DEFAULT_MATRIX_PATH):
+	if not os.path.exsists(DEFAULT_MATRIX_PATH):
 		DEFAULT_MATRIX_PATH = None
 	elif not DEFAULT_MATRIX_PATH.endswith('.npy'):
 		DEFAULT_MATRIX_PATH = None
@@ -45,7 +46,7 @@ if DEFAULT_COLS is not None:
 	DEFAULT_SHAPE = (DEFAULT_SHAPE[0], DEFAULT_COLS)
 
 class OptkitTestCase(unittest.TestCase):
-	VERBOSE_TEST = getenv('OPTKIT_TESTING_VERBOSE', False)
+	VERBOSE_TEST = os.getenv('OPTKIT_TESTING_VERBOSE', False)
 
 	# library conditions: gpu = True/False, single_precision = True/False
 	CONDITIONS = [(a, b) for a in (True, False) for b in (True, False)]

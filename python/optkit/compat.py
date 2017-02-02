@@ -1,12 +1,11 @@
 from __future__ import print_function
-from sys import version_info
+import six
 
-if version_info.major > 2:
-	xrange = range
-	def listmap(f, *args):
-		return list(map(f, *args))
-	def listfilter(f, *args):
-		return list(filter(f, *args))
-else:
-	listmap = map
-	listfilter = filter
+def listmap(f, *args):
+	return list(six.moves.map(f, *args))
+def listfilter(f, *args):
+	return list(six.moves.filter(f, *args))
+
+if six.PY3:
+	from six.moves import xrange
+	from six.moves import reduce

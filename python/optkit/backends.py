@@ -1,12 +1,13 @@
-from os import getenv
+from optkit.compat import *
+
 import gc
-from ctypes import c_int, c_void_p, byref, pointer, CDLL
+import ctypes as ct
+
 # from optkit.libs.linsys import DenseLinsysLibs, SparseLinsysLibs
 # from optkit.libs.prox import ProxLibs
 from optkit.libs.pogs import PogsLibs
 from optkit.libs.clustering import ClusteringLibs
 from optkit.utils.pyutils import version_string
-from optkit.compat import *
 
 
 # CPU32, CPU64, GPU32, GPU64
@@ -92,13 +93,14 @@ class OKBackend(object):
 		self.__LIBGUARD_ON = self.__COBJECT_COUNT > 0
 
 	def __get_version(self):
-		major = c_int()
-		minor = c_int()
-		change = c_int()
-		status = c_int()
+		major = ct.c_int()
+		minor = ct.c_int()
+		change = ct.c_int()
+		status = ct.c_int()
 		try:
-			self.pogs.optkit_version(byref(major), byref(minor), byref(change),
-									 byref(status))
+			self.pogs.optkit_version(
+					ct.byref(major), ct.byref(minor), ct.byref(change),
+					ct.byref(status))
 
 			self.__version = 'Optkit v{}'.format(
 					version_string(major.value, minor.value, change.value,

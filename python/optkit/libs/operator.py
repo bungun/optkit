@@ -1,9 +1,11 @@
-from ctypes import c_uint, c_size_t, c_void_p, CFUNCTYPE, POINTER, Structure
+from optkit.compat import *
+
+import ctypes as ct
+
 from optkit.libs.loader import OptkitLibs
 from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\
 	attach_sparse_linsys_ctypes, attach_base_ccalls, attach_vector_ccalls, \
 	attach_dense_linsys_ccalls, attach_sparse_linsys_ccalls
-from optkit.compat import *
 
 class OperatorLibs(OptkitLibs):
 	def __init__(self):
@@ -25,21 +27,25 @@ def attach_operator_ctypes(lib, single_precision=False):
 	ok_float = lib.ok_float
 	vector_p = lib.vector_p
 
-	class ok_operator(Structure):
-		_fields_ = [('size1', c_size_t),
-					('size2', c_size_t),
-					('data', c_void_p),
-					('apply', CFUNCTYPE(c_uint, c_void_p, vector_p, vector_p)),
-					('adjoint', CFUNCTYPE(c_uint, c_void_p,vector_p, vector_p)),
-					('fused_apply', CFUNCTYPE(c_uint, c_void_p, ok_float,
-											  vector_p, ok_float, vector_p)),
-					('fused_adjoint', CFUNCTYPE(c_uint, c_void_p, ok_float,
-												vector_p, ok_float, vector_p)),
-					('free', CFUNCTYPE(c_uint, c_void_p)),
-					('kind', c_uint)]
+	class ok_operator(ct.Structure):
+		_fields_ = [('size1', ct.c_size_t),
+					('size2', ct.c_size_t),
+					('data', ct.c_void_p),
+					('apply', ct.CFUNCTYPE(
+							ct.c_uint, ct.c_void_p, vector_p, vector_p)),
+					('adjoint', ct.CFUNCTYPE(
+							ct.c_uint, ct.c_void_p,vector_p, vector_p)),
+					('fused_apply', ct.CFUNCTYPE(
+							ct.c_uint, ct.c_void_p, ok_float, vector_p,
+							ok_float, vector_p)),
+					('fused_adjoint', ct.CFUNCTYPE(
+							ct.c_uint, ct.c_void_p, ok_float, vector_p,
+							ok_float, vector_p)),
+					('free', ct.CFUNCTYPE(ct.c_uint, ct.c_void_p)),
+					('kind', ct.c_uint)]
 
 	lib.operator = ok_operator
-	lib.operator_p = POINTER(lib.operator)
+	lib.operator_p = ct.POINTER(lib.operator)
 
 def attach_operator_ccalls(lib, single_precision=False):
 	if not 'sparse_matrix_p' in lib.__dict__:

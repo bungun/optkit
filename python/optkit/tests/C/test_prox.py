@@ -1,11 +1,13 @@
+from optkit.compat import *
+
 import os
 import numpy as np
-from ctypes import c_int, byref, c_void_p
+import ctypes as ct
+
 from optkit.libs.prox import ProxLibs
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
 from optkit.tests.defs import OptkitTestCase, TEST_ITERATE
 from optkit.tests.C.base import OptkitCTestCase
-from optkit.compat import *
 
 class ProxLibsTestCase(OptkitTestCase):
 	@classmethod
@@ -42,13 +44,14 @@ class ProxLibsTestCase(OptkitTestCase):
 			if lib is None:
 				continue
 
-			major = c_int()
-			minor = c_int()
-			change = c_int()
-			status = c_int()
+			major = ct.c_int()
+			minor = ct.c_int()
+			change = ct.c_int()
+			status = ct.c_int()
 
-			lib.optkit_version(byref(major), byref(minor), byref(change),
-							   byref(status))
+			lib.optkit_version(
+					ct.byref(major), ct.byref(minor), ct.byref(change),
+					ct.byref(status))
 
 			version = self.version_string(major.value, minor.value,
 										  change.value, status.value)

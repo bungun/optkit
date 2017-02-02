@@ -1,12 +1,13 @@
-from os import getenv
 from optkit.compat import *
 
-if int(getenv('OPTKIT_C_TESTING', 0)) == 0:
+import os
+
+if int(os.getenv('OPTKIT_C_TESTING', 0)) == 0:
 	from optkit.api import OPTKIT_VERSION
 
 	# Backend
 	from optkit.api import set_backend
-	if int(getenv('OPTKIT_IMPORT_BACKEND', 0)) > 1:
+	if int(os.getenv('OPTKIT_IMPORT_BACKEND', 0)) > 1:
 		from optkit.api import backend
 
 	# C implementations
@@ -19,4 +20,4 @@ if int(getenv('OPTKIT_C_TESTING', 0)) == 0:
 	del backends
 	# del api
 
-del getenv
+del os.getenv

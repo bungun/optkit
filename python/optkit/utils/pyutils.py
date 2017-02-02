@@ -1,7 +1,8 @@
-from ctypes import c_uint
-from operator import and_, add as op_add
-from numpy import ndarray, squeeze, abs as np_abs, max as np_max
 from optkit.compat import *
+
+import operator as op
+import numpy as np
+import ctypes as ct
 
 def version_string(major, minor, change, status):
 	v = "{}.{}.{}".format(major, minor, change)
@@ -20,7 +21,7 @@ def println(*args):
 	for arg in args: print(arg)
 
 def pretty_print(msg, sym='-'):
-	line = reduce(op_add, [sym for char in msg])
+	line = reduce(op.add, [sym for char in msg])
 	print(line)
 	println(msg)
 	print(line)

@@ -1,8 +1,6 @@
-from numpy import log, exp, cos, arccos, sign, inf, nan,\
-					 zeros, copy as np_copy
 from optkit.compat import *
 
-
+import numpy as np
 # """
 # low-level utilities
 # """
@@ -40,20 +38,20 @@ def lambertw_exp(x):
 
 	if x > 100:
 		# approximation for x in [100, 700]
-		logx = log(x)
+		logx = np.log(x)
 		return -0.36962844 + x - 0.97284858 * logx + 1.3437973 / logx
 	elif x < 0:
-		p = (2 * exp(x + 1) + 1)**0.5
+		p = (2 * np.exp(x + 1) + 1)**0.5
 		w = -1 + p * (1 + p *(-1. / 3 + p * 11. / 72))
 	else:
 		w = x
 
 	if x > 1.098612288668110:
-		w = -log(w)
+		w = -np.log(w)
 
 	for i in xrange(10):
-		e = exp(w)
-		t = w * e - exp(x)
+		e = np.exp(w)
+		t = w * e - np.exp(x)
 		p = w + 1
 		t /= e * p - 0.5 * (p + 1) * t / p
 		w -= t
@@ -75,9 +73,9 @@ def cubicsolve(p, q, r):
 		return -s - a/A + A
 	else:
 		A = pow(-a3, 0.5)
-		B = arccos(-b/A)
+		B = np.arccos(-b/A)
 		C = pow(A, 1/3.)
-		return -s + (C - a/C) * cos(B/3)
+		return -s + (C - a/C) * np.cos(B/3)
 
 def proxlog(xi,rhoi):
 	# initial guess based on piecewise approximation
@@ -92,7 +90,7 @@ def proxlog(xi,rhoi):
 	l = xi - 1./rhoi
 	u = xi
 	for i in xrange(5):
-		t = 1./(1 + exp(-x))
+		t = 1./(1 + np.exp(-x))
 		f = t + rhoi * (x-xi)
 		g = t - t**2 + rhoi
 		if (f < 0):
@@ -106,7 +104,7 @@ def proxlog(xi,rhoi):
 	# guarded method if not converged
 	i=0
 	while i < 100 and u-l > 1e-10:
-		g = 1./(rhoi*(1 + exp(-x))) + (x - xi)
+		g = 1./(rhoi*(1 + np.exp(-x))) + (x - xi)
 		if g > 0:
 			l = max(l, x-g)
 			u = x
@@ -147,9 +145,9 @@ def func_eval_python(f, x):
 		if func == 'Abs':
 			return abs(xi)
 		elif func == 'NegEntr':
-			return 0 if xi <= 0 else xi * log(xi)
+			return 0 if xi <= 0 else xi * np.log(xi)
 		elif func =='Exp':
-			return exp(xi)
+			return np.exp(xi)
 		elif func == 'Huber':
 			return abs(xi) - 0.5 if xi>=1 else 0.5 * xi * xi
 		elif func == 'Identity':
@@ -157,13 +155,13 @@ def func_eval_python(f, x):
 		elif func in ('IndBox01','IndEq0','IndGe0','IndLe0','Zero'):
 			return 0
 		elif func == 'Logistic':
-			return log(1 + exp(xi))
+			return np.log(1 + np.exp(xi))
 		elif func == 'MaxNeg0':
 			return -xi * (xi < 0)
 		elif func == 'MaxPos0':
 			return xi * (xi > 0)
 		elif func == 'NegLog':
-			return -1 * log(xi)
+			return -1 * np.log(xi)
 		elif func == 'Recipr':
 			return (xi**-1) * (xi >= 0)
 		elif func == 'Square':
@@ -190,12 +188,12 @@ def prox_eval_python(f, rho, x):
 		if func =='Abs':
 			return max(xi - 1./rhoi, 0) + min(xi + 1./rhoi, 0)
 		elif func == 'NegEntr':
-			return (lambertw_exp(rhoi*xi - 1) * log(rhoi)) / rhoi
+			return (lambertw_exp(rhoi*xi - 1) * np.log(rhoi)) / rhoi
 		elif func == 'Exp':
-			return xi - lambertw_exp(xi - log(rhoi))
+			return xi - lambertw_exp(xi - np.log(rhoi))
 		elif func == 'Huber':
 			return xi * rhoi / (1.+rhoi) if abs(xi) < (1 + 1./rhoi) \
-				else xi - sign(xi) / rhoi
+				else xi - np.sign(xi) / rhoi
 		elif func == 'Identity':
 			return xi - 1./rhoi
 		elif func == 'IndBox01':
@@ -229,7 +227,7 @@ def prox_eval_python(f, rho, x):
 		x_ = pfunc(f_.h, x_, rho_)
 		return (x_ + f_.b) / f_.a
 
-	x_out = zeros(len(f))
+	x_out = np.zeros(len(f))
 	x_out[:] = listmap(fprox, f, x)
 
 	return x_out

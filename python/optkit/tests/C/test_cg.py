@@ -1,11 +1,12 @@
+from optkit.compat import *
+
 import os
 import numpy as np
-from scipy.sparse import csr_matrix, csc_matrix
-from ctypes import c_uint, c_void_p, byref, POINTER
+import ctypes as ct
+
 from optkit.libs.cg import ConjugateGradientLibs
 from optkit.tests.defs import TEST_ITERATE
 from optkit.tests.C.base import OptkitCTestCase, OptkitCOperatorTestCase
-from optkit.compat import *
 
 CG_QUIET = 1
 
@@ -129,8 +130,8 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				h = lib.cgls_helper_alloc(m, n)
 				self.register_var('h', h, lib.cgls_helper_free)
 
-				flag = np.zeros(1).astype(c_uint)
-				flag_p = flag.ctypes.data_as(POINTER(c_uint))
+				flag = np.zeros(1).astype(ct.c_uint)
+				flag_p = flag.ctypes.data_as(ct.POINTER(ct.c_uint))
 				self.assertCall( lib.cgls_nonallocating(h, o, b, x, RHO, TOL,
 														maxiter, CG_QUIET,
 														flag_p) )
@@ -178,8 +179,8 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 
 				A_, A, o = self.register_operator(lib, op_)
 
-				flag = np.zeros(1).astype(c_uint)
-				flag_p = flag.ctypes.data_as(POINTER(c_uint))
+				flag = np.zeros(1).astype(ct.c_uint)
+				flag_p = flag.ctypes.data_as(ct.POINTER(ct.c_uint))
 
 				self.assertCall( lib.cgls(o, b, x, RHO, TOL, maxiter,
 										  CG_QUIET, flag_p) )
@@ -222,8 +223,8 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				cgls_work = lib.cgls_init(m, n)
 				self.register_var('work', cgls_work, lib.cgls_finish)
 
-				flag = np.zeros(1).astype(c_uint)
-				flag_p = flag.ctypes.data_as(POINTER(c_uint))
+				flag = np.zeros(1).astype(ct.c_uint)
+				flag_p = flag.ctypes.data_as(ct.POINTER(ct.c_uint))
 
 				self.assertCall( lib.cgls_solve(cgls_work, o, b, x, RHO,
 												TOL, maxiter, CG_QUIET,
@@ -347,8 +348,8 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				h = lib.pcg_helper_alloc(m, n)
 				self.register_var('h', h, lib.pcg_helper_free)
 
-				iter_ = np.zeros(1).astype(c_uint)
-				iter_p = iter_.ctypes.data_as(POINTER(c_uint))
+				iter_ = np.zeros(1).astype(ct.c_uint)
+				iter_p = iter_.ctypes.data_as(ct.POINTER(ct.c_uint))
 				self.assertCall( lib.pcg_nonallocating(
 						h, o, p, b, x, RHO, tol, maxiter, CG_QUIET, iter_p) )
 				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
@@ -392,8 +393,8 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				h = lib.pcg_helper_alloc(m, n)
 				self.register_var('h', h, lib.pcg_helper_free)
 
-				iter_ = np.zeros(1).astype(c_uint)
-				iter_p = iter_.ctypes.data_as(POINTER(c_uint))
+				iter_ = np.zeros(1).astype(ct.c_uint)
+				iter_p = iter_.ctypes.data_as(ct.POINTER(ct.c_uint))
 
 				# first run
 				self.assertCall( lib.pcg_nonallocating(
@@ -451,8 +452,8 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				h = lib.pcg_helper_alloc(m, n)
 				self.register_var('h', h, lib.pcg_helper_free)
 
-				iter_ = np.zeros(1).astype(c_uint)
-				iter_p = iter_.ctypes.data_as(POINTER(c_uint))
+				iter_ = np.zeros(1).astype(ct.c_uint)
+				iter_p = iter_.ctypes.data_as(ct.POINTER(ct.c_uint))
 
 				self.assertCall( lib.pcg(o, p, b, x, RHO, tol, maxiter,
 					CG_QUIET, iter_p) )
@@ -498,8 +499,8 @@ class ConjugateGradientLibsTestCase(OptkitCOperatorTestCase):
 				pcg_work = lib.pcg_init(m, n)
 				self.register_var('work', pcg_work, lib.pcg_finish)
 
-				iter_ = np.zeros(1).astype(c_uint)
-				iter_p = iter_.ctypes.data_as(POINTER(c_uint))
+				iter_ = np.zeros(1).astype(ct.c_uint)
+				iter_p = iter_.ctypes.data_as(ct.POINTER(ct.c_uint))
 
 				self.assertCall( lib.pcg_solve(pcg_work, o, p, b, x, RHO, tol,
 											   maxiter, CG_QUIET, iter_p) )

@@ -3,6 +3,7 @@ from optkit.compat import *
 import os
 import numpy as np
 import numpy.linalg as la
+
 from optkit.types.pogs.common import PogsCommonTypes
 
 class DoubleCache(object):

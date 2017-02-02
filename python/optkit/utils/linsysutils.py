@@ -1,15 +1,16 @@
-# from ctypes import c_void_p, byref
-# from numpy import ndarray, float32, float64
-# from scipy.sparse import csr_matrix, csc_matrix
-# from toolz import curry
 # from optkit.compat import *
 
+# import numpy as np
+# import scipy.sparse as sp
+# import ctypes as ct
+# import toolz
+
 # # low-level utilities
-# @curry
+# @toolz.curry
 # def util_make_cvector(denselib, x):
 # 	if x is None:
 # 		return denselib.vector(0, 0, None)
-# 	elif isinstance(x, ndarray):
+# 	elif isinstance(x, np.ndarray):
 # 		if len(x.shape) == 1:
 # 			x_ = denselib.vector(0, 0, None)
 # 			denselib.vector_calloc(x_, x.size)
@@ -18,10 +19,10 @@
 # 		else:
 # 			raise ValueError('argument "x", if provided as an {}, must be a'
 # 							 'vector, i.e., singleton dimension. dimensions '
-# 							 'of provided array: {}'.format(ndarray, x.shape))
+# 							 'of provided array: {}'.format(np.ndarray, x.shape))
 # 	else:
 # 		raise TypeError('argument "x" must be of type {} or {}'.format(
-# 						type(None), ndarray))
+# 						type(None), np.ndarray))
 
 
 
@@ -36,12 +37,12 @@
 # 		if A is None:
 # 			return self.denselib.matrix(0, 0, 0, None,
 # 				self.enums.CblasRowMajor)
-# 		elif isinstance(A, ndarray) and len(A.shape)==2:
+# 		elif isinstance(A, np.ndarray) and len(A.shape)==2:
 # 			(m,n) = A.shape
 
 # 			order = self.enums.CblasRowMajor if A.flags.c_contiguous else \
 # 					self.enums.CblasColMajor
-# 			pytype = float32 if denselib.FLOAT else float64
+# 			pytype = np.float32 if denselib.FLOAT else np.float64
 
 # 			A_ = self.denselib.matrix(0, 0, 0, None, order)
 # 			if not copy_data:
@@ -66,16 +67,16 @@
 # 		if A is None:
 # 			return self.sparselib.sparse_matrix(0, 0, 0, 0,
 # 				None, None, None, self.enums.CblasRowMajor)
-# 		elif isinstance(A, (csr_matrix, csc_matrix)):
+# 		elif isinstance(A, (sp.csr_matrix, sp.csc_matrix)):
 # 			(m,n) = A.shape
-# 			order = self.enums.CblasRowMajor if isinstance(A, csr_matrix) else \
+# 			order = self.enums.CblasRowMajor if isinstance(A, sp.csr_matrix) else \
 # 					self.enums.CblasColMajor
 
 # 			A_ = self.sparselib.sparse_matrix(0, 0, 0, 0,
 # 				None, None, None, order)
 
-# 			sparse_handle = c_void_p()
-# 			self.sparselib.sp_make_handle(byref(sparse_handle))
+# 			sparse_handle = ct.c_void_p()
+# 			self.sparselib.sp_make_handle(ct.byref(sparse_handle))
 # 			self.sparselib.sp_matrix_calloc(A_, m, n, A.nnz, order)
 # 			self.sparselib.sp_matrix_memcpy_ma(sparse_handle, A_,
 # 				A.data.ctypes.data_as(self.sparselib.ok_int_p),
@@ -89,17 +90,17 @@
 # 			# TODO: error message (type, dims)
 
 
-# @curry
+# @toolz.curry
 # def util_release_cvector(denselib, x):
 # 	if isinstance(x, denselib.vector):
 # 		denselib.vector_free(x)
 
-# @curry
+# @toolz.curry
 # def util_release_cmatrix(denselib, A):
 # 	if isinstance(A, denselib.matrix):
 # 		denselib.matrix_free(A)
 
-# @curry
+# @toolz.curry
 # def util_release_csparsematrix(sparselib, A):
 # 	if isinstance(A, sparselib.sparse_matrix):
 # 		sparselib.sp_matrix_free(A)
