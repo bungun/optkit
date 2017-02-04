@@ -42,6 +42,7 @@ install:
       sudo ln -s /usr/lib/libblas.so.3gf /usr/lib/libblas.so;
     fi
   - ./install
+  - pip install six 
 
 script:
   - export OPTKIT_TEST_FLOAT=1 && export OPTKIT_TEST_TRANSPOSE=1
