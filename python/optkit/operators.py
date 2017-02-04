@@ -1,3 +1,4 @@
+"""
 from optkit.compat import *
 
 class AbstractMatrix(object):
@@ -151,18 +152,14 @@ class GramianOperator(DenseOperator):
 		self.data = AA
 		self.transpose = transpose
 		self.shape = (A.shape[0],A.shape[0]) if transpose else (A.shape[1],A.shape[1])
-			self.mul = gemv_reordered('N',AA)
-			self.mul_t = gemv_reordered('N',AA)
+		self.mul = gemv_reordered('N',AA)
+		self.mul_t = gemv_reordered('N',AA)
 
 	# def as_dense(self):
 	# 	if self.transpose:
 	# 		return DenseOperator(self.data.T*self.data)
 	# 	else
 	# 		return DenseOperator(self.data*self.data.T)
-
-
-
-
 
 # DenseOperator(A):
 # 	self.A = A
@@ -676,3 +673,4 @@ BlockInverseOperator(M::BlockOperator)
 class BlockProjector(object):
 	def __init__(self):
 		pass
+"""
