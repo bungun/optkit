@@ -30,15 +30,16 @@ class PogsCommonTypes(object):
 			def eval(self, vec):
 				if self.size == 0:
 					return 0.
-				vec = np.squeeze(np.array(vec))
-				if len(vec) != self.size:
+
+				vec = np.reshape(np.array(vec), np.size(vec,))
+				if vec.size != self.size:
 					raise ValueError(
 							'argument `vec` must have same length as '
 							'this {} object.\nlength {}: {}\nlength '
 							'vec: {}'
 							''.format(
 									Objective, Objective, self.size,
-									len(vec)))
+									vec.size))
 
 				return func_eval_python(self.list(lib.function), vec)
 
