@@ -29,7 +29,7 @@ class PogsCommonTypes(object):
 
 			def eval(self, vec):
 				if self.size == 0:
-					return 0
+					return 0.
 				vec = np.squeeze(np.array(vec))
 				if len(vec) != self.size:
 					raise ValueError(
@@ -45,6 +45,8 @@ class PogsCommonTypes(object):
 
 			def copy_from(self, obj, start_index_target=0,
 						  start_index_source=0, n_values=None):
+				if self.size == 0:
+					return
 				if not isinstance(obj, Objective):
 					raise TypeError(
 							'argument `obj` must be of type {}'
@@ -107,6 +109,9 @@ class PogsCommonTypes(object):
 
 
 			def set(self, **params):
+				if self.size == 0:
+					return
+
 				start = int(params['start']) if 'start' in params else 0
 				end = int(params['end']) if 'end' in params else self.size
 
