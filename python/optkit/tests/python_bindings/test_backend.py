@@ -37,7 +37,7 @@ class BackendTestCase(unittest.TestCase):
 			self.assertEqual( backend.reset_device(), 0 )
 			self.assertEqual( set_backend(gpu=gpu, double=double), 0 )
 
-			self.assertIsNone( backend.pogs )
+			self.assertIsNotNone( backend.pogs )
 			self.assertIsNotNone( backend.cluster )
 
 			self.assertEqual( backend.device_is_gpu, gpu )

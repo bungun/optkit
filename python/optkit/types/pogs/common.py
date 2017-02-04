@@ -31,7 +31,7 @@ class PogsCommonTypes(object):
 				if self.size == 0:
 					return 0
 				vec = np.squeeze(np.array(vec))
-				elif len(vec) != self.size:
+				if len(vec) != self.size:
 					raise ValueError(
 							'argument `vec` must have same length as '
 							'this {} object.\nlength {}: {}\nlength '
@@ -43,14 +43,33 @@ class PogsCommonTypes(object):
 				return func_eval_python(self.list(lib.function), vec)
 
 
-			def copy_from(self, obj):
+			def copy_from(self, obj, start_index_target=0,
+						  start_index_source=0, n_values=None):
 				if not isinstance(obj, Objective):
 					raise TypeError(
 							'argument `obj` must be of type {}'
 							''.format(Objective))
-				if not obj.size == self.size:
-					raise ValueError('Incompatible dimensions')
-				self.__h[:] = obj.__h[:]
+
+				start_source = min(max(start_index_source, 0), obj.size)
+				start_target = min(max(start_index_target, 0), self.size)
+
+				end_source = obj.size
+				if n_values is not None:
+					end_source = min(start_source + int(n_values), end_source)
+				end_target = start_target + (end_source - start_source)
+
+				self.__h[start_target : end_target] = obj.__h[
+						start_source : end_source]
+				self.__a[start_target : end_target] = obj.__a[
+						start_source : end_source]
+				self.__b[start_target : end_target] = obj.__b[
+						start_source : end_source]
+				self.__c[start_target : end_target] = obj.__c[
+						start_source : end_source]
+				self.__d[start_target : end_target] = obj.__d[
+						start_source : end_source]
+				self.__e[start_target : end_target] = obj.__e[
+						start_source : end_source]
 
 			def list(self, function_t):
 				return [function_t(self.__h[t], self.__a[t], self.__b[t],

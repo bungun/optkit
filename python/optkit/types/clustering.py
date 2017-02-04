@@ -327,7 +327,7 @@ class ClusteringTypes(object):
 						isinstance(assignments, np.ndarray) and
 						len(assignments.shape) == 1):
 					self.__a2c = assignments.astype(ct.c_size_t)
-					self.__a2c_ptr = self.a2c.ctypes.data_as(lib.ct.c_size_t_p)
+					self.__a2c_ptr = self.a2c.ctypes.data_as(lib.c_size_t_p)
 
 			@property
 			def a2c_ptr(self):

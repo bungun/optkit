@@ -1,7 +1,7 @@
 from optkit.compat import *
 
 import numpy as np
-import cyptes as ct
+import ctypes as ct
 
 from optkit.libs.loader import OptkitLibs
 from optkit.libs.enums import OKFunctionEnums

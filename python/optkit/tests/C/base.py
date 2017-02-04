@@ -125,7 +125,7 @@ class OptkitCTestCase(OptkitTestCase):
 		self.assertCall( lib.indvector_calloc(v, size) )
 		self.register_var(name, v, lib.indvector_free)
 		v_py = np.zeros(size).astype(ct.c_size_t)
-		v_ptr = v_py.ctypes.data_as(lib.ct.c_size_t_p)
+		v_ptr = v_py.ctypes.data_as(lib.c_size_t_p)
 		return v, v_py, v_ptr
 
 	def register_matrix(self, lib, size1, size2, order, name, random=False):

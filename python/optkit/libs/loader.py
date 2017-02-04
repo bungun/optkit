@@ -13,7 +13,7 @@ def get_optkit_libdir():
 	if p[:2] == 'b\'':
 		p = p[2:]
 
-	p = path.abspath(path.join(p, '..', 'lib'))
+	p = os.path.abspath(os.path.join(p, '..', 'lib'))
 	py_version = 'python{}.{}'.format(
 			sys.version_info.major, sys.version_info.minor)
 	p = os.path.join(p, py_version)

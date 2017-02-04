@@ -7,6 +7,7 @@ import ctypes as ct
 from optkit.libs.linsys import DenseLinsysLibs
 from optkit.tests.C.base import OptkitCTestCase
 
+
 class VectorTestCase(OptkitCTestCase):
 	@classmethod
 	def setUpClass(self):
@@ -243,7 +244,7 @@ class VectorTestCase(OptkitCTestCase):
 
 			# vector argmin
 			wargmin = np.zeros(1).astype(ct.c_size_t)
-			wargmin_p = wargmin.ctypes.data_as(lib.ct.c_size_t_p)
+			wargmin_p = wargmin.ctypes.data_as(lib.c_size_t_p)
 			self.assertCall( lib.vector_indmin(w, wargmin_p) )
 			self.assertScalarEqual( w_py[wargmin[0]], w_py.min(), RTOL )
 
@@ -286,7 +287,7 @@ class VectorTestCase(OptkitCTestCase):
 
 			# vector argmin
 			wargmin = np.zeros(1).astype(ct.c_size_t)
-			wargmin_p = wargmin.ctypes.data_as(lib.ct.c_size_t_p)
+			wargmin_p = wargmin.ctypes.data_as(lib.c_size_t_p)
 			self.assertCall( lib.indvector_indmin(w, wargmin_p) )
 			self.assertScalarEqual( w_py[wargmin[0]], w_py.min(), RTOL )
 

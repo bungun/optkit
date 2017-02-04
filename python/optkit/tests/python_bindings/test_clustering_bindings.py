@@ -106,10 +106,10 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 		self.assertTrue( newmax < oldmax )
 
 	def test_clustering_settings(self):
-		ct = ClusteringTypes(backend)
+		clus = ClusteringTypes(backend)
 		m = 500
 
-		s = ct.ClusteringSettings(m)
+		s = clus.ClusteringSettings(m)
 		self.assertIsInstance( backend.cluster, ct.CDLL )
 
 		self.assertEqual( type(s.pointer), backend.cluster.kmeans_settings )
@@ -125,19 +125,19 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 		ITER = 200
 		VERBOSE = 0
 
-		s = ct.ClusteringSettings(m, DTOL, ITOL, ITER, VERBOSE)
+		s = clus.ClusteringSettings(m, DTOL, ITOL, ITER, VERBOSE)
 		self.assertEqual( s.distance_tol, DTOL )
 		self.assertEqual( s.assignment_tol, itolm )
 		self.assertEqual( s.maxiter, ITER )
 		self.assertEqual( s.verbose, VERBOSE )
 
 	def test_clustering_work(self):
-		ct = ClusteringTypes(backend)
+		clus = ClusteringTypes(backend)
 		m = 500
 		n = 200
 		k = 40
 
-		w = ct.ClusteringWork(m, k, n)
+		w = clus.ClusteringWork(m, k, n)
 
 		# check that the C object is tracked by opkit backend module
 		self.assertFalse( backend.device_reset_allowed )
@@ -145,7 +145,7 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 		gc.collect()
 		self.assertTrue( backend.device_reset_allowed )
 
-		w = ct.ClusteringWork(m, k, n)
+		w = clus.ClusteringWork(m, k, n)
 
 		self.assertEqual( w.m, m )
 		self.assertEqual( w.k, k )
@@ -157,12 +157,12 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 		self.assertEqual( w.n, n )
 
 	def test_clustering_object(self):
-		ct = ClusteringTypes(backend)
+		clus = ClusteringTypes(backend)
 		m = 500
 		n = 200
 		k = 40
 
-		clu = ct.Clustering()
+		clu = clus.Clustering()
 		clu.kmeans_work_init(m, k, n)
 		self.assertFalse( backend.device_reset_allowed )
 		clu.kmeans_work_finish()
@@ -192,29 +192,29 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 		clu.a2c = k * np.random.rand(m)
 		self.assertIsNotNone( clu.a2c )
 		self.assertEqual( clu.a2c.dtype, ct.c_size_t )
-		self.assertIsInstance( clu.a2c_ptr, backend.cluster.ct.c_size_t_p )
+		self.assertIsInstance( clu.a2c_ptr, backend.cluster.c_size_t_p )
 
 		self.assertIsInstance( clu.io, backend.cluster.kmeans_io )
 
 	def test_kmeans_inplace(self):
-		ct = ClusteringTypes(backend)
-		clu = ct.Clustering()
+		clus = ClusteringTypes(backend)
+		clu = clus.Clustering()
 
 		C, a2c, counts = clu.kmeans_inplace(self.A_test, self.C_test,
 										 self.assignments_test)
 		self.assertEqual( sum(counts), self.shape[0] )
 
 	def test_kmeans_inplace(self):
-		ct = ClusteringTypes(backend)
-		clu = ct.Clustering()
+		clus = ClusteringTypes(backend)
+		clu = clus.Clustering()
 
 		C, a2c, counts = clu.kmeans(self.A_test, self.k,
 									   self.assignments_test)
 		self.assertEqual( sum(counts), self.shape[0] )
 
 	def test_blockwise_kmeans_inplace(self):
-		ct = ClusteringTypes(backend)
-		clu = ct.Clustering()
+		clus = ClusteringTypes(backend)
+		clu = clus.Clustering()
 
 		b = 3
 		A_array = b * [self.A_test]
@@ -232,8 +232,8 @@ class ClusteringBindingsTestCase(OptkitTestCase):
 			self.assertEqual( sum(counts[i]), self.shape[0] )
 
 	def test_blockwise_kmeans(self):
-		ct = ClusteringTypes(backend)
-		clu = ct.Clustering()
+		clus = ClusteringTypes(backend)
+		clu = clus.Clustering()
 
 		b = 3
 		A_array = b * [self.A_test]

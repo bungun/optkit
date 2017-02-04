@@ -19,5 +19,3 @@ if int(os.getenv('OPTKIT_C_TESTING', 0)) == 0:
 	del types
 	del backends
 	# del api
-
-del os.getenv

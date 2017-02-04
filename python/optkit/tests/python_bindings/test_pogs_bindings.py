@@ -69,6 +69,19 @@ class PogsBindingsTestCase(OptkitTestCase):
 		for i, idx in enumerate(indices):
 			self.assertAlmostEqual(f.d[idx], d[i])
 
+		# block copy
+		msub = int(m / 3)
+		fsub = PogsObjective(
+				msub, b=np.random.rand(msub), d=np.random.rand(msub))
+		f.copy_from(fsub)
+		self.assertEqual( sum(f.b[:msub] - fsub.b), 0 )
+		self.assertEqual( sum(f.d[:msub] - fsub.d), 0 )
+
+		start_idx = int(m / 2)
+		f.copy_from(fsub, start_idx)
+		self.assertEqual( sum(f.b[start_idx:start_idx + msub] - fsub.b), 0 )
+		self.assertEqual( sum(f.d[start_idx:start_idx + msub] - fsub.d), 0 )
+
 	def test_solver_object(self):
 		s = PogsSolver(self.A_test)
 		self.assertFalse( backend.device_reset_allowed )

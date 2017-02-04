@@ -115,13 +115,13 @@ class ClusterLibsTestCase(OptkitCTestCase):
 		return D, dmin, reassigned
 
 	def gen_py_upsamplingvec(self, lib, size1, size2, random=False):
-		if 'ct.c_size_t_p' not in lib.__dict__:
+		if 'c_size_t_p' not in lib.__dict__:
 			raise ValueError(
-					'symbol "ct.c_size_t_p" undefined in library {}'
+					'symbol "c_size_t_p" undefined in library {}'
 					''.format(lib))
 
 		u_py = np.zeros(size1).astype(ct.c_size_t)
-		u_ptr = u_py.ctypes.data_as(lib.ct.c_size_t_p)
+		u_ptr = u_py.ctypes.data_as(lib.c_size_t_p)
 		if random:
 			u_py += (size2 * np.random.rand(size1)).astype(ct.c_size_t)
 			u_py[-1] = size2 - 1
