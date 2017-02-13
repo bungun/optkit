@@ -46,7 +46,7 @@ if DEFAULT_COLS is not None:
 	DEFAULT_SHAPE = (DEFAULT_SHAPE[0], DEFAULT_COLS)
 
 class OptkitTestCase(unittest.TestCase):
-	VERBOSE_TEST = os.getenv('OPTKIT_TESTING_VERBOSE', False)
+	VERBOSE_TEST = os.getenv('OPTKIT_TEST_VERBOSE', False)
 
 	# library conditions: gpu = True/False, single_precision = True/False
 	CONDITIONS = [(a, b) for a in (True, False) for b in (True, False)]
