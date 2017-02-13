@@ -133,6 +133,8 @@ def enum_to_func(e):
 	if e == 13: return 'NegLog'
 	if e == 14: return 'Recipr'
 	if e == 15: return 'Square'
+	if e == 16: return 'Berhu'
+	# if e == 17: return 'AffQuad'
 
 
 def func_eval_python(f, x):
@@ -166,6 +168,10 @@ def func_eval_python(f, x):
 			return (xi**-1) * (xi >= 0)
 		elif func == 'Square':
 			return 0.5 * xi**2
+		elif func == 'Berhu':
+			return abs(xi) if xi < 1 else (xi**2 + 1) / 2
+		# elif func == 'AffQuad':
+			# return -x if x < - 1 / rho else xi**2)
 		else:
 			return 0
 		return h
@@ -173,7 +179,9 @@ def func_eval_python(f, x):
 	val = 0
 	for i, ff in enumerate(f):
 		xi = ff.a * x[i] - ff.b
+		# asymm = 1 if xi < 0 else = f_.s
 		xi = ffunc(ff.h, xi)
+		# xi = asymm * ffunc(ff.h, xi)
 		val += ff.c * xi + ff.d * x[i] + 0.5 * ff.e * x[i] * x[i]
 	return val
 
@@ -216,6 +224,18 @@ def prox_eval_python(f, rho, x):
 			return cubicsolve(-max(xi, 0), 0, -1./rhoi)
 		elif func == 'Square':
 			return rhoi * xi / (1. + rhoi)
+		elif func == 'Berhu':
+			if abs(xi) > 1. + 1. / rhoi:
+				return rhoi * xi / (1. + rhoi)
+			elif xi > 1. / rhoi:
+				return xi - 1. / rhoi
+			elif xi > -1 / rhoi:
+				return 0.
+			else:
+				return xi + 1 / rhoi
+		# elif func == 'AffQuad':
+			# return xi - 1. / rho if xi <= - 1. / rho else max(
+				# rho * xi / (1. + rho), 0)
 		else:
 			return xi
 		return fprox
@@ -224,6 +244,7 @@ def prox_eval_python(f, rho, x):
 		x_ = float(x_)
 		x_ = f_.a * (x_ * rho - f_.d) / (f_.e + rho) - f_.b
 		rho_ = (f_.e + rho) / (f_.c * f_.a * f_.a)
+		# rho_ = rho if x_ < 0 else  rho / f_.s
 		x_ = pfunc(f_.h, x_, rho_)
 		return (x_ + f_.b) / f_.a
 

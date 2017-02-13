@@ -110,6 +110,7 @@ class ProxTestCase(OptkitCTestCase):
 		c = np.random.rand()
 		d = np.random.rand()
 		e = np.random.rand()
+		# s = np.random.rand()
 
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
@@ -131,6 +132,7 @@ class ProxTestCase(OptkitCTestCase):
 			clast = 1.
 			dlast = 0.
 			elast = 0.
+			# slast = 1.
 
 			for hkey, hval in lib.function_enums.dict.items():
 				if self.VERBOSE_TEST:
@@ -146,12 +148,14 @@ class ProxTestCase(OptkitCTestCase):
 				fc = np.array([f_.c - c for f_ in f_list])
 				fd = np.array([f_.d - d for f_ in f_list])
 				fe = np.array([f_.e - e for f_ in f_list])
+				# fs = np.array([f_.s - s for f_ in f_list])
 				self.assertVecEqual( 0, fh, ATOLM, 0 )
 				self.assertVecEqual( 0, fa, ATOLM, 0 )
 				self.assertVecEqual( 0, fb, ATOLM, 0 )
 				self.assertVecEqual( 0, fc, ATOLM, 0 )
 				self.assertVecEqual( 0, fd, ATOLM, 0 )
 				self.assertVecEqual( 0, fe, ATOLM, 0 )
+				# self.assertVecEqual( 0, fs, ATOLM, 0 )
 
 				# memcpy af
 				self.assertCall( lib.function_vector_memcpy_av(f_ptr, f) )
@@ -163,12 +167,14 @@ class ProxTestCase(OptkitCTestCase):
 				fc = np.array([f_.c - clast for f_ in f_list])
 				fd = np.array([f_.d - dlast for f_ in f_list])
 				fe = np.array([f_.e - elast for f_ in f_list])
+				# fs = np.array([f_.s - slast for f_ in f_list])
 				self.assertVecEqual( 0, fh, ATOLM, 0 )
 				self.assertVecEqual( 0, fa, ATOLM, 0 )
 				self.assertVecEqual( 0, fb, ATOLM, 0 )
 				self.assertVecEqual( 0, fc, ATOLM, 0 )
 				self.assertVecEqual( 0, fd, ATOLM, 0 )
 				self.assertVecEqual( 0, fe, ATOLM, 0 )
+				# self.assertVecEqual( 0, fs, ATOLM, 0 )
 
 				# memcpy fa
 				for i in xrange(m):
@@ -184,12 +190,14 @@ class ProxTestCase(OptkitCTestCase):
 				fc = np.array([f_.c - c for f_ in f_list])
 				fd = np.array([f_.d - d for f_ in f_list])
 				fe = np.array([f_.e - e for f_ in f_list])
+				# fs = np.array([f_.s - s for f_ in f_list])
 				self.assertVecEqual( 0, fh, ATOLM, 0 )
 				self.assertVecEqual( 0, fa, ATOLM, 0 )
 				self.assertVecEqual( 0, fb, ATOLM, 0 )
 				self.assertVecEqual( 0, fc, ATOLM, 0 )
 				self.assertVecEqual( 0, fd, ATOLM, 0 )
 				self.assertVecEqual( 0, fe, ATOLM, 0 )
+				# self.assertVecEqual( 0, fs, ATOLM, 0 )
 
 				hlast = hval
 				alast = a
@@ -197,6 +205,7 @@ class ProxTestCase(OptkitCTestCase):
 				clast = c
 				dlast = d
 				elast = e
+				# slast = s
 
 			self.free_var('f')
 			self.assertCall( lib.ok_device_reset() )
@@ -208,6 +217,7 @@ class ProxTestCase(OptkitCTestCase):
 		c = 1 + np.random.rand(m)
 		d = 1 + np.random.rand(m)
 		e = 1 + np.random.rand(m)
+		# s = 1 + np.random.rand(m)
 		# (add 1 above to make sure no divide by zero below)
 
 		hval = 0
@@ -253,12 +263,15 @@ class ProxTestCase(OptkitCTestCase):
 			fc = np.array([f_.c for f_ in f_list])
 			fd = np.array([f_.d for f_ in f_list])
 			fe = np.array([f_.e for f_ in f_list])
+			# fs = np.array([f_.s for f_ in f_list])
 			self.assertVecEqual( 0, fh, ATOLM, 0 )
 			self.assertVecEqual( fa, a , ATOLM, RTOL )
 			self.assertVecEqual( fb, b , ATOLM, RTOL )
 			self.assertVecEqual( fc, c , ATOLM, RTOL )
 			self.assertVecEqual( fd, d , ATOLM, RTOL )
 			self.assertVecEqual( fe, e , ATOLM, RTOL )
+			self.assertVecEqual( fe, e , ATOLM, RTOL )
+			# self.assertVecEqual( fs, s , ATOLM, RTOL )
 			# div
 			self.assertCall( lib.function_vector_div(f, v) )
 			self.assertCall( lib.function_vector_memcpy_av(f_ptr, f) )
@@ -273,25 +286,28 @@ class ProxTestCase(OptkitCTestCase):
 			fc = np.array([f_.c for f_ in f_list])
 			fd = np.array([f_.d for f_ in f_list])
 			fe = np.array([f_.e for f_ in f_list])
+			# fs = np.array([f_.s for f_ in f_list])
 			self.assertVecEqual( 0, fh, ATOLM, 0)
 			self.assertVecEqual( fa, a , ATOLM, RTOL )
 			self.assertVecEqual( fb, b , ATOLM, RTOL )
 			self.assertVecEqual( fc, c , ATOLM, RTOL )
 			self.assertVecEqual( fd, d , ATOLM, RTOL )
 			self.assertVecEqual( fe, e , ATOLM, RTOL )
+			# self.assertVecEqual( fs, s , ATOLM, RTOL )
 
 			self.free_vars('f', 'v')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_eval(self):
-		m, n = self.shape
+		m, _ = self.shape
 		scal = self.scalefactor
-		a = 10 * np.random.rand(m)
+		a = 1 + np.random.rand(m)
 		b = np.random.rand(m)
-		c = np.random.rand(m)
+		c = 1 + np.random.rand(m)
 		d = np.random.rand(m)
 		e = np.random.rand(m)
-		x_rand = np.random.rand(m)
+		# s = 1 + np.random.rand(m)
+		x_rand = 10 * np.random.rand(m)
 
 		for (gpu, single_precision) in self.CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
@@ -303,7 +319,6 @@ class ProxTestCase(OptkitCTestCase):
 			DIGITS = 7 - 2 * single_precision
 			RTOL = 10**(-DIGITS) * repeat_factor
 			ATOLM = RTOL * m**0.5 * repeat_factor
-			ATOLN = RTOL * n**0.5 * repeat_factor
 
 			f, f_py, f_ptr = self.register_fnvector(lib, m, 'f')
 			x, x_py, x_ptr = self.register_vector(lib, m, 'x')

@@ -7,7 +7,7 @@ namespace optkit {
 /* CUDA helper kernels */
 template<typename T>
 __global__ static void set_fn_vector(function_t_<T> * objs, const T a,
-	const T b, const T c, const T d, const T e,
+	const T b, const T c, const T d, const T e, // const T s,
 	const enum OPTKIT_SCALAR_FUNCTION h, uint n)
 {
 	uint tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -18,6 +18,7 @@ __global__ static void set_fn_vector(function_t_<T> * objs, const T a,
 		objs[i].d = d;
 		objs[i].e = e;
 		objs[i].h = h;
+		// objs[i].s = s;
 	}
 }
 
@@ -106,6 +107,7 @@ ok_status function_vector_calloc_(function_vector_<T> * f, size_t n)
 	optkit::set_fn_vector<<<grid_dim, kBlockSize>>>(f->objectives,
 		static_cast<T>(1), static_cast<T>(0), static_cast<T>(1),
 		static_cast<T>(0), static_cast<T>(0), FnZero, n);
+		// static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), FnZero, n);
 	cudaDeviceSynchronize();
 	return OK_STATUS_CUDA;
 }
@@ -194,6 +196,7 @@ ok_status function_vector_print_(function_vector_<T> * f)
 	ok_status err = OPTKIT_SUCCESS;
 	const char * fmt =
 		"h: %i, a: %0.2e, b: %0.2e, c: %0.2e, d: %0.2e, e: %0.2e\n";
+		// "h: %i, a: %0.2e, b: %0.2e, c: %0.2e, d: %0.2e, e: %0.2e, s: %0.2e\n";
 	OK_CHECK_FNVECTOR(f);
 
 	function_t obj_host[f->size];
@@ -203,6 +206,7 @@ ok_status function_vector_print_(function_vector_<T> * f)
 			printf(fmt, (int) obj_host[i].h, obj_host[i].a,
 				obj_host[i].b, obj_host[i].c, obj_host[i].d,
 				obj_host[i].e);
+				// obj_host[i].e, obj_host[i].s);
 	return err;
 }
 

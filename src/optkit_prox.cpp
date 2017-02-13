@@ -27,6 +27,7 @@ ok_status function_vector_calloc_(function_vector_<T> * f, size_t n)
 		f->objectives[i].c = kOne;
 		f->objectives[i].d = kZero;
 		f->objectives[i].e = kZero;
+		// f->objectives[i].s = kOne;
 	}
 	return OPTKIT_SUCCESS;
 }
@@ -122,10 +123,12 @@ ok_status function_vector_print_(function_vector_<T> * f)
 	size_t i;
 	const char * fmt =
 		"h: %i, a: %0.2e, b: %0.2e, c: %0.2e, d: %0.2e, e: %0.2e\n";
+		// "h: %i, a: %0.2e, b: %0.2e, c: %0.2e, d: %0.2e, e: %0.2e, s:%0.2e\n";
 	for (i = 0; i < f->size; ++i)
 		printf(fmt, (int) f->objectives[i].h, f->objectives[i].a,
 			f->objectives[i].b, f->objectives[i].c,
 			f->objectives[i].d, f->objectives[i].e);
+			// f->objectives[i].d, f->objectives[i].e, f->objectives[i].s);
 	return OPTKIT_SUCCESS;
 }
 

@@ -16,3 +16,6 @@ python/build/
 *cython*
 include/*graph*
 src/*graph*
+
+
+*block_prox*

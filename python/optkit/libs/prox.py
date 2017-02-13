@@ -31,7 +31,9 @@ def attach_prox_ctypes(lib, single_precision=False):
 					('b', ok_float),
 					('c', ok_float),
 					('d', ok_float),
-					('e', ok_float)]
+					('e', ok_float),
+					#('s', ok_float),
+					]
 	lib.function = ok_function
 	lib.function_p = POINTER(lib.function)
 

@@ -67,11 +67,14 @@ class OKFunctionEnums(object):
 	NegLog = ct.c_uint(13).value
 	Recipr = ct.c_uint(14).value
 	Square = ct.c_uint(15).value
+	Berhu = ct.c_uint(16).value
+	# AffQuad = ct.c_uint(15).value
 	__str2fun = {
 			'Zero': 0, 'Abs': 1, 'Exp': 2, 'Huber': 3,
 			'Identity': 4, 'IndBox01': 5, 'IndEq0': 6, 'IndGe0': 7,
 			'IndLe0': 8, 'Logistic': 9, 'MaxNeg0': 10, 'MaxPos0': 11,
-			'NegEntr': 12, 'NegLog': 13, 'Recipr': 14, 'Square': 15
+			'NegEntr': 12, 'NegLog': 13, 'Recipr': 14, 'Square': 15,
+			'Berhu': 16, #'AffQuad': 17,
 	}
 	min_enum = 0
 	max_enum = max(__str2fun.values())
@@ -102,12 +105,34 @@ class OKFunctionEnums(object):
 					'initialized with arguments of type:\n `int`, '
 					'`c_int`, or `str`\n')
 
-	def validate_ce(self, c_or_e):
-		if c_or_e < 0:
+	def validate_c(self, c):
+		if c <= 0:
 			raise ValueError(
-					'Function parameters `c` and `e` must be strictly '
-					'positive for function to be convex:\n '
+					'Function parameter `c` must be nonnegative '
+					'for function to be convex:\n '
 					'\tf(x) =def= c * h(ax - b) + dx + ex^2'
+					'\n, with h convex.'.format(name))
+		else:
+			return c
+
+	def validate_e(self, e):
+		if e < 0:
+			raise ValueError(
+					'Function parameter `e` must be nonnegative '
+					'for function to be convex:\n '
+					'\tf(x) =def= c * h(ax - b) + dx + ex^2'
+					'\n, with h convex.'.format(name))
+		else:
+			return e
+
+	def validate_s(self, s):
+		if s <= 0:
+			raise ValueError(
+					'Asymmetry parameter `s` must be strictly '
+					'positive for function to be convex:\n '
+					'\t s =def= 1 * I(ax < b) + scalar * I(ax > b)\n'
+					'and\n'
+					'\tf(x) =def= c * s * h(ax - b) + dx + ex^2'
 					'\n, with h convex.')
 		else:
-			return c_or_e
+			return s

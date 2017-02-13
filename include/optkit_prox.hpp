@@ -35,7 +35,9 @@ enum OPTKIT_SCALAR_FUNCTION {
 	FnNegEntr, /* f(x) = x log(x) */
 	FnNegLog, /* f(x) = -log(x) */
 	FnRecipr, /* f(x) = 1/x */
-	FnSquare /* f(x) = (1/2) x^2 */
+	FnSquare, /* f(x) = (1/2) x^2 */
+	FnBerhu /* f(x) = berhu(x) */
+	/*FnAffQuad*/ /* f(x) = |x|, x < 0; s/2 x^2, otherwise */
 };
 
 #ifdef __cplusplus
@@ -45,10 +47,16 @@ enum OPTKIT_SCALAR_FUNCTION {
 
 #ifdef __cplusplus
 /* f(x) = c * h(ax-b) + dx + ex^2 */
+/* 	let parameter s be an asymmetric scaling for variants of symmetric h;
+	i.e.,
+		c_{effective} 	= c * s, 	ax >= b;
+		  		  c,		otherwise,
+	and use c_{effective} in the definition of f(x) above.
+ */
 template<typename T>
 struct function_t_{
 	enum OPTKIT_SCALAR_FUNCTION h;
-	T a, b, c, d, e;
+	T a, b, c, d, e; //, s;
 };
 
 template<typename T>
@@ -68,7 +76,7 @@ typedef function_vector_<ok_float> function_vector;
 #else
 typedef struct function_t{
 	enum OPTKIT_SCALAR_FUNCTION h;
-	ok_float a, b, c, d, e;
+	ok_float a, b, c, d, e // s;
 } function_t;
 
 typedef struct function_vector {
@@ -326,6 +334,31 @@ __DEVICE__ inline T ProxSquare(T v, T rho) { return rho * v / (1 + rho); }
 template<typename T>
 __DEVICE__ inline T ProxZero(T v, T rho) { return v; }
 
+
+template<typename T>
+__DEVICE__ inline T ProxBerhu(T v, T rho)
+{
+	const T ri = 1 / rho;
+	const T absv = Abs(v);
+	if (absv > 1 + ri)
+		return rho * v / (1 + rho);
+	else if (v > ri)
+		return v - ri;
+	else if (v > -ri)
+		return static_cast<T>(0);
+	else
+		return v + ri;
+}
+
+/*
+template<typename T>
+__DEVICE__ inline T ProxAffQuad(T v, T rho)
+{
+	return v < -1 / rho ? v + 1 / rho :
+		v < 0 ? 0 : rho * v / (1 + rho);
+}
+*/
+
 /* Evaluates the proximal operator of f. */
 template<typename T>
 __DEVICE__ inline ok_float ProxEval(const function_t_<T> * f_obj, T v, T rho)
@@ -335,9 +368,11 @@ __DEVICE__ inline ok_float ProxEval(const function_t_<T> * f_obj, T v, T rho)
 	const T c = f_obj->c;
 	const T d = f_obj->d;
 	const T e = f_obj->e;
+	// const T s = f_obj->s;
 
 	v = a * (v * rho - d) / (e + rho) - b;
 	rho = (e + rho) / (c * a * a);
+	// rho *= v < 0 ?  1 : 1 / s;
 
 	switch ( f_obj->h ) {
 	case FnAbs :
@@ -385,6 +420,14 @@ __DEVICE__ inline ok_float ProxEval(const function_t_<T> * f_obj, T v, T rho)
 	case FnSquare :
 		v = ProxSquare<T>(v, rho);
 		break;
+	case FnBerhu:
+		v = ProxBerhu<T>(v, rho);
+		break;
+	/*
+	case FnAffQuad:
+		v = ProxAffQuad(v, rho);
+		break;
+	*/
 	default :
 		v = ProxZero<T>(v, rho);
 		break;
@@ -469,13 +512,31 @@ __DEVICE__ inline T FuncZero(T x)
 	return static_cast<T>(0);
 }
 
+template<typename T>
+__DEVICE__ inline T FuncBerhu(T x)
+{
+	T xabs = Abs(x);
+	T xabs2 = xabs * xabs;
+	return xabs < 1 ? xabs : (xabs2 + 1)/ 2;
+}
+
+/*
+template<typename T>
+__DEVICE__ inline T FuncAffQuad(T x)
+{
+	return x < 0 ? -x : x * x;
+}
+*/
+
 /* Evaluates the function f. */
 template<typename T>
 __DEVICE__ inline T FuncEval(const function_t_<T> * f_obj, T x)
 {
 	T dx = f_obj->d * x;
 	T ex = f_obj->e * x * x / 2;
+	// T asymm = 1;
 	x = f_obj->a * x - f_obj->b;
+	// asymm = x < 0 ? 1 : f_obj->s;
 
 	switch ( f_obj->h ) {
 	case FnAbs:
@@ -523,12 +584,20 @@ __DEVICE__ inline T FuncEval(const function_t_<T> * f_obj, T x)
 	case FnSquare:
 		x = FuncSquare<T>(x);
 		break;
+	case FnBerhu:
+		x = FuncBerhu<T>(x);
+		break;
+	/*
+	case FnAffQuad:
+		x = FuncAffQuad(x;
+		break;
+	*/
 	default:
 		x = FuncZero<T>(x);
 		break;
 	}
-
 	return f_obj->c * x + dx + ex;
+	// return asymm * f_obj->c * x + dx + ex;
 }
 
 template<typename T>
