@@ -22,6 +22,7 @@ class PogsCommonTypes(object):
 				self.__c = np.ones(self.size)
 				self.__d = np.zeros(self.size)
 				self.__e = np.zeros(self.size)
+				self.__s = np.ones(self.size)
 				if 'f' in params:
 					self.copy_from(params['f'])
 				else:
@@ -73,16 +74,21 @@ class PogsCommonTypes(object):
 						start_source : end_source]
 				self.__e[start_target : end_target] = obj.__e[
 						start_source : end_source]
+				self.__s[start_target : end_target] = obj.__s[
+						start_source : end_source]
 
 			def list(self, function_t):
-				return [function_t(self.__h[t], self.__a[t], self.__b[t],
-						self.__c[t], self.__d[t], self.__e[t]) for t in
-						xrange(self.size)]
+				return [
+						function_t(
+							self.__h[t], self.__a[t], self.__b[t],
+							self.__c[t], self.__d[t], self.__e[t],
+							self.__s[t],
+							)
+						for t in xrange(self.size)]
 
 			@property
 			def arrays(self):
-				return self.__h, self.__a, self.__b, self.__c, self.__d, \
-					   self.__e
+				return self.h, self.a, self.b, self.c, self.d, self.e, self.s
 
 			@property
 			def h(self):
@@ -108,6 +114,9 @@ class PogsCommonTypes(object):
 			def e(self):
 				return self.__e
 
+			@property
+			def s(self):
+				return self.__s
 
 			def set(self, **params):
 				if self.size == 0:
@@ -129,7 +138,7 @@ class PogsCommonTypes(object):
 							'to an {} of length {}.'
 							''.format(start, end, Objective, self.size))
 
-				for item in ['a', 'b', 'c', 'd', 'e', 'h']:
+				for item in ['a', 'b', 'c', 'd', 'e', 's', 'h']:
 					if item in params:
 						if isinstance(params[item],(list, np.ndarray)):
 							if len(params[item]) != range_length:
@@ -186,11 +195,9 @@ class PogsCommonTypes(object):
 
 				if 'c' in params:
 					if isinstance(params['c'], (int, float)):
-						cval = const_iterator(
-								self.enums.validate_ce(params['c']),
-								range_length)
+						cval = const_iterator(params['c'], range_length)
 					elif isinstance(params['c'], (list, np.ndarray)):
-						cval = params['c']
+						cval = map(self.enums.validate_c, params['c'])
 					else:
 						raise TypeError(
 								'if specified, argument `c` must be '
@@ -216,11 +223,9 @@ class PogsCommonTypes(object):
 
 				if 'e' in params:
 					if isinstance(params['e'], (int, float)):
-						e_val = const_iterator(
-								self.enums.validate_ce(params['e']),
-								range_length)
+						e_val = const_iterator(params['e'], range_length)
 					elif isinstance(params['e'], (list, np.ndarray)):
-						e_val = params['e']
+						e_val = map(self.enums.validate_e, params['e'])
 					else:
 						raise TypeError(
 								'if specified, argument `e` must be '
@@ -230,12 +235,27 @@ class PogsCommonTypes(object):
 					for idx, val in enumerate(e_val):
 						self.__e[r[idx]] = val
 
+				if 's' in params:
+					if isinstance(params['s'], (int, float)):
+						s_val = const_iterator(params['s'], range_length)
+					elif isinstance(params['s'], (list, np.ndarray)):
+						s_val = map(self.enums.validate_s, params['s'])
+					else:
+						raise TypeError(
+								'if specified, argument `s` must be '
+								'one of {}, {}, {} or {}'
+								''.format(int, float, list, np.ndarray))
+
+					for idx, val in enumerate(s_val):
+						self.__s[r[idx]] = val
+
 			def __str__(self):
 				return str(
-						'size: {}\nh: {}\na: {}\nb: {}\nc: {}\nd: {}\ne: {}'
+						'size: {}\nh: {}\na: {}\nb: {}\nc: {}\nd: '
+						'{}\ne: {}\ns: {}'
 						''.format(
 								self.size, self.h, self.a, self.b, self.c,
-								self.d, self.e))
+								self.d, self.e, self.s))
 
 		self.Objective = Objective
 
