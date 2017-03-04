@@ -71,14 +71,15 @@ class OKFunctionEnums(object):
 	AsymmHuber = ct.c_uint(17).value
 	AsymmSquare = ct.c_uint(18).value
 	AsymmBerhu = ct.c_uint(19).value
-	# AffQuad = ct.c_uint(20).value
+	AffQuad = ct.c_uint(20).value
+	# AffExp = ct.c_uint(21).value
 	__str2fun = {
 			'Zero': 0, 'Abs': 1, 'Exp': 2, 'Huber': 3,
 			'Identity': 4, 'IndBox01': 5, 'IndEq0': 6, 'IndGe0': 7,
 			'IndLe0': 8, 'Logistic': 9, 'MaxNeg0': 10, 'MaxPos0': 11,
 			'NegEntr': 12, 'NegLog': 13, 'Recipr': 14, 'Square': 15,
 			'Berhu': 16, 'AsymmHuber': 17, 'AsymmSquare': 18,
-			'AsymmBerhu': 19,  #'AffQuad': 20,
+			'AsymmBerhu': 19,  'AffQuad': 20, #'AffExp': 21,
 	}
 	min_enum = 0
 	max_enum = max(__str2fun.values())

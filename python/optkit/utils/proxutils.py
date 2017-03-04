@@ -137,117 +137,123 @@ def enum_to_func(e):
 	if e == 17: return 'AsymmHuber'
 	if e == 18: return 'AsymmSquare'
 	if e == 19: return 'AsymmBerhu'
-	# if e == 20: return 'AffQuad'
+	if e == 20: return 'AffQuad'
+	# if e == 21: return 'AffExp'
+
+def ffunc(h, xi):
+	func = enum_to_func(h).replace('Asymm', '')
+	if func == 'Abs':
+		return abs(xi)
+	elif func == 'NegEntr':
+		return 0 if xi <= 0 else xi * np.log(xi)
+	elif func =='Exp':
+		return np.exp(xi)
+	elif func == 'Huber':
+		return abs(xi) - 0.5 if xi >=1 else 0.5 * xi * xi
+	elif func == 'Identity':
+		return xi
+	elif func in ('IndBox01','IndEq0','IndGe0','IndLe0','Zero'):
+		return 0
+	elif func == 'Logistic':
+		return np.log(1 + np.exp(xi))
+	elif func == 'MaxNeg0':
+		return -xi * (xi < 0)
+	elif func == 'MaxPos0':
+		return xi * (xi > 0)
+	elif func == 'NegLog':
+		return -1 * np.log(xi)
+	elif func == 'Recipr':
+		return (xi**-1) * (xi >= 0)
+	elif func == 'Square':
+		return 0.5 * xi**2
+	elif func == 'Berhu':
+		return abs(xi) if xi < 1 else (xi**2 + 1) / 2
+	elif func == 'AffQuad':
+		return -xi if xi < 0 else 0.5 * xi * xi
+	elif func == 'AffExp':
+		raise NotImplementedError
+	else:
+		return 0
+	return h
 
 def func_eval_python(f, x):
 	"""
 	Assumes f is a list of FunctionObject instances, where each element has
 	fields a, b, c, d and e of type float32/64 and a field h of type uint
 	"""
-	def ffunc(h, xi):
-		func = enum_to_func(h).replace('Asymm', '')
-		if func == 'Abs':
-			return abs(xi)
-		elif func == 'NegEntr':
-			return 0 if xi <= 0 else xi * np.log(xi)
-		elif func =='Exp':
-			return np.exp(xi)
-		elif func == 'Huber':
-			return abs(xi) - 0.5 if xi >=1 else 0.5 * xi * xi
-		elif func == 'Identity':
-			return xi
-		elif func in ('IndBox01','IndEq0','IndGe0','IndLe0','Zero'):
-			return 0
-		elif func == 'Logistic':
-			return np.log(1 + np.exp(xi))
-		elif func == 'MaxNeg0':
-			return -xi * (xi < 0)
-		elif func == 'MaxPos0':
-			return xi * (xi > 0)
-		elif func == 'NegLog':
-			return -1 * np.log(xi)
-		elif func == 'Recipr':
-			return (xi**-1) * (xi >= 0)
-		elif func == 'Square':
-			return 0.5 * xi**2
-		elif func == 'Berhu':
-			return abs(xi) if xi < 1 else (xi**2 + 1) / 2
-		# elif func == 'AffQuad':
-			# return -x if x < - 1 / rho else xi**2)
-		else:
-			return 0
-		return h
-
 	val = 0
 	for i, ff in enumerate(f):
 		xi = ff.a * x[i] - ff.b
 		c = ff.c
-		if 'Asymm' in enum_to_func(ff.h):
+		funcname = enum_to_func(ff.h)
+		if 'Asymm' in funcname or funcname in ('AffQuad', 'AffExp'):
 			c *= 1. if xi < 0 else ff.s
 		xi = ffunc(ff.h, xi)
 		val += c * xi + ff.d * x[i] + 0.5 * ff.e * x[i] * x[i]
 	return val
 
+def pfunc(h, xi, rhoi):
+	func = enum_to_func(h).replace('Asymm', '')
+	if func =='Abs':
+		return max(xi - 1./rhoi, 0) + min(xi + 1./rhoi, 0)
+	elif func == 'NegEntr':
+		return (lambertw_exp(rhoi*xi - 1) * np.log(rhoi)) / rhoi
+	elif func == 'Exp':
+		return xi - lambertw_exp(xi - np.log(rhoi))
+	elif func == 'Huber':
+		return xi * rhoi / (1.+rhoi) if abs(xi) < (1 + 1./rhoi) \
+			else xi - np.sign(xi) / rhoi
+	elif func == 'Identity':
+		return xi - 1./rhoi
+	elif func == 'IndBox01':
+		return min(max(xi, 0), 1)
+	elif func == 'IndEq0':
+		return 0
+	elif func == 'IndGe0':
+		return max(xi, 0)
+	elif func == 'IndLe0':
+		return min(xi, 0)
+	elif func == 'Logistic':
+		fprox = proxlog(xi, rhoi)
+	elif func == 'MaxNeg0':
+		return xi + 1./rhoi if xi <= -1./rhoi else max(xi, 0)
+	elif func == 'MaxPos0':
+		return xi - 1./rhoi if xi >= 1./rhoi else min(xi ,0)
+	elif func == 'NegLog':
+		return (xi + (xi**2 + 4/rhoi)**0.5) / 2
+	elif func == 'Recipr':
+		return cubicsolve(-max(xi, 0), 0, -1./rhoi)
+	elif func == 'Square':
+		return rhoi * xi / (1. + rhoi)
+	elif func == 'Berhu':
+		if abs(xi) > 1. + 1. / rhoi:
+			return rhoi * xi / (1. + rhoi)
+		elif xi > 1. / rhoi:
+			return xi - 1. / rhoi
+		elif xi > -1 / rhoi:
+			return 0.
+		else:
+			return xi + 1 / rhoi
+	elif func == 'AffQuad':
+		return xi - 1. / rhoi if xi <= - 1. / rhoi else max(
+				rhoi * xi / (1. + rhoi), 0)
+	elif func == 'AffExp':
+		raise NotImplementedError
+	else:
+		return xi
+	return fprox
 
 def prox_eval_python(f, rho, x):
 	"""
 	Assumes f is a list of FunctionObject instances, where each element has
 	fields a, b, c, d and e of type float32/64 and a field h of type uint
 	"""
-	def pfunc(h, xi, rhoi):
-		func = enum_to_func(h).replace('Asymm', '')
-		if func =='Abs':
-			return max(xi - 1./rhoi, 0) + min(xi + 1./rhoi, 0)
-		elif func == 'NegEntr':
-			return (lambertw_exp(rhoi*xi - 1) * np.log(rhoi)) / rhoi
-		elif func == 'Exp':
-			return xi - lambertw_exp(xi - np.log(rhoi))
-		elif func == 'Huber':
-			return xi * rhoi / (1.+rhoi) if abs(xi) < (1 + 1./rhoi) \
-				else xi - np.sign(xi) / rhoi
-		elif func == 'Identity':
-			return xi - 1./rhoi
-		elif func == 'IndBox01':
-			return min(max(xi, 0), 1)
-		elif func == 'IndEq0':
-			return 0
-		elif func == 'IndGe0':
-			return max(xi, 0)
-		elif func == 'IndLe0':
-			return min(xi, 0)
-		elif func == 'Logistic':
-			fprox = proxlog(xi, rhoi)
-		elif func == 'MaxNeg0':
-			return xi + 1./rhoi if xi <= -1./rhoi else max(xi, 0)
-		elif func == 'MaxPos0':
-			return xi - 1./rhoi if xi >= 1./rhoi else min(xi ,0)
-		elif func == 'NegLog':
-			return (xi + (xi**2 + 4/rhoi)**0.5) / 2
-		elif func == 'Recipr':
-			return cubicsolve(-max(xi, 0), 0, -1./rhoi)
-		elif func == 'Square':
-			return rhoi * xi / (1. + rhoi)
-		elif func == 'Berhu':
-			if abs(xi) > 1. + 1. / rhoi:
-				return rhoi * xi / (1. + rhoi)
-			elif xi > 1. / rhoi:
-				return xi - 1. / rhoi
-			elif xi > -1 / rhoi:
-				return 0.
-			else:
-				return xi + 1 / rhoi
-		# elif func == 'AffQuad':
-			# return xi - 1. / rho if xi <= - 1. / rho else max(
-				# rho * xi / (1. + rho), 0)
-		else:
-			return xi
-		return fprox
-
 	def fprox(f_, x_):
 		x_ = float(x_)
 		x_ = f_.a * (x_ * rho - f_.d) / (f_.e + rho) - f_.b
 		rho_ = (f_.e + rho) / (f_.c * f_.a * f_.a)
-		if 'Asymm' in enum_to_func(f_.h):
+		funcname = enum_to_func(f_.h)
+		if 'Asymm' in funcname or funcname in ('AffQuad', 'AffExp'):
 			rho_ *= 1. if x_ < 0 else  1. / f_.s
 		x_ = pfunc(f_.h, x_, rho_)
 		return (x_ + f_.b) / f_.a

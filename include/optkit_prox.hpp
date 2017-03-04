@@ -39,9 +39,9 @@ enum OPTKIT_SCALAR_FUNCTION {
 	FnBerhu, /* f(x) = berhu(x) */
 	FnAsymmHuber, /* f(x) = t * huber(x); t = 1, x < 0; t = s otherwise */
 	FnAsymmSquare, /* f(x) = (t/2) x^2; t = 1, x < 0; t = s otherwise */
-	FnAsymmBerhu /* f(x) = t * berhu(x); t = 1, x < 0; t = s otherwise */
-	/*FnAffQuad*/ /* f(x) =  1/s * |x|, x < 0; 1/2 x^2, otherwise */
-	/*FnAffExp*/ /* f(x) = 1/s * |x|, x < 0; e^x, otherwise */
+	FnAsymmBerhu, /* f(x) = t * berhu(x); t = 1, x < 0; t = s otherwise */
+	FnAffQuad, /* f(x) = |x|, x < 0; s/2 x^2, otherwise */
+	/*FnAffExp,*/ /* f(x) = |x|, x < 0; s * e^x, otherwise */
 };
 
 #ifdef __cplusplus
@@ -354,14 +354,20 @@ __DEVICE__ inline T ProxBerhu(T v, T rho)
 		return v + ri;
 }
 
-/*
 template<typename T>
 __DEVICE__ inline T ProxAffQuad(T v, T rho)
 {
 	return v < -1 / rho ? v + 1 / rho :
 		v < 0 ? 0 : rho * v / (1 + rho);
 }
-*/
+
+// template<typename T>
+// __DEVICE__ inline T ProxAffExp(T v, T rho)
+// {
+// 	return v < -1 / rho ? v + 1 / rho :
+// 		v < 0 ? 0 : rho * v / (1 + rho);
+// v - LambertWExp<T>((v) / rho)
+// }
 
 /* Evaluates the proximal operator of f. */
 template<typename T>
@@ -438,10 +444,14 @@ __DEVICE__ inline ok_float ProxEval(const function_t_<T> * f_obj, T v, T rho)
 		rho *= v < 0 ?  kOne : kOne / s;
 		v = ProxBerhu<T>(v, rho);
 		break;
-	/*
 	case FnAffQuad:
 		rho *= v < 0 ?  1 : 1 / s;
-		v = ProxAffQuad(v, rho);
+		v = ProxAffQuad<T>(v, rho);
+		break;
+	/*
+	case FnAffExp:
+		rho *= v < 0 ?  1 : 1 / s;
+		v = ProxAffExp<T>(v, rho);
 		break;
 	*/
 	default :
@@ -536,11 +546,17 @@ __DEVICE__ inline T FuncBerhu(T x)
 	return xabs < 1 ? xabs : (xabs2 + 1)/ 2;
 }
 
-/*
 template<typename T>
 __DEVICE__ inline T FuncAffQuad(T x)
 {
-	return x < 0 ? -x : x * x;
+	return x < 0 ? -x : x * x / 2;
+}
+
+/*
+template<typename T>
+__DEVICE__ inline T FuncAffExp(T x)
+{
+	return x < 0 ? -x : Exp(x);
 }
 */
 
@@ -612,9 +628,12 @@ __DEVICE__ inline T FuncEval(const function_t_<T> * f_obj, T x)
 	case FnAsymmBerhu:
 		x = asymm * FuncBerhu<T>(x);
 		break;
-	/*
 	case FnAffQuad:
-		x = asymm * FuncAffQuad(x;
+		x = asymm * FuncAffQuad<T>(x);
+		break;
+	/*
+	case FnAffExp:
+		x = asymm * FuncAffExp<T>(x);
 		break;
 	*/
 	default:
