@@ -134,8 +134,10 @@ def enum_to_func(e):
 	if e == 14: return 'Recipr'
 	if e == 15: return 'Square'
 	if e == 16: return 'Berhu'
-	# if e == 17: return 'AffQuad'
-
+	if e == 17: return 'AsymmHuber'
+	if e == 18: return 'AsymmSquare'
+	if e == 19: return 'AsymmBerhu'
+	# if e == 20: return 'AffQuad'
 
 def func_eval_python(f, x):
 	"""
@@ -143,7 +145,7 @@ def func_eval_python(f, x):
 	fields a, b, c, d and e of type float32/64 and a field h of type uint
 	"""
 	def ffunc(h, xi):
-		func = enum_to_func(h)
+		func = enum_to_func(h).replace('Asymm', '')
 		if func == 'Abs':
 			return abs(xi)
 		elif func == 'NegEntr':
@@ -151,7 +153,7 @@ def func_eval_python(f, x):
 		elif func =='Exp':
 			return np.exp(xi)
 		elif func == 'Huber':
-			return abs(xi) - 0.5 if xi>=1 else 0.5 * xi * xi
+			return abs(xi) - 0.5 if xi >=1 else 0.5 * xi * xi
 		elif func == 'Identity':
 			return xi
 		elif func in ('IndBox01','IndEq0','IndGe0','IndLe0','Zero'):
@@ -179,10 +181,11 @@ def func_eval_python(f, x):
 	val = 0
 	for i, ff in enumerate(f):
 		xi = ff.a * x[i] - ff.b
-		# asymm = 1 if xi < 0 else = f_.s
+		c = ff.c
+		if 'Asymm' in enum_to_func(ff.h):
+			c *= 1. if xi < 0 else ff.s
 		xi = ffunc(ff.h, xi)
-		# xi = asymm * ffunc(ff.h, xi)
-		val += ff.c * xi + ff.d * x[i] + 0.5 * ff.e * x[i] * x[i]
+		val += c * xi + ff.d * x[i] + 0.5 * ff.e * x[i] * x[i]
 	return val
 
 
@@ -192,7 +195,7 @@ def prox_eval_python(f, rho, x):
 	fields a, b, c, d and e of type float32/64 and a field h of type uint
 	"""
 	def pfunc(h, xi, rhoi):
-		func = enum_to_func(h)
+		func = enum_to_func(h).replace('Asymm', '')
 		if func =='Abs':
 			return max(xi - 1./rhoi, 0) + min(xi + 1./rhoi, 0)
 		elif func == 'NegEntr':
@@ -244,7 +247,8 @@ def prox_eval_python(f, rho, x):
 		x_ = float(x_)
 		x_ = f_.a * (x_ * rho - f_.d) / (f_.e + rho) - f_.b
 		rho_ = (f_.e + rho) / (f_.c * f_.a * f_.a)
-		# rho_ = rho if x_ < 0 else  rho / f_.s
+		if 'Asymm' in enum_to_func(f_.h):
+			rho_ *= 1. if x_ < 0 else  1. / f_.s
 		x_ = pfunc(f_.h, x_, rho_)
 		return (x_ + f_.b) / f_.a
 

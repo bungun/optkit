@@ -18,7 +18,7 @@ __global__ static void set_fn_vector(function_t_<T> * objs, const T a,
 		objs[i].d = d;
 		objs[i].e = e;
 		objs[i].h = h;
-		// objs[i].s = s;
+		objs[i].s = s;
 	}
 }
 
@@ -106,8 +106,8 @@ ok_status function_vector_calloc_(function_vector_<T> * f, size_t n)
 	grid_dim = calc_grid_dim(n);
 	optkit::set_fn_vector<<<grid_dim, kBlockSize>>>(f->objectives,
 		static_cast<T>(1), static_cast<T>(0), static_cast<T>(1),
-		static_cast<T>(0), static_cast<T>(0), FnZero, n);
-		// static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), FnZero, n);
+		static_cast<T>(0), static_cast<T>(0), static_cast<T>(1), FnZero,
+		n);
 	cudaDeviceSynchronize();
 	return OK_STATUS_CUDA;
 }
@@ -195,8 +195,7 @@ ok_status function_vector_print_(function_vector_<T> * f)
 	size_t i;
 	ok_status err = OPTKIT_SUCCESS;
 	const char * fmt =
-		"h: %i, a: %0.2e, b: %0.2e, c: %0.2e, d: %0.2e, e: %0.2e\n";
-		// "h: %i, a: %0.2e, b: %0.2e, c: %0.2e, d: %0.2e, e: %0.2e, s: %0.2e\n";
+		"h: %i, a:%1.2e, b:%1.2e, c:%1.2e, d:%1.2e, e:%1.2e, s:%1.2e\n";
 	OK_CHECK_FNVECTOR(f);
 
 	function_t obj_host[f->size];
@@ -205,8 +204,7 @@ ok_status function_vector_print_(function_vector_<T> * f)
 		for (i = 0; i < f->size; ++i)
 			printf(fmt, (int) obj_host[i].h, obj_host[i].a,
 				obj_host[i].b, obj_host[i].c, obj_host[i].d,
-				obj_host[i].e);
-				// obj_host[i].e, obj_host[i].s);
+				obj_host[i].e, obj_host[i].s);
 	return err;
 }
 

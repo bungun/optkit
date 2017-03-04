@@ -32,7 +32,7 @@ class PogsBindingsTestCase(OptkitTestCase):
 	def test_objective(self):
 		m = self.shape[0]
 		f = PogsObjective(m, h='Abs', b=1, d=2, e=3)
-		h, a, b, c, d, e = f.arrays
+		h, a, b, c, d, e, s = f.arrays
 
 		for i in xrange(m):
 			self.assertEqual(h[i], f.enums.dict['Abs'])
@@ -41,6 +41,7 @@ class PogsBindingsTestCase(OptkitTestCase):
 			self.assertAlmostEqual(c[i], 1)
 			self.assertAlmostEqual(d[i], 2)
 			self.assertAlmostEqual(e[i], 3)
+			self.assertAlmostEqual(s[i], 1)
 
 		# set block by scalar
 		f.set(end=int(m / 2), b=0.5)

@@ -36,8 +36,12 @@ enum OPTKIT_SCALAR_FUNCTION {
 	FnNegLog, /* f(x) = -log(x) */
 	FnRecipr, /* f(x) = 1/x */
 	FnSquare, /* f(x) = (1/2) x^2 */
-	FnBerhu /* f(x) = berhu(x) */
-	/*FnAffQuad*/ /* f(x) = |x|, x < 0; s/2 x^2, otherwise */
+	FnBerhu, /* f(x) = berhu(x) */
+	FnAsymmHuber, /* f(x) = t * huber(x); t = 1, x < 0; t = s otherwise */
+	FnAsymmSquare, /* f(x) = (t/2) x^2; t = 1, x < 0; t = s otherwise */
+	FnAsymmBerhu /* f(x) = t * berhu(x); t = 1, x < 0; t = s otherwise */
+	/*FnAffQuad*/ /* f(x) =  1/s * |x|, x < 0; 1/2 x^2, otherwise */
+	/*FnAffExp*/ /* f(x) = 1/s * |x|, x < 0; e^x, otherwise */
 };
 
 #ifdef __cplusplus
@@ -56,7 +60,7 @@ enum OPTKIT_SCALAR_FUNCTION {
 template<typename T>
 struct function_t_{
 	enum OPTKIT_SCALAR_FUNCTION h;
-	T a, b, c, d, e; //, s;
+	T a, b, c, d, e, s;
 };
 
 template<typename T>
@@ -76,7 +80,7 @@ typedef function_vector_<ok_float> function_vector;
 #else
 typedef struct function_t{
 	enum OPTKIT_SCALAR_FUNCTION h;
-	ok_float a, b, c, d, e // s;
+	ok_float a, b, c, d, e, s;
 } function_t;
 
 typedef struct function_vector {
@@ -368,11 +372,10 @@ __DEVICE__ inline ok_float ProxEval(const function_t_<T> * f_obj, T v, T rho)
 	const T c = f_obj->c;
 	const T d = f_obj->d;
 	const T e = f_obj->e;
-	// const T s = f_obj->s;
+	const T s = f_obj->s;
 
 	v = a * (v * rho - d) / (e + rho) - b;
 	rho = (e + rho) / (c * a * a);
-	// rho *= v < 0 ?  1 : 1 / s;
 
 	switch ( f_obj->h ) {
 	case FnAbs :
@@ -423,8 +426,21 @@ __DEVICE__ inline ok_float ProxEval(const function_t_<T> * f_obj, T v, T rho)
 	case FnBerhu:
 		v = ProxBerhu<T>(v, rho);
 		break;
+	case FnAsymmHuber :
+		rho *= v < 0 ?  kOne : kOne / s;
+		v = ProxHuber<T>(v, rho);
+		break;
+	case FnAsymmSquare :
+		rho *= v < 0 ?  kOne : kOne / s;
+		v = ProxSquare<T>(v, rho);
+		break;
+	case FnAsymmBerhu :
+		rho *= v < 0 ?  kOne : kOne / s;
+		v = ProxBerhu<T>(v, rho);
+		break;
 	/*
 	case FnAffQuad:
+		rho *= v < 0 ?  1 : 1 / s;
 		v = ProxAffQuad(v, rho);
 		break;
 	*/
@@ -532,11 +548,11 @@ __DEVICE__ inline T FuncAffQuad(T x)
 template<typename T>
 __DEVICE__ inline T FuncEval(const function_t_<T> * f_obj, T x)
 {
-	T dx = f_obj->d * x;
-	T ex = f_obj->e * x * x / 2;
-	// T asymm = 1;
+	const T dx = f_obj->d * x;
+	const T ex = f_obj->e * x * x / 2;
+	const T asymm = x < 0 ? kOne : f_obj->s;
+
 	x = f_obj->a * x - f_obj->b;
-	// asymm = x < 0 ? 1 : f_obj->s;
 
 	switch ( f_obj->h ) {
 	case FnAbs:
@@ -587,9 +603,18 @@ __DEVICE__ inline T FuncEval(const function_t_<T> * f_obj, T x)
 	case FnBerhu:
 		x = FuncBerhu<T>(x);
 		break;
+	case FnAsymmHuber:
+		x = asymm * FuncHuber<T>(x);
+		break;
+	case FnAsymmSquare:
+		x = asymm * FuncSquare<T>(x);
+		break;
+	case FnAsymmBerhu:
+		x = asymm * FuncBerhu<T>(x);
+		break;
 	/*
 	case FnAffQuad:
-		x = FuncAffQuad(x;
+		x = asymm * FuncAffQuad(x;
 		break;
 	*/
 	default:
@@ -597,7 +622,6 @@ __DEVICE__ inline T FuncEval(const function_t_<T> * f_obj, T x)
 		break;
 	}
 	return f_obj->c * x + dx + ex;
-	// return asymm * f_obj->c * x + dx + ex;
 }
 
 template<typename T>

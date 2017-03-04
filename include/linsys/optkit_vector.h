@@ -110,6 +110,13 @@ ok_status vector_min(const vector * v, ok_float * minval);
 ok_status vector_max(const vector * v, ok_float * maxval);
 ok_status vector_uniform_rand(vector * v, const ok_float minval,
 	const ok_float maxval);
+// consider changing vector_min, vector_max, vector_indmin to vector_reduce_min
+// vector_max_reduce(const vector * v, ok_float * a);
+// vector_max_elemwise_vs(const vector * v, const ok_float a);
+// vector_max_elemwise_vv(constvector * v, const vector * u);
+// vector_min_elemwise_vs(const vector * v, const ok_float a);
+// vector_min_elemwise_vv(constvector * v, const vector * u);
+
 
 #ifdef __cplusplus
 typedef vector_<size_t> indvector;
