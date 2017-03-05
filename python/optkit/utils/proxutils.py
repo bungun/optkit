@@ -100,7 +100,6 @@ def proxlog(xi,rhoi):
 		x -= f/g
 		x = max(min(x, u), l)
 
-
 	# guarded method if not converged
 	i=0
 	while i < 100 and u-l > 1e-10:
@@ -137,8 +136,8 @@ def enum_to_func(e):
 	if e == 17: return 'AsymmHuber'
 	if e == 18: return 'AsymmSquare'
 	if e == 19: return 'AsymmBerhu'
-	if e == 20: return 'AffQuad'
-	# if e == 21: return 'AffExp'
+	if e == 20: return 'AbsQuad'
+	if e == 21: return 'AbsExp'
 
 def ffunc(h, xi):
 	func = enum_to_func(h).replace('Asymm', '')
@@ -168,10 +167,10 @@ def ffunc(h, xi):
 		return 0.5 * xi**2
 	elif func == 'Berhu':
 		return abs(xi) if xi < 1 else (xi**2 + 1) / 2
-	elif func == 'AffQuad':
+	elif func == 'AbsQuad':
 		return -xi if xi < 0 else 0.5 * xi * xi
-	elif func == 'AffExp':
-		raise NotImplementedError
+	elif func == 'AbsExp':
+		return -xi if xi < 0 else np.exp(xi)
 	else:
 		return 0
 	return h
@@ -186,7 +185,7 @@ def func_eval_python(f, x):
 		xi = ff.a * x[i] - ff.b
 		c = ff.c
 		funcname = enum_to_func(ff.h)
-		if 'Asymm' in funcname or funcname in ('AffQuad', 'AffExp'):
+		if 'Asymm' in funcname or funcname in ('AbsQuad', 'AbsExp'):
 			c *= 1. if xi < 0 else ff.s
 		xi = ffunc(ff.h, xi)
 		val += c * xi + ff.d * x[i] + 0.5 * ff.e * x[i] * x[i]
@@ -234,11 +233,12 @@ def pfunc(h, xi, rhoi):
 			return 0.
 		else:
 			return xi + 1 / rhoi
-	elif func == 'AffQuad':
-		return xi - 1. / rhoi if xi <= - 1. / rhoi else max(
+	elif func == 'AbsQuad':
+		return xi + 1. / rhoi if xi <= - 1. / rhoi else max(
 				rhoi * xi / (1. + rhoi), 0)
-	elif func == 'AffExp':
-		raise NotImplementedError
+	elif func == 'AbsExp':
+		return xi + 1. / rhoi if xi <= -1. / rhoi else \
+				0 if xi <= 1. / rhoi else xi - lambertw_exp(xi - np.log(rhoi))
 	else:
 		return xi
 	return fprox
@@ -253,7 +253,7 @@ def prox_eval_python(f, rho, x):
 		x_ = f_.a * (x_ * rho - f_.d) / (f_.e + rho) - f_.b
 		rho_ = (f_.e + rho) / (f_.c * f_.a * f_.a)
 		funcname = enum_to_func(f_.h)
-		if 'Asymm' in funcname or funcname in ('AffQuad', 'AffExp'):
+		if 'Asymm' in funcname or funcname in ('AbsQuad', 'AbsExp'):
 			rho_ *= 1. if x_ < 0 else  1. / f_.s
 		x_ = pfunc(f_.h, x_, rho_)
 		return (x_ + f_.b) / f_.a
