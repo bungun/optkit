@@ -235,65 +235,70 @@ class PogsTestCase(OptkitCPogsTestCase):
 			self.register_exit(lib.ok_device_reset)
 
 			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
-				hdl = self.register_blas_handle(lib, 'hdl')
-				f, f_py, g, g_py = self.gen_registered_pogs_fns(lib, m, n)
-				f_list = [lib.function(*f_) for f_ in f_py]
-				g_list = [lib.function(*g_) for g_ in g_py]
+				for obj in ('Abs', 'AbsQuad', 'AbsExp', 'AsymmSquare'):
+					if self.VERBOSE_TEST:
+						print('pogs private api, objective = %s' %obj)
 
-				# problem matrix A
-				A, A_ptr = self.gen_py_matrix(lib, m, n, order)
-				A += self.A_test
+					hdl = self.register_blas_handle(lib, 'hdl')
+					f, f_py, g, g_py = self.gen_registered_pogs_fns(
+							lib, m, n, objective=obj)
+					f_list = [lib.function(*f_) for f_ in f_py]
+					g_list = [lib.function(*g_) for g_ in g_py]
 
-				solver = lib.pogs_init(A_ptr, m, n, order)
-				self.register_solver('solver', solver, lib.pogs_finish)
-				output, info, settings = self.gen_pogs_params(lib, m, n)
+					# problem matrix A
+					A, A_ptr = self.gen_py_matrix(lib, m, n, order)
+					A += self.A_test
 
-				local_vars = self.PogsVariablesLocal(m, n, lib.pyfloat)
-				localA, localA_ptr = self.gen_py_matrix(lib, m, n, order)
+					solver = lib.pogs_init(A_ptr, m, n, order)
+					self.register_solver('solver', solver, lib.pogs_finish)
+					output, info, settings = self.gen_pogs_params(lib, m, n)
 
-				self.assertCall( lib.matrix_memcpy_am(
-						localA_ptr, solver.contents.M.contents.A, order) )
+					local_vars = self.PogsVariablesLocal(m, n, lib.pyfloat)
+					localA, localA_ptr = self.gen_py_matrix(lib, m, n, order)
 
-				res = lib.pogs_residuals()
-				tols = lib.pogs_tolerances()
-				obj = lib.pogs_objectives()
-				self.assertCall( lib.initialize_conditions(
-						obj, res, tols, settings, m, n) )
+					self.assertCall( lib.matrix_memcpy_am(
+							localA_ptr, solver.contents.M.contents.A, order) )
 
-				# test (coldstart) solver calls
-				z = solver.contents.z
-				M = solver.contents.M
-				rho = solver.contents.rho
-				self.assert_pogs_equilibration(lib, M, A, localA)
-				self.assert_pogs_projector(lib, hdl, M.contents.P, localA)
-				self.assert_pogs_scaling(lib, solver, f, f_py, g, g_py,
-										 local_vars)
-				self.assert_pogs_primal_update(lib, solver, local_vars)
-				self.assert_pogs_prox(lib, hdl, solver, f, f_py, g, g_py,
-									  local_vars)
-				self.assert_pogs_primal_project(lib, hdl, solver, localA,
-												local_vars)
-				self.assert_pogs_dual_update(lib, hdl, solver, local_vars)
-				self.assert_pogs_check_convergence(lib, hdl, solver, f_list,
-												   g_list, obj, res, tols,
-												   localA, local_vars)
-				self.assert_pogs_adapt_rho(lib, solver, res, tols, local_vars)
-				self.assert_pogs_unscaling(lib, output, solver, local_vars)
+					res = lib.pogs_residuals()
+					tols = lib.pogs_tolerances()
+					obj = lib.pogs_objectives()
+					self.assertCall( lib.initialize_conditions(
+							obj, res, tols, settings, m, n) )
 
-				x0, x0_ptr = self.gen_py_vector(lib, n, random=True)
-				nu0, nu0_ptr = self.gen_py_vector(lib, m, random=True)
+					# test (coldstart) solver calls
+					z = solver.contents.z
+					M = solver.contents.M
+					rho = solver.contents.rho
+					self.assert_pogs_equilibration(lib, M, A, localA)
+					self.assert_pogs_projector(lib, hdl, M.contents.P, localA)
+					self.assert_pogs_scaling(lib, solver, f, f_py, g, g_py,
+											 local_vars)
+					self.assert_pogs_primal_update(lib, solver, local_vars)
+					self.assert_pogs_prox(lib, hdl, solver, f, f_py, g, g_py,
+										  local_vars)
+					self.assert_pogs_primal_project(lib, hdl, solver, localA,
+													local_vars)
+					self.assert_pogs_dual_update(lib, hdl, solver, local_vars)
+					self.assert_pogs_check_convergence(lib, hdl, solver, f_list,
+													   g_list, obj, res, tols,
+													   localA, local_vars)
+					self.assert_pogs_adapt_rho(lib, solver, res, tols, local_vars)
+					self.assert_pogs_unscaling(lib, output, solver, local_vars)
 
-				settings.x0 = x0_ptr
-				settings.nu0 = nu0_ptr
-				self.assertCall( lib.update_settings(solver.contents.settings,
-													 ct.byref(settings)) )
-				self.assertCall( lib.initialize_variables(solver) )
+					x0, x0_ptr = self.gen_py_vector(lib, n, random=True)
+					nu0, nu0_ptr = self.gen_py_vector(lib, m, random=True)
 
-				self.assert_pogs_warmstart(lib, solver, localA, local_vars, x0,
-										   nu0)
+					settings.x0 = x0_ptr
+					settings.nu0 = nu0_ptr
+					self.assertCall( lib.update_settings(solver.contents.settings,
+														 ct.byref(settings)) )
+					self.assertCall( lib.initialize_variables(solver) )
 
-				self.free_vars('solver', 'f', 'g', 'hdl')
-				self.assertCall( lib.ok_device_reset() )
+					self.assert_pogs_warmstart(lib, solver, localA, local_vars, x0,
+											   nu0)
+
+					self.free_vars('solver', 'f', 'g', 'hdl')
+					self.assertCall( lib.ok_device_reset() )
 
 	def test_pogs_call(self):
 		m, n = self.shape
@@ -305,28 +310,33 @@ class PogsTestCase(OptkitCPogsTestCase):
 			self.register_exit(lib.ok_device_reset)
 
 			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
-				f, f_py, g, g_py = self.gen_registered_pogs_fns(lib, m, n)
+				for obj in ('Abs', 'AbsQuad', 'AbsExp', 'AsymmSquare'):
+					if self.VERBOSE_TEST:
+						print('pogs call, objective = %s' %obj)
 
-				# problem matrix
-				A, A_ptr = self.gen_py_matrix(lib, m, n, order)
-				A += self.A_test
+					f, f_py, g, g_py = self.gen_registered_pogs_fns(
+							lib, m, n, objective=obj)
 
-				solver = lib.pogs_init(A_ptr, m, n, order)
-				self.register_solver('solver', solver, lib.pogs_finish)
-				output, info, settings = self.gen_pogs_params(lib, m, n)
+					# problem matrix
+					A, A_ptr = self.gen_py_matrix(lib, m, n, order)
+					A += self.A_test
 
-				# solve
-				self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
-												output.ptr) )
-				self.free_var('solver')
+					solver = lib.pogs_init(A_ptr, m, n, order)
+					self.register_solver('solver', solver, lib.pogs_finish)
+					output, info, settings = self.gen_pogs_params(lib, m, n)
 
-				if info.converged:
-					self.assert_pogs_convergence(
-							A, settings, output, gpu=gpu,
-							single_precision=single_precision)
+					# solve
+					self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
+													output.ptr) )
+					self.free_var('solver')
 
-				self.free_vars('f', 'g')
-				self.assertCall( lib.ok_device_reset() )
+					if info.converged:
+						self.assert_pogs_convergence(
+								A, settings, output, gpu=gpu,
+								single_precision=single_precision)
+
+					self.free_vars('f', 'g')
+					self.assertCall( lib.ok_device_reset() )
 
 	def test_pogs_call_unified(self):
 		m, n = self.shape

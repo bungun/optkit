@@ -116,14 +116,18 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 				return self.libcall(solver, 0)
 		self.register_var(name, solver, solver_free(libcall) )
 
-	def gen_registered_pogs_fns(self, lib, m, n, name1='f', name2='g'):
+	def gen_registered_pogs_fns(self, lib, m, n, name1='f', name2='g',
+								objective='Abs'):
 		f, f_py, f_ptr = self.register_fnvector(lib, m, name1)
 		g, g_py, g_ptr = self.register_fnvector(lib, n, name2)
 
+		h = lib.function_enums.dict[objective]
+		asymm = 1 + int('Asymm' in objective)
+
 		for i in xrange(m):
-			f_py[i] = lib.function(lib.function_enums.Abs, 1, 1, 1, 0, 0)
+			f_py[i] = lib.function(h, 1, 1, 1, 0, 0, asymm)
 		for j in xrange(n):
-			g_py[j] = lib.function(lib.function_enums.IndGe0, 1, 0, 1, 0, 0)
+			g_py[j] = lib.function(lib.function_enums.IndGe0, 1, 0, 1, 0, 0, 1)
 
 		self.assertCall( lib.function_vector_memcpy_va(f, f_ptr) )
 		self.assertCall( lib.function_vector_memcpy_va(g, g_ptr) )
@@ -135,7 +139,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 		info = lib.pogs_info()
 		settings = lib.pogs_settings()
 		self.assertCall( lib.set_default_settings(settings) )
-		settings.verbose = self.VERBOSE_TEST
+		settings.verbose = int(self.VERBOSE_TEST)
 		return output, info, settings
 
 	def assert_default_settings(self, lib):

@@ -91,13 +91,19 @@ class PogsBindingsTestCase(OptkitTestCase):
 		self.assertTrue( backend.device_reset_allowed )
 
 	def test_solve_call(self):
-		s = PogsSolver(self.A_test)
-		f = PogsObjective(self.shape[0], h='Abs', b=1)
-		g = PogsObjective(self.shape[1], h='IndGe0')
-		s.solve(f, g)
-		self.assertEqual(s.info.err, 0)
-		self.assertTrue(s.info.converged or s.info.k == s.settings.maxiter)
-		del s
+		objectives = ('Abs', 'AbsQuad', 'AbsExp', 'AsymmSquare')
+		for h in objectives:
+			if self.VERBOSE_TEST:
+				print('objective:', h)
+			asymm = 2. if h != 'Abs' else 1.
+			s = PogsSolver(self.A_test)
+			f = PogsObjective(self.shape[0], h=h, b=1, s=asymm)
+			g = PogsObjective(self.shape[1], h='IndGe0')
+			s.solve(f, g)
+			self.assertEqual(s.info.err, 0)
+			self.assertTrue(
+					s.info.converged or s.info.iters == s.settings.maxiter)
+			del s
 
 	def test_solver_io(self):
 		f = PogsObjective(self.shape[0], h='Abs', b=1)
