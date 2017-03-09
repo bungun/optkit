@@ -117,12 +117,14 @@ class PogsDenseDirectTypes(PogsCommonTypes):
 
 			def __update_function_vectors(self, f, g):
 				for i in xrange(f.size):
-					self.__f[i] = lib.function(f.h[i], f.a[i], f.b[i],
-												   f.c[i], f.d[i], f.e[i])
+					self.__f[i] = lib.function(
+							f.h[i], f.a[i], f.b[i], f.c[i], f.d[i], f.e[i],
+							f.s[i])
 
 				for j in xrange(g.size):
-					self.__g[j] = lib.function(g.h[j], g.a[j], g.b[j],
-												   g.c[j], g.d[j], g.e[j])
+					self.__g[j] = lib.function(
+							g.h[j], g.a[j], g.b[j], g.c[j], g.d[j], g.e[j],
+							g.s[j])
 
 			def solve(self, f, g, **options):
 				if self.c_solver is None:
@@ -142,7 +144,6 @@ class PogsDenseDirectTypes(PogsCommonTypes):
 
 
 				# TODO : logic around resume, warmstart, rho input
-
 				self.__update_function_vectors(f, g)
 				self.settings.update(**options)
 				lib.pogs_solve(self.c_solver, self.__f_c, self.__g_c,
