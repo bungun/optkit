@@ -191,7 +191,7 @@ all: libs liboperator libcg libequil libprojector libpogs libcluster
 libs: libok libprox
 libok: libok_dense libok_sparse
 libpogs: libpogs_dense libpogs_abstract
-pylibs: libpogs_dense libcluster
+pylibs: libpogs_dense libpogs_abstract libcluster
 
 libpogs_abstract: $(OUT)libpogs_abstract_$(LIBCONFIG).$(SHARED)
 $(OUT)libpogs_abstract_$(LIBCONFIG).$(SHARED): pogs_abstract \

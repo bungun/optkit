@@ -8,12 +8,12 @@ from optkit.types.pogs.common import PogsCommonTypes
 
 class DoubleCache(object):
 	def __init__(self, npz_file=None, dictionary=None):
-		self.__dictionary = {}
+		self.__local_cache = {}
 		self.__npz_cache = {}
 
 		if isinstance(npz_file, DoubleCache):
 			self.set_file(npz_file._DoubleCache__npz_cache)
-			self.update(npz_file._DoubleCache__dictionary)
+			self.update(npz_file._DoubleCache__local_cache)
 		else:
 			self.set_file(npz_file)
 		self.update(dictionary)
@@ -26,27 +26,27 @@ class DoubleCache(object):
 
 	def update(self, dictionary):
 		if isinstance(dictionary, dict):
-			self.__dictionary.update(dictionary)
+			self.__local_cache.update(dictionary)
 
 	def __contains__(self, key):
-		return key in self.__npz_cache or key in self.__dictionary
+		return key in self.__npz_cache or key in self.__local_cache
 
 	def __setitem__(self, key, item):
-		self.__dictionary[key] = item
+		self.__local_cache[key] = item
 
 	def __getitem__(self, key):
 		if key in self.__npz_cache:
 			return self.__npz_cache[key]
-		elif key in self.__dictionary:
-			return self.__dictionary[key]
+		elif key in self.__local_cache:
+			return self.__local_cache[key]
 		else:
 			raise KeyError(
 					'{} has no entry for key=`{}`'.format(DoubleCache, key))
 
 class PogsDenseDirectTypes(PogsCommonTypes):
 	def __init__(self, backend):
-		PogsCommonTypes.__init__(self, backend)
 		lib = backend.pogs
+		PogsCommonTypes.__init__(self, lib)
 		PogsSettings = lib.pogs_settings
 		PogsInfo = lib.pogs_info
 		PogsOutput = lib.pogs_output
@@ -146,8 +146,9 @@ class PogsDenseDirectTypes(PogsCommonTypes):
 				# TODO : logic around resume, warmstart, rho input
 				self.__update_function_vectors(f, g)
 				self.settings.update(**options)
-				lib.pogs_solve(self.c_solver, self.__f_c, self.__g_c,
-								   self.settings.c, self.info.c, self.output.c)
+				lib.pogs_solve(
+						self.c_solver, self.__f_c, self.__g_c, self.settings.c,
+						self.info.c, self.output.c)
 				self.first_run = False
 
 			def load_cache(self, cache, allow_cholesky=True, cache_extra=None):

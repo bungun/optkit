@@ -16,7 +16,7 @@ class OperatorTypes(object):
 
 			def __init__(self, py_operator):
 				if isinstance(py_operator, sp.coo_matrix):
-					print "sparse matrix: converting COO input to CSR"
+					print('sparse matrix: converting COO input to CSR')
 					py_operator = py_operator.tocsr()
 
 				self.__py = py_operator

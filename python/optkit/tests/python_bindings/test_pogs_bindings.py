@@ -3,6 +3,7 @@ from optkit.compat import *
 import gc
 import os
 import numpy as np
+import scipy.sparse as sp
 
 from optkit import *
 from optkit.api import backend
@@ -24,6 +25,9 @@ class PogsBindingsTestCase(OptkitTestCase):
 
 	def setUp(self):
 		self.A_test = self.A_test_gen
+		self.A_test_csr = sp.csr_matrix(self.A_test_sparse_gen)
+		self.A_test_csc = sp.csc_matrix(self.A_test_sparse_gen)
+		self.test_matrices = [self.A_test, self.A_test_csc, self.A_test_csr]
 
 	def register_file(self, file):
 		if os.path.exists(file):
@@ -90,13 +94,22 @@ class PogsBindingsTestCase(OptkitTestCase):
 		gc.collect()
 		self.assertTrue( backend.device_reset_allowed )
 
-	def test_solve_call(self):
-		objectives = ('Abs', 'AbsQuad', 'AbsExp', 'AsymmSquare')
+	def test_abstract_solver_object(self):
+		for A in [self.A_test_csc, self.A_test_csr]:
+			s = PogsAbstractSolver(A)
+			self.assertFalse( backend.device_reset_allowed )
+			del s
+			gc.collect()
+			self.assertTrue( backend.device_reset_allowed )
+
+	def exercise_solve_call(self, solver_constructor, test_matrix):
+		# objectives = ('Abs', 'AbsQuad', 'AbsExp', 'AsymmSquare')
+		objectives = ['Abs']
 		for h in objectives:
 			if self.VERBOSE_TEST:
 				print('objective:', h)
 			asymm = 2. if h != 'Abs' else 1.
-			s = PogsSolver(self.A_test)
+			s = solver_constructor(test_matrix)
 			f = PogsObjective(self.shape[0], h=h, b=1, s=asymm)
 			g = PogsObjective(self.shape[1], h='IndGe0')
 			s.solve(f, g)
@@ -105,7 +118,18 @@ class PogsBindingsTestCase(OptkitTestCase):
 					s.info.converged or s.info.iters == s.settings.maxiter)
 			del s
 
+	def test_solve_call(self):
+		self.exercise_solve_call(PogsSolver, self.A_test)
+
+	def test_abstract_solve_call(self):
+		n = 1
+		for test_matrix in self.test_matrices:
+			print('abstract solve: {}/{}'.format(n, len(self.test_matrices)))
+			n += 1
+			self.exercise_solve_call(PogsAbstractSolver, test_matrix)
+
 	def test_solver_io(self):
+		return
 		f = PogsObjective(self.shape[0], h='Abs', b=1)
 		g = PogsObjective(self.shape[1], h='IndGe0')
 

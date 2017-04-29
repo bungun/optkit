@@ -3,7 +3,7 @@ from optkit.compat import *
 import os
 
 from optkit.backends import OKBackend
-from optkit.types import PogsTypes, ClusteringTypes
+from optkit.types import PogsTypes, PogsAbstractTypes, ClusteringTypes
 
 """
 Version query
@@ -21,6 +21,9 @@ C implementations
 pogs_types = None
 PogsSolver = None
 PogsObjective = None
+
+pogs_abstract_types = None
+PogsAbstractSolver = None
 
 clustering_types = None
 ClusteringSettings = None
@@ -40,6 +43,9 @@ def set_backend(gpu=False, double=True):
 	global PogsSolver
 	global PogsObjective
 
+	global pogs_abstract_types
+	global PogsAbstractSolver
+
 	global clustering_types
 	global ClusteringSettings
 	global Clustering
@@ -56,6 +62,9 @@ def set_backend(gpu=False, double=True):
 	pogs_types = PogsTypes(backend)
 	PogsSolver = pogs_types.Solver
 	PogsObjective = pogs_types.Objective
+
+	pogs_abstract_types = PogsAbstractTypes(backend)
+	PogsAbstractSolver = pogs_abstract_types.Solver
 
 	clustering_types = ClusteringTypes(backend)
 	ClusteringSettings = clustering_types.ClusteringSettings

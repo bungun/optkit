@@ -12,6 +12,7 @@ if int(os.getenv('OPTKIT_C_TESTING', 0)) == 0:
 
 	# C implementations
 	from optkit.api import PogsSolver, PogsObjective
+	from optkit.api import PogsAbstractSolver
 	from optkit.api import Clustering, ClusteringSettings
 
 	del utils

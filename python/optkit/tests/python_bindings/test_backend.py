@@ -10,14 +10,20 @@ from optkit import set_backend
 class BackendTestCase(unittest.TestCase):
 	def test_libs(self):
 		pogs_libnames = []
+		pogs_abstract_libnames = []
 		cluster_libnames = []
 
 		self.assertIsNotNone( backend.pogs_lib_loader )
+		self.assertIsNotNone( backend.pogs_abstract_lib_loader )
 		self.assertIsNotNone( backend.cluster_lib_loader )
 
 		for libkey in backend.pogs_lib_loader.libs:
 			if backend.pogs_lib_loader.libs[libkey] is not None:
 				pogs_libnames.append(libkey)
+
+		for libkey in backend.pogs_lib_loader.libs:
+			if backend.pogs_abstract_lib_loader.libs[libkey] is not None:
+				pogs_abstract_libnames.append(libkey)
 
 		for libkey in backend.cluster_lib_loader.libs:
 			if backend.cluster_lib_loader.libs[libkey] is not None:
@@ -25,6 +31,9 @@ class BackendTestCase(unittest.TestCase):
 
 		print('available libs, POGS:', pogs_libnames)
 		self.assertTrue( len(pogs_libnames) > 0 )
+
+		print('available libs, POGS abstract:', pogs_abstract_libnames)
+		self.assertTrue( len(pogs_abstract_libnames) > 0 )
 
 		print('avaialable libs, clustering:', cluster_libnames)
 		self.assertTrue( len(cluster_libnames) > 0 )
@@ -38,6 +47,7 @@ class BackendTestCase(unittest.TestCase):
 			self.assertEqual( set_backend(gpu=gpu, double=double), 0 )
 
 			self.assertIsNotNone( backend.pogs )
+			self.assertIsNotNone( backend.pogs_abstract )
 			self.assertIsNotNone( backend.cluster )
 
 			self.assertEqual( backend.device_is_gpu, gpu )
@@ -48,6 +58,8 @@ class BackendTestCase(unittest.TestCase):
 			del s
 			self.assertTrue( backend.device_reset_allowed )
 			backend.reset_device()
+
+			# TODO: add solver initialization/deletion for PogsAbstract?
 
 			c = optkit.api.Clustering()
 			c.kmeans_work_init(10, 5, 5)

@@ -5,14 +5,14 @@ import ctypes as ct
 
 # from optkit.libs.linsys import DenseLinsysLibs, SparseLinsysLibs
 # from optkit.libs.prox import ProxLibs
-from optkit.libs.pogs import PogsLibs
+from optkit.libs.pogs import PogsLibs, PogsAbstractLibs
 from optkit.libs.clustering import ClusteringLibs
 from optkit.utils.pyutils import version_string
 
 
 # CPU32, CPU64, GPU32, GPU64
 class OKBackend(object):
-	__LIBNAMES = ['pogs', 'cluster']
+	__LIBNAMES = ['pogs', 'pogs_abstract', 'cluster']
 
 	def __init__(self, gpu=False, single_precision=False):
 		self.__version = None
@@ -25,6 +25,7 @@ class OKBackend(object):
 		# self.sparse_lib_loader = SparseLinsysLibs()
 		# self.prox_lib_loader = ProxLibs()
 		self.pogs_lib_loader = PogsLibs()
+		self.pogs_abstract_lib_loader = PogsAbstractLibs()
 		self.cluster_lib_loader = ClusteringLibs()
 
 		# library instances
@@ -32,6 +33,7 @@ class OKBackend(object):
 		# self.sparse = None
 		# self.prox = None
 		self.pogs = None
+		self.pogs_abstract = None
 		self.cluster = None
 		self.__active_libs = []
 
@@ -48,6 +50,7 @@ class OKBackend(object):
 		# self.sparse = None
 		# self.prox = None
 		self.pogs = None
+		self.pogs_abstract = None
 		self.cluster = None
 
 		self.__LIBGUARD_ON = False
@@ -126,7 +129,11 @@ class OKBackend(object):
 					single_precision=self.precision_is_32bit,
 					gpu=self.device_is_gpu)
 			self.__active_libs.append(self.cluster)
-
+		elif name == 'pogs_abstract':
+			self.pogs_abstract = self.pogs_abstract_lib_loader.get(
+					single_precision=self.precision_is_32bit,
+					gpu=self.device_is_gpu)
+			self.__active_libs.append(self.pogs_abstract)
 
 	def load_libs(self, *names):
 		for name in names:
@@ -148,11 +155,13 @@ class OKBackend(object):
 					self.__config = lib_key
 					self.load_lib('pogs', override=True)
 					self.load_lib('cluster', override=True)
+					self.load_lib('pogs_abstract', override=True)
 					return
 				else:
-					print ('Libraries for configuration {} '
-						   'not found. Trying next configuration.'.format(
-						   	lib_key))
+					print (
+							'Libraries for configuration {} '
+							'not found. Trying next configuration.'
+							''.format(lib_key))
 
 		raise RuntimeError('No libraries found for backend.')
 

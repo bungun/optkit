@@ -12,7 +12,7 @@ RECOMPILE_LIBS = int(os.getenv('OPTKIT_RECOMPILE_LIBS', 1)) == 1
 BUILD_GPU = int(os.getenv('OPTKIT_BUILD_GPU', 0)) == 1
 USE_OPENMP = False
 SPARSE_POGS = False
-ABSTRACT_POGS = False
+ABSTRACT_POGS = True
 BASEPATH = os.path.abspath(os.path.join(os.path.dirname(
         os.path.abspath(__file__)),'..'))
 LIBPATH = os.path.join(BASEPATH, 'build')

@@ -6,11 +6,10 @@ from optkit.utils.pyutils import const_iterator
 from optkit.utils.proxutils import func_eval_python
 
 class PogsCommonTypes(object):
-	def __init__(self, backend):
-		PogsSettings = backend.pogs.pogs_settings
-		PogsInfo = backend.pogs.pogs_info
-		PogsOutput = backend.pogs.pogs_output
-		lib = backend.pogs
+	def __init__(self, lib):
+		PogsSettings = lib.pogs_settings
+		PogsInfo = lib.pogs_info
+		PogsOutput = lib.pogs_output
 
 		class Objective(object):
 			def __init__(self, n, **params):
