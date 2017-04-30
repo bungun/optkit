@@ -7,7 +7,7 @@ namespace optkit {
 /* CUDA helper kernels */
 template<typename T>
 __global__ static void set_fn_vector(function_t_<T> * objs, const T a,
-	const T b, const T c, const T d, const T e, // const T s,
+	const T b, const T c, const T d, const T e, const T s,
 	const enum OPTKIT_SCALAR_FUNCTION h, uint n)
 {
 	uint tid = blockIdx.x * blockDim.x + threadIdx.x;
