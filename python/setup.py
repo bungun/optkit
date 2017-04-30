@@ -15,7 +15,6 @@ SPARSE_POGS = False
 ABSTRACT_POGS = True
 BASEPATH = os.path.abspath(os.path.join(os.path.dirname(
         os.path.abspath(__file__)),'..'))
-print os.path.abspath(__file__)
 LIBPATH = os.path.join(BASEPATH, 'build')
 LONG_DESC= str('optkit provides a Python interface for CPU and GPU '
                '(dense/sparse) linear algebra, enabling the composition '
