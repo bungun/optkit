@@ -1,9 +1,9 @@
 import os
 
-from setuptools import setup
-from setuptools.command.install import install
-from distutils.command.build import build
-from subprocess import call
+import setuptools
+import setuptools.command.install as sci
+import distutils.command.build as dcb
+import subprocess as sub
 
 # TODO: use this for OMP thread #?
 # from multiprocessing import cpu_count
@@ -15,13 +15,14 @@ SPARSE_POGS = False
 ABSTRACT_POGS = True
 BASEPATH = os.path.abspath(os.path.join(os.path.dirname(
         os.path.abspath(__file__)),'..'))
+print os.path.abspath(__file__)
 LIBPATH = os.path.join(BASEPATH, 'build')
 LONG_DESC= str('optkit provides a Python interface for CPU and GPU '
                '(dense/sparse) linear algebra, enabling the composition '
                'of C- or CUDA C-based optimization routines in a Python '
                'environment.')
 
-class OptkitBuild(build):
+class OptkitBuild(dcb.build):
     def run(self):
         global RECOMPILE_LIBS
         global BUILD_GPU
@@ -35,7 +36,7 @@ class OptkitBuild(build):
         EXT = "dylib" if os.uname()[0] == "Darwin" else "so"
 
         # run original build code
-        build.run(self)
+        dcb.build.run(self)
 
         if not RECOMPILE_LIBS:
             return
@@ -49,7 +50,7 @@ class OptkitBuild(build):
         devices = ['cpu', 'gpu'] if BUILD_GPU else ['cpu']
         precisions = ['32', '64']
 
-        call([ 'make', 'clean' ], cwd=BASEPATH)
+        sub.call([ 'make', 'clean' ], cwd=BASEPATH)
         for prec in precisions:
             for dev in devices:
                 cmd = [ 'make', 'pylibs' ]
@@ -66,7 +67,7 @@ class OptkitBuild(build):
 
                 # run Make for each condition (make CPU/GPU, 32/64)
                 def compile():
-                    call(cmd, cwd=BASEPATH)
+                    sub.call(cmd, cwd=BASEPATH)
 
                 self.execute(compile, [], message)
 
@@ -119,23 +120,23 @@ class OptkitBuild(build):
         for target in target_files:
             self.copy_file(os.path.join(LIBPATH, target), libtarg)
 
-class OptkitInstall(install):
+class OptkitInstall(sci.install):
     def initialize_options(self):
-        install.initialize_options(self)
+        sci.install.initialize_options(self)
         self.build_scripts = None
 
     def finalize_options(self):
-        install.finalize_options(self)
+        sci.install.finalize_options(self)
         self.set_undefined_options('build', ('build_scripts', 'build_scripts'))
 
     def run(self):
         # run original install code
-        install.run(self)
+        sci.install.run(self)
 
         # install Optkit executables
         self.copy_tree(self.build_lib, self.install_lib)
 
-setup(
+setuptools.setup(
     name='optkit',
     version='0.0.5a',
     author='Baris Ungun',
