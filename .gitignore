@@ -1,4 +1,5 @@
 *.html
+*.log
 build/
 python/build/
 *.egg-info

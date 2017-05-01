@@ -1,0 +1,82 @@
+#!/bin/bash
+export OPTKIT_TEST_VERBOSE=$([[ "$@" == "--verbose" ]] && echo "1" || echo "0")
+
+CONFIGS=("null" "null" "null" "null")
+
+if [[ "$@" == "--cpu32" || "$@" == "--cpu" || "$@" == "--32" || "$@" == "--all" ]]; 
+then
+	CONFIGS[0]='cpu32'
+fi
+if [[ "$@" == "--cpu64" || "$@" == "--cpu" || "$@" == "--64" || "$@" == "--all" ]]; 
+then
+	CONFIGS[1]='cpu64'
+fi
+if [[ "$@" == "--gpu32" || "$@" == "--gpu" || "$@" == "--32" || "$@" == "--all" ]]; 
+then
+	CONFIGS[2]='gpu32'
+fi
+if [[ "$@" == "--gpu64" || "$@" == "--gpu" || "$@" == "--64" || "$@" == "--all" ]]; 
+then
+	CONFIGS[3]='gpu64'
+fi
+
+TRANSPOSE=$([[ "$@" == "--notranspose" ]] && echo "0" || echo "1")
+TRANSPOSE=$([[ "$@" == "--noadjoint" ]] && echo "0" || echo $TRANSPOSE )
+TRANSPOSE=$([[ "$@" == "--noadj" ]] && echo "0" || echo $TRANSPOSE )
+TRANSPOSE=$([[ "$@" == "--noADJ" ]] && echo "0" || echo $TRANSPOSE )
+TRANSPOSE=$([[ "$@" == "--noT" ]] && echo "0" || echo $TRANSPOSE )
+
+export OPTKIT_TEST_TRANSPOSE=$TRANSPOSE 
+
+LOG='metatest.log'
+CTEST_CMD='./test '
+PYTEST_CMD='nosetests python/optkit/tests/python_bindings/test_'
+
+GLOBAL_TALLY=0
+GLOBAL_DENOMINATOR=0
+TALLY=0
+DENOMINATOR=0
+
+CTESTS=(vector matrix dense sparse prox operator cg equil proj pogs)
+PYTESTS=(pogs_bindings clustering_bindings backend)
+
+# avoid duplicate tests
+find python/optkit/tests/ -name "*.pyc" -exec rm -f {} \;
+
+for CFG in ${CONFIGS[@]}; do
+	if [[ "$CFG" != "null" ]]; then
+		device=${CFG//[^a-z]}
+		precision=${CFG//[^0-9]}
+		echo "conditions: $CFG" | tee -a $LOG
+		export OPTKIT_TEST_GPU=$([[ $device == "gpu" ]] && echo "1" || echo "0")
+		export OPTKIT_TEST_FLOAT=$([[ $precision == "32" ]] && echo "1" || echo "0")
+
+		for test in ${CTESTS[@]}; do
+			${CTEST_CMD}$test >> $LOG
+			STATUS=${PIPESTATUS[0]}
+			MSG=$([[ $STATUS == 0 ]] && echo pass || echo fail)
+			[[ $STATUS == 0 ]] && TALLY=$(($TALLY + 1))
+			DENOMINATOR=$(($DENOMINATOR + 1))	
+			echo "testing $test: $MSG"
+		done 
+
+		for test in ${PYTESTS[@]}; do
+			${PYTEST_CMD}${test}.py --nocapture >> $LOG
+			STATUS=${PIPESTATUS[0]}
+			MSG=$([[ $STATUS == 0 ]] && echo pass || echo fail)
+			[[ $STATUS == 0 ]] && TALLY=$(($TALLY + 1))
+			DENOMINATOR=$(($DENOMINATOR + 1))	
+			echo "testing $test: $MSG"
+		done 
+		echo "NUMBER OF TESTS PASSED: $TALLY/$DENOMINATOR" | tee -a $LOG
+		GLOBAL_TALLY=$(($GLOBAL_TALLY + $TALLY))
+		GLOBAL_DENOMINATOR=$(($GLOBAL_DENOMINATOR + $DENOMINATOR))
+	fi
+done
+echo "TOTAL NUMBER OF TESTS PASSED: $GLOBAL_TALLY/$GLOBAL_DENOMINATOR" | tee -a $LOG
+
+if (( $GLOBAL_TALLY == $GLOBAL_DENOMINATOR )); then
+	exit 0;
+else
+	exit 1;
+fi
