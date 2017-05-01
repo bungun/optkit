@@ -111,12 +111,12 @@ class OKFunctionEnums(object):
 					'`c_int`, or `str`\n')
 
 	def validate_c(self, c):
-		if c <= 0:
+		if c < 0:
 			raise ValueError(
 					'Function parameter `c` must be nonnegative '
 					'for function to be convex:\n '
 					'\tf(x) =def= c * h(ax - b) + dx + ex^2'
-					'\n, with h convex.'.format(name))
+					'\n, with h convex.')
 		else:
 			return c
 
@@ -126,7 +126,7 @@ class OKFunctionEnums(object):
 					'Function parameter `e` must be nonnegative '
 					'for function to be convex:\n '
 					'\tf(x) =def= c * h(ax - b) + dx + ex^2'
-					'\n, with h convex.'.format(name))
+					'\n, with h convex.')
 		else:
 			return e
 
