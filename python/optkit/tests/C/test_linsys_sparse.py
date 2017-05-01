@@ -68,7 +68,7 @@ class SparseLibsTestCase(OptkitCTestCase):
 
 			self.assertNotEqual( version, '0.0.0' )
 			if self.VERBOSE_TEST:
-				print("sparselib version", sversion)
+				print("sparselib version", version)
 
 class SparseMatrixTestCase(OptkitCTestCase):
 	@classmethod
