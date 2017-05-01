@@ -335,7 +335,7 @@ class ProxTestCase(OptkitCTestCase):
 					print(hkey)
 
 				# avoid domain errors with randomly generated data
-				if 'Log' in hkey or 'Exp' == hkey or 'Entr' in hkey:
+				if 'Log' in hkey or 'Exp' in hkey or 'Entr' in hkey:
 					continue
 
 				for i in xrange(m):
