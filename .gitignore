@@ -18,5 +18,7 @@ python/build/
 include/*graph*
 src/*graph*
 
+.nv/
+
 
 *block_prox*
