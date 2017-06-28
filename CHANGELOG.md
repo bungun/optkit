@@ -6,6 +6,7 @@
 - TODO: operator IO
 - TODO: fix GPU allocation issues for large problems (i.e., poll available memory,
 check problem size? or...handle allocation failures in python?)
+- TODO: workspaces with independent backends; object transfer (e.g., copy cpu64 solver to gpu32)
 
 ###v0.0.5 (next release)
 - TODO: license

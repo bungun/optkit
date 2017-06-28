@@ -39,7 +39,7 @@ class PogsAbstractTypes(PogsCommonTypes):
 				EQUILNORM = float(options.pop('equil_norm', 1.))
 
 				if not NO_INIT:
-					self.__register_solver(lib, lib.pogs_init(
+					self.__register_solver(lib.pogs_init(
 							self.A.c_ptr, DIRECT, EQUILNORM))
 
 				self.settings = SolverSettings()
@@ -56,7 +56,7 @@ class PogsAbstractTypes(PogsCommonTypes):
 			def c_solver(self):
 			    return self.__c_solver
 
-			def __register_solver(self, lib, solver):
+			def __register_solver(self, solver):
 				self.__c_solver = solver
 				self.exit_call = lib.pogs_finish
 

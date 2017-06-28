@@ -82,7 +82,7 @@ class PogsDenseDirectTypes(PogsCommonTypes):
 				bypass_init = options.pop('bypass_initialization', False)
 				bypass_init |= 'no_init' in args
 				if not bypass_init:
-					self.__register_solver(lib, lib.pogs_init(self.A_ptr, m, n,
+					self.__register_solver(lib.pogs_init(self.A_ptr, m, n,
 							layout))
 				else:
 					cache = options.pop('solver_cache', None)
@@ -99,8 +99,8 @@ class PogsDenseDirectTypes(PogsCommonTypes):
 			def c_solver(self):
 			    return self.__c_solver
 
-			def __register_solver(self, lib, solver):
-				err = self.__backend.pogs.pogs_solver_exists(solver)
+			def __register_solver(self, solver):
+				err = lib.pogs_solver_exists(solver)
 				if err > 0:
 					raise RuntimeError('solver allocation failed')
 
@@ -110,7 +110,7 @@ class PogsDenseDirectTypes(PogsCommonTypes):
 			def __unregister_solver(self):
 				if self.__c_solver is None:
 					return
-				self.__backend.pogs.pogs_finish(self.c_solver, 0)
+				lib.pogs_finish(self.c_solver, 0)
 				self.__c_solver = None
 				self.__backend.decrement_cobject_count()
 
@@ -235,7 +235,7 @@ class PogsDenseDirectTypes(PogsCommonTypes):
 				if self.c_solver is not None:
 					self.__unregister_solver()
 
-				self.__register_solver(lib, lib.pogs_load_solver(
+				self.__register_solver(lib.pogs_load_solver(
 						A_equil.ctypes.data_as(lib.ok_float_p),
 						LLT.ctypes.data_as(lib.ok_float_p),
 						d.ctypes.data_as(lib.ok_float_p),
@@ -414,7 +414,7 @@ class PogsDenseDirectTypes(PogsCommonTypes):
 			# 	if self.c_solver is not None:
 			# 		self.__unregister_solver()
 
-			# 	self.__register_solver(lib, lib.pogs_load_solver(
+			# 	self.__register_solver(lib.pogs_load_solver(
 			# 			A_equil.ctypes.data_as(lib.ok_float_p),
 			# 			LLT.ctypes.data_as(lib.ok_float_p),
 			# 			d.ctypes.data_as(lib.ok_float_p),

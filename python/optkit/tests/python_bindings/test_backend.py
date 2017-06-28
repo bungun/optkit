@@ -54,14 +54,21 @@ class BackendTestCase(unittest.TestCase):
 			self.assertNotEqual( backend.precision_is_32bit, double )
 
 			s = optkit.api.PogsSolver(np.random.rand(10, 5))
+			self.assertIsNotNone( s )
 			self.assertFalse( backend.device_reset_allowed )
 			del s
 			self.assertTrue( backend.device_reset_allowed )
 			backend.reset_device()
 
-			# TODO: add solver initialization/deletion for PogsAbstract?
+			s = optkit.api.PogsAbstractSolver(np.random.rand(10, 5))
+			self.assertIsNotNone( s )
+			self.assertFalse( backend.device_reset_allowed )
+			del s
+			self.assertTrue( backend.device_reset_allowed )
+			backend.reset_device()
 
 			c = optkit.api.Clustering()
+			self.assertIsNotNone( c )
 			c.kmeans_work_init(10, 5, 5)
 			self.assertFalse( backend.device_reset_allowed )
 			del c

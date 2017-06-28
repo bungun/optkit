@@ -50,7 +50,7 @@ install:
   - pip install six 
 
 script:
-  # -./metatest --cpu
+  # -./metatest --cpu64
   - export OPTKIT_TEST_FLOAT=1 && export OPTKIT_TEST_TRANSPOSE=1
   - ./test vector
   - ./test matrix
