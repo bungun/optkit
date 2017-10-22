@@ -17,13 +17,12 @@ anderson_accelerator * accelerator_init(vector * x_initial, size_t lookback_dim)
 	aa.vector_dim = x_initial->size;
 	aa.lookback_dim = lookback_dim;
 	aa.mu_regularization = (ok_float) 0.01;
-	aa.fixed_size = 1u;
 	aa.iter = 0;
 
 	ok_alloc(aa->F, sizeof(*aa->F));
 	OK_MAX_ERR( err, matrix_calloc(aa->F, vector_dim, lookback_dim + 1) );
-	ok_alloc(aa->X, sizeof(*aa->X));
-	OK_MAX_ERR( err, matrix_calloc(aa->X, vector_dim, lookback_dim + 1) );
+	ok_alloc(aa->G, sizeof(*aa->G));
+	OK_MAX_ERR( err, matrix_calloc(aa->G, vector_dim, lookback_dim + 1) );
 	ok_alloc(aa->F_gram, sizeof(*aa->F_gram));
 	OK_MAX_ERR( err, matrix_calloc(aa->F_gram, lookback_dim + 1,
 		lookback_dim + 1) );
@@ -43,9 +42,12 @@ anderson_accelerator * accelerator_init(vector * x_initial, size_t lookback_dim)
 		OK_MAX_ERR( err, accelerator_free(aa) );
 		aa = OK_NULL;
 	} else {
-		/* update f_0, g_0 */
+		/*
+		 * update F, G:
+		 *	F = [-x0 0 ... 0]
+		 * 	G = [0 0 ... 0]
+		 */
 		OK_CHECK_ERR( accelerator_update_F_x(aa, aa->F, x_initial, 0) );
-		OK_CHECK_ERR( accelerator_update_G(aa, aa->G, x_initial, 0) );
 
 		/* initialize aa->ones to 1 vector */
 		OK_CHECK_ERR( vector_set_all(aa->ones, kOne) );
@@ -56,14 +58,14 @@ anderson_accelerator * accelerator_init(vector * x_initial, size_t lookback_dim)
 ok_status accelerator_free(anderson_accelerator * aa){
 	ok_status err = OK_SCAN_ERR( blas_destroy_handle(aa->blas_handle) );
 	OK_MAX_ERR( err, matrix_free(aa->F) );
-	OK_MAX_ERR( err, matrix_free(aa->X) );
+	OK_MAX_ERR( err, matrix_free(aa->G) );
 	OK_MAX_ERR( err, matrix_free(aa->F_gram) );
 
 	OK_MAX_ERR( err, vector_free(aa->alpha) );
 	OK_MAX_ERR( err, vector_free(aa->ones) );
 
 	ok_free(aa->F);
-	ok_free(aa->X);
+	ok_free(aa->G);
 	ok_free(aa->F_gram);
 
 	ok_free(aa->f);
@@ -78,24 +80,28 @@ ok_status accelerator_free(anderson_accelerator * aa){
 	return err;
 };
 
+/* At index i, set f_i = -x */
 ok_status anderson_update_F_x(anderson_accelerator * aa, matrix * F, vector * x,
 	size_t index){
-	OK_RETURNIF_ERR( matrix_column(aa->f, aa->F, index) );
-	OK_RETURNIF_ERR( blas_axpy(aa->blas_handle, kOne, x, aa->f) );
+	OK_RETURNIF_ERR( matrix_column(aa->f, F, index) );
+	OK_RETURNIF_ERR( vector_memcpy_vv(aa->f, x) );
+	OK_RETURNIF_ERR( vector_scale(aa->f, -kOne) );
 	return OPTKIT_SUCCESS;
 }
 
+/* At index i, perform f_i += g(x); call after anderson_update_F_x */
 ok_status anderson_update_F_g(anderson_accelerator * aa, matrix * F, vector * gx,
 	size_t index){
 	OK_RETURNIF_ERR( matrix_column(aa->f, aa->F, index) );
-	OK_RETURNIF_ERR( vector_copy(aa->f, gx) );
+	OK_RETURNIF_ERR( vector_add(aa->f, gx) );
 	return OPTKIT_SUCCESS;
 }
 
+/* At index i, set g_i = x */
 ok_status anderson_update_G(anderson_accelerator * aa, matrix * G, vector * gx,
 	size_t index){
 	OK_RETURNIF_ERR( matrix_column(aa->g, aa->G, index) );
-	OK_RETURNIF_ERR( vector_copy(aa->g, gx) );
+	OK_RETURNIF_ERR( vector_memcpy_vv(aa->g, gx) );
 	return OPTKIT_SUCCESS;
 }
 
@@ -138,7 +144,7 @@ ok_status anderson_solve(anderson_accelerator *aa, matrix * F, vector * alpha,
 	 * 	 = alpha_hat / 1'alpha_hat
 	 *	 = (F'F + \sqrt(mu)I)^{-1}1 / 1'(F'F + \sqrt(mu)I)^{-1}1
 	 */
-	OK_RETURNIF_ERR( vector_scale(alpha, 1. / denominator) );
+	OK_RETURNIF_ERR( vector_scale(alpha, kOne / denominator) );
 	return OPTKIT_SUCCESS;
 }
 
@@ -149,9 +155,27 @@ ok_status anderson_mix(anderson_accelerator *aa, matrix * G, vector * alpha,
 	return OPTKIT_SUCCESS;
 }
 
+/*
+ * Perform one iteration of Anderson Acceleration for some input taken
+ * to be an iterate of some fixed-point algorithm given by x_{k+1} = G(x_k)
+ *
+ * For iteration k, inputs represent:
+ * 	anderson_accelerator * aa: an object containing the state of the
+ *		algorithm, namely the last ``aa->lookback_dim`` iterates and
+ *		residuals (given by the columns of matrices ``aa->G`` and
+ *		``aa->F``, respectively), as well as the iteration counter.
+ *	vector * x: assumed to represent fixed-point iterate G(x_k)
+ *
+ * The output x_{k+1} is written over the input G(x_k).
+ * If k < aa->lookback_dim, the input G(x_k) is passed to the output x_{k+1}.
+ * If k >= aa->lookback_dim, Anderson Acceleration is performed to obtain a
+ * 	linear combination of the iterates stored in the columns of ``aa->G``,
+ *	with the weights ``aa->alpha`` chosen to minimize the norm of the same
+ *	linear combination of the residuals stored in the columns of ``aa->F``.
+ */
 ok_status anderson_accelerate(anderson_accelerator * aa, vector * x){
 	size_t index = aa->iter % (aa->lookback_dim + 1);
-	ok_float denominator, x_scale;
+	size_t next_index = (aa->iter + 1) % (aa->lookback_dim + 1);
 
 	/* CHECK POINTERS, COMPATIBILITY OF X */
 	OK_CHECK_PTR(aa);
@@ -159,24 +183,32 @@ ok_status anderson_accelerate(anderson_accelerator * aa, vector * x){
 	if (aa->vector_dim != x->size)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	/* UPDATE f_i, g_i */
+	/*
+	 * UPDATE G, COMPLETE F UPDATE:
+	 *	g_i = G(x_i)
+	 *	f_i +=  G(x_i), should now contain G(x_i) - x_i
+	 */
 	OK_RETURNIF_ERR( anderson_update_F_g(aa, aa->F, x, index) );
 	OK_RETURNIF_ERR( anderson_update_G(aa, aa->G, x, index) );
 
 	/* CHECK ITERATION >= LOOKBACK */
-	if (aa->iter < aa->lookback_dim)
-		return;
+	if (aa->iter >= aa->lookback_dim){
+		/* SOLVE argmin_\alpha ||F \alpha||_2 s.t. 1'\alpha = 1 */
+		OK_RETURNIF_ERR( anderson_solve(aa, aa->F, aa->alpha,
+			aa->mu_regularization) );
 
-	/* SOLVE argmin_\alpha ||F \alpha||_2 s.t. 1'\alpha = 1 */
-	OK_RETURNIF_ERR( anderson_solve(aa, aa->F, aa->alpha,
-		aa->mu_regularization) );
+		/* x = G \alpha */
+		OK_RETURNIF_ERR( anderson_mix(aa, aa->G, aa->alpha, x) );
+	}
 
-	/* x = G \alpha */
-	OK_RETURNIF_ERR( anderson_mix(aa, aa->G, aa->alpha, x) );
+	/*
+	 * START BUILDING F UPDATE
+	 *	f_{i + 1} = -x_{i + 1}
+	 */
+	OK_RETURNIF_ERR( anderson_update_F_x(aa, aa->F, x, next_index) );
 
-	// UPDATE COUNTER and START BUILDING f_{i+1}
+
 	aa->iter += 1;
-	OK_RETURNIF_ERR( anderson_update_F_x(aa, aa->F, x, index) );
 
 	return OPTKIT_SUCCESS;
 }

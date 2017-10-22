@@ -13,7 +13,7 @@ typedef struct {
 	vector * f, * g, * diag; 	/* views of above matrices */
 	vector * alpha, * ones; 	/* vectors in R^{lookback_dim + 1} */
 	ok_float mu_regularization;
-	uint iter;
+	size_t iter;
 	void * blas_handle;
 } anderson_accelerator;
 
@@ -33,7 +33,6 @@ ok_status anderson_solve(anderson_accelerator *aa, matrix * F, vector * alpha,
 ok_status anderson_mix(anderson_accelerator *aa, matrix * G, vector * alpha,
 	vector * x);
 ok_status anderson_accelerate(anderson_accelerator * aa, vector * x);
-
 
 #ifdef __cplusplus
 }
