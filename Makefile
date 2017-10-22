@@ -140,6 +140,8 @@ DENSE_OBJ+=$(LAOUT)blas_$(LIBCONFIG).o $(LAOUT)dense_$(LIBCONFIG).o
 SPARSE_OBJ=$(LAOUT)sparse_$(LIBCONFIG).o
 PROX_OBJ=$(PREFIX_OUT)prox_$(LIBCONFIG).o
 
+ANDERSON_OBJ=$(PREFIX_OUT)anderson_$(LIBCONFIG).o
+
 OPERATOR_OBJ=$(OPOUT)dense_$(LIBCONFIG).o $(OPOUT)sparse_$(LIBCONFIG).o 
 OPERATOR_OBJ+=$(OPOUT)diagonal_$(LIBCONFIG).o 
 
@@ -159,6 +161,7 @@ POGS_OBJ=$(POGS_COMMON_OBJ) $(POGSOUT)pogs_$(LIBCONFIG).o
 POGS_ABSTR_OBJ=$(POGS_COMMON_OBJ) $(POGSOUT)pogs_abstract_$(LIBCONFIG).o
 
 SPARSE_STATIC_DEPS=$(BASE_OBJ) $(VECTOR_OBJ)
+ANDERSON_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ)
 OPERATOR_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ) $(SPARSE_OBJ) $(OPERATOR_OBJ)
 CG_STATIC_DEPS=$(OPERATOR_STATIC_DEPS) $(CG_OBJ)
 EQUIL_STATIC_DEPS=$(OPERATOR_STATIC_DEPS) $(EQUIL_OBJ) 
@@ -174,10 +177,11 @@ POGS_ABSTRACT_LIB_DEPS=operator cg equil projector $(LINSYS_TARGS) $(PROX_TARG)
 
 .PHONY: default all libs libok libpogs pylibs
 .PHONY: libpogs_abstract libpogs_sparse libpogs_dense libprojector libequil
-.PHONY: libcg liboperator libcluster libprox libok_sparse libok_dense
+.PHONY: libcg liboperator libanderson libcluster 
+.PHONY: libprox libok_sparse libok_dense
 
 .PHONY: pogs_abstract pogs pogs_abstract_ pogs_ pogs_common 
-.PHONY: equil equil_dense projector projector_direct cg
+.PHONY: equil equil_dense projector projector_direct cg anderson 
 .PHONY: operator dense_operator sparse_operator diagonal_operator
 .PHONY: cpu_cluster gpu_cluster cpu_cluster_ gpu_cluster_ clustering_common
 .PHONY: cpu_upsampling_vector_ gpu_upsampling_vector_ cpu_upsampling_vector 
@@ -249,6 +253,12 @@ $(OUT)libcluster_$(LIBCONFIG).$(SHARED): $(CLUSTER_TARG) $(DENSE_TARG) \
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) -shared -o $@ \
 	$(CLUSTER_OBJ) $(DENSE_OBJ) $(BASE_OBJ) $(LDFLAGS)	
+
+libanderson: $(OUT)libanderson_$(LIBCONFIG).$(SHARED)
+$(OUT)libanderson_$(LIBCONFIG).$(SHARED): anderson $(DENSE_TARG) $(BASE_TARG)
+	mkdir -p $(OUT)
+	$(CC) $(CCFLAGS) -shared -o $@ 
+	$(ANDERSON_OBJ) $(ANDERSON_STATIC_DEPS) $(LDFLAGS)
 
 libprox: $(OUT)libprox_$(LIBCONFIG).$(SHARED)
 $(OUT)libprox_$(LIBCONFIG).$(SHARED): $(PROX_TARG) $(VECTOR_TARG) $(BASE_TARG)
@@ -386,6 +396,12 @@ $(CLUOUT)upsampling_vector_common_$(LIBCONFIG).o: \
 	$(DENSE_HDR)
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)clustering/
+	$(CC) $(CCFLAGS) $< -c -o $@
+
+anderson: $(PREFIX_OUT)anderson_$(LIBCONFIG).o
+$(PREFIX_OUT)anderson_$(LIBCONFIG).o: $(SRC)optkit_anderson.c \
+	$(INCLUDE)optkit_anderson.h $(DENSE_HDR)
+	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) $< -c -o $@
 
 cpu_prox: $(PREFIX_OUT)prox_cpu$(PRECISION).o
