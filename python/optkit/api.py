@@ -71,7 +71,11 @@ def set_backend(gpu=False, double=True):
 	Clustering = clustering_types.Clustering
 
 	print('optkit backend set to {}'.format(backend.config))
-	return bool(requested_config != backend.config)
+	return int(requested_config != backend.config)
+
+def clear_backend():
+	global backend
+	backend.reset_device()
 
 """
 INITIALIZATION BEHAVIOR:
