@@ -117,6 +117,13 @@ POGS_PRIVATE ok_status copy_output(pogs_output * output,
 POGS_PRIVATE ok_status print_header_string(void);
 POGS_PRIVATE ok_status print_iter_string(pogs_residuals * res,
 	pogs_tolerances * eps, pogs_objectives * obj, uint k);
+// POGS_PRIVATE ok_status _pogs_load_state(pogs_variables * vars, pogs_settings * stgs,
+// 	const ok_float * z, const ok_float * z12, const ok_float * z_dual,
+// 	const ok_float * z_dual12, const ok_float * z_prev,
+// 	const ok_float * rho);
+// POGS_PRIVATE ok_status _pogs_extract_state(const pogs_variables * vars, const pogs_settings * stgs,
+// 	ok_float * z, ok_float * z12, ok_float * z_dual, ok_float * z_dual12,
+// 	ok_float * z_prev, ok_float * rho);
 
 /* private API */
 #ifndef OPTKIT_POGS_IMPLEMENTATION_
@@ -458,6 +465,50 @@ POGS_PRIVATE ok_status print_iter_string(pogs_residuals * res,
 		res->gap, eps->gap, obj->primal);
 	return OPTKIT_SUCCESS;
 }
+
+// POGS_PRIVATE ok_status _pogs_load_state(pogs_variables * vars, pogs_settings * stgs,
+// 	const ok_float * z, const ok_float * z12, const ok_float * z_dual,
+// 	const ok_float * z_dual12, const ok_float * z_prev,
+// 	const ok_float * rho)
+// {
+	// OK_CHECK_PTR(vars);
+	// OK_CHECK_PTR(stgs);
+	// OK_CHECK_PTR(z);
+	// OK_CHECK_PTR(z12);
+	// OK_CHECK_PTR(z_dual);
+	// OK_CHECK_PTR(z_dual12);
+	// OK_CHECK_PTR(z_prev);
+	// OK_CHECK_PTR(rho);
+	// OK_RETURNIF_ERR( vector_memcpy_va(vars->primal, z, 1) );
+	// OK_RETURNIF_ERR( vector_memcpy_va(vars->primal12, z12, 1) );
+	// OK_RETURNIF_ERR( vector_memcpy_va(vars->dual, z_dual, 1) );
+	// OK_RETURNIF_ERR( vector_memcpy_va(vars->dual12, z_dual12, 1) );
+	// OK_RETURNIF_ERR( vector_memcpy_va(vars->prev, z_prev, 1) );
+	// stgs->rho = *rho;
+	// return OPTKIT_SUCCESS;
+// }
+
+// POGS_PRIVATE ok_status _pogs_extract_state(const pogs_variables * vars, const pogs_settings * stgs,
+// 	ok_float * z, ok_float * z12, ok_float * z_dual, ok_float * z_dual12,
+// 	ok_float * z_prev, ok_float * rho)
+// {
+	// OK_CHECK_PTR(vars);
+	// OK_CHECK_PTR(stgs);
+	// OK_CHECK_PTR(z);
+	// OK_CHECK_PTR(z12);
+	// OK_CHECK_PTR(z_dual);
+	// OK_CHECK_PTR(z_dual12);
+	// OK_CHECK_PTR(z_prev);
+	// OK_CHECK_PTR(rho);
+	// OK_RETURNIF_ERR( vector_memcpy_av(z, vars->primal, 1) );
+	// OK_RETURNIF_ERR( vector_memcpy_av(z12, vars->primal12, 1) );
+	// OK_RETURNIF_ERR( vector_memcpy_av(z_dual, vars->dual, 1) );
+	// OK_RETURNIF_ERR( vector_memcpy_av(z_dual12, vars->dual12, 1) );
+	// OK_RETURNIF_ERR( vector_memcpy_av(z_prev, vars->prev, 1) );
+	// *rho = stgs->rho;
+	// return OPTKIT_SUCCESS;
+// }
+
 #endif /* OPTKIT_POGS_IMPLEMENTATION_ */
 
 #ifdef __cplusplus

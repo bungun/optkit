@@ -85,6 +85,14 @@ ok_status pogs_sparse_operator_free(operator * A);
 // 	operator * LLT_factorization, ok_float * d, ok_float * e, ok_float * z,
 // 	ok_float * z12, ok_float * z_dual, ok_float * z_dual12,
 // 	ok_float * z_prev, ok_float * rho);
+// ok_status pogs_load_state(pogs_solver * solver, const ok_float * z,
+// 	const ok_float * z12, const ok_float * z_dual,
+// 	const ok_float * z_dual12, const ok_float * z_prev,
+// 	const ok_float * rho);
+// ok_status pogs_extract_state(const pogs_solver * solver, ok_float * z,
+// 	ok_float * z12, ok_float * z_dual, ok_float * z_dual12,
+// 	ok_float * z_prev,ok _float * rho);
+
 
 #ifdef __cplusplus
 }
