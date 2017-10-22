@@ -14,7 +14,7 @@ typedef struct {
 	vector * alpha, * ones; 	/* vectors in R^{lookback_dim + 1} */
 	ok_float mu_regularization;
 	size_t iter;
-	void * blas_handle;
+	void * linalg_handle;
 } anderson_accelerator;
 
 anderson_accelerator * anderson_accelerator_init(vector * x_initial,
