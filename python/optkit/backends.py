@@ -70,7 +70,15 @@ class OKBackend(object):
 
 	@property
 	def precision_is_32bit(self):
-		return self.__precision == '32'
+		return self.precision == '32'
+
+	# redundant with above property since only 2 precision levels exist;
+	# however, convenient given backend.change(...) takes argument
+	# ``double`` (:obj:`bool`)
+	@property
+	def precision_is_64bit(self):
+		return self.precision == '64'
+
 	@property
 	def device(self):
 		return self.__device
