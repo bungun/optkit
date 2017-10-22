@@ -8,6 +8,7 @@ import scipy.sparse as sp
 from optkit import *
 from optkit.api import backend
 from optkit.tests.defs import OptkitTestCase, TEST_ITERATE
+print('BACKEND:', backend.config)
 
 class PogsBindingsTestCase(OptkitTestCase):
 	@classmethod
@@ -89,18 +90,19 @@ class PogsBindingsTestCase(OptkitTestCase):
 
 	def test_solver_object(self):
 		s = PogsSolver(self.A_test)
+		print(type(s))
 		self.assertFalse( backend.device_reset_allowed )
 		del s
 		gc.collect()
 		self.assertTrue( backend.device_reset_allowed )
 
-	def test_abstract_solver_object(self):
-		for A in [self.A_test_csc, self.A_test_csr]:
-			s = PogsAbstractSolver(A)
-			self.assertFalse( backend.device_reset_allowed )
-			del s
-			gc.collect()
-			self.assertTrue( backend.device_reset_allowed )
+	# def test_abstract_solver_object(self):
+	# 	for A in [self.A_test_csc, self.A_test_csr]:
+	# 		s = PogsAbstractSolver(A)
+	# 		self.assertFalse( backend.device_reset_allowed )
+	# 		del s
+	# 		gc.collect()
+	# 		self.assertTrue( backend.device_reset_allowed )
 
 	def exercise_solve_call(self, solver_constructor, test_matrix):
 		# objectives = ('Abs', 'AbsQuad', 'AbsExp', 'AsymmSquare')
@@ -119,17 +121,18 @@ class PogsBindingsTestCase(OptkitTestCase):
 			del s
 
 	def test_solve_call(self):
+		print(backend.config)
 		self.exercise_solve_call(PogsSolver, self.A_test)
 
-	def test_abstract_solve_call(self):
-		n = 1
-		for test_matrix in self.test_matrices:
-			print('abstract solve: {}/{}'.format(n, len(self.test_matrices)))
-			n += 1
-			self.exercise_solve_call(PogsAbstractSolver, test_matrix)
+	# def test_abstract_solve_call(self):
+	# 	n = 1
+	# 	for test_matrix in self.test_matrices:
+	# 		print('abstract solve: {}/{}---{}'.format(
+	# 				n, len(self.test_matrices), ))
+	# 		n += 1
+	# 		self.exercise_solve_call(PogsAbstractSolver, test_matrix)
 
 	def test_solver_io(self):
-		return
 		f = PogsObjective(self.shape[0], h='Abs', b=1)
 		g = PogsObjective(self.shape[1], h='IndGe0')
 
