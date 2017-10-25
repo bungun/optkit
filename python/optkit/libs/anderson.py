@@ -22,7 +22,7 @@ def attach_anderson_ctypes(lib, single_precision=False):
 		attach_dense_linsys_ctypes(lib, single_precision)
 
 	ok_float = lib.ok_float
-	vector = lib.vector_p
+	vector_p = lib.vector_p
 	matrix_p = lib.matrix_p
 
 	class anderson_accelerator(ct.Structure):
@@ -49,7 +49,7 @@ def attach_anderson_ccalls(lib, single_precision=False):
 
 	ok_float = lib.ok_float
 	ok_float_p = lib.ok_float_p
-	vector = lib.vector_p
+	vector_p = lib.vector_p
 	matrix_p = lib.matrix_p
 	anderson_accelerator_p = lib.anderson_accelerator_p
 
@@ -57,13 +57,13 @@ def attach_anderson_ccalls(lib, single_precision=False):
 	lib.anderson_accelerator_init.argtypes = [vector_p, ct.c_size_t]
 	lib.anderson_accelerator_free.argtypes = [anderson_accelerator_p]
 	lib.anderson_update_F_x.argtypes = [
-			anderson_accelerator_p, matrix_p, vector_p, c_size_t]
+			anderson_accelerator_p, matrix_p, vector_p, ct.c_size_t]
 	lib.anderson_update_F_g.argtypes = [
-			anderson_accelerator_p, matrix_p, vector_p, c_size_t]
+			anderson_accelerator_p, matrix_p, vector_p, ct.c_size_t]
 	lib.anderson_update_G.argtypes = [
-			anderson_accelerator_p, matrix_p, vector_p, c_size_t]
+			anderson_accelerator_p, matrix_p, vector_p, ct.c_size_t]
 	lib.anderson_regularized_gram.argtypes = [
-			anderson_accelerator_p, matrix_p, matrix_p, ok_float_p]
+			anderson_accelerator_p, matrix_p, matrix_p, ok_float]
 	lib.anderson_solve.argtypes = [
 			anderson_accelerator_p, matrix_p, vector_p, ok_float]
 	lib.anderson_mix.argtypes = [

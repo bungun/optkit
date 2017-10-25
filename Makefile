@@ -257,7 +257,7 @@ $(OUT)libcluster_$(LIBCONFIG).$(SHARED): $(CLUSTER_TARG) $(DENSE_TARG) \
 libanderson: $(OUT)libanderson_$(LIBCONFIG).$(SHARED)
 $(OUT)libanderson_$(LIBCONFIG).$(SHARED): anderson $(DENSE_TARG) $(BASE_TARG)
 	mkdir -p $(OUT)
-	$(CC) $(CCFLAGS) -shared -o $@ 
+	$(CC) $(CCFLAGS) -shared -o $@ \
 	$(ANDERSON_OBJ) $(ANDERSON_STATIC_DEPS) $(LDFLAGS)
 
 libprox: $(OUT)libprox_$(LIBCONFIG).$(SHARED)

@@ -56,6 +56,9 @@ fi
 if (( level >= 2 && floor <= 2 )) || [ $arg = "cluster" ]; then
 	CLUSTER=1
 fi
+if (( level >= 2 && floor <= 2 )) || [ $arg = "anderson" ]; then
+	ANDERSON=1
+fi
 # level 3
 if (( level >= 3 && floor <= 3 )) || [ $arg = "cg" ]; then
 	CG=1
@@ -207,6 +210,15 @@ for transpose in ${TRANSPOSE_STATES[@]}; do
 		# TEST_FAILURE=$(($? + $TEST_FAILURE))
 	fi
 
+	if [[ ${ANDERSON:-0} -eq 1 ]]; then
+		lib=$(ls ${HOME}/build | grep libanderson_${config})
+		if [[ -d ./build ]] && [[ ${lib:-""} = "" ]]; then
+			make libanderson FLOAT=$FLOAT GPU=$GPU
+		fi
+		echo TESTING ANDERSON CALLS: ${msg}
+		nosetests ${testprefix}anderson${suffix}
+		TEST_FAILURE=$(($? + $TEST_FAILURE))
+	fi
 	
 	if [[ ${CG:-0} -eq 1 ]]; then
 		lib=$(ls ${HOME}/build | grep libcg_${config})
