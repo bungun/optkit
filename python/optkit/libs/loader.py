@@ -61,14 +61,14 @@ def retrieve_libs(lib_prefix):
 	return libs, search_results
 
 class OptkitLibs(object):
-	def __init__(self, lib_prefix):
+	def __init__(self, lib_prefix, api_call_list):
 		self.libs, search_results = retrieve_libs(lib_prefix)
 		if all([self.libs[k] is None for k in self.libs]):
 			raise ValueError(
 					'No backend libraries were located:\n{}'
 					''.format(search_results))
 
-		self.attach_calls = []
+		self.attach_calls = list(set(api_call_list))
 
 	def get(self, single_precision=False, gpu=False):
 		device = 'gpu' if gpu else 'cpu'
@@ -86,9 +86,19 @@ class OptkitLibs(object):
 			lib.enums = OKEnums()
 
 			for attach_call in self.attach_calls:
-				attach_call(lib, single_precision)
+				attach_call(lib, single_precision=single_precision)
 
 			lib.FLOAT = single_precision
 			lib.GPU = gpu
 			lib.INITIALIZED = True
 			return lib
+
+	@staticmethod
+	def conditional_include(lib, token, include_call, **include_args):
+		if not token in lib:
+			include_call(lib, **include_args)
+
+	@staticmethod
+	def attach_default_restype(*methods):
+		for m in methods:
+			m.restypes = ct.c_uint
