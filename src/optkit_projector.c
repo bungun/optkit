@@ -167,7 +167,7 @@ ok_status direct_projector_project(void * linalg_handle, direct_projector * P,
 
 #ifndef OPTKIT_NO_INDIRECT_PROJECTOR
 /* Indirect Projector methods */
-ok_status indirect_projector_alloc(indirect_projector * P, operator * A)
+ok_status indirect_projector_alloc(indirect_projector * P, abstract_operator * A)
 {
 	OK_CHECK_PTR(P);
 	OK_CHECK_OPERATOR(A);
@@ -363,7 +363,7 @@ projector * dense_direct_projector_alloc(matrix * A)
 }
 
 #ifndef OPTKIT_NO_INDIRECT_PROJECTOR
-void * indirect_projector_data_alloc(operator * A)
+void * indirect_projector_data_alloc(abstract_operator * A)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	indirect_projector_generic * P = OK_NULL;
@@ -430,7 +430,7 @@ ok_status indirect_projector_g_project(void * data, vector * x_in, vector * y_in
 		P->A->apply(P->A->data, x_out, y_out) );
 }
 
-projector * indirect_projector_generic_alloc(operator * A)
+projector * indirect_projector_generic_alloc(abstract_operator * A)
 {
 	projector * P = OK_NULL;
 	ok_alloc(P, sizeof(*P));

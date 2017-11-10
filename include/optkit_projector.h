@@ -51,12 +51,12 @@ ok_status direct_projector_project(void * linalg_handle, direct_projector * P,
 ok_status direct_projector_free(direct_projector * P);
 
 typedef struct indirect_projector {
-	operator * A;
+	abstract_operator * A;
 	void * cgls_work;
 	uint flag;
 } indirect_projector;
 
-ok_status indirect_projector_alloc(indirect_projector * P, operator * A);
+ok_status indirect_projector_alloc(indirect_projector * P, abstract_operator * A);
 ok_status indirect_projector_initialize(void * linalg_handle,
 	indirect_projector * P, const int normalize);
 ok_status indirect_projector_project(void * linalg_handle,
@@ -80,7 +80,7 @@ ok_status dense_direct_projector_project(void * data, vector * x_in,
 projector * dense_direct_projector_alloc(matrix * A);
 
 typedef struct indirect_projector_generic {
-	operator * A;
+	abstract_operator * A;
 	void * cgls_work;
 	void * linalg_handle;
 	ok_float normA;
@@ -88,12 +88,12 @@ typedef struct indirect_projector_generic {
 	uint flag;
 } indirect_projector_generic;
 
-void * indirect_projector_data_alloc(operator * A);
+void * indirect_projector_data_alloc(abstract_operator * A);
 ok_status indirect_projector_data_free(void * data);
 ok_status indirect_projector_g_initialize(void * data, const int normalize);
 ok_status indirect_projector_g_project(void * data, vector * x_in,
 	vector * y_in, vector * x_out, vector * y_out, ok_float tol);
-projector * indirect_projector_generic_alloc(operator * A);
+projector * indirect_projector_generic_alloc(abstract_operator * A);
 
 #ifdef __cplusplus
 }
