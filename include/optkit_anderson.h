@@ -17,9 +17,10 @@ typedef struct {
 	void * linalg_handle;
 } anderson_accelerator;
 
-anderson_accelerator * anderson_accelerator_init(vector * x_initial,
-	size_t lookback_dim);
+ok_status anderson_accelerator_init(anderson_accelerator * aa,
+	size_t vector_dim, size_t lookback_dim);
 ok_status anderson_accelerator_free(anderson_accelerator * aa);
+ok_status anderson_set_x0(anderson_accelerator * aa, vector * x_initial);
 ok_status anderson_update_F_x(anderson_accelerator * aa, matrix * F, vector * x,
 	size_t index);
 ok_status anderson_update_F_g(anderson_accelerator * aa, matrix * F,
