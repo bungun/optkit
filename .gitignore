@@ -22,3 +22,6 @@ src/*graph*
 
 
 *block_prox*
+*python/optkit/extensions/
+*python/optkit/libs/interp/
+*python/optkit/optkit_pydefs.h

@@ -23,7 +23,7 @@ CLUINC=$(INCLUDE)$(CLUSTER)
 CLUSRC=$(SRC)$(CLUSTER)
 CLUOUT=$(OUT)$(CLUSTER)
 
-POGS=pogs/optkit_
+POGS=pogs/optkit_pogs_
 POGSINC=$(INCLUDE)$(POGS)
 POGSSRC=$(SRC)$(POGS)
 POGSOUT=$(OUT)$(POGS)
@@ -105,7 +105,7 @@ LDFLAGS=$(LDFLAGS_)
 DEVICETAG=cpu
 endif
 
-LIBCONFIG=$(DEVICETAG)$(PRECISION)
+LIBCONFIG=_$(DEVICETAG)$(PRECISION)
 
 BASE_TARG=$(DEVICETAG)_defs
 VECTOR_TARG=$(DEVICETAG)_vector
@@ -132,33 +132,44 @@ OPERATOR_HDR=$(LINSYS_HDR) $(OPINC)dense.h $(OPINC)sparse.h $(OPINC)diagonal.h
 OPERATOR_HDR+=$(INCLUDE)optkit_abstract_operator.h $(OPINC)transforms.h
 CG_HDR=$(OPERATOR_HDR) $(INCLUDE)optkit_cg.h
 
+# POGS_BASE_HDR=$(DENSE_HDR) $(INCLUDE)optkit_prox.hpp $(POGSINC)datatypes.h 
+# POGS_BASE_HDR+=$(POGSINC)impl_common.h $(POGSINC)adaptive_rho.h 
+# POGS_BASE_HDR+=$(INCLUDE)optkit_projector.h $(INCLUDE)optkit_equilibration.h
+# POGS_ABSTRACT_HDR=$(POGS_BASE_HDR) $(POGSINC)impl_abstract.h
+# POGS_ABSTRACT_HDR+=
+# POGS_SPARSE_HDR=$(POGS_BASE_HDR) $(POGSINC)impl_sparse.h
+# POGS_DENSE_HDR=$(POGS_BASE_HDR) $(POGSINC)impl_dense.h
 
-BASE_OBJ=$(PREFIX_OUT)defs_$(LIBCONFIG).o
-VECTOR_OBJ=$(LAOUT)vector_$(LIBCONFIG).o
-DENSE_OBJ=$(LAOUT)vector_$(LIBCONFIG).o $(LAOUT)matrix_$(LIBCONFIG).o
-DENSE_OBJ+=$(LAOUT)blas_$(LIBCONFIG).o $(LAOUT)dense_$(LIBCONFIG).o
-SPARSE_OBJ=$(LAOUT)sparse_$(LIBCONFIG).o
-PROX_OBJ=$(PREFIX_OUT)prox_$(LIBCONFIG).o
+BASE_OBJ=$(PREFIX_OUT)defs$(LIBCONFIG).o
+VECTOR_OBJ=$(LAOUT)vector$(LIBCONFIG).o
+DENSE_OBJ=$(LAOUT)vector$(LIBCONFIG).o $(LAOUT)matrix$(LIBCONFIG).o
+DENSE_OBJ+=$(LAOUT)blas$(LIBCONFIG).o $(LAOUT)dense$(LIBCONFIG).o
+SPARSE_OBJ=$(LAOUT)sparse$(LIBCONFIG).o
+PROX_OBJ=$(PREFIX_OUT)prox$(LIBCONFIG).o
 
-ANDERSON_OBJ=$(PREFIX_OUT)anderson_$(LIBCONFIG).o
+ANDERSON_OBJ=$(PREFIX_OUT)anderson$(LIBCONFIG).o
 
-OPERATOR_OBJ=$(OPOUT)dense_$(LIBCONFIG).o $(OPOUT)sparse_$(LIBCONFIG).o 
-OPERATOR_OBJ+=$(OPOUT)diagonal_$(LIBCONFIG).o 
+OPERATOR_OBJ=$(OPOUT)dense$(LIBCONFIG).o $(OPOUT)sparse$(LIBCONFIG).o 
+OPERATOR_OBJ+=$(OPOUT)diagonal$(LIBCONFIG).o 
 
-CLUSTER_OBJ=$(CLUOUT)clustering_$(LIBCONFIG).o 
-CLUSTER_OBJ+=$(CLUOUT)upsampling_vector_$(LIBCONFIG).o
-CLUSTER_OBJ+=$(CLUOUT)upsampling_vector_common_$(LIBCONFIG).o
-CLUSTER_OBJ+=$(CLUOUT)clustering_common_$(LIBCONFIG).o
+CLUSTER_OBJ=$(CLUOUT)clustering$(LIBCONFIG).o 
+CLUSTER_OBJ+=$(CLUOUT)upsampling_vector$(LIBCONFIG).o
+CLUSTER_OBJ+=$(CLUOUT)upsampling_vector_common$(LIBCONFIG).o
+CLUSTER_OBJ+=$(CLUOUT)clustering_common$(LIBCONFIG).o
 
-CG_OBJ=$(PREFIX_OUT)cg_$(LIBCONFIG).o
-PROJ_OBJ=$(PREFIX_OUT)projector_$(LIBCONFIG).o
-PROJ_DIRECT_OBJ=$(PREFIX_OUT)projector_direct_$(LIBCONFIG).o
-EQUIL_OBJ=$(PREFIX_OUT)equil_$(LIBCONFIG).o
-EQUIL_DENSE_OBJ=$(PREFIX_OUT)equil_dense_$(LIBCONFIG).o
+CG_OBJ=$(PREFIX_OUT)cg$(LIBCONFIG).o
+PROJ_OBJ=$(PREFIX_OUT)projector$(LIBCONFIG).o
+PROJ_DIRECT_OBJ=$(PREFIX_OUT)projector_direct$(LIBCONFIG).o
+EQUIL_OBJ=$(PREFIX_OUT)equil$(LIBCONFIG).o
+EQUIL_DENSE_OBJ=$(PREFIX_OUT)equil_dense$(LIBCONFIG).o
 
-POGS_COMMON_OBJ=$(POGSOUT)pogs_common_$(LIBCONFIG).o 
-POGS_OBJ=$(POGS_COMMON_OBJ) $(POGSOUT)pogs_$(LIBCONFIG).o
-POGS_ABSTR_OBJ=$(POGS_COMMON_OBJ) $(POGSOUT)pogs_abstract_$(LIBCONFIG).o
+# POGS_COMMON_OBJ=$(POGSOUT)pogs_common$(LIBCONFIG).o 
+# POGS_OBJ=$(POGS_COMMON_OBJ) $(POGSOUT)pogs$(LIBCONFIG).o
+# POGS_ABSTR_OBJ=$(POGS_COMMON_OBJ) $(POGSOUT)pogs_abstract$(LIBCONFIG).o
+
+POGS_DENSE_OBJ=$(POGSOUT)dense$(LIBCONFIG).o
+POGS_SPARSE_OBJ=$(POGSOUT)sparse$(LIBCONFIG).o
+POGS_ABSTRACT_OBJ=$(POGSOUT)abstract$(LIBCONFIG).o
 
 SPARSE_STATIC_DEPS=$(BASE_OBJ) $(VECTOR_OBJ)
 ANDERSON_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ)
@@ -166,21 +177,32 @@ OPERATOR_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ) $(SPARSE_OBJ) $(OPERATOR_OBJ)
 CG_STATIC_DEPS=$(OPERATOR_STATIC_DEPS) $(CG_OBJ)
 EQUIL_STATIC_DEPS=$(OPERATOR_STATIC_DEPS) $(EQUIL_OBJ) 
 PROJ_STATIC_DEPS=$(CG_STATIC_DEPS) $(PROJ_OBJ)
-POGS_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ) $(PROX_OBJ) $(EQUIL_DENSE_OBJ) 
-POGS_STATIC_DEPS+=$(PROJ_DIRECT_OBJ) $(POGS_OBJ) 
-POGS_ABSTRACT_STATIC_DEPS=$(EQUIL_STATIC_DEPS) $(CG_OBJ) $(PROJ_OBJ) $(PROX_OBJ)
-POGS_ABSTRACT_STATIC_DEPS+=$(POGS_ABSTR_OBJ)
 
-POGS_DENSE_LIB_DEPS=equil_dense projector_direct $(DENSE_TARG) $(PROX_TARG)
-POGS_SPARSE_LIB_DEPS=operator cg equil projector $(LINSYS_TARGS) $(PROX_TARG)
-POGS_ABSTRACT_LIB_DEPS=operator cg equil projector $(LINSYS_TARGS) $(PROX_TARG)
+# POGS_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ) $(PROX_OBJ) $(EQUIL_DENSE_OBJ) 
+# POGS_STATIC_DEPS+=$(PROJ_DIRECT_OBJ) $(POGS_OBJ) 
+# POGS_ABSTRACT_STATIC_DEPS=$(EQUIL_STATIC_DEPS) $(CG_OBJ) $(PROJ_OBJ) $(PROX_OBJ)
+# POGS_ABSTRACT_STATIC_DEPS+=$(POGS_ABSTR_OBJ)
+
+POGS_DENSE_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ) $(PROX_OBJ) $(EQUIL_DENSE_OBJ) 
+POGS_DENSE_STATIC_DEPS+=$(PROJ_DIRECT_OBJ) $(ANDERSON_OBJ) $(POGS_DENSE_OBJ) 
+POGS_SPARSE_STATIC_DEPS=$(OPERATOR_STATIC_DEPS) $(PROX_OBJ) $(CG_OBJ) $(PROJ_OBJ)
+POGS_SPARSE_STATIC_DEPS+=$(EQUIL_OBJ) $(ANDERSON_OBJ) $(POGS_SPARSE_OBJ)
+POGS_ABSTRACT_STATIC_DEPS=$(OPERATOR_STATIC_DEPS) $(PROX_OBJ) $(CG_OBJ) $(PROJ_OBJ)
+POGS_ABSTRACT_STATIC_DEPS+=$(EQUIL_OBJ) $(ANDERSON_OBJ) $(POGS_ABSTRACT_OBJ)
+
+POGS_DENSE_LIB_DEPS=$(BASE_TARG) $(DENSE_TARG) $(PROX_TARG) 
+POGS_DENSE_LIB_DEPS+=equil_dense projector_direct anderson
+POGS_SPARSE_LIB_DEPS=$(BASE_TARG) $(LINSYS_TARGS) $(PROX_TARG) 
+POGS_SPARSE_LIB_DEPS+=operator cg equil projector anderson 
+POGS_ABSTRACT_LIB_DEPS=$(BASE_TARG) $(LINSYS_TARGS) $(PROX_TARG) 
+POGS_ABSTRACT_LIB_DEPS+=operator cg equil projector anderson 
 
 .PHONY: default all libs libok libpogs pylibs
 .PHONY: libpogs_abstract libpogs_sparse libpogs_dense libprojector libequil
 .PHONY: libcg liboperator libanderson libcluster 
 .PHONY: libprox libok_sparse libok_dense
 
-.PHONY: pogs_abstract pogs pogs_abstract_ pogs_ pogs_common 
+.PHONY: pogs_abstract pogs_dense pogs_#pogs_abstract_ pogs_common 
 .PHONY: equil equil_dense projector projector_direct cg anderson 
 .PHONY: operator dense_operator sparse_operator diagonal_operator
 .PHONY: cpu_cluster gpu_cluster cpu_cluster_ gpu_cluster_ clustering_common
@@ -197,111 +219,128 @@ libok: libok_dense libok_sparse
 libpogs: libpogs_dense libpogs_abstract
 pylibs: libpogs_dense libpogs_abstract libcluster
 
-libpogs_abstract: $(OUT)libpogs_abstract_$(LIBCONFIG).$(SHARED)
-$(OUT)libpogs_abstract_$(LIBCONFIG).$(SHARED): pogs_abstract \
-	$(POGS_ABSTRACT_LIB_DEPS) $(BASE_TARG)
+libpogs_abstract: $(OUT)libpogs_abstract$(LIBCONFIG).$(SHARED)
+$(OUT)libpogs_abstract$(LIBCONFIG).$(SHARED): pogs_abstract \
+	$(POGS_ABSTRACT_LIB_DEPS)
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs -shared -o $@ \
 	$(POGS_ABSTRACT_STATIC_DEPS) $(LDFLAGS) 
 
-libpogs_sparse: 
-# libpogs_sparse: $(OUT)libpogs_sparse_$(LIBCONFIG).$(SHARED)
-$(OUT)libpogs_sparse_$(LIBCONFIG).$(SHARED): pogs $(POGS_SPARSE_LIB_DEPS) \
-	$(BASE_TARG)
+libpogs_sparse: $(OUT)libpogs_sparse$(LIBCONFIG).$(SHARED)
+$(OUT)libpogs_sparse$(LIBCONFIG).$(SHARED): pogs_sparse \
+	$(POGS_SPARSE_LIB_DEPS) 
 	mkdir -p $(OUT)	
 	$(CC) $(CCFLAGS) -shared -o $@ \
-	$(POGS_STATIC_DEPS) $(SPARSE_OBJ) $(LDFLAGS)
+	$(POGS_SPARSE_STATIC_DEPS)  $(LDFLAGS)
 
-libpogs_dense: $(OUT)libpogs_dense_$(LIBCONFIG).$(SHARED)
-$(OUT)libpogs_dense_$(LIBCONFIG).$(SHARED): pogs $(POGS_DENSE_LIB_DEPS) \
-	$(BASE_TARG)
+libpogs_dense: $(OUT)libpogs_dense$(LIBCONFIG).$(SHARED)
+$(OUT)libpogs_dense$(LIBCONFIG).$(SHARED): pogs_dense $(POGS_DENSE_LIB_DEPS) 
 	mkdir -p $(OUT)	
 	$(CC) $(CCFLAGS) -shared -o $@ \
-	$(POGS_STATIC_DEPS) $(LDFLAGS) 
+	$(POGS_DENSE_STATIC_DEPS) $(LDFLAGS) 
 
-libprojector: $(OUT)libprojector_$(LIBCONFIG).$(SHARED)
-$(OUT)libprojector_$(LIBCONFIG).$(SHARED): projector operator cg $(DENSE_TARG) \
+libprojector: $(OUT)libprojector$(LIBCONFIG).$(SHARED)
+$(OUT)libprojector$(LIBCONFIG).$(SHARED): projector operator cg $(DENSE_TARG) \
 	$(SPARSE_TARG) $(BASE_TARG)
 	mkdir -p $(OUT)	
 	$(CC) $(CCFLAGS) -shared -o $@ \
 	$(PROJ_STATIC_DEPS) $(LDFLAGS)
 
-libequil: $(OUT)libequil_$(LIBCONFIG).$(SHARED)
-$(OUT)libequil_$(LIBCONFIG).$(SHARED): equil $(DENSE_TARG) $(SPARSE_TARG) \
+libequil: $(OUT)libequil$(LIBCONFIG).$(SHARED)
+$(OUT)libequil$(LIBCONFIG).$(SHARED): equil $(DENSE_TARG) $(SPARSE_TARG) \
 	operator $(BASE_TARG)
 	mkdir -p $(OUT)	
 	$(CC) $(CCFLAGS) -shared -o $@ \
 	$(EQUIL_STATIC_DEPS) $(LDFLAGS)
 
-libcg: $(OUT)libcg_$(LIBCONFIG).$(SHARED)
-$(OUT)libcg_$(LIBCONFIG).$(SHARED): cg $(DENSE_TARG) $(SPARSE_TARG) operator \
+libcg: $(OUT)libcg$(LIBCONFIG).$(SHARED)
+$(OUT)libcg$(LIBCONFIG).$(SHARED): cg $(DENSE_TARG) $(SPARSE_TARG) operator \
 	$(BASE_TARG)
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) -shared -o $@ \
 	$(CG_STATIC_DEPS) $(LDFLAGS) 
 
-liboperator: $(OUT)liboperator_$(LIBCONFIG).$(SHARED)
-$(OUT)liboperator_$(LIBCONFIG).$(SHARED): operator $(DENSE_TARG) \
+liboperator: $(OUT)liboperator$(LIBCONFIG).$(SHARED)
+$(OUT)liboperator$(LIBCONFIG).$(SHARED): operator $(DENSE_TARG) \
 	$(SPARSE_TARG) $(BASE_TARG)
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) -shared -o $@ \
 	$(OPERATOR_STATIC_DEPS) $(LDFLAGS)
 
-libcluster: $(OUT)libcluster_$(LIBCONFIG).$(SHARED)
-$(OUT)libcluster_$(LIBCONFIG).$(SHARED): $(CLUSTER_TARG) $(DENSE_TARG) \
+libcluster: $(OUT)libcluster$(LIBCONFIG).$(SHARED)
+$(OUT)libcluster$(LIBCONFIG).$(SHARED): $(CLUSTER_TARG) $(DENSE_TARG) \
 	$(BASE_TARG)
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) -shared -o $@ \
 	$(CLUSTER_OBJ) $(DENSE_OBJ) $(BASE_OBJ) $(LDFLAGS)	
 
-libanderson: $(OUT)libanderson_$(LIBCONFIG).$(SHARED)
-$(OUT)libanderson_$(LIBCONFIG).$(SHARED): anderson $(DENSE_TARG) $(BASE_TARG)
+libanderson: $(OUT)libanderson$(LIBCONFIG).$(SHARED)
+$(OUT)libanderson$(LIBCONFIG).$(SHARED): anderson $(DENSE_TARG) $(BASE_TARG)
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) -shared -o $@ \
 	$(ANDERSON_OBJ) $(ANDERSON_STATIC_DEPS) $(LDFLAGS)
 
-libprox: $(OUT)libprox_$(LIBCONFIG).$(SHARED)
-$(OUT)libprox_$(LIBCONFIG).$(SHARED): $(PROX_TARG) $(VECTOR_TARG) $(BASE_TARG)
+libprox: $(OUT)libprox$(LIBCONFIG).$(SHARED)
+$(OUT)libprox$(LIBCONFIG).$(SHARED): $(PROX_TARG) $(VECTOR_TARG) $(BASE_TARG)
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) -shared -o $@ \
 	$(PROX_OBJ) $(VECTOR_OBJ) $(BASE_OBJ) $(LDFLAGS)
 
-libok_sparse: $(OUT)libok_sparse_$(LIBCONFIG).$(SHARED)
-$(OUT)libok_sparse_$(LIBCONFIG).$(SHARED): $(SPARSE_TARG) $(BASE_TARG)
+libok_sparse: $(OUT)libok_sparse$(LIBCONFIG).$(SHARED)
+$(OUT)libok_sparse$(LIBCONFIG).$(SHARED): $(SPARSE_TARG) $(BASE_TARG)
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) -shared -o $@ \
 	$(SPARSE_OBJ) $(SPARSE_STATIC_DEPS) $(LDFLAGS) 
 
-libok_dense: $(OUT)libok_dense_$(LIBCONFIG).$(SHARED)
-$(OUT)libok_dense_$(LIBCONFIG).$(SHARED): $(DENSE_TARG) $(BASE_TARG)
+libok_dense: $(OUT)libok_dense$(LIBCONFIG).$(SHARED)
+$(OUT)libok_dense$(LIBCONFIG).$(SHARED): $(DENSE_TARG) $(BASE_TARG)
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) -shared -o $@ \
 	$(DENSE_OBJ) $(BASE_OBJ) $(LDFLAGS)
 
-pogs_abstract: pogs_common pogs_abstract_
-pogs: pogs_common pogs_
+# pogs_abstract: pogs_common pogs_abstract_
+# pogs: pogs_common pogs_
 
-pogs_abstract_: $(POGSOUT)pogs_abstract_$(LIBCONFIG).o
-$(POGSOUT)pogs_abstract_$(LIBCONFIG).o: $(POGSSRC)pogs_abstract.c \
-	$(POGSINC)pogs_abstract.h $(INCLUDE)optkit_equilibration.h \
-	$(INCLUDE)optkit_projector.h
+# pogs_abstract_: $(POGSOUT)pogs_abstract$(LIBCONFIG).o
+# $(POGSOUT)pogs_abstract$(LIBCONFIG).o: $(POGSSRC)pogs_abstract.c \
+# 	$(POGSINC)pogs_abstract.h $(INCLUDE)optkit_equilibration.h \
+# 	$(INCLUDE)optkit_projector.h
+# 	mkdir -p $(OUT) 
+# 	mkdir -p $(OUT)pogs 	
+# 	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $< -c -o $@
+
+# pogs_: $(POGSOUT)pogs$(LIBCONFIG).o
+# $(POGSOUT)pogs$(LIBCONFIG).o: $(POGSSRC)pogs.c $(POGSINC)pogs.h \
+# 	$(INCLUDE)optkit_equilibration.h $(INCLUDE)optkit_projector.h
+# 	mkdir -p $(OUT) 
+# 	mkdir -p $(OUT)pogs 	
+# 	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $< -c -o $@	
+
+# pogs_common: $(POGSOUT)pogs_common$(LIBCONFIG).o
+# $(POGSOUT)pogs_common$(LIBCONFIG).o: $(POGSSRC)pogs_common.c \
+# 	$(POGSINC)pogs_common.h $(DENSE_HDR) $(INCLUDE)optkit_prox.hpp
+# 	mkdir -p $(OUT) 
+# 	mkdir -p $(OUT)pogs 	
+# 	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $< -c -o $@
+
+pogs_abstract: $(POGSOUT)abstract$(LIBCONFIG).o
+$(POGSOUT)abstract$(LIBCONFIG).o: $(POGSSRC)generic.c 
 	mkdir -p $(OUT) 
 	mkdir -p $(OUT)pogs 	
-	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $< -c -o $@
+	$(CC) $(CCFLAGS) -DOK_COMPILE_POGS_ABSTRACT \
+	-I$(INCLUDE)pogs -I$(INCLUDE)operator $< -c -o $@
 
-pogs_: $(POGSOUT)pogs_$(LIBCONFIG).o
-$(POGSOUT)pogs_$(LIBCONFIG).o: $(POGSSRC)pogs.c $(POGSINC)pogs.h \
-	$(INCLUDE)optkit_equilibration.h $(INCLUDE)optkit_projector.h
+pogs_sparse: $(POGSOUT)dense$(LIBCONFIG).o
+$(POGSOUT)sparse$(LIBCONFIG).o: $(POGSSRC)generic.c 
 	mkdir -p $(OUT) 
 	mkdir -p $(OUT)pogs 	
-	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $< -c -o $@	
+	$(CC) $(CCFLAGS) -DOK_COMPILE_POGS_SPARSE -I$(INCLUDE)pogs $< -c -o $@
 
-pogs_common: $(POGSOUT)pogs_common_$(LIBCONFIG).o
-$(POGSOUT)pogs_common_$(LIBCONFIG).o: $(POGSSRC)pogs_common.c \
-	$(POGSINC)pogs_common.h $(DENSE_HDR) $(INCLUDE)optkit_prox.hpp
+pogs_dense: $(POGSOUT)dense$(LIBCONFIG).o
+$(POGSOUT)dense$(LIBCONFIG).o: $(POGSSRC)generic.c 
 	mkdir -p $(OUT) 
 	mkdir -p $(OUT)pogs 	
-	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $< -c -o $@
+	$(CC) $(CCFLAGS) -DOK_COMPILE_POGS_DENSE -I$(INCLUDE)pogs $< -c -o $@
 
 equil: $(EQUIL_OBJ)
 $(EQUIL_OBJ): $(SRC)optkit_equilibration.c $(INCLUDE)optkit_equilibration.h \
@@ -332,22 +371,22 @@ $(CG_OBJ): $(SRC)optkit_cg.c $(INCLUDE)optkit_cg.h $(OPERATOR_HDR)
 	$(CC) $(CCFLAGS) $< -c -o $@
 
 operator: dense_operator sparse_operator diagonal_operator
-dense_operator: $(OUT)$(OPERATOR)dense_$(LIBCONFIG).o
-$(OUT)$(OPERATOR)dense_$(LIBCONFIG).o: $(OPSRC)dense.c $(OPINC)dense.h \
+dense_operator: $(OUT)$(OPERATOR)dense$(LIBCONFIG).o
+$(OUT)$(OPERATOR)dense$(LIBCONFIG).o: $(OPSRC)dense.c $(OPINC)dense.h \
 	$(INCLUDE)optkit_abstract_operator.h $(OPINC)transforms.h $(DENSE_HDR)
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)operator
 	$(CC) $(CCFLAGS) $< -c -o $@
 
-sparse_operator: $(OUT)$(OPERATOR)sparse_$(LIBCONFIG).o
-$(OUT)$(OPERATOR)sparse_$(LIBCONFIG).o: $(OPSRC)sparse.c $(OPINC)sparse.h \
+sparse_operator: $(OUT)$(OPERATOR)sparse$(LIBCONFIG).o
+$(OUT)$(OPERATOR)sparse$(LIBCONFIG).o: $(OPSRC)sparse.c $(OPINC)sparse.h \
 	$(INCLUDE)optkit_abstract_operator.h $(OPINC)transforms.h $(SPARSE_HDR)
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)operator
 	$(CC) $(CCFLAGS) $< -c -o $@
 
-diagonal_operator: $(OUT)$(OPERATOR)diagonal_$(LIBCONFIG).o
-$(OUT)$(OPERATOR)diagonal_$(LIBCONFIG).o: $(OPSRC)diagonal.c \
+diagonal_operator: $(OUT)$(OPERATOR)diagonal$(LIBCONFIG).o
+$(OUT)$(OPERATOR)diagonal$(LIBCONFIG).o: $(OPSRC)diagonal.c \
 	$(OPINC)diagonal.h $(INCLUDE)optkit_abstract_operator.h $(DENSE_HDR)
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)operator
@@ -368,8 +407,8 @@ $(CLUOUT)clustering_gpu$(PRECISION).o: $(CLUSRC)clustering.cu
 	mkdir -p $(OUT)clustering/
 	$(CUXX) $(CUXXFLAGS) $< -c -o $@
 
-clustering_common: $(CLUOUT)clustering_common_$(LIBCONFIG).o
-$(CLUOUT)clustering_common_$(LIBCONFIG).o: $(CLUSRC)clustering_common.c \
+clustering_common: $(CLUOUT)clustering_common$(LIBCONFIG).o
+$(CLUOUT)clustering_common$(LIBCONFIG).o: $(CLUSRC)clustering_common.c \
 	$(CLUINC)clustering.h $(DEVICETAG)_upsampling_vector
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)clustering/
@@ -390,16 +429,16 @@ $(CLUOUT)upsampling_vector_gpu$(PRECISION).o: $(CLUSRC)upsampling_vector.cu
 	mkdir -p $(OUT)clustering/
 	$(CUXX) $(CUXXFLAGS) $< -c -o $@
 
-upsampling_vector_common: $(CLUOUT)upsampling_vector_common_$(LIBCONFIG).o
-$(CLUOUT)upsampling_vector_common_$(LIBCONFIG).o: \
+upsampling_vector_common: $(CLUOUT)upsampling_vector_common$(LIBCONFIG).o
+$(CLUOUT)upsampling_vector_common$(LIBCONFIG).o: \
 	$(CLUSRC)upsampling_vector_common.c $(CLUINC)upsampling_vector.h \
 	$(DENSE_HDR)
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)clustering/
 	$(CC) $(CCFLAGS) $< -c -o $@
 
-anderson: $(PREFIX_OUT)anderson_$(LIBCONFIG).o
-$(PREFIX_OUT)anderson_$(LIBCONFIG).o: $(SRC)optkit_anderson.c \
+anderson: $(PREFIX_OUT)anderson$(LIBCONFIG).o
+$(PREFIX_OUT)anderson$(LIBCONFIG).o: $(SRC)optkit_anderson.c \
 	$(INCLUDE)optkit_anderson.h $(DENSE_HDR)
 	mkdir -p $(OUT)
 	$(CC) $(CCFLAGS) $< -c -o $@
