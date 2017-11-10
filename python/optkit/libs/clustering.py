@@ -3,24 +3,21 @@ from optkit.compat import *
 import ctypes as ct
 
 from optkit.libs.loader import OptkitLibs
-from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\
-	attach_sparse_linsys_ctypes, attach_base_ccalls, attach_vector_ccalls, \
-	attach_dense_linsys_ccalls, attach_sparse_linsys_ccalls
+from optkit.libs.linsys import include_ok_dense, ok_dense_api
+
+
+def include_ok_clustering(lib, **include_args):
+	OptkitLibs.conditional_include(
+		lib, 'kmeans_io_p', attach_clustering_ctypes, **include_args)
+
+ok_cluster_api = ok_dense_api + [attach_clustering_ccalls]
 
 class ClusteringLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'libcluster_')
-		self.attach_calls.append(attach_base_ctypes)
-		self.attach_calls.append(attach_dense_linsys_ctypes)
-		self.attach_calls.append(attach_base_ccalls)
-		self.attach_calls.append(attach_vector_ccalls)
-		self.attach_calls.append(attach_dense_linsys_ccalls)
-		self.attach_calls.append(attach_clustering_ctypes)
-		self.attach_calls.append(attach_clustering_ccalls)
+		OptkitLibs.__init__(self, 'libcluster_', ok_cluster_api)
 
 def attach_clustering_ctypes(lib, single_precision=False):
-	if not 'matrix' in lib.__dict__:
-		attach_dense_linsys_ctypes(lib, single_precision)
+	include_ok_dense(lib, single_precision=single_precision)
 
 	ok_float = lib.ok_float
 	ok_float_p = lib.ok_float_p
@@ -92,10 +89,7 @@ def attach_clustering_ctypes(lib, single_precision=False):
 	lib.kmeans_io_p = ct.POINTER(lib.kmeans_io)
 
 def attach_clustering_ccalls(lib, single_precision=False):
-	if not 'matrix_p' in lib.__dict__:
-		attach_dense_linsys_ctypes(lib, single_precision)
-	if not 'kmeans_work_p' in lib.__dict__:
-		attach_cluster_ctypes(lib, single_precision)
+	include_ok_clustering(lib, single_precision=single_precision)
 
 	ok_float = lib.ok_float
 	ok_float_p = lib.ok_float_p
@@ -151,24 +145,27 @@ def attach_clustering_ccalls(lib, single_precision=False):
 	lib.kmeans_easy_finish.argtypes = [ct.c_void_p]
 
 	# return types
-	lib.upsamplingvec_alloc.restype = ct.c_uint
-	lib.upsamplingvec_free.restype = ct.c_uint
-	lib.upsamplingvec_check_bounds.restype = ct.c_uint
-	lib.upsamplingvec_update_size.restype = ct.c_uint
-	lib.upsamplingvec_subvector.restype = ct.c_uint
-	lib.upsamplingvec_mul_matrix.restype = ct.c_uint
-	lib.upsamplingvec_count.restype = ct.c_uint
-	lib.cluster_aid_alloc.restype = ct.c_uint
-	lib.cluster_aid_free.restype = ct.c_uint
-	lib.kmeans_work_alloc.restype = ct.c_uint
-	lib.kmeans_work_free.restype = ct.c_uint
-	lib.kmeans_work_subselect.restype = ct.c_uint
-	lib.kmeans_work_load.restype = ct.c_uint
-	lib.kmeans_work_extract.restype = ct.c_uint
-	lib.cluster.restype = ct.c_uint
-	lib.calculate_centroids.restype = ct.c_uint
-	lib.k_means.restype = ct.c_uint
+	OptkitLibs.attach_default_restype([
+			lib.upsamplingvec_alloc,
+			lib.upsamplingvec_free,
+			lib.upsamplingvec_check_bounds,
+			lib.upsamplingvec_update_size,
+			lib.upsamplingvec_subvector,
+			lib.upsamplingvec_mul_matrix,
+			lib.upsamplingvec_count,
+			lib.cluster_aid_alloc,
+			lib.cluster_aid_free,
+			lib.kmeans_work_alloc,
+			lib.kmeans_work_free,
+			lib.kmeans_work_subselect,
+			lib.kmeans_work_load,
+			lib.kmeans_work_extract,
+			lib.cluster,
+			lib.calculate_centroids,
+			lib.k_means,
+			lib.kmeans_easy_resize,
+			lib.kmeans_easy_run,
+			lib.kmeans_easy_finish,
+	])
 	lib.kmeans_easy_init.restype = ct.c_void_p
-	lib.kmeans_easy_resize.restype = ct.c_uint
-	lib.kmeans_easy_run.restype = ct.c_uint
-	lib.kmeans_easy_finish.restype = ct.c_uint
+

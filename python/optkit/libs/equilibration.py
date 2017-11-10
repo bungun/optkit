@@ -3,29 +3,19 @@ from optkit.compat import *
 import ctypes as ct
 
 from optkit.libs.loader import OptkitLibs
-from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\
-	attach_sparse_linsys_ctypes, attach_base_ccalls, attach_vector_ccalls, \
-	attach_dense_linsys_ccalls, attach_sparse_linsys_ccalls
-from optkit.libs.operator import attach_operator_ctypes, attach_operator_ccalls
+from optkit.libs.linsys import include_ok_dense, ok_dense_api
+from optkit.libs.operator import include_ok_operator, ok_operator_api
+
+ok_equil_dense_api = ok_dense_api + [attach_equilibration_ccalls]
+ok_equil_api = ok_operator_api + [
+		attach_equilibration_ccalls, attach_operator_equilibration_ccalls]
 
 class EquilibrationLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'libequil_')
-		self.attach_calls.append(attach_base_ctypes)
-		self.attach_calls.append(attach_dense_linsys_ctypes)
-		self.attach_calls.append(attach_sparse_linsys_ctypes)
-		self.attach_calls.append(attach_base_ccalls)
-		self.attach_calls.append(attach_vector_ccalls)
-		self.attach_calls.append(attach_dense_linsys_ccalls)
-		self.attach_calls.append(attach_sparse_linsys_ccalls)
-		self.attach_calls.append(attach_operator_ctypes)
-		self.attach_calls.append(attach_operator_ccalls)
-		self.attach_calls.append(attach_equilibration_ccalls)
-		self.attach_calls.append(attach_operator_equilibration_ccalls)
+		OptkitLibs.__init__(self, 'libequil_', ok_equil_generic_api)
 
 def attach_equilibration_ccalls(lib, single_precision=False):
-	if not 'matrix_p' in lib.__dict__:
-		attach_dense_linsys_ctypes(lib, single_precision)
+	include_ok_dense(lib, single_precision=single_precision)
 
 	ok_float_p = lib.ok_float_p
 	vector_p = lib.vector_p
@@ -36,26 +26,25 @@ def attach_equilibration_ccalls(lib, single_precision=False):
 			ct.c_void_p, ok_float_p, matrix_p, vector_p, vector_p, ct.c_uint]
 
 	# return types
-	lib.regularized_sinkhorn_knopp.restype = ct.c_uint
+	OptkitLibs.attach_default_restype([lib.regularized_sinkhorn_knopp])
 
 def attach_operator_equilibration_ccalls(lib, single_precision=False):
-	if not 'vector_p' in lib.__dict__:
-		attach_dense_linsys_ctypes(lib, single_precision)
-	if not 'operator_p' in lib.__dict__:
-		attach_operator_ctypes(lib, single_precision)
+	include_ok_operator(lib, single_precision=single_precision)
 
 	ok_float = lib.ok_float
 	vector_p = lib.vector_p
-	operator_p = lib.operator_p
+	abstract_operator_p = lib.abstract_operator_p
 
 	# argument types
 	lib.operator_regularized_sinkhorn.argtypes = [
-			ct.c_void_p, operator_p, vector_p, vector_p, ok_float]
+			ct.c_void_p, abstract_operator_p, vector_p, vector_p, ok_float]
 	lib.operator_equilibrate.argtypes = [
-			ct.c_void_p, operator_p, vector_p, vector_p, ok_float]
-	lib.operator_estimate_norm.argtypes = [ct.c_void_p, operator_p]
+			ct.c_void_p, abstract_operator_p, vector_p, vector_p, ok_float]
+	lib.operator_estimate_norm.argtypes = [ct.c_void_p, abstract_operator_p]
 
 	# return types
-	lib.operator_regularized_sinkhorn.restype = ct.c_uint
-	lib.operator_equilibrate.restype = ct.c_uint
-	lib.operator_estimate_norm.restype = ct.c_uint
+	OptkitLibs.attach_default_restype([
+			lib.operator_regularized_sinkhorn,
+			lib.operator_equilibrate,
+			lib.operator_estimate_norm,
+	])

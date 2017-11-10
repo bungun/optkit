@@ -1,39 +1,34 @@
-from ctypes import Structure, POINTER, c_int, c_uint, c_size_t, c_void_p
-from numpy import float32
-from optkit.libs.loader import OptkitLibs
-from optkit.libs.enums import OKFunctionEnums
-from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\
-	attach_sparse_linsys_ctypes, attach_base_ccalls, attach_vector_ccalls, \
-	attach_dense_linsys_ccalls, attach_sparse_linsys_ccalls
 from optkit.compat import *
 
+from ctypes import Structure, POINTER, c_int, c_uint, c_size_t, c_void_p
+from numpy import float32
+
+from optkit.libs.loader import OptkitLibs
+from optkit.libs.enums import OKFunctionEnums
+from optkit.libs.linsys import include_ok_dense, ok_vector_api
+
+def include_ok_prox(lib, **include_args):
+	OptkitLibs.conditional_include(
+		lib, 'function_p', attach_prox_ctypes, **include_args)
+
+ok_prox_api = ok_vector_api + [attach_prox_ccalls]
 
 class ProxLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'libprox_')
-		self.attach_calls.append(attach_base_ctypes)
-		self.attach_calls.append(attach_dense_linsys_ctypes)
-		self.attach_calls.append(attach_base_ccalls)
-		self.attach_calls.append(attach_vector_ccalls)
-		self.attach_calls.append(attach_prox_ctypes)
-		self.attach_calls.append(attach_prox_ccalls)
+		OptkitLibs.__init__(self, 'libprox_', ok_prox_api)
 
 def attach_prox_ctypes(lib, single_precision=False):
-	if 'ok_float' not in lib.__dict__:
-		attach_base_ctypes(lib, single_precision)
-
-	ok_float = lib.ok_float
+	include_ok_dense(lib, single_precision=single_precision)
 
 	# function struct
 	class ok_function(Structure):
 		_fields_ = [('h', c_uint),
-					('a', ok_float),
-					('b', ok_float),
-					('c', ok_float),
-					('d', ok_float),
-					('e', ok_float),
-					('s', ok_float),
-					]
+					('a', lib.ok_float),
+					('b', lib.ok_float),
+					('c', lib.ok_float),
+					('d', lib.ok_float),
+					('e', lib.ok_float),
+					('s', lib.ok_float)]
 	lib.function = ok_function
 	lib.function_p = POINTER(lib.function)
 
@@ -47,10 +42,7 @@ def attach_prox_ctypes(lib, single_precision=False):
 	lib.function_enums = OKFunctionEnums()
 
 def attach_prox_ccalls(lib, single_precision=False):
-	if not 'vector_p' in lib.__dict__:
-		attach_dense_linsys_ctypes(lib, single_precision)
-	if not 'function_vector_p' in lib.__dict__:
-		attach_prox_ctypes(lib, single_precision)
+	include_ok_prox(lib, single_precision)
 
 	ok_float = lib.ok_float
 	ok_float_p = lib.ok_float_p
@@ -71,14 +63,16 @@ def attach_prox_ccalls(lib, single_precision=False):
 	lib.function_vector_print.argtypes = [function_vector_p]
 
 	## return values
-	lib.function_vector_alloc.restype = c_uint
-	lib.function_vector_calloc.restype = c_uint
-	lib.function_vector_free.restype = c_uint
-	lib.function_vector_memcpy_va.restype = c_uint
-	lib.function_vector_memcpy_av.restype = c_uint
-	lib.function_vector_mul.restype = c_uint
-	lib.function_vector_div.restype = c_uint
-	lib.function_vector_print.restype = c_uint
+	OptkitLibs.attach_default_restype([
+			lib.function_vector_alloc,
+			lib.function_vector_calloc,
+			lib.function_vector_free,
+			lib.function_vector_memcpy_va,
+			lib.function_vector_memcpy_av,
+			lib.function_vector_mul,
+			lib.function_vector_div,
+			lib.function_vector_print
+	])
 
 	# Prox & Function evaluation
 	# --------------------------
@@ -89,5 +83,7 @@ def attach_prox_ccalls(lib, single_precision=False):
 										 ok_float_p]
 
 	## return values
-	lib.prox_eval_vector.restype = c_uint
-	lib.function_eval_vector.restype = c_uint
+	OptkitLibs.attach_default_restype([
+			lib.prox_eval_vector,
+			lib.function_eval_vector,
+	])

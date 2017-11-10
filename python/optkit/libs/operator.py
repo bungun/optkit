@@ -3,31 +3,27 @@ from optkit.compat import *
 import ctypes as ct
 
 from optkit.libs.loader import OptkitLibs
-from optkit.libs.linsys import attach_base_ctypes, attach_dense_linsys_ctypes,\
-	attach_sparse_linsys_ctypes, attach_base_ccalls, attach_vector_ccalls, \
-	attach_dense_linsys_ccalls, attach_sparse_linsys_ccalls
+from optkit.libs.linsys import include_ok_dense, include_ok_sparse, \
+		ok_linsys_api
+
+def include_ok_operator(lib, **include_args):
+	OptkitLibs.conditional_include(
+		lib, 'abstract_operator_p', attach_operator_ctypes, **include_args)
+
+ok_operator_api = ok_linsys_api + [attach_operator_ccalls]
 
 class OperatorLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'liboperator_')
-		self.attach_calls.append(attach_base_ctypes)
-		self.attach_calls.append(attach_dense_linsys_ctypes)
-		self.attach_calls.append(attach_sparse_linsys_ctypes)
-		self.attach_calls.append(attach_base_ccalls)
-		self.attach_calls.append(attach_vector_ccalls)
-		self.attach_calls.append(attach_dense_linsys_ccalls)
-		self.attach_calls.append(attach_sparse_linsys_ccalls)
-		self.attach_calls.append(attach_operator_ctypes)
-		self.attach_calls.append(attach_operator_ccalls)
+		OptkitLibs.__init__(self, 'liboperator_', ok_operator_api)
 
 def attach_operator_ctypes(lib, single_precision=False):
-	if not 'vector_p' in lib.__dict__:
-		attach_dense_linsys_ctypes(lib, single_precision)
+	include_ok_dense(lib, single_precision=single_precision)
+	include_ok_sparse(lib, single_precision=single_precision)
 
 	ok_float = lib.ok_float
 	vector_p = lib.vector_p
 
-	class ok_operator(ct.Structure):
+	class ok_abstract_operator(ct.Structure):
 		_fields_ = [('size1', ct.c_size_t),
 					('size2', ct.c_size_t),
 					('data', ct.c_void_p),
@@ -44,27 +40,18 @@ def attach_operator_ctypes(lib, single_precision=False):
 					('free', ct.CFUNCTYPE(ct.c_uint, ct.c_void_p)),
 					('kind', ct.c_uint)]
 
-	lib.operator = ok_operator
-	lib.operator_p = ct.POINTER(lib.operator)
+	lib.abstract_operator = ok_operator
+	lib.abstract_operator_p = ct.POINTER(lib.abstract_operator)
 
 def attach_operator_ccalls(lib, single_precision=False):
-	if not 'sparse_matrix_p' in lib.__dict__:
-		attach_sparse_linsys_ctypes(lib, single_precision)
-	if not 'operator_p' in lib.__dict__:
-		attach_operator_ctypes(lib, single_precision)
-
-	# check VECTORP, MATRIXP, SPARSEMATRIXP, OPERATORP exist
-	vector_p = lib.vector_p
-	matrix_p = lib.matrix_p
-	sparse_matrix_p = lib.sparse_matrix_p
-	operator_p = lib.operator_p
+	include_ok_operator(lib, single_precision=single_precision)
 
 	# argument types
-	lib.dense_operator_alloc.argtypes = [matrix_p]
-	lib.sparse_operator_alloc.argtypes = [sparse_matrix_p]
-	lib.diagonal_operator_alloc.argtypes = [vector_p]
+	lib.dense_operator_alloc.argtypes = [lib.matrix_p]
+	lib.sparse_operator_alloc.argtypes = [lib.sparse_matrix_p]
+	lib.diagonal_operator_alloc.argtypes = [lib.vector_p]
 
 	# return types
-	lib.dense_operator_alloc.restype = operator_p
-	lib.sparse_operator_alloc.restype = operator_p
-	lib.diagonal_operator_alloc.restype = operator_p
+	lib.dense_operator_alloc.restype = lib.abstract_operator_p
+	lib.sparse_operator_alloc.restype = lib.abstract_operator_p
+	lib.diagonal_operator_alloc.restype = lib.abstract_operator_p
