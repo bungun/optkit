@@ -48,6 +48,9 @@ class OperatorTypes(object):
 					lib.matrix_memcpy_ma(self.__c_data, input_ptr, order)
 
 					self.__c_ptr = lib.dense_operator_alloc(self.__c_data)
+					# ALTERNATE:
+					# self.__c_ptr = lib.pogs_dense_operator_gen(
+					# 		input_ptr, m, n, order)
 					backend.increment_cobject_count()
 
 					self.__free_data = lib.matrix_free
@@ -77,6 +80,10 @@ class OperatorTypes(object):
 
 					self.__c_ptr = lib.sparse_operator_alloc(
 							self.__c_data)
+					# ALTERNATE:
+					# self.__c_ptr = lib.pogs_sparse_operator_gen(
+					# 		A_val_p, A_ind_p, A_ptr_p, m, n, self.__py.nnz,
+					# 		order)
 					backend.increment_cobject_count()
 
 					self.__free_data = lib.sp_matrix_free

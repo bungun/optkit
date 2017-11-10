@@ -156,7 +156,7 @@ ok_status pcg_helper_free(pcg_helper * helper)
  * https://github.com/foges/pogs/blob/master/src/cpu/include/cgls.h
  */
 ok_status cgls_nonallocating(cgls_helper * helper,
-		operator * op, vector * b, vector * x,
+		abstract_operator * op, vector * b, vector * x,
 		const ok_float rho, const ok_float tol,
 		const size_t maxiter, const int quiet,
 		uint * flag)
@@ -281,7 +281,7 @@ ok_status cgls_nonallocating(cgls_helper * helper,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status cgls(operator * op, vector * b, vector * x, const ok_float rho,
+ok_status cgls(abstract_operator * op, vector * b, vector * x, const ok_float rho,
 	const ok_float tol, const size_t maxiter, const int quiet, uint * flag)
 {
 	ok_status err = OPTKIT_SUCCESS;
@@ -303,9 +303,9 @@ void * cgls_init(size_t m, size_t n)
 	return (void *) cgls_helper_alloc(m, n);
 }
 
-ok_status cgls_solve(void * cgls_work, operator * op, vector * b, vector * x,
-	const ok_float rho, const ok_float tol, const size_t maxiter, int quiet,
-	uint * flag)
+ok_status cgls_solve(void * cgls_work, abstract_operator * op, vector * b,
+	vector * x, const ok_float rho, const ok_float tol,
+	const size_t maxiter, int quiet, uint * flag)
 {
 	return cgls_nonallocating((cgls_helper *) cgls_work, op, b, x,
 		rho, tol, maxiter, quiet, flag);
@@ -330,7 +330,7 @@ ok_status cgls_finish(void * cgls_work)
  * A'Ae_i = A'a_i = (aa)_i
  * (aa)_i + rho * e_i : column
  */
-ok_status diagonal_preconditioner(operator * op, vector * p, ok_float rho)
+ok_status diagonal_preconditioner(abstract_operator * op, vector * p, ok_float rho)
 {
 	OK_CHECK_OPERATOR(op);
 	OK_CHECK_VECTOR(p);
@@ -392,8 +392,8 @@ ok_status diagonal_preconditioner(operator * op, vector * p, ok_float rho)
  * ref: Brendan O'Donoghue, SCS
  * https://github.com/cvxgrp/scs/blob/master/linsys/indirect/private.c
  */
-ok_status pcg_nonallocating(pcg_helper * helper, operator * op,
-	operator * pre_cond, vector * b, vector * x, const ok_float rho,
+ok_status pcg_nonallocating(pcg_helper * helper, abstract_operator * op,
+	abstract_operator * pre_cond, vector * b, vector * x, const ok_float rho,
 	const ok_float tol, const size_t maxiter, const int quiet, uint * iters)
 {
 	OK_CHECK_PTR(helper);
@@ -515,8 +515,8 @@ ok_status pcg_nonallocating(pcg_helper * helper, operator * op,
 	return err;
 }
 
-ok_status pcg(operator * op, operator * pre_cond, vector * b, vector * x,
-	const ok_float rho, const ok_float tol, const size_t maxiter,
+ok_status pcg(abstract_operator * op, abstract_operator * pre_cond, vector * b,
+	vector * x, const ok_float rho, const ok_float tol, const size_t maxiter,
 	const int quiet, uint * iters)
 {
 	ok_status err = OPTKIT_SUCCESS;
@@ -536,9 +536,10 @@ void * pcg_init(size_t m, size_t n)
 	return (void *) pcg_helper_alloc(m, n);
 }
 
-ok_status pcg_solve(void * pcg_work, operator * op, operator * pre_cond,
-	vector * b, vector * x, const ok_float rho, const ok_float tol,
-	const size_t maxiter, int quiet, uint * iters)
+ok_status pcg_solve(void * pcg_work, abstract_operator * op,
+	abstract_operator * pre_cond, vector * b, vector * x,
+	const ok_float rho, const ok_float tol, const size_t maxiter,
+	int quiet, uint * iters)
 {
 	return pcg_nonallocating((pcg_helper *) pcg_work, op, pre_cond, b, x,
 		rho, tol, maxiter, quiet, iters);
