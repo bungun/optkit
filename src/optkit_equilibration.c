@@ -96,8 +96,8 @@ ok_status regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 }
 
 #ifndef OPTKIT_NO_OPERATOR_EQUIL
-ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
-	vector * d, vector * e, const ok_float pnorm)
+ok_status operator_regularized_sinkhorn(void * linalg_handle,
+	abstract_operator * A, vector * d, vector * e, const ok_float pnorm)
 {
 	OK_CHECK_OPERATOR(A);
 	OK_CHECK_VECTOR(d);
@@ -199,7 +199,7 @@ ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
 }
 
 /* STUB */
-ok_status operator_equilibrate(void * linalg_handle, operator * A,
+ok_status operator_equilibrate(void * linalg_handle, abstract_operator * A,
 	vector * d, vector * e, const ok_float pnorm)
 {
 	return OPTKIT_ERROR;
@@ -213,7 +213,7 @@ ok_status operator_equilibrate(void * linalg_handle, operator * A,
  * where x is a random vector and n <= kNormIter is a
  * given number of iterations.
  */
-ok_status operator_estimate_norm(void * linalg_handle, operator * A,
+ok_status operator_estimate_norm(void * linalg_handle, abstract_operator * A,
 	ok_float * norm_est)
 {
 	OK_CHECK_OPERATOR(A);
@@ -255,24 +255,24 @@ ok_status operator_estimate_norm(void * linalg_handle, operator * A,
 	vector_free(&Ax);
 	return OPTKIT_SUCCESS;
 }
-#else
-ok_status operator_regularized_sinkhorn(void * linalg_handle, operator * A,
-	vector * d, vector * e, const ok_float pnorm)
-{
-	return OPTKIT_ERROR;
-}
+// #else
+// ok_status operator_regularized_sinkhorn(void * linalg_handle,
+// 	abstract_operator * A, vector * d, vector * e, const ok_float pnorm)
+// {
+// 	return OPTKIT_ERROR;
+// }
 
-ok_status operator_equilibrate(void * linalg_handle, operator * A,
-	vector * d, vector * e, const ok_float pnorm)
-{
-	return OPTKIT_ERROR;
-}
+// ok_status operator_equilibrate(void * linalg_handle, abstract_operator * A,
+// 	vector * d, vector * e, const ok_float pnorm)
+// {
+// 	return OPTKIT_ERROR;
+// }
 
-ok_status operator_estimate_norm(void * linalg_handle, operator * A,
-	ok_float * norm_est)
-{
-	return OPTKIT_ERROR;
-}
+// ok_status operator_estimate_norm(void * linalg_handle, abstract_operator * A,
+// 	ok_float * norm_est)
+// {
+// 	return OPTKIT_ERROR;
+// }
 #endif /* ndef OPTKIT_NO_OPERATOR_EQUIL */
 
 #ifdef __cplusplus
