@@ -36,6 +36,11 @@ class OKEnums(object):
 	SPARSE_DIRECT = 102
 	INDIRECT = 103
 
+	# Optkit POGS Implementations
+	OkPogsDense = 1001
+	OkPogsSparse = 1002
+	OkPogsAbstract = 2001
+
 	# Errors
 	OPTKIT_SUCCESS = 0
 	OPTKIT_ERROR = 1
