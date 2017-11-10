@@ -87,9 +87,9 @@ ok_status difference_operator_mul_t_fused(void * data, ok_float alpha,
 }
 
 
-operator * difference_operator_alloc(size_t n, size_t offset)
+abstract_operator * difference_operator_alloc(size_t n, size_t offset)
 {
-	operator * o = OK_NULL;
+	abstract_operator * o = OK_NULL;
 	void * data = difference_operator_data_alloc(n, offset);
 
 	if (data) {
@@ -247,10 +247,10 @@ ok_status block_difference_operator_mul_t_fused(void * data, ok_float alpha,
 }
 
 
-operator * block_difference_operator_alloc(size_t n, size_t n_blocks,
+abstract_operator * block_difference_operator_alloc(size_t n, size_t n_blocks,
 	size_t * block_sizes, size_t * offsets)
 {
-	operator * o = OK_NULL;
+	abstract_operator * o = OK_NULL;
 	void * data = OK_NULL;
 	if (block_sizes && offsets) {
 		data = block_difference_operator_data_alloc(n_blocks,

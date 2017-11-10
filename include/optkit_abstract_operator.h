@@ -56,7 +56,7 @@ typedef struct abstract_linear_operator {
 		ok_float beta, vector * output);
 	ok_status (* free)(void * data);
 	OPTKIT_OPERATOR kind;
-} operator;
+} abstract_operator;
 
 static const char * optkit_op2str(OPTKIT_OPERATOR optype)
 {

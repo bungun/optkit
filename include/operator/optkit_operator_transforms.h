@@ -8,14 +8,14 @@ extern "C" {
 #endif
 
 typedef struct transformable_operator {
-	operator * o;
-	void * (* export)(operator * o);
-	void * (* import)(operator * o, void * data);
-	ok_status (* abs)(operator * o);
-	ok_status (* pow)(operator * o, const ok_float power);
-	ok_status (* scale)(operator * o, const ok_float scaling);
-	ok_status (* scale_left)(operator * o, const vector * v);
-	ok_status (* scale_right)(operator * o, const vector * v);
+	abstract_operator * o;
+	void * (* export)(abstract_operator * o);
+	void * (* import)(abstract_operator * o, void * data);
+	ok_status (* abs)(abstract_operator * o);
+	ok_status (* pow)(abstract_operator * o, const ok_float power);
+	ok_status (* scale)(abstract_operator * o, const ok_float scaling);
+	ok_status (* scale_left)(abstract_operator * o, const vector * v);
+	ok_status (* scale_right)(abstract_operator * o, const vector * v);
 } transformable_operator;
 
 #ifdef __cplusplus

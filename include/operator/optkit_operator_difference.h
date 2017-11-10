@@ -23,7 +23,7 @@ ok_status difference_operator_mul_fused(void * data, ok_float alpha,
 ok_status difference_operator_mul_t_fused(void * data, ok_float alpha,
 	vector * input, ok_float beta, vector * output);
 
-operator * difference_operator_alloc(sp_matrix * A);
+abstract_operator * difference_operator_alloc(sp_matrix * A);
 
 typedef struct block_difference_operator_data{
 	void * dense_handle;
@@ -43,7 +43,7 @@ ok_status block_difference_operator_mul_fused(void * data, ok_float alpha,
 ok_status block_difference_operator_mul_t_fused(void * data, ok_float alpha,
 	vector * input, ok_float beta, vector * output);
 
-operator * block_difference_operator_alloc(sp_matrix * A);
+abstract_operator * block_difference_operator_alloc(sp_matrix * A);
 
 #ifdef __cplusplus
 }

@@ -21,11 +21,11 @@ ok_status diagonal_operator_mul_fused(void * data, ok_float alpha,
 ok_status diagonal_operator_mul_t_fused(void * data, ok_float alpha,
 	vector * input, ok_float beta, vector * output);
 
-operator * diagonal_operator_alloc(vector * d);
+abstract_operator * diagonal_operator_alloc(vector * d);
 
-ok_status diagonal_operator_abs(operator * A);
-ok_status diagonal_operator_pow(operator * A, const ok_float power);
-ok_status diagonal_operator_scale(operator * A, const ok_float scaling);
+ok_status diagonal_operator_abs(abstract_operator * A);
+ok_status diagonal_operator_pow(abstract_operator * A, const ok_float power);
+ok_status diagonal_operator_scale(abstract_operator * A, const ok_float scaling);
 
 #ifdef __cplusplus
 }

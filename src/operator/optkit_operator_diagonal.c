@@ -68,9 +68,9 @@ ok_status diagonal_operator_mul_t_fused(void * data, ok_float alpha,
 		output);
 }
 
-operator * diagonal_operator_alloc(vector * d)
+abstract_operator * diagonal_operator_alloc(vector * d)
 {
-	operator * o = OK_NULL;
+	abstract_operator * o = OK_NULL;
 	void * data;
 
 	if (d && d->data) {
@@ -91,7 +91,7 @@ operator * diagonal_operator_alloc(vector * d)
 	return o;
 }
 
-static ok_status diagonal_operator_typecheck(operator * A, const char * caller)
+static ok_status diagonal_operator_typecheck(abstract_operator * A, const char * caller)
 {
 	OK_CHECK_OPERATOR(A);
 	if (A->kind != OkOperatorDiagonal) {
@@ -103,20 +103,20 @@ static ok_status diagonal_operator_typecheck(operator * A, const char * caller)
 	}
 }
 
-ok_status diagonal_operator_abs(operator * A)
+ok_status diagonal_operator_abs(abstract_operator * A)
 {
 	OK_RETURNIF_ERR( diagonal_operator_typecheck(A, "abs") );
 	return vector_abs(((diagonal_operator_data *) A->data)->d);
 }
 
-ok_status diagonal_operator_pow(operator * A, const ok_float power)
+ok_status diagonal_operator_pow(abstract_operator * A, const ok_float power)
 {
 
 	OK_RETURNIF_ERR( diagonal_operator_typecheck(A, "pow") );
 	return vector_pow(((diagonal_operator_data *) A->data)->d, power);
 }
 
-ok_status diagonal_operator_scale(operator * A, const ok_float scaling)
+ok_status diagonal_operator_scale(abstract_operator * A, const ok_float scaling)
 {
 	OK_RETURNIF_ERR( diagonal_operator_typecheck(A, "scale") );
 	return vector_scale(((diagonal_operator_data *) A->data)->d, scaling);

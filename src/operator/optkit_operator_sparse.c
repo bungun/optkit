@@ -73,9 +73,9 @@ ok_status sparse_operator_mul_t_fused(void * data, ok_float alpha,
 		beta, output);
 }
 
-operator * sparse_operator_alloc(sp_matrix * A)
+abstract_operator * sparse_operator_alloc(sp_matrix * A)
 {
-	operator * o = OK_NULL;
+	abstract_operator * o = OK_NULL;
 	void * data = OK_NULL;
 	if (A && A->val && A->ind && A->ptr) {
 		data = sparse_operator_data_alloc(A);
@@ -96,7 +96,7 @@ operator * sparse_operator_alloc(sp_matrix * A)
 	return o;
 }
 
-static ok_status sparse_operator_typecheck(operator * A,
+static ok_status sparse_operator_typecheck(abstract_operator * A,
 	const char * caller)
 {
 	OK_CHECK_OPERATOR(A);
@@ -110,7 +110,7 @@ static ok_status sparse_operator_typecheck(operator * A,
 }
 
 
-sp_matrix * sparse_operator_get_matrix_pointer(operator * A)
+sp_matrix * sparse_operator_get_matrix_pointer(abstract_operator * A)
 {
 	ok_status err = sparse_operator_typecheck(A, "get_matrix_pointer");
 
@@ -120,7 +120,7 @@ sp_matrix * sparse_operator_get_matrix_pointer(operator * A)
 		return OK_NULL;
 }
 
-void * sparse_operator_export(operator * A)
+void * sparse_operator_export(abstract_operator * A)
 {
 	ok_status err = sparse_operator_typecheck(A, "export");
 	sparse_operator_data * op_data = OK_NULL;
@@ -138,7 +138,7 @@ void * sparse_operator_export(operator * A)
 	return (void *) export;
 }
 
-void * sparse_operator_import(operator * A, void * data)
+void * sparse_operator_import(abstract_operator * A, void * data)
 {
 	ok_status err = sparse_operator_typecheck(A, "import");
 	sparse_operator_data * op_data = OK_NULL;
@@ -160,25 +160,25 @@ void * sparse_operator_import(operator * A, void * data)
 	return data;
 }
 
-ok_status sparse_operator_abs(operator * A)
+ok_status sparse_operator_abs(abstract_operator * A)
 {
 	OK_RETURNIF_ERR( sparse_operator_typecheck(A, "abs") );
 	return sp_matrix_abs(((sparse_operator_data *) A->data)->A);
 }
 
-ok_status sparse_operator_pow(operator * A, const ok_float power)
+ok_status sparse_operator_pow(abstract_operator * A, const ok_float power)
 {
 	OK_RETURNIF_ERR( sparse_operator_typecheck(A, "pow") );
 	return sp_matrix_pow(((sparse_operator_data *) A->data)->A, power);
 }
 
-ok_status sparse_operator_scale(operator * A, const ok_float scaling)
+ok_status sparse_operator_scale(abstract_operator * A, const ok_float scaling)
 {
 	OK_RETURNIF_ERR( sparse_operator_typecheck(A, "scale") );
 	return sp_matrix_scale(((sparse_operator_data *) A->data)->A, scaling);
 }
 
-ok_status sparse_operator_scale_left(operator * A, const vector * v)
+ok_status sparse_operator_scale_left(abstract_operator * A, const vector * v)
 {
 	OK_RETURNIF_ERR( sparse_operator_typecheck(A, "scale_left") );
 	return sp_matrix_scale_left(
@@ -186,7 +186,7 @@ ok_status sparse_operator_scale_left(operator * A, const vector * v)
 		((sparse_operator_data *) A->data)->A, v);
 }
 
-ok_status sparse_operator_scale_right(operator * A, const vector * v)
+ok_status sparse_operator_scale_right(abstract_operator * A, const vector * v)
 {
 	OK_RETURNIF_ERR( sparse_operator_typecheck(A, "scale_right") );
 	return sp_matrix_scale_right(
@@ -194,7 +194,7 @@ ok_status sparse_operator_scale_right(operator * A, const vector * v)
 		((sparse_operator_data *) A->data)->A, v);
 }
 
-transformable_operator * sparse_operator_to_transformable(operator * A)
+transformable_operator * sparse_operator_to_transformable(abstract_operator * A)
 {
 	ok_status err = sparse_operator_typecheck(A, "to_transformable");
 	transformable_operator * t = OK_NULL;
