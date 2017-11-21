@@ -319,16 +319,7 @@ ok_status cgls_finish(void * cgls_work)
 /*
  * diagonal preconditioner
  *
- * need column norms-squared of
- * 	(rho I + A'A)
- *
- * to obtain this:
- *
- *
- *
- * Ae_i = a_i
- * A'Ae_i = A'a_i = (aa)_i
- * (aa)_i + rho * e_i : column
+ * 	M = inv ( diag ( rho * I + A'A ) )
  */
 ok_status diagonal_preconditioner(abstract_operator * op, vector * p, ok_float rho)
 {
@@ -339,11 +330,10 @@ ok_status diagonal_preconditioner(abstract_operator * op, vector * p, ok_float r
 	ok_float col_norm_sq;
 	size_t i;
 	void * blas_handle;
-	vector ej, ej_sub, a, iaa, p_sub;
+	vector ej, ej_sub, a, p_sub;
 	ej.data = OK_NULL;
 	ej_sub.data = OK_NULL;
 	a.data = OK_NULL;
-	iaa.data = OK_NULL;
 	p_sub.data = OK_NULL;
 
 	if (p->size != op->size2)
@@ -351,7 +341,6 @@ ok_status diagonal_preconditioner(abstract_operator * op, vector * p, ok_float r
 
 	vector_calloc(&ej, op->size2);
 	vector_calloc(&a, op->size1);
-	vector_calloc(&iaa, op->size2);
 	blas_make_handle(&blas_handle);
 
 	vector_scale(p, 0);
@@ -361,11 +350,10 @@ ok_status diagonal_preconditioner(abstract_operator * op, vector * p, ok_float r
 		vector_subvector(&ej_sub, &ej, i, 1);
 		vector_add_constant(&ej_sub, 1);
 		op->apply(op->data, &ej, &a);
-		op->adjoint(op->data, &a, &iaa);
 
-		blas_dot(blas_handle, &iaa, &iaa, &col_norm_sq);
+		blas_dot(blas_handle, &a, &a, &col_norm_sq);
 		vector_subvector(&p_sub, p, i, 1);
-		vector_add_constant(&p_sub, col_norm_sq + rho);
+		vector_add_constant(&p_sub, rho + col_norm_sq);
 	}
 
 	err = vector_recip(p);
@@ -382,9 +370,13 @@ ok_status diagonal_preconditioner(abstract_operator * op, vector * p, ok_float r
  *
  * Attempts to solve
  *
- * 		M(rho * I + A'A)x = b
+ * 		(rho * I + A'A)x = b
  *
- * to specified tolerance within maxiter CG iterations
+ * to specified tolerance within maxiter CG iterations.
+ * In particular, solves a left-preconditioned version of the problem with
+ * the (abstract linear operator) M as a preconditioner:
+ *
+ *		M((rho * I + A'A)x - b) = 0
  *
  * Solution written to method parameter x, and stored in helper->z
  * Warm starts from helper->z if helper->never_ran is false
@@ -408,7 +400,7 @@ ok_status pcg_nonallocating(pcg_helper * helper, abstract_operator * op,
 	 * convenience abbreviations
 	 * p, q: iterate vectors
 	 * r: residual
-	 * z: preconditioned variable
+	 * z: preconditioned residual
 	 * x0: alias of z for warmstart
 	 * temp: storage for A'A intermediate
 	 */
