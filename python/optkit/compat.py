@@ -11,3 +11,9 @@ def listfilter(f, *args):
 if six.PY3:
 	from six.moves import xrange
 	from six.moves import reduce
+
+import six
+if six.PY3:
+	import contextlib
+else:
+	import contextlib2
