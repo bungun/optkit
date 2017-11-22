@@ -16,6 +16,8 @@ class OKEnums(object):
 	CblasLeft = ct.c_uint(141).value
 	CblasRight = ct.c_uint(142).value
 
+	MATRIX_ORDERS = (CblasRowMajor, CblasColMajor)
+
 	# Optkit Transformatiosn
 	OkTransformScale = ct.c_uint(0).value
 	OkTransformAdd = ct.c_uint(1).value
