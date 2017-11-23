@@ -3,17 +3,17 @@ from optkit.compat import *
 import ctypes as ct
 
 from optkit.libs.loader import OptkitLibs
-from optkit.libs.operator import include_ok_operator, ok_operator_api
+from optkit.libs.operator import include_ok_operator, ok_operator_API
 
 def include_ok_cg(lib, **include_args):
 	OptkitLibs.conditional_include(
 		lib, 'pcg_helper_p', attach_cg_ctypes, **include_args)
 
-ok_cg_api = ok_operator_api + [attach_cg_calls]
+def ok_cg_API(): return ok_operator_API() + [attach_cg_calls]
 
 class ConjugateGradientLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'libcg_', ok_cg_api)
+		OptkitLibs.__init__(self, 'libcg_', ok_cg_API())
 
 def attach_cg_ctypes(lib, single_precision=False):
 	include_ok_operator(lib, single_precision=single_precision)

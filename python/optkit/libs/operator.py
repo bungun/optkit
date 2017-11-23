@@ -4,17 +4,17 @@ import ctypes as ct
 
 from optkit.libs.loader import OptkitLibs
 from optkit.libs.linsys import include_ok_dense, include_ok_sparse, \
-		ok_linsys_api
+		ok_linsys_API
 
 def include_ok_operator(lib, **include_args):
 	OptkitLibs.conditional_include(
 		lib, 'abstract_operator_p', attach_operator_ctypes, **include_args)
 
-ok_operator_api = ok_linsys_api + [attach_operator_ccalls]
+def ok_operator_API(): return ok_linsys_API() + [attach_operator_ccalls]
 
 class OperatorLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'liboperator_', ok_operator_api)
+		OptkitLibs.__init__(self, 'liboperator_', ok_operator_API())
 
 def attach_operator_ctypes(lib, single_precision=False):
 	include_ok_dense(lib, single_precision=single_precision)

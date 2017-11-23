@@ -3,15 +3,15 @@ from optkit.compat import *
 import numpy as np
 import ctypes as ct
 
-from optkit.libs.loader import OptkitLibs, conditional_include
+from optkit.libs.loader import OptkitLibs
 from optkit.libs.enums import OKEnums, OKFunctionEnums
 from optkit.libs.linsys import include_ok_dense
-from optkit.libs.prox import include_ok_prox, ok_prox_api
+from optkit.libs.prox import include_ok_prox, ok_prox_API
 from optkit.libs.operator import include_ok_operator
-from optkit.libs.equilibration import ok_equil_dense_api, ok_equil_api
+from optkit.libs.equilibration import ok_equil_dense_API, ok_equil_API
 from optkit.libs.projector import include_ok_projector, \
-		ok_projector_dense_api, ok_projector_api
-from optkit.libs.anderson import include_ok_anderson, ok_anderson_api
+		ok_projector_dense_API, ok_projector_API
+from optkit.libs.anderson import include_ok_anderson, ok_anderson_API
 
 def include_ok_pogs_datatypes(lib, **include_args):
 	OptkitLibs.conditional_include(
@@ -25,22 +25,34 @@ def include_ok_pogs(lib, **include_args):
 	OptkitLibs.conditional_include(
 		lib, 'pogs_solver_p', attach_pogs_ctypes, **include_args)
 
-ok_pogs_common_api = ok_prox_api + ok_anderson_api + [attach_pogs_ccalls]
-ok_pogs_dense_api = ok_pogs_common_api + ok_projector_dense_api + ok_equil_dense_api
-# ok_pogs_sparse_api = []
-ok_pogs_abstract_api = ok_pogs_common_api + ok_projector_api + ok_equil_api
+def ok_pogs_common_API() = return (
+		ok_prox_API()
+		+ ok_anderson_API()
+		+ [attach_pogs_ccalls]
+	)
+def ok_pogs_dense_API() = return (
+		ok_pogs_common_API()
+		+ ok_projector_dense_API()
+		+ ok_equil_dense_API()
+	)
+#def ok_pogs_sparse_API(): return []
+def ok_pogs_abstract_API(): return (
+		ok_pogs_common_API()
+		+ ok_projector_API()
+		+ ok_equil_API()
+	)
 
 class PogsDenseLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'libpogs_dense_', ok_pogs_dense_api)
+		OptkitLibs.__init__(self, 'libpogs_dense_', ok_pogs_dense_API())
 
 # class PogsIndirectLibs(OptkitLibs):
 # 	def __init__(self):
-# 		OptkitLibs.__init__(self, 'libpogs_sparse_', ok_pogs_sparse_api)
+# 		OptkitLibs.__init__(self, 'libpogs_sparse_', ok_pogs_sparse_API())
 
 class PogsAbstractLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'libpogs_abstract_', ok_pogs_abstract_api)
+		OptkitLibs.__init__(self, 'libpogs_abstract_', ok_pogs_abstract_API())
 
 def set_pogs_impl(lib):
 	enums = OKEnums()
@@ -212,10 +224,10 @@ def attach_pogs_ctypes(lib, single_precision=False):
 	priv_fields = []
 
 	if lib.py_pogs_impl == 'dense':
-		work_fields += [('A', lib.matrix_p), ('P', lib.direct_projector_p)]
-		flag_fields += [
-				('m', ct.c_size_t), ('m', ct.c_size_t), ('ord', ct.c_uint)]
-		priv_fields += [
+		work_fields = [('A', lib.matrix_p), ('P', lib.direct_projector_p)]
+		flag_fields = [
+				('m', ct.c_size_t), ('n', ct.c_size_t), ('ord', ct.c_uint)]
+		priv_fields = [
 				('A_equil', lib.ok_float_p),
 				('d', lib.ok_float_p)
 				('e', lib.ok_float_p)
@@ -319,23 +331,23 @@ def _attach_pogs_impl_common_ccalls(lib):
 
 	# results
 	OptkitLibs.attach_default_restype([
-			lib.pogs_graph_vector_alloc
-			lib.pogs_graph_vector_free
-			lib.pogs_graph_vector_attach_memory
-			lib.pogs_graph_vector_release_memory
-			lib.pogs_graph_vector_view_vector
-			lib.pogs_variables_alloc
-			lib.pogs_variables_free
-			lib.pogs_set_default_settings
-			lib.pogs_update_settings
-			lib.pogs_initialize_conditions
-			lib.pogs_update_objective_values
-			lib.pogs_update_tolerances
-			lib.pogs_set_print_iter
-			lib.pogs_print_header_string
-			lib.pogs_print_iter_string
-			lib.pogs_scale_objectives
-			lib.pogs_unscale_output
+			lib.pogs_graph_vector_alloc,
+			lib.pogs_graph_vector_free,
+			lib.pogs_graph_vector_attach_memory,
+			lib.pogs_graph_vector_release_memory,
+			lib.pogs_graph_vector_view_vector,
+			lib.pogs_variables_alloc,
+			lib.pogs_variables_free,
+			lib.pogs_set_default_settings,
+			lib.pogs_update_settings,
+			lib.pogs_initialize_conditions,
+			lib.pogs_update_objective_values,
+			lib.pogs_update_tolerances,
+			lib.pogs_set_print_iter,
+			lib.pogs_print_header_string,
+			lib.pogs_print_iter_string,
+			lib.pogs_scale_objectives,
+			lib.pogs_unscale_output,
 	])
 
 def _attach_pogs_impl_dense_ccalls(lib):
@@ -380,7 +392,7 @@ def _attach_pogs_impl_dense_ccalls(lib):
 			lib.pogs_dense_work_get_norm,
 			lib.pogs_dense_work_normalize,
 			lib.pogs_dense_save_work,
-			lib.pogs_dense_load_work
+			lib.pogs_dense_load_work,
 	])
 
 
@@ -439,7 +451,7 @@ def _attach_pogs_impl_abstract_ccalls(lib):
 			lib.pogs_abstract_save_work,
 			lib.pogs_abstract_load_work,
 			lib.pogs_dense_operator_free,
-			lib.pogs_sparse_operator_free
+			lib.pogs_sparse_operator_free,
 	])
 	lib.pogs_dense_operator_gen.restype = lib.abstract_operator_p
 	lib.pogs_sparse_operator_gen.restype = lib.abstract_operator_p
@@ -461,7 +473,7 @@ def _attach_pogs_generic_ccalls(lib):
 	lib.pogs_primal_update.argtypes = [lib.pogs_variables_p]
 	lib.pogs_prox.argtypes = [
 			ct.c_void_p, lib.function_vector_p, lib.function_vector_p,
-			lib.pogs_variables_p, ok_float rho]
+			lib.pogs_variables_p, ok_float]
 	lib.pogs_project_graph.argtypes = [
 			lib.pogs_work_p, lib.pogs_variables_p, lib.ok_float, lib.ok_float]
 	lib.pogs_dual_update.argtypes = [
@@ -495,9 +507,9 @@ def _attach_pogs_generic_ccalls(lib):
 			lib.pogs_solver_flags_p] ####
 
 	lib.pogs_solver_save_state.argtypes = [
-			lib.ok_float_p state, lib.ok_float_p rho, lib.pogs_solver_p]
+			lib.ok_float_p, lib.ok_float_p, lib.pogs_solver_p]
 	lib.pogs_solver_load_state.argtypes = [
-			lib.pogs_solver_p, lib.ok_float_p state, lib.ok_float]
+			lib.pogs_solver_p, lib.ok_float_p, lib.ok_float]
 
 	## return types
 	OptkitLibs.attach_default_restype([
@@ -521,7 +533,7 @@ def _attach_pogs_generic_ccalls(lib):
 			lib.pogs,
 			lib.pogs_export_solver,
 			lib.pogs_solver_save_state,
-			lib.pogs_solver_load_state
+			lib.pogs_solver_load_state,
 	])
 
 	lib.pogs_init.restype = lib.pogs_solver_p

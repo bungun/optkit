@@ -3,17 +3,17 @@ from optkit.compat import *
 import ctypes as ct
 
 from optkit.libs.loader import OptkitLibs
-from optkit.libs.linsys import include_ok_dense, ok_dense_api
+from optkit.libs.linsys import include_ok_dense, ok_dense_API
 
 def include_ok_anderson(lib, **include_args):
 	OptkitLibs.conditional_include(
 		lib, 'anderson_accelerator_p', attach_anderson_ctypes, **include_args)
 
-ok_anderson_api = ok_dense_api + [attach_anderson_ccalls]
+def ok_anderson_API(): return ok_dense_API() + [attach_anderson_ccalls]
 
 class AndersonLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'libanderson_', ok_anderson_api)
+		OptkitLibs.__init__(self, 'libanderson_', ok_anderson_API())
 
 def attach_anderson_ctypes(lib, single_precision=False):
 	include_ok_dense(lib, single_precision=single_precision)

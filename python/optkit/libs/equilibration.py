@@ -3,16 +3,18 @@ from optkit.compat import *
 import ctypes as ct
 
 from optkit.libs.loader import OptkitLibs
-from optkit.libs.linsys import include_ok_dense, ok_dense_api
-from optkit.libs.operator import include_ok_operator, ok_operator_api
+from optkit.libs.linsys import include_ok_dense, ok_dense_API
+from optkit.libs.operator import include_ok_operator, ok_operator_API
 
-ok_equil_dense_api = ok_dense_api + [attach_equilibration_ccalls]
-ok_equil_api = ok_operator_api + [
-		attach_equilibration_ccalls, attach_operator_equilibration_ccalls]
+def ok_equil_dense_API(): return ok_dense_API() + [attach_equilibration_ccalls]
+def ok_equil_API(): return (
+		ok_operator_API()
+		+ [attach_equilibration_ccalls, attach_operator_equilibration_ccalls]
+	)
 
 class EquilibrationLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'libequil_', ok_equil_generic_api)
+		OptkitLibs.__init__(self, 'libequil_', ok_equil_generic_API())
 
 def attach_equilibration_ccalls(lib, single_precision=False):
 	include_ok_dense(lib, single_precision=single_precision)

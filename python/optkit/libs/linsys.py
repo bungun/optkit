@@ -15,19 +15,19 @@ def include_ok_sparse(lib, **include_args):
 	OptkitLibs.conditional_include(
 		lib, 'sparse_matrix_p', attach_sparse_linsys_ctypes, **include_args)
 
-ok_base_api = [attach_base_ccalls]
-ok_vector_api = ok_base_api + [attach_vector_ccalls]
-ok_dense_api = ok_vector_api + [attach_dense_linsys_ccalls]
-ok_sparse_api = ok_vector_api + [attach_sparse_linsys_ccalls]
-ok_linsys_api = ok_dense_api + [attach_sparse_linsys_ccalls]
+def ok_base_API(): return [attach_base_ccalls]
+def ok_vector_API(): return ok_base_API() + [attach_vector_ccalls]
+def ok_dense_API(): return ok_vector_API() + [attach_dense_linsys_ccalls]
+def ok_sparse_API(): return ok_vector_API() + [attach_sparse_linsys_ccalls]
+def ok_linsys_API(): return ok_dense_API() + [attach_sparse_linsys_ccalls]
 
 class DenseLinsysLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'libok_dense_', ok_dense_api)
+		OptkitLibs.__init__(self, 'libok_dense_', ok_dense_API())
 
 class SparseLinsysLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'libok_sparse_', ok_sparse_api)
+		OptkitLibs.__init__(self, 'libok_sparse_', ok_sparse_API())
 
 def attach_base_ctypes(lib, single_precision=False):
 	# low-level C types, as defined for optkit

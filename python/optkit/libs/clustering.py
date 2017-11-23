@@ -3,18 +3,18 @@ from optkit.compat import *
 import ctypes as ct
 
 from optkit.libs.loader import OptkitLibs
-from optkit.libs.linsys import include_ok_dense, ok_dense_api
+from optkit.libs.linsys import include_ok_dense, ok_dense_API
 
 
 def include_ok_clustering(lib, **include_args):
 	OptkitLibs.conditional_include(
 		lib, 'kmeans_io_p', attach_clustering_ctypes, **include_args)
 
-ok_cluster_api = ok_dense_api + [attach_clustering_ccalls]
+def ok_cluster_API(): return ok_dense_API() + [attach_clustering_ccalls]
 
 class ClusteringLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'libcluster_', ok_cluster_api)
+		OptkitLibs.__init__(self, 'libcluster_', ok_cluster_API())
 
 def attach_clustering_ctypes(lib, single_precision=False):
 	include_ok_dense(lib, single_precision=single_precision)

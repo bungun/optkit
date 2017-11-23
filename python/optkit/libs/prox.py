@@ -5,17 +5,17 @@ from numpy import float32
 
 from optkit.libs.loader import OptkitLibs
 from optkit.libs.enums import OKFunctionEnums
-from optkit.libs.linsys import include_ok_dense, ok_vector_api
+from optkit.libs.linsys import include_ok_dense, ok_vector_API
 
 def include_ok_prox(lib, **include_args):
 	OptkitLibs.conditional_include(
 		lib, 'function_p', attach_prox_ctypes, **include_args)
 
-ok_prox_api = ok_vector_api + [attach_prox_ccalls]
+ok_prox_API = ok_vector_API() + [attach_prox_ccalls]
 
 class ProxLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'libprox_', ok_prox_api)
+		OptkitLibs.__init__(self, 'libprox_', ok_prox_API())
 
 def attach_prox_ctypes(lib, single_precision=False):
 	include_ok_dense(lib, single_precision=single_precision)

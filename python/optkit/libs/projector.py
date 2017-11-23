@@ -3,21 +3,23 @@ from optkit.compat import *
 import ctypes as ct
 
 from optkit.libs.loader import OptkitLibs
-from optkit.libs.linsys import include_ok_dense, ok_linsys_api
+from optkit.libs.linsys import include_ok_dense, ok_linsys_API
 from optkit.libs.operator import include_ok_operator
-from optkit.libs.cg import ok_cg_api
+from optkit.libs.cg import ok_cg_API
 
 def include_ok_projector(lib, **include_args):
 	OptkitLibs.conditional_include(
 		lib, 'projector_p', attach_projector_ctypes, **include_args)
 
-ok_projector_dense_api = ok_dense_api + [attach_projector_ccalls]
-ok_projector_api = ok_cg_api + [
-		attach_projector_ccalls, attach_operator_projector_ctypes_ccalls]
+def ok_projector_dense_API(): return ok_dense_API() + [attach_projector_ccalls]
+def ok_projector_API(): return (
+		ok_cg_API()
+		+ [attach_projector_ccalls, attach_operator_projector_ctypes_ccalls]
+	)
 
 class ProjectorLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'libprojector_', ok_projector_api)
+		OptkitLibs.__init__(self, 'libprojector_', ok_projector_API())
 
 def attach_projector_ctypes(lib, single_precision=False):
 	include_ok_dense(lib, single_precision=single_precision)
