@@ -119,6 +119,9 @@ class ZeroMatrix(AbstractMatrix):
 
 # BB' + I =
 
+# [ I + AA'  -A
+#   -A' 	 2I + UU']
+
 class MatrixOperator(object):
 	pass
 
