@@ -25,12 +25,12 @@ def include_ok_pogs(lib, **include_args):
 	OptkitLibs.conditional_include(
 		lib, 'pogs_solver_p', attach_pogs_ctypes, **include_args)
 
-def ok_pogs_common_API() = return (
+def ok_pogs_common_API(): return (
 		ok_prox_API()
 		+ ok_anderson_API()
 		+ [attach_pogs_ccalls]
 	)
-def ok_pogs_dense_API() = return (
+def ok_pogs_dense_API(): return (
 		ok_pogs_common_API()
 		+ ok_projector_dense_API()
 		+ ok_equil_dense_API()
