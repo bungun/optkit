@@ -3,31 +3,26 @@ from optkit.compat import *
 import os
 import numpy as np
 import ctypes as ct
+import unittest
 
 from optkit.libs.linsys import DenseLinsysLibs
 from optkit.tests.C import statements
 import optkit.tests.C.context_managers as okcctx
-from optkit.tests.C.base import OptkitCTestCase
 
 NO_ERR = statements.noerr
 VEC_EQ = statements.vec_equal
 SCAL_EQ = statements.scalar_equal
 
-class VectorTestCase(OptkitCTestCase):
+class VectorTestCase(unittest.TestCase):
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
 		self.libs = okcctx.lib_contexts(DenseLinsysLibs())
-		# self.libs = DenseLinsysLibs()
 
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
-
-	def tearDown(self):
-		self.free_all_vars()
-		self.exit_call()
 
 	def test_alloc(self):
 		for lib in self.libs:
@@ -229,7 +224,6 @@ class VectorTestCase(OptkitCTestCase):
 				# len_v = 10 + int(10 * np.random.rand())
 
 				RTOL, _ = statements.standard_vector_tolerances(lib, len_v, 1)
-
 				w = okcctx.CIndvectorContext(lib, len_v, random_maxidx=30)
 
 				with w:
