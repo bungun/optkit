@@ -360,7 +360,6 @@ ok_status diagonal_preconditioner(abstract_operator * op, vector * p, ok_float r
 
 	vector_free(&ej);
 	vector_free(&a);
-	vector_free(&iaa);
 	blas_destroy_handle(blas_handle);
 	return err;
 }
