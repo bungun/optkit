@@ -44,12 +44,13 @@ def attach_anderson_ccalls(lib, single_precision=False):
 	vector_p = lib.vector_p
 	matrix_p = lib.matrix_p
 	anderson_accelerator_p = lib.anderson_accelerator_p
-	anderson_accelerator_pp = ct.POINTER(anderson_accelerator_p)
 
 	# argument types
 	lib.anderson_accelerator_init.argtypes = [
-			anderson_accelerator_pp, vector_p, ct.c_size_t]
+			anderson_accelerator_p, ct.c_size_t, ct.c_size_t]
 	lib.anderson_accelerator_free.argtypes = [anderson_accelerator_p]
+	lib.anderson_set_x0.argtypes = [
+			anderson_accelerator_p, vector_p]
 	lib.anderson_update_F_x.argtypes = [
 			anderson_accelerator_p, matrix_p, vector_p, ct.c_size_t]
 	lib.anderson_update_F_g.argtypes = [
@@ -65,9 +66,10 @@ def attach_anderson_ccalls(lib, single_precision=False):
 	lib.anderson_accelerate.argtypes = [anderson_accelerator_p, vector_p]
 
 	# return types
-	lib.anderson_accelerator_init.restype = anderson_accelerator_p
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
+			lib.anderson_accelerator_init,
 			lib.anderson_accelerator_free,
+			lib.anderson_set_x0,
 			lib.anderson_update_F_x,
 			lib.anderson_update_F_g,
 			lib.anderson_update_G,
@@ -75,4 +77,4 @@ def attach_anderson_ccalls(lib, single_precision=False):
 			lib.anderson_solve,
 			lib.anderson_mix,
 			lib.anderson_accelerate,
-	])
+	)

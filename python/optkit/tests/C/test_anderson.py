@@ -42,27 +42,25 @@ class AndersonLibsTestCase(OptkitCTestCase):
 				continue
 			self.register_exit(lib.ok_device_reset)
 
-			x, x_py, x_ptr = self.register_vector(lib, n, 'x')
-
-			aa = lib.anderson_accelerator_init(x, lookback)
+			aa = lib.anderson_accelerator()
+			self.assertCall(lib.anderson_accelerator_init(aa, n, lookback))
 			self.register_var('aa', aa, lib.anderson_accelerator_free)
-			self.assertIsInstance( aa.contents.F, lib.matrix_p )
-			self.assertIsInstance( aa.contents.G, lib.matrix_p )
-			self.assertIsInstance( aa.contents.F_gram, lib.matrix_p )
-			self.assertIsInstance( aa.contents.f, lib.vector_p )
-			self.assertIsInstance( aa.contents.g, lib.vector_p )
-			self.assertIsInstance( aa.contents.diag, lib.vector_p )
-			self.assertIsInstance( aa.contents.alpha, lib.vector_p )
-			self.assertIsInstance( aa.contents.ones, lib.vector_p )
-			self.assertEqual( aa.contents.mu_regularization, 0.01 )
-			self.assertEqual( aa.contents.iter, 0 )
+			self.assertIsInstance( aa.F, lib.matrix_p )
+			self.assertIsInstance( aa.G, lib.matrix_p )
+			self.assertIsInstance( aa.F_gram, lib.matrix_p )
+			self.assertIsInstance( aa.f, lib.vector_p )
+			self.assertIsInstance( aa.g, lib.vector_p )
+			self.assertIsInstance( aa.diag, lib.vector_p )
+			self.assertIsInstance( aa.alpha, lib.vector_p )
+			self.assertIsInstance( aa.ones, lib.vector_p )
+			self.assertEqual( aa.mu_regularization, 0.01 )
+			self.assertEqual( aa.iter, 0 )
 			self.assertCall( lib.anderson_accelerator_free(aa) )
 			self.unregister_var('aa')
 
-			self.free_vars('x')
 			self.assertCall( lib.ok_device_reset() )
 
-	def test_accelerator_update_matrices(self):
+	def test_anderson_update_matrices(self):
 		n, lookback = self.n, self.lookback
 
 		for (gpu, single_precision) in self.CONDITIONS:
@@ -80,7 +78,8 @@ class AndersonLibsTestCase(OptkitCTestCase):
 				x, x_, x_ptr = self.register_vector(lib, n, 'x', random=True)
 				g, g_, g_ptr = self.register_vector(lib, n, 'g', random=True)
 
-				aa = lib.anderson_accelerator_init(x, lookback)
+				aa = lib.anderson_accelerator()
+				self.assertCall(lib.anderson_accelerator_init(aa, n, lookback))
 				self.register_var('aa', aa, lib.anderson_accelerator_free)
 
 				i = int(lookback * np.random.rand(1))
@@ -100,7 +99,32 @@ class AndersonLibsTestCase(OptkitCTestCase):
 				self.free_vars('aa', 'F', 'G', 'g', 'x')
 				self.assertCall( lib.ok_device_reset() )
 
-	def test_accelerator_gramian(self):
+	def test_anderson_set_x0(self):
+		n, lookback = self.n, self.lookback
+
+		for (gpu, single_precision) in self.CONDITIONS:
+			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+			if lib is None:
+				continue
+			self.register_exit(lib.ok_device_reset)
+
+			aa = lib.anderson_accelerator()
+			self.assertCall(lib.anderson_accelerator_init(aa, n, lookback))
+			self.register_var('aa', aa, lib.anderson_accelerator_free)
+
+			order = lib.enums.CblasRowMajor
+			x, x_py, x_ptr = self.register_vector(lib, n, 'x', random=True)
+			F_py, F_ptr = self.gen_py_matrix(lib, n, lookback + 1, order)
+
+			self.assertCall( lib.anderson_set_x0(aa, x) )
+
+			self.assertCall( lib.matrix_memcpy_am(F_ptr, aa.F, order) )
+			self.assertVecEqual( F_py[:, 0], - x_py, 1e-7, 1e-7 )
+
+			self.free_vars('aa', 'x')
+			self.assertCall( lib.ok_device_reset() )
+
+	def test_anderson_gramian(self):
 		n, lookback = self.n, self.lookback
 
 		for (gpu, single_precision) in self.CONDITIONS:
@@ -117,22 +141,22 @@ class AndersonLibsTestCase(OptkitCTestCase):
 						lib, n, lookback + 1, order, 'F', random=True)
 				F_gram, F_gram_py, F_gram_ptr = self.register_matrix(
 						lib, lookback + 1, lookback + 1, order, 'F_gram')
-				x, x_, x_ptr = self.register_vector(lib, n, 'x')
 
-				aa = lib.anderson_accelerator_init(x, lookback)
+				aa = lib.anderson_accelerator()
+				self.assertCall(lib.anderson_accelerator_init(aa, n, lookback))
 				self.register_var('aa', aa, lib.anderson_accelerator_free)
 
 				F_gram_calc = F_py.T.dot(F_py)
 				F_gram_calc += np.eye(lookback + 1) * np.sqrt(
-						aa.contents.mu_regularization)
+						aa.mu_regularization)
 
 				self.assertCall( lib.anderson_regularized_gram(
-						aa, F, F_gram, aa.contents.mu_regularization) )
+						aa, F, F_gram, aa.mu_regularization) )
 				self.assertCall( lib.matrix_memcpy_am(
 						F_gram_ptr, F_gram, order) )
 				self.assertVecEqual( F_gram_py, F_gram_calc, ATOL, RTOL)
 
-				self.free_vars('aa', 'F', 'F_gram', 'x')
+				self.free_vars('aa', 'F', 'F_gram')
 				self.assertCall( lib.ok_device_reset() )
 
 	@staticmethod
@@ -157,24 +181,23 @@ class AndersonLibsTestCase(OptkitCTestCase):
 
 			F, F_py, F_ptr = self.register_matrix(
 					lib, n, lookback + 1, ORDER, 'F', random=True)
-			x, x_, x_ptr = self.register_vector(lib, n, 'x')
 			alpha, alpha_py, alpha_ptr = self.register_vector(
 					lib, lookback + 1, 'alpha')
 
-			aa = lib.anderson_accelerator_init(x, lookback)
+			aa = lib.anderson_accelerator()
+			self.assertCall(lib.anderson_accelerator_init(aa, n, lookback))
 			self.register_var('aa', aa, lib.anderson_accelerator_free)
 
 			####
-			alpha__ = self.py_anderson_solve(
-					F_py, aa.contents.mu_regularization)
+			alpha__ = self.py_anderson_solve(F_py, aa.mu_regularization)
 			####
 
 			self.assertCall( lib.anderson_solve(
-					aa, F, alpha, aa.contents.mu_regularization) )
+					aa, F, alpha, aa.mu_regularization) )
 			self.assertCall( lib.vector_memcpy_av(alpha_ptr, alpha, 1) )
 			self.assertVecEqual( alpha_py, alpha__, ATOL, RTOL )
 
-			self.free_vars('aa', 'F', 'x', 'alpha')
+			self.free_vars('aa', 'F', 'alpha')
 			self.assertCall( lib.ok_device_reset() )
 
 	def test_anderson_mix(self):
@@ -197,7 +220,8 @@ class AndersonLibsTestCase(OptkitCTestCase):
 						lib, lookback + 1, 'alpha', random=True)
 				x, x_py, x_ptr = self.register_vector(lib, n, 'x', random=True)
 
-				aa = lib.anderson_accelerator_init(x, lookback)
+				aa = lib.anderson_accelerator()
+				self.assertCall(lib.anderson_accelerator_init(aa, n, lookback))
 				self.register_var('aa', aa, lib.anderson_accelerator_free)
 				self.assertCall( lib.anderson_mix(aa, G, alpha, x) )
 
@@ -224,9 +248,11 @@ class AndersonLibsTestCase(OptkitCTestCase):
 			F = np.zeros((n, lookback + 1))
 			G = np.zeros((n, lookback + 1))
 
-			#TODO: TEST THINGS HERE
-			aa = lib.anderson_accelerator_init(x, lookback)
-			mu = aa.contents.mu_regularization
+			aa = lib.anderson_accelerator()
+			self.assertCall( lib.anderson_accelerator_init(aa, n, lookback) )
+			self.register_var('aa', aa, lib.anderson_accelerator_free)
+			mu = aa.mu_regularization
+			self.assertCall( lib.anderson_set_x0(aa, x) )
 
 			# TEST THE BEHAVIOR < LOOKBACK AND >= LOOKBACK
 			for k in xrange(lookback + 5):
