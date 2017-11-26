@@ -111,23 +111,27 @@ class PogsAbstractTestCase(OptkitCPogsTestCase):
         for (lib, op, direct, equil) in itertools.product(
                 self.libs, OPS, DIRECT, EQUILS):
             with PogsDenseTestContext(lib, self.A_test, obj) as ctx:
+                self.set_standard_tolerances(ctx.lib)
                 self.assert_coldstart_components(ctx)
 
     def test_pogs_abstract_call(self):
         for (lib, op, direct, equil) in itertools.product(
                 self.libs, OPS, DIRECT, EQUILS):
-            with PogsDenseTestContext(lib, self.A_test, obj) as test:
+            with PogsDenseTestContext(lib, self.A_test, obj) as ctx:
+                self.set_standard_tolerances(ctx.lib)
                 self.assert_pogs_call(ctx)
 
     def test_pogs_abstract_call_unified(self):
         for (lib, op, direct, equil) in itertools.product(self.libs):
-            with PogsDenseTestContext(lib, self.A_test, solver=False) as test:
+            with PogsDenseTestContext(lib, self.A_test, solver=False) as ctx:
+                self.set_standard_tolerances(ctx.lib)
                 self.assert_pogs_unified(ctx)
 
     def test_pogs_abstract_warmstart(self):
         for (lib, op, direct, equil) in itertools.product(
                 self.libs, DIRECT, EQUILS):
-            with PogsDenseTestContext(lib, self.A_test) as test:
+            with PogsDenseTestContext(lib, self.A_test) as ctx:
+                self.set_standard_tolerances(ctx.lib)
                 self.assert_pogs_warmstart(ctx)
 
     def test_pogs_abstract_io(self):
@@ -135,5 +139,6 @@ class PogsAbstractTestCase(OptkitCPogsTestCase):
         # TODO: FIX
         equil = 1.
         for (lib, op, direct) in itertools.product(self.libs, OPS, DIRECT):
-            with PogsDenseTestContext(lib, self.A_test) as test:
+            with PogsDenseTestContext(lib, self.A_test) as ctx:
+                self.set_standard_tolerances(ctx.lib)
                 self.assert_pogs_io(ctx)
