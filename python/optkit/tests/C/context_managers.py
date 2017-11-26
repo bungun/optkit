@@ -51,12 +51,11 @@ class CVariableContext:
 
 class CArrayContext:
     def __init__(self, c, py, pyptr, build, free):
-        self.cptr = c
+        self.cptr = self.c = c
         self.py = py
         self.pyptr = pyptr
         self._build = build
         self._free = free
-
     def __enter__(self):
         self._build()
         return self
@@ -67,8 +66,7 @@ class CArrayIO:
     def __init__(self, py_array, copy_py2c, copy_c2py):
         self._py2c = copy_py2c
         self._c2py = copy_c2py
-        self._pyarray = py_ptr
-        self._dtype = type(py_ptr)
+        self._pyarray = py_array
 
     def sync_to_py(self):
         assert okctest.noerr( self._c2py(self._pyarray) )
@@ -80,7 +78,6 @@ class CArrayIO:
         assert okctest.noerr( self._c2py(py_array) )
 
     def copy_to_c(self, py_array):
-        pyptr = py_array.ravel().ctypes.data_as(self._dtype)
         assert okctest.noerr( self._py2c(py_array) )
 
 class CVectorContext(CArrayContext, CArrayIO):
@@ -94,13 +91,13 @@ class CVectorContext(CArrayContext, CArrayIO):
         def c2py(py_array):
             return lib.vector_memcpy_av(arr2ptr(py_array), v, 1)
         def build():
-            assert okctest.noerr( lib.vector_calloc(vec, size) )
+            assert okctest.noerr( lib.vector_calloc(v, size) )
             if random:
                 assert okctest.noerr(py2c(v_py))
         def free(): return lib.vector_free(v)
 
         CArrayContext.__init__(self, v, v_py, v_ptr, build, free)
-        CArrayIO.__init__(self, v, v_py, py2c, c2py)
+        CArrayIO.__init__(self, v_py, py2c, c2py)
 
 
 class CIndvectorContext(CArrayContext, CArrayIO):

@@ -5,6 +5,8 @@ import numpy as np
 import unittest
 
 TEST_ITERATE = int(os.getenv('OPTKIT_REPEAT_NUMERICALTEST', '0'))
+VERBOSE_TEST = os.getenv('OPTKIT_TEST_VERBOSE', False)
+LIB_CONDITIONS = [(a, b) for a in (True, False) for b in (True, False)]
 
 DEFAULT_SHAPE = (500, 800)
 # DEFAULT_SHAPE = (10, 15)
@@ -44,6 +46,32 @@ if DEFAULT_ROWS is not None:
     DEFAULT_SHAPE = (DEFAULT_ROWS, DEFAULT_SHAPE[1])
 if DEFAULT_COLS is not None:
     DEFAULT_SHAPE = (DEFAULT_SHAPE[0], DEFAULT_COLS)
+
+def A_test_gen():
+    if DEFAULT_MATRIX is not None:
+        return DEFAULT_MATRIX
+    else:
+        return np.random.rand(*DEFAULT_SHAPE)
+
+def shape():
+    if DEFAULT_MATRIX is not None:
+        return DEFAULT_MATRIX.shape
+    else:
+        return DEFAULT_SHAPE
+
+def A_test_sparse_gen():
+    A_ = DEFAULT_MATRIX if DEFAULT_MATRIX else np.random.rand(*DEFAULT_SHAPE)
+    mask = np.random.rand(*A_.shape) < DEFAULT_SPARSE_OCCUPANCY
+    self.__nnz = sum(sum(mask))
+    return A_ * mask
+
+@staticmethod
+def version_string(major, minor, change, status):
+    v = '{}.{}.{}'.format(major, minor, change)
+    if status:
+        v.join('-{}'.format(chr(status)))
+    return v
+
 
 class OptkitTestCase(unittest.TestCase):
     VERBOSE_TEST = os.getenv('OPTKIT_TEST_VERBOSE', False)
