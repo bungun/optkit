@@ -54,13 +54,13 @@ ok_status pogs_graph_vector_alloc(pogs_graph_vector * z, size_t m, size_t n)
 		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
 
 	ok_status err = OPTKIT_SUCCESS;
-	z_->size = m + n;
-	z_->m = m;
-	z_->n = n;
-	ok_alloc(z_->vec, sizeof(*z_->vec));
-	ok_alloc(z_->x, sizeof(*z_->x));
-	ok_alloc(z_->y, sizeof(*z_->y));
-	z_->memory_attached = 0;
+	z->size = m + n;
+	z->m = m;
+	z->n = n;
+	ok_alloc(z->vec, sizeof(*z->vec));
+	ok_alloc(z->x, sizeof(*z->x));
+	ok_alloc(z->y, sizeof(*z->y));
+	z->memory_attached = 0;
 	return err;
 }
 
@@ -98,6 +98,8 @@ ok_status pogs_graph_vector_release_memory(pogs_graph_vector * z)
 	if (!z)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	err = OK_SCAN_ERR( vector_free(z->vec) );
+	z->y->data = OK_NULL;
+	z->x->data = OK_NULL;
 	z->memory_attached = 0;
 	return err;
 }
@@ -133,40 +135,40 @@ ok_status pogs_variables_alloc(pogs_variables * z, size_t m, size_t n)
 		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
 
 	ok_status err = OPTKIT_SUCCESS;
-	z_->m = m;
-	z_->n = n;
+	z->m = m;
+	z->n = n;
 
-	ok_alloc(z, sizeof(*(z->state)));
+	ok_alloc(z->state, sizeof(*(z->state)));
 	OK_CHECK_ERR( err, vector_alloc(z->state, 6 * (m + n)) );
 
 	ok_alloc(z->primal, sizeof(*z));
-	OK_CHECK_ERR( err, pogs_graph_vector_alloc(&(z->primal), m, n) );
+	OK_CHECK_ERR( err, pogs_graph_vector_alloc(z->primal, m, n) );
 	OK_CHECK_ERR( err, pogs_graph_vector_view_vector(z->primal, z->state,
 		0, m + n) );
 	ok_alloc(z->dual, sizeof(*z));
-	OK_CHECK_ERR( err, pogs_graph_vector_alloc(&(z->dual), m ,n) );
+	OK_CHECK_ERR( err, pogs_graph_vector_alloc(z->dual, m, n) );
 	OK_CHECK_ERR( err, pogs_graph_vector_view_vector(z->dual, z->state,
 		m + n, m + n) );
 	ok_alloc(z->primal12, sizeof(*z));
-	OK_CHECK_ERR( err, pogs_graph_vector_alloc(&(z->primal12), m, n) );
+	OK_CHECK_ERR( err, pogs_graph_vector_alloc(z->primal12, m, n) );
 	OK_CHECK_ERR( err, pogs_graph_vector_view_vector(z->primal12, z->state,
 		2 * (m + n), m + n) );
 	ok_alloc(z->dual12, sizeof(*z));
-	OK_CHECK_ERR( err, pogs_graph_vector_alloc(&(z->dual12), m, n) );
+	OK_CHECK_ERR( err, pogs_graph_vector_alloc(z->dual12, m, n) );
 	OK_CHECK_ERR( err, pogs_graph_vector_view_vector(z->dual12, z->state,
 		3 * (m + n), m + n) );
 	ok_alloc(z->prev, sizeof(*z));
-	OK_CHECK_ERR( err, pogs_graph_vector_alloc(&(z->prev), m ,n) );
+	OK_CHECK_ERR( err, pogs_graph_vector_alloc(z->prev, m ,n) );
 	OK_CHECK_ERR( err, pogs_graph_vector_view_vector(z->prev, z->state,
 		4 * (m + n), m + n) );
 	ok_alloc(z->temp, sizeof(*z));
-	OK_CHECK_ERR( err, pogs_graph_vector_alloc(&(z->temp), m, n) );
+	OK_CHECK_ERR( err, pogs_graph_vector_alloc(z->temp, m, n) );
 	OK_CHECK_ERR( err, pogs_graph_vector_view_vector(z->temp, z->state,
 		5 * (m + n), m + n) );
 
-	ok_alloc(z, sizeof(*(z->fixed_point_iterate)));
+	ok_alloc(z->fixed_point_iterate, sizeof(*(z->fixed_point_iterate)));
 	OK_CHECK_ERR( err, vector_subvector(z->fixed_point_iterate, z->state,
-		0, 2 * (m + n)) );
+		2 * (m + n), 1 * (m + n)) );
 
 	if (err)
 		OK_MAX_ERR( err, pogs_variables_free(z) );
@@ -192,7 +194,6 @@ ok_status pogs_variables_free(pogs_variables * z)
 	OK_MAX_ERR( err, vector_free(z->state) );
 	ok_free(z->fixed_point_iterate);
 	ok_free(z->state);
-	ok_free(z);
 	return err;
 }
 
@@ -338,10 +339,10 @@ ok_status pogs_print_header_string(void)
 {
 	printf("\n");
 	printf("%8s %12s %12s %12s %12s %12s %12s %12s\n",
-		"#", "res_pri", "eps_pri", "res_dual", "eps_dual", "gap",
+		"iter #", "res_pri", "eps_pri", "res_dual", "eps_dual", "gap",
 		"eps_gap", "objective");
 	printf("%8s %12s %12s %12s %12s %12s %12s %12s\n",
-		"-", "-------", "-------", "--------", "--------", "---",
+		"------", "-------", "-------", "--------", "--------", "---",
 		"-------", "---------");
 	return OPTKIT_SUCCESS;
 }
@@ -352,7 +353,7 @@ ok_status pogs_print_iter_string(pogs_residuals * res,
 	OK_CHECK_PTR(res);
 	OK_CHECK_PTR(tol);
 	OK_CHECK_PTR(obj);
-	printf("%7u: %12.3e, %12.3e, %12.3e, %12.3e, %12.3e, %12.3e, %12.3e\n",
+	printf("%8u %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e\n",
 		k, res->primal, tol->primal, res->dual, tol->dual,
 		res->gap, tol->gap, obj->primal);
 	return OPTKIT_SUCCESS;

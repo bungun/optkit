@@ -19,8 +19,8 @@ ok_status pogs_work_alloc(pogs_work * W, pogs_solver_data * A,
 	OK_CHECK_ERR( err, POGS(problem_data_alloc)(W, A, flags) );
 	ok_alloc(W->d, sizeof(*W->d));
 	ok_alloc(W->e, sizeof(*W->e));
-	OK_CHECK_ERR( err, vector_calloc(W->d, flags->m) );
-	OK_CHECK_ERR( err, vector_calloc(W->e, flags->n) );
+	OK_CHECK_ERR( err, vector_calloc(W->d, W->A->size1) );
+	OK_CHECK_ERR( err, vector_calloc(W->e, W->A->size2) );
 	W->skinny = (W->A->size1 >= W->A->size2);
 	W->normalized = 0;
 	W->equilibrated = 0;
@@ -42,7 +42,8 @@ ok_status pogs_work_free(pogs_work * W)
 ok_status pogs_solver_alloc(pogs_solver * solver, pogs_solver_data * A,
 	const pogs_solver_flags * flags)
 {
-	ok_status err = OPTKIT_SUCCESS;
+	size_t m, n;
+        ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_PTR(solver);
 	if (solver->W)
 		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
@@ -51,25 +52,26 @@ ok_status pogs_solver_alloc(pogs_solver * solver, pogs_solver_data * A,
 	OK_CHECK_ERR( err, pogs_set_default_settings(solver->settings) );
 
 	ok_alloc(solver->W, sizeof(*solver->W));
-	OK_CHECK_ERR( err, pogs_work_alloc(&(solver->W), A, flags) );
+	OK_CHECK_ERR( err, pogs_work_alloc(solver->W, A, flags) );
 	if (!err) {
 		m = solver->W->A->size1;
 		n = solver->W->A->size2;
 	}
 	ok_alloc(solver->f, sizeof(*solver->f));
-	ok_alloc(solver->f, sizeof(*solver->g));
+	ok_alloc(solver->g, sizeof(*solver->g));
 	OK_CHECK_ERR( err, function_vector_calloc(solver->f, m) );
 	OK_CHECK_ERR( err, function_vector_calloc(solver->g, n) );
 	ok_alloc(solver->z, sizeof(*solver->z));
-	OK_CHECK_ERR( err, pogs_variables_alloc(&(solver->z), m, n) );
-	OK_CHECK_ERR( err, blas_make_handle(&(s->linalg_handle)) );
+	OK_CHECK_ERR( err, pogs_variables_alloc(solver->z, m, n) );
+	OK_CHECK_ERR( err, vector_set_all(solver->z->state, kZero) );
+	OK_CHECK_ERR( err, blas_make_handle(&(solver->linalg_handle)) );
 	ok_alloc(solver->aa, sizeof(*solver->aa));
+
 	OK_CHECK_ERR( err, anderson_accelerator_init(solver->aa,
 		solver->z->fixed_point_iterate->size,
 		(size_t) solver->settings->anderson_lookback) );
-
 	if (err)
-		OK_MAX_ERR( err, pogs_solver_free(s) );
+		OK_MAX_ERR( err, pogs_solver_free(solver) );
 	return err;
 }
 
@@ -149,7 +151,6 @@ ok_status pogs_normalize_DAE(pogs_work * W)
 		vector_scale(W->d, kOne / (MATH(sqrt)(W->normA) * factor)) );
 	OK_CHECK_ERR( err,
 		vector_scale(W->e, factor / MATH(sqrt)(W->normA)) );
-
 	return err;
 }
 
@@ -372,6 +373,7 @@ ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 			&rho_params, settings, &res, &tol, k) );
 	}
 
+
 	if (!converged && k == settings->maxiter)
 		printf("reached max iter = %u\n", k);
 
@@ -391,7 +393,7 @@ pogs_solver * pogs_init(pogs_solver_data * A, const pogs_solver_flags * flags)
 
 	OK_TIMER t = ok_timer_tic();
 	ok_alloc(solver, sizeof(*solver));
-	OK_CHECK_ERR( err, pogs_solver_alloc(&solver, A, flags) );
+	OK_CHECK_ERR( err, pogs_solver_alloc(solver, A, flags) );
 	OK_CHECK_ERR( err, POGS(equilibrate_matrix)(solver->W, A, flags) );
 	OK_CHECK_ERR( err, POGS(initalize_graph_projector)(
 		solver->W) );
@@ -423,13 +425,15 @@ ok_status pogs_solve(pogs_solver * solver, const function_vector * f,
 
 	/* SETUP */
 	OK_TIMER t = ok_timer_tic();
+
 	OK_CHECK_ERR( err, pogs_update_settings(solver->settings, settings) );
 	OK_CHECK_ERR( err, pogs_scale_objectives(solver->f, solver->g,
 		solver->W->d, solver->W->e, f, g) );
-	OK_CHECK_ERR( err, pogs_set_z0(solver) );
+	if (settings->warmstart)
+		OK_CHECK_ERR( err, pogs_set_z0(solver) );
 
-	solver->aa->mu_regularization = solver->settings->anderson_regularization;
-	if (solver->settings->warmstart || solver->settings->resume)
+	solver->aa->mu_regularization = settings->anderson_regularization;
+	if ((settings->warmstart || settings->resume) && settings->accelerate )
 		OK_CHECK_ERR( err, anderson_set_x0(
 			solver->aa, solver->z->fixed_point_iterate) );
 
@@ -445,8 +449,10 @@ ok_status pogs_solve(pogs_solver * solver, const function_vector * f,
 	OK_CHECK_ERR( err, pogs_solver_loop(solver, info) );
 	info->solve_time = ok_timer_toc(t);
 
+	/* UNSCALE */
 	OK_CHECK_ERR( err, pogs_unscale_output(output, solver->z, solver->W->d,
 		solver->W->e, solver->rho, solver->settings->suppress) );
+
 	return err;
 }
 
@@ -493,7 +499,7 @@ pogs_solver * pogs_load_solver(const pogs_solver_private_data * data,
 
 	err = OK_SCAN_ERR( POGS(get_init_data)(A, data, flags) );
 	ok_alloc(solver, sizeof(*solver));
-	OK_CHECK_ERR( err, pogs_solver_alloc(&solver, A, flags) );
+	OK_CHECK_ERR( err, pogs_solver_alloc(solver, A, flags) );
 	OK_CHECK_ERR( err, POGS(load_work)(solver->W, data, flags) );
 	OK_CHECK_ERR( err, pogs_solver_load_state(solver, state, rho) );
 	if (err) {
