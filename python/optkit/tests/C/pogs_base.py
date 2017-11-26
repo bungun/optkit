@@ -1,15 +1,13 @@
 from optkit.compat import *
 
-import os
 import numpy as np
 import ctypes as ct
-import collections
 
 from optkit.utils import proxutils
 from optkit.tests.C.base import OptkitCTestCase
 import optkit.tests.C.statements as okctest
 import optkit.tests.C.context_managers as okcctx
-
+import optkit.tests.C.pogs_contexts as pogsctx
 
 ALPHA_DEFAULT = 1.7
 RHO_DEFAULT = 1.
@@ -23,143 +21,6 @@ VERBOSE_DEFAULT = 2
 SUPPRESS_DEFAULT = 0
 RESUME_DEFAULT = 0
 
-class PogsBaseTestContext(object):
-    def __init__(self, libctx, m, n, obj='Abs'):
-        lib = libctx.lib
-        self._libctx = libctx
-        self._f = okcctx.CFunctionVectorContext(lib, m)
-        self._g = okcctx.CFunctionVectorContext(lib, n)
-        self._objstring = obj
-        self.params = collections.namedtuple(
-                'TestParams',
-                'shape z output info setings res tol obj f f_py g g_py')
-        self.params.shape = (m, n)
-        self.params.z = PogsVariablesLocal(m, n, lib.pyfloat)
-        self.params.output = PogsOutputLocal(lib, m, n)
-        self.params.info = lib.pogs_info()
-        self.params.settings = settings = lib.pogs_settings()
-        assert okctest.noerr( lib.pogs_set_default_settings(settings) )
-        self.params.settings.verbose = int(okctest.VERBOSE_TEST)
-        self.params.res = lib.pogs_residuals()
-        self.params.tol = lib.pogs_tolerances()
-        self.params.obj = lib.pogs_objective_values()
-
-    def __enter__(self):
-        m, n = self.params.shape
-        lib = self.lib = self._libctx.__enter__()
-        self.f = self._f.__enter__()
-        self.g = self._g.__enter__()
-        f, f_py, f_ptr = self.f.cptr, self.f.py, self.f.pyptr
-        g, g_py, g_ptr = self.g.cptr, self.g.py, self.g.pyptr
-
-        h = lib.function_enums.dict[self._objstring]
-        asymm = 1 + int('Asymm' in self._objstring)
-        for i in xrange(m):
-            f_py[i] = lib.function(h, 1, 1, 1, 0, 0, asymm)
-        for j in xrange(n):
-            g_py[j] = lib.function(
-                    lib.function_enums.IndGe0, 1, 0, 1, 0, 0, 1)
-        assert okctest.noerr( lib.function_vector_memcpy_va(f, f_ptr) )
-        assert okctest.noerr( lib.function_vector_memcpy_va(g, g_ptr) )
-        self.params.f = f
-        self.params.g = g
-        self.params.f_py = f_py
-        self.params.g_py = g_py
-        return self
-
-    def __exit__(self, *exc):
-        self._f.__exit__(*exc)
-        self._g.__exit__(*exc)
-        self._libctx.__exit__(*exc)
-
-class PogsVariablesLocal():
-    def __init__(self, m, n, pytype):
-        self.m = m
-        self.n = n
-        self.z = np.zeros(m + n).astype(pytype)
-        self.z12 = np.zeros(m + n).astype(pytype)
-        self.zt = np.zeros(m + n).astype(pytype)
-        self.zt12 = np.zeros(m + n).astype(pytype)
-        self.prev = np.zeros(m + n).astype(pytype)
-        self.d = np.zeros(m).astype(pytype)
-        self.e = np.zeros(n).astype(pytype)
-
-    @property
-    def x(self):
-        return self.z[self.m:]
-
-    @property
-    def y(self):
-        return self.z[:self.m]
-
-    @property
-    def x12(self):
-        return self.z12[self.m:]
-
-    @property
-    def y12(self):
-        return self.z12[:self.m]
-
-    @property
-    def xt(self):
-        return self.zt[self.m:]
-
-    @property
-    def yt(self):
-        return self.zt[:self.m]
-
-    @property
-    def xt12(self):
-        return self.zt12[self.m:]
-
-    @property
-    def yt12(self):
-        return self.zt12[:self.m]
-
-class PogsOutputLocal():
-    def __init__(self, lib, m, n):
-        self.x = np.zeros(n).astype(lib.pyfloat)
-        self.y = np.zeros(m).astype(lib.pyfloat)
-        self.mu = np.zeros(n).astype(lib.pyfloat)
-        self.nu = np.zeros(m).astype(lib.pyfloat)
-        self.ptr = lib.pogs_output(self.x.ctypes.data_as(lib.ok_float_p),
-                                   self.y.ctypes.data_as(lib.ok_float_p),
-                                   self.mu.ctypes.data_as(lib.ok_float_p),
-                                   self.nu.ctypes.data_as(lib.ok_float_p))
-
-def load_to_local(lib, py_vector, c_vector):
-    assert okctest.noerr( lib.vector_memcpy_av(
-            py_vector.ctypes.data_as(lib.ok_float_p), c_vector, 1) )
-
-def load_all_local(lib, py_vars, solver):
-    if not isinstance(py_vars, PogsVariablesLocal):
-        raise TypeError('argument "py_vars" must be of type {}'.format(
-                        PogsVariablesLocal))
-    elif 'pogs_solver_p' not in lib.__dict__:
-        raise ValueError('argument "lib" must contain field named '
-                         '"pogs_solver_p"')
-    elif not isinstance(solver, lib.pogs_solver_p):
-        raise TypeError('argument "solver" must be of type {}'.format(
-                        lib.pogs_solver_p))
-
-    z = solver.contents.z
-    W = solver.contents.W
-    load_to_local(lib, py_vars.z, z.contents.primal.contents.vec)
-    load_to_local(lib, py_vars.z12, z.contents.primal12.contents.vec)
-    load_to_local(lib, py_vars.zt, z.contents.dual.contents.vec)
-    load_to_local(lib, py_vars.zt12, z.contents.dual12.contents.vec)
-    load_to_local(lib, py_vars.prev, z.contents.prev.contents.vec)
-    load_to_local(lib, py_vars.d, W.contents.d)
-    load_to_local(lib, py_vars.e, W.contents.e)
-
-class EquilibratedMatrix(object):
-    def __init__(self, d, A, e):
-        self.dot = lambda x: d * A.dot(e * x)
-        self.shape = A.shape
-        self.transpose = lambda: EquilibratedMatrix(e, A.T, d)
-    @property
-    def T(self):
-        return self.transpose()
 
 class OptkitCPogsTestCase(OptkitCTestCase):
     def assert_default_settings(self, lib):
@@ -224,7 +85,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         g_h1, g_a1, g_b1, g_c1, g_d1, g_e1 = fv_list2arrays(g_list)
 
         # retrieve scaling
-        load_all_local(lib, local_vars, solver)
+        pogsctx.load_all_local(lib, local_vars, solver)
 
         # scaled vars
         assert okctest.vec_equal( f_a0, local_vars.d * f_a1, self.ATOLM, self.RTOL )
@@ -246,16 +107,16 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         m, n = A_orig.shape
         d_local = np.zeros(m).astype(lib.pyfloat)
         e_local = np.zeros(n).astype(lib.pyfloat)
-        load_to_local(lib, d_local, solver_work.contents.d)
-        load_to_local(lib, e_local, solver_work.contents.e)
-        return EquilibratedMatrix(d_local, A_orig, e_local,)
+        pogsctx.load_to_local(lib, d_local, solver_work.contents.d)
+        pogsctx.load_to_local(lib, e_local, solver_work.contents.e)
+        return pogsctx.EquilibratedMatrix(d_local, A_orig, e_local,)
 
     def assert_equilibrate_matrix(self, lib, solver_work, A_orig):
         m, n = A_orig.shape
         d_local = np.zeros(m).astype(lib.pyfloat)
         e_local = np.zeros(n).astype(lib.pyfloat)
-        load_to_local(lib, d_local, solver_work.contents.d)
-        load_to_local(lib, e_local, solver_work.contents.e)
+        pogsctx.load_to_local(lib, d_local, solver_work.contents.d)
+        pogsctx.load_to_local(lib, e_local, solver_work.contents.e)
 
         x, x_py, x_ptr = self.register_vector(lib, n, 'x', random=True)
         y, y_py, y_ptr = self.register_vector(lib, m, 'y')
@@ -271,7 +132,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         else:
             raise ValueError('UNKNOWN POGS IMPLEMENTATION')
 
-        load_to_local(lib, y_py, y)
+        pogsctx.load_to_local(lib, y_py, y)
 
         DAEX = d_local * A_orig.dot(e_local * x_py)
         assert okctest.vec_equal( y_py, DAEX, self.ATOLM, self.RTOL )
@@ -294,7 +155,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
             raise ValueError('UNKNOWN POGS IMPLEMENTATION')
 
         AXPY = alpha * A_equil.dot(x_py) + beta * y_py
-        load_to_local(lib, y_py, y)
+        pogsctx.load_to_local(lib, y_py, y)
         assert okctest.vec_equal( y_py, AXPY, self.ATOLM, self.RTOL )
 
         self.free_vars('x', 'y')
@@ -316,7 +177,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
             raise ValueError('UNKNOWN POGS IMPLEMENTATION')
 
         ATYPX = alpha * A_equil.T.dot(y_py) + beta * x_py
-        load_to_local(lib, x_py, x)
+        pogsctx.load_to_local(lib, x_py, x)
         assert okctest.vec_equal( x_py, ATYPX, self.ATOLN, self.RTOL )
 
         self.free_vars('x', 'y')
@@ -341,8 +202,8 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         else:
             raise ValueError('UNKNOWN POGS IMPLEMENTATION')
 
-        load_to_local(lib, x_out_py, x_out)
-        load_to_local(lib, y_out_py, y_out)
+        pogsctx.load_to_local(lib, x_out_py, x_out)
+        pogsctx.load_to_local(lib, y_out_py, y_out)
         AX = A_equil.dot(x_out_py)
         assert okctest.vec_equal( y_out_py, AX, ATOLM, RTOL )
 
@@ -362,7 +223,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
             holds elementwise
         """
         assert okctest.noerr( lib.pogs_primal_update(solver.contents.z) )
-        load_all_local(lib, local_vars, solver)
+        pogsctx.load_all_local(lib, local_vars, solver)
         assert okctest.vec_equal( local_vars.z, local_vars.prev, self.ATOLMN, self.RTOL )
 
     def assert_pogs_prox(self, lib, solver, test_params):
@@ -382,10 +243,10 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         rho = test_params.settings.rho
 
         hdl = solver.contents.linalg_handle
-        load_all_local(lib, local_vars, solver)
+        pogsctx.load_all_local(lib, local_vars, solver)
 
         assert okctest.noerr( lib.pogs_prox(hdl, f, g, z, rho) )
-        load_all_local(lib, local_vars, solver)
+        pogsctx.load_all_local(lib, local_vars, solver)
 
         f_list = [lib.function(*f_) for f_ in f_py]
         g_list = [lib.function(*f_) for f_ in g_py]
@@ -417,7 +278,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
                 solver.contents.W, solver.contents.z,
                 solver.contents.settings.contents.alpha, self.RTOL) )
 
-        load_all_local(lib, local_vars, solver)
+        pogsctx.load_all_local(lib, local_vars, solver)
         assert okctest.vec_equal(
                 A_equil.dot(local_vars.x), local_vars.y, self.ATOLM, self.RTOL)
 
@@ -435,14 +296,14 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         blas_handle = solver.contents.linalg_handle
         z = solver.contents.z
 
-        load_all_local(lib, local_vars, solver)
+        pogsctx.load_all_local(lib, local_vars, solver)
         alpha = solver.contents.settings.contents.alpha
         zt12_py = local_vars.z12 - local_vars.prev + local_vars.zt
         zt_py = local_vars.zt - local_vars.z + (
                     alpha * local_vars.z12 + (1-alpha) * local_vars.prev)
 
         assert okctest.noerr( lib.pogs_dual_update(blas_handle, z, alpha) )
-        load_all_local(lib, local_vars, solver)
+        pogsctx.load_all_local(lib, local_vars, solver)
         assert okctest.vec_equal( local_vars.zt12, zt12_py, self.ATOLMN, self.RTOL )
         assert okctest.vec_equal( local_vars.zt, zt_py, self.ATOLMN, self.RTOL )
 
@@ -476,7 +337,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
             assert okctest.noerr( lib.pogs_adapt_rho(
                     z, rho_p, rho_params, solver.contents.settings, residuals,
                     tolerances, 1) )
-            load_all_local(lib, local_vars, solver)
+            pogsctx.load_all_local(lib, local_vars, solver)
             zt_after = local_vars.zt
             rho_after = rho_p.contents
             assert okctest.vec_equal(
@@ -523,7 +384,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         assert okctest.noerr( lib.pogs_check_convergence(
                 solver, objectives, residuals, tolerances, cvg_ptr) );
 
-        load_all_local(lib, local_vars, solver)
+        pogsctx.load_all_local(lib, local_vars, solver)
         obj_py = proxutils.func_eval_python(g_list, local_vars.x12)
         obj_py += proxutils.func_eval_python(f_list, local_vars.y12)
         obj_gap_py = abs(local_vars.z12.dot(local_vars.zt12))
@@ -564,33 +425,14 @@ class OptkitCPogsTestCase(OptkitCTestCase):
                 -rho * xt^{k+1/2} / e - mu_out == 0
                 -rho * yt^{k+1/2} * d - nu_out == 0
         """
-        if not isinstance(solver, lib.pogs_solver_p):
-            raise TypeError('argument "solver" must be of type {}'.format(
-                            lib.pogs_solver_p))
-
-        if not isinstance(output, PogsOutputLocal):
-            raise TypeError('argument "output" must be of type {}'.format(
-                            PogsOutputLocal))
-
-        if not isinstance(local_vars, PogsVariablesLocal):
-            raise TypeError('argument "local_vars" must be of type {}'.format(
-                            PogsVariablesLocal))
-
+        work = solver.contents.W
         rho = solver.contents.rho
         suppress = solver.contents.settings.contents.suppress
-        load_all_local(lib, local_vars, solver)
-
-        if 'pogs_matrix_p' in lib.__dict__:
-            solver_work = solver.contents.M
-        elif 'pogs_work_p' in lib.__dict__:
-            solver_work = solver.contents.W
-        else:
-            raise ValueError('argument "lib" must contain a field named'
-                             '"pogs_matrix_p" or "pogs_work_p"')
+        pogsctx.load_all_local(lib, local_vars, solver)
 
         assert okctest.noerr( lib.pogs_unscale_output(
-                output.ptr, solver.contents.z, solver_work.contents.d,
-                solver_work.contents.e, rho, suppress) )
+                output.ptr, solver.contents.z, work.contents.d,
+                work.contents.e, rho, suppress) )
 
         assert okctest.vec_equal(
                 local_vars.x12 * local_vars.e, output.x,
@@ -693,7 +535,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         assert okctest.noerr( lib.pogs_update_settings(solver.contents.settings,
                                              ct.byref(settings)) )
         assert okctest.noerr( lib.pogs_set_z0(solver) )
-        load_all_local(lib, local_vars, solver)
+        pogsctx.load_all_local(lib, local_vars, solver)
         self.assert_scaled_variables(A_equil, x0, nu0, local_vars, rho)
 
         # TEST SOLVER WARMSTART
@@ -711,7 +553,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         rho = solver.contents.rho
         assert ( info.err == 0 )
         assert ( info.converged or info.k >= settings.maxiter )
-        load_all_local(lib, local_vars, solver)
+        pogsctx.load_all_local(lib, local_vars, solver)
         self.assert_scaled_variables(A_equil, x0, nu0, local_vars, rho)
 
     def assert_pogs_warmstart(self, test_context):
@@ -900,7 +742,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 
         build_solver = lambda: lib.pogs_init(ctx.data, ctx.flags)
         free_solver = lambda s: lib.pogs_finish(s, 0)
-        with okcctx.VariableContext(build_solver, free_solver) as solver2:
+        with okcctx.CVariableContext(build_solver, free_solver) as solver2:
             settings.resume = 1
             assert okctest.noerr( lib.pogs_solver_load_state(
                     solver2, state_ptr, rho_ptr[0]))
@@ -918,7 +760,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 
         build_solver = lambda: lib.pogs_load_solver(
                 priv_data, state_ptr, rho_out[0], flags)
-        with okcctx.VariableContext(build_solver, free_solver) as solver3:
+        with okcctx.CVariableContext(build_solver, free_solver) as solver3:
             settings.resume = 1
             assert okctest.noerr( lib.pogs_solve(
                     solver3, f, g, settings, info, output.ptr) )

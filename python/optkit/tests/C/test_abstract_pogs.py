@@ -1,50 +1,15 @@
 from optkit.compat import *
 
 import os
-import numpy as np
-import ctypes as ct
 import itertools
-import collections
 
 import optkit.libs.enums as enums
 from optkit.libs.pogs import PogsLibs
-import optkit.tests.C.base_layer as oktest
 from optkit.tests.defs import OptkitTestCase
+import optkit.tests.C.statements as oktest
+import optkit.test.C.context_managers as okcctx
+from  optkit.tests.C import pogs_contexts
 from optkit.tests.C.pogs_base import OptkitCPogsTestCase
-
-OPS = ['dense', 'sparse']
-DIRECT = [0 , 1]
-EQUILS = [1., 2.]
-
-
-class PogsAbstractTestContext(PogsBaseTestContext):
-    def __init__(self, lib, A, optype, direct, equil, obj='Abs', solver=True):
-        m, n = A.shape
-        PogsBaseTestContext.__init__(self, lib, m, n, obj=obj)
-        self.optype = optype
-        self.direct = direct
-        self.equil = equil
-
-        rowmajor = A.flags.c_contiguous
-        self.A_dense = A
-        self._op = oktest.c_operator_context(lib, optype, A, rowmajor)
-        self.data = None
-        self.flags = lib.pogs_solver_flags(direct, equil)
-        self._solver = solver
-
-    def __enter__(self):
-        PogsBaseTestContext.__enter__(self)
-        self.op = self.data = self._op.__enter__()
-        if self._solver:
-            self.solver = self.lib.pogs_init(self.data, self.flags)
-        return self
-
-    def __exit__(self):
-        if self._solver:
-            oktest.assert_noerr(self.lib.pogs_free(self.solver))
-        self._op.__exit__()
-        PogsBaseTestContext.__exit__(self)
-
 
 class PogsAbstractLibsTestCase(OptkitTestCase):
     """TODO: docstring"""
@@ -78,6 +43,16 @@ class PogsAbstractTestCase(OptkitCPogsTestCase):
         self.ATOLN = RTOL * n**0.5
         self.ATOLMN = RTOL * (m + n)**0.5
 
+    def setUp(self):
+        operators = ['dense', 'sparse']
+        direct = (0 , 1)
+        equil = (1., 2.)
+        self.LIBS_OPS = list(itertools.product(self.libs, operators))
+        self.LIBS_OPS_DIRECT = list(itertools.product(
+                self.libs, operators, direct))
+        self.LIBS_OPS_DIRECT_EQUIL = list(itertools.product(
+                self.libs, operators, direct, equil))
+
     def tearDown(self):
         self.free_all_vars()
         self.exit_call()
@@ -87,7 +62,7 @@ class PogsAbstractTestCase(OptkitCPogsTestCase):
         os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
     def test_pogs_abstract_operator_gen_free(self):
-        for (lib, op) in itertools.product(self.libs, OPS):
+        for (lib, op) in self.LIBS_OPS:
             with lib:
                 with oktest.c_operator_context(lib, op, self.A_test) as op:
                     assert isinstance(o, lib.operator_p)
@@ -99,38 +74,34 @@ class PogsAbstractTestCase(OptkitCPogsTestCase):
 
     def test_pogs_abstract_init_finish(self, reset=0):
         m, n = self.shape
-        for (lib, op, direct, equil) in itertools.product(
-                self.libs, OPS, DIRECT, EQUILS):
+        for (lib, op, direct, equil) in self.LIBS_OPS_DIRECT_EQUIL:
             with lib:
-                with oktest.c_operator_context(lib, op, self.A_test) as op:
+                with okcctx.c_operator_context(lib, op, self.A_test) as op:
                     flags = lib.pogs_solver_flags(direct, equil)
                     solver = lib.pogs_init(op, flags)
                     oktest.assert_noerr(lib.pogs_finish(solver, 0))
 
     def test_pogs_abstract_components(self):
-        for (lib, op, direct, equil) in itertools.product(
-                self.libs, OPS, DIRECT, EQUILS):
-            with PogsDenseTestContext(lib, self.A_test, obj) as ctx:
+        for (lib, op, direct, equil) in self.LIBS_OPS_DIRECT_EQUIL:
+            with pogs_contexts.Abstract(lib, self.A_test, obj) as ctx:
                 self.set_standard_tolerances(ctx.lib)
                 self.assert_coldstart_components(ctx)
 
     def test_pogs_abstract_call(self):
-        for (lib, op, direct, equil) in itertools.product(
-                self.libs, OPS, DIRECT, EQUILS):
-            with PogsDenseTestContext(lib, self.A_test, obj) as ctx:
+        for (lib, op, direct, equil) in self.LIBS_OPS_DIRECT_EQUIL:
+            with pogs_contexts.Abstract(lib, self.A_test, obj) as ctx:
                 self.set_standard_tolerances(ctx.lib)
                 self.assert_pogs_call(ctx)
 
     def test_pogs_abstract_call_unified(self):
-        for (lib, op, direct, equil) in itertools.product(self.libs):
-            with PogsDenseTestContext(lib, self.A_test, solver=False) as ctx:
+        for (lib, op, direct, equil) in self.LIBS_OPS_DIRECT_EQUIL:
+            with pogs_contexts.Abstract(lib, self.A_test, solver=False) as ctx:
                 self.set_standard_tolerances(ctx.lib)
                 self.assert_pogs_unified(ctx)
 
     def test_pogs_abstract_warmstart(self):
-        for (lib, op, direct, equil) in itertools.product(
-                self.libs, DIRECT, EQUILS):
-            with PogsDenseTestContext(lib, self.A_test) as ctx:
+        for (lib, op, direct, equil) in self.LIBS_OPS_DIRECT_EQUIL:
+            with pogs_contexts.Abstract(lib, self.A_test) as ctx:
                 self.set_standard_tolerances(ctx.lib)
                 self.assert_pogs_warmstart(ctx)
 
@@ -138,7 +109,7 @@ class PogsAbstractTestCase(OptkitCPogsTestCase):
         pass
         # TODO: FIX
         equil = 1.
-        for (lib, op, direct) in itertools.product(self.libs, OPS, DIRECT):
-            with PogsDenseTestContext(lib, self.A_test) as ctx:
+        for (lib, op, direct) in self.LIBS_OPS_DIRECT:
+            with pogs_contexts.Abstract(lib, self.A_test) as ctx:
                 self.set_standard_tolerances(ctx.lib)
                 self.assert_pogs_io(ctx)
