@@ -35,9 +35,7 @@ class PogsDenseTestCase(unittest.TestCase):
     def setUpClass(self):
         self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
         os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-        libs = map(lambda c: okcctx.CLibContext(
-                None, PogsDenseLibs(), c), defs.LIB_CONDITIONS)
-        self.libs = list(filter(lambda ctx: ctx.lib is not None, libs))
+        self.libs = okcctx.lib_contexts(PogsDenseLibs())
         self.A_test = defs.A_test_gen()
 
     def setUp(self):
