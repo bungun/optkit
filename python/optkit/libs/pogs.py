@@ -19,7 +19,7 @@ def include_ok_pogs_datatypes(lib, **include_args):
 
 def include_ok_pogs_adaptrho(lib, **include_args):
 	OptkitLibs.conditional_include(
-		lib, 'adapt_params_p', attach_pogs_adaptrho, **include_args)
+		lib, 'adapt_params_p', attach_pogs_adaptrho_ctypes, **include_args)
 
 def include_ok_pogs(lib, **include_args):
 	OptkitLibs.conditional_include(
@@ -189,7 +189,7 @@ def attach_pogs_datatypes_ctypes(lib, single_precision=False):
 	lib.pogs_variables = PogsVariables
 	lib.pogs_variables_p = ct.POINTER(lib.pogs_variables)
 
-def attach_pogs_adaptrho(lib, single_precision=False):
+def attach_pogs_adaptrho_ctypes(lib, single_precision=False):
 	include_ok_pogs_datatypes(lib, single_precision=single_precision)
 
 	class AdaptiveRhoParameters(ct.Structure):
@@ -200,15 +200,6 @@ def attach_pogs_adaptrho(lib, single_precision=False):
 
 	lib.adapt_params = AdaptiveRhoParameters
 	lib.adapt_params_p = ct.POINTER(lib.adapt_params)
-
-	lib.pogs_adaptive_rho_initialize.argtypes = [lib.adapt_params_p]
-	lib.pogs_adapt_rho.argtypes = [
-			lib.pogs_variables_p, lib.ok_float_p, lib.adapt_params_p,
-			lib.pogs_settings_p, lib.pogs_residuals_p, lib.pogs_tolerances_p,
-			ct.c_uint]
-
-	lib.pogs_adaptive_rho_initialize.restype = ct.c_uint
-	OptkitLibs.attach_default_restype([lib.pogs_adapt_rho])
 
 def attach_pogs_ctypes(lib, single_precision=False):
 	include_ok_prox(lib, single_precision=single_precision)
@@ -229,10 +220,10 @@ def attach_pogs_ctypes(lib, single_precision=False):
 				('m', ct.c_size_t), ('n', ct.c_size_t), ('ord', ct.c_uint)]
 		priv_fields = [
 				('A_equil', lib.ok_float_p),
-				('d', lib.ok_float_p)
-				('e', lib.ok_float_p)
+				('d', lib.ok_float_p),
+				('e', lib.ok_float_p),
 				('ATA_cholesky', lib.ok_float_p) ]
-		lib.solver_data_p = lib.ok_float_p
+		lib.pogs_solver_data_p = lib.ok_float_p
 	elif lib.py_pogs_impl == 'abstract':
 		include_ok_operator(lib, single_precision=single_precision)
 		work_fields += [('A', lib.abstract_operator_p), ('P', lib.projector_p)]
@@ -244,12 +235,12 @@ def attach_pogs_ctypes(lib, single_precision=False):
 						vector_p, ok_float))]
 		flag_fields = [('direct', ct.c_int), ('equil_norm', lib.ok_float)]
 		priv_fields = [('d', lib.ok_float_p), ('e', lib.ok_float_p)]
-		lib.solver_data_p = lib.abstract_operator_p
+		lib.pogs_solver_data_p = lib.abstract_operator_p
 
 	work_fields += [
 			('d', lib.vector_p),
 			('e', lib.vector_p),
-			('normA', ok_float),
+			('normA', lib.ok_float),
 			('skinny', ct.c_int),
 			('normalized', ct.c_int),
 			('equilibrated', ct.c_int),
@@ -264,13 +255,13 @@ def attach_pogs_ctypes(lib, single_precision=False):
 	class PogsSolverFlags(ct.Structure):
 		_fields_ = flag_fields
 
-	lib.pogs_solver_flags = PogsWork
+	lib.pogs_solver_flags = PogsSolverFlags
 	lib.pogs_solver_flags_p = ct.POINTER(lib.pogs_solver_flags)
 
 	class PogsSolverPrivateData(ct.Structure):
 		_fields_ = priv_fields
 
-	lib.pogs_solver_priv_data = PogsWork
+	lib.pogs_solver_priv_data = PogsSolverPrivateData
 	lib.pogs_solver_priv_data_p = ct.POINTER(lib.pogs_solver_priv_data)
 
 	class PogsSolver(ct.Structure):
@@ -279,7 +270,7 @@ def attach_pogs_ctypes(lib, single_precision=False):
 					('f', lib.function_vector_p),
 					('g', lib.function_vector_p),
 					('rho', lib.ok_float),
-					('settings', pogs_settings_p),
+					('settings', lib.pogs_settings_p),
 					('linalg_handle', ct.c_void_p),
 					('init_time', lib.ok_float),
 					('aa', lib.anderson_accelerator_p)]
@@ -287,10 +278,20 @@ def attach_pogs_ctypes(lib, single_precision=False):
 	lib.pogs_solver = PogsSolver
 	lib.pogs_solver_p = ct.POINTER(lib.pogs_solver)
 
+def _attach_pogs_adaptrho_ccalls(lib):
+	lib.pogs_adaptive_rho_initialize.argtypes = [lib.adapt_params_p]
+	lib.pogs_adapt_rho.argtypes = [
+			lib.pogs_variables_p, lib.ok_float_p, lib.adapt_params_p,
+			lib.pogs_settings_p, lib.pogs_residuals_p, lib.pogs_tolerances_p,
+			ct.c_uint]
+
+	lib.pogs_adaptive_rho_initialize.restype = ct.c_uint
+	OptkitLibs.attach_default_restype(lib.pogs_adapt_rho)
+
 def _attach_pogs_impl_common_ccalls(lib):
 	# arguments
 	lib.pogs_graph_vector_alloc.argtypes = [
-			lib.graph_vector_p, ct.c_size_t, ct.c_ct.c_size_t]
+			lib.graph_vector_p, ct.c_size_t, ct.c_size_t]
 	lib.pogs_graph_vector_free.argtypes = [lib.graph_vector_p]
 	lib.pogs_graph_vector_attach_memory.argtypes = [lib.graph_vector_p]
 	lib.pogs_graph_vector_release_memory.argtypes = [lib.graph_vector_p]
@@ -298,7 +299,7 @@ def _attach_pogs_impl_common_ccalls(lib):
 			lib.graph_vector_p, lib.vector_p, ct.c_size_t, ct.c_size_t]
 
 	lib.pogs_variables_alloc.argtypes = [
-			lib.pogs_variables_p, ct.c_size_t, ct.c_ct.c_size_t]
+			lib.pogs_variables_p, ct.c_size_t, ct.c_size_t]
 	lib.pogs_variables_free.argtypes = [lib.pogs_variables_p]
 
 	lib.pogs_set_default_settings.argtypes = [lib.pogs_settings_p]
@@ -308,7 +309,7 @@ def _attach_pogs_impl_common_ccalls(lib):
 	lib.pogs_initialize_conditions.argtypes = [
 			lib.pogs_objective_values_p, lib.pogs_residuals_p,
 			lib.pogs_tolerances_p, lib.pogs_settings_p, ct.c_size_t,
-			ct.c_ct.c_size_t]
+			ct.c_size_t]
 	lib.pogs_update_objective_values.argtypes = [
 			ct.c_void_p, lib.function_vector_p, lib.function_vector_p,
 			lib.ok_float, lib.pogs_variables_p, lib.pogs_objective_values_p]
@@ -316,6 +317,7 @@ def _attach_pogs_impl_common_ccalls(lib):
 			ct.c_void_p, lib.pogs_variables_p, lib.pogs_objective_values_p,
 			lib.pogs_tolerances_p]
 
+	c_uint_p = ct.POINTER(ct.c_uint)
 	lib.pogs_set_print_iter.argtypes = [c_uint_p, lib.pogs_settings_p]
 	lib.pogs_print_header_string.argtypes = []
 	lib.pogs_print_iter_string.argtypes = [
@@ -330,7 +332,7 @@ def _attach_pogs_impl_common_ccalls(lib):
 			lib.vector_p, lib.ok_float, ct.c_uint]
 
 	# results
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.pogs_graph_vector_alloc,
 			lib.pogs_graph_vector_free,
 			lib.pogs_graph_vector_attach_memory,
@@ -348,14 +350,15 @@ def _attach_pogs_impl_common_ccalls(lib):
 			lib.pogs_print_iter_string,
 			lib.pogs_scale_objectives,
 			lib.pogs_unscale_output,
-	])
+	)
 
 def _attach_pogs_impl_dense_ccalls(lib):
 	lib.pogs_dense_problem_data_alloc.argtypes = [
-			lib.pogs_work_p, lib.ok_float_p, lib.solver_flags_p]
+			lib.pogs_work_p, lib.ok_float_p, lib.pogs_solver_flags_p]
 	lib.pogs_dense_problem_data_free.argtypes = [lib.pogs_work_p]
 	lib.pogs_dense_get_init_data.argtypes = [
-			lib.ok_float_p, lib.pogs_solver_priv_data_p, lib.solver_flags_p]
+			lib.ok_float_p, lib.pogs_solver_priv_data_p,
+			lib.pogs_solver_flags_p]
 
 	lib.pogs_dense_apply_matrix.argtypes = [
 			lib.pogs_work_p, lib.ok_float, lib.vector_p, lib.ok_float,
@@ -364,22 +367,24 @@ def _attach_pogs_impl_dense_ccalls(lib):
 			lib.pogs_work_p, lib.ok_float, lib.vector_p, lib.ok_float,
 			lib.vector_p]
 	lib.pogs_dense_project_graph.argtypes = [
-			lib.pogs_work_p, lib.vector_p_in, lib.vector_p_in, lib.vector_p_out,
-			lib.vector_p_out, lib.ok_float]
+			lib.pogs_work_p, lib.vector_p, lib.vector_p, lib.vector_p,
+			lib.vector_p, lib.ok_float]
 
 	lib.pogs_dense_equilibrate_matrix.argtypes = [
-			lib.pogs_work_p, lib.ok_float_p, lib.solver_flags_p]
+			lib.pogs_work_p, lib.ok_float_p, lib.pogs_solver_flags_p]
 	lib.pogs_dense_initalize_graph_projector.argtypes = [lib.pogs_work_p]
 	lib.pogs_dense_estimate_norm.argtypes = [lib.pogs_work_p, lib.ok_float_p]
 	lib.pogs_dense_work_get_norm.argtypes = [lib.pogs_work_p]
 	lib.pogs_dense_work_normalize.argtypes = [lib.pogs_work_p]
 
 	lib.pogs_dense_save_work.argtypes = [
-			lib.pogs_solver_priv_data_p, lib.solver_flags_p, lib.pogs_work_p]
+			lib.pogs_solver_priv_data_p, lib.pogs_solver_flags_p,
+			lib.pogs_work_p]
 	lib.pogs_dense_load_work.argtypes = [
-			lib.pogs_work_p, lib.pogs_solver_priv_data_p, lib.solver_flags_p]
+			lib.pogs_work_p, lib.pogs_solver_priv_data_p,
+			lib.pogs_solver_flags_p]
 
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.pogs_dense_problem_data_alloc,
 			lib.pogs_dense_problem_data_free,
 			lib.pogs_dense_get_init_data,
@@ -393,17 +398,17 @@ def _attach_pogs_impl_dense_ccalls(lib):
 			lib.pogs_dense_work_normalize,
 			lib.pogs_dense_save_work,
 			lib.pogs_dense_load_work,
-	])
+	)
 
 
 def _attach_pogs_impl_abstract_ccalls(lib):
 	## arguments
 	lib.pogs_abstract_problem_data_alloc.argtypes = [
-			lib.pogs_work_p, lib.abstract_operator_p, lib.solver_flags_p]
+			lib.pogs_work_p, lib.abstract_operator_p, lib.pogs_solver_flags_p]
 	lib.pogs_abstract_problem_data_free.argtypes = [lib.pogs_work_p]
 	lib.pogs_abstract_get_init_data.argtypes = [
 			lib.abstract_operator_p, lib.pogs_solver_priv_data_p,
-			lib.solver_flags_p]
+			lib.pogs_solver_flags_p]
 
 	lib.pogs_abstract_apply_matrix.argtypes = [
 			lib.pogs_work_p, lib.ok_float, lib.vector_p, lib.ok_float,
@@ -416,16 +421,19 @@ def _attach_pogs_impl_abstract_ccalls(lib):
 			lib.vector_p, lib.ok_float]
 
 	lib.pogs_abstract_equilibrate_matrix.argtypes = [
-			lib.pogs_work_p, lib.abstract_operator_p, lib.solver_flags_p]
+			lib.pogs_work_p, lib.abstract_operator_p,
+			lib.pogs_solver_flags_p]
 	lib.pogs_abstract_initalize_graph_projector.argtypes = [lib.pogs_work_p]
 	lib.pogs_abstract_estimate_norm.argtypes = [lib.pogs_work_p, lib.ok_float_p]
 	lib.pogs_abstract_work_get_norm.argtypes = [lib.pogs_work_p]
 	lib.pogs_abstract_work_normalize.argtypes = [lib.pogs_work_p]
 
 	lib.pogs_abstract_save_work.argtypes = [
-			lib.pogs_solver_priv_data_p, lib.solver_flags_p, lib.pogs_work_p]
+			lib.pogs_solver_priv_data_p, lib.pogs_solver_flags_p,
+			lib.pogs_work_p]
 	lib.pogs_abstract_load_work.argtypes = [
-			lib.pogs_work_p, lib.pogs_solver_priv_data_p, lib.solver_flags_p]
+			lib.pogs_work_p, lib.pogs_solver_priv_data_p,
+			lib.pogs_solver_flags_p]
 
 	lib.pogs_dense_operator_gen.argtypes = [
 			ok_float_p, ct.c_size_t, ct.c_size_t, ct.c_uint]
@@ -436,7 +444,7 @@ def _attach_pogs_impl_abstract_ccalls(lib):
 	lib.pogs_sparse_operator_free.argtypes = [lib.abstract_operator_p]
 
 	## return types
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.pogs_abstract_problem_data_alloc,
 			lib.pogs_abstract_problem_data_free,
 			lib.pogs_abstract_get_init_data,
@@ -452,7 +460,7 @@ def _attach_pogs_impl_abstract_ccalls(lib):
 			lib.pogs_abstract_load_work,
 			lib.pogs_dense_operator_free,
 			lib.pogs_sparse_operator_free,
-	])
+	)
 	lib.pogs_dense_operator_gen.restype = lib.abstract_operator_p
 	lib.pogs_sparse_operator_gen.restype = lib.abstract_operator_p
 
@@ -473,7 +481,7 @@ def _attach_pogs_generic_ccalls(lib):
 	lib.pogs_primal_update.argtypes = [lib.pogs_variables_p]
 	lib.pogs_prox.argtypes = [
 			ct.c_void_p, lib.function_vector_p, lib.function_vector_p,
-			lib.pogs_variables_p, ok_float]
+			lib.pogs_variables_p, lib.ok_float]
 	lib.pogs_project_graph.argtypes = [
 			lib.pogs_work_p, lib.pogs_variables_p, lib.ok_float, lib.ok_float]
 	lib.pogs_dual_update.argtypes = [
@@ -489,7 +497,7 @@ def _attach_pogs_generic_ccalls(lib):
 			lib.pogs_residuals_p, lib.pogs_tolerances_p, lib.c_int_p]
 	lib.pogs_solver_loop.argtypes = [lib.pogs_solver_p, lib.pogs_info_p]
 
-	lib.pogs_init.argtypes = [lib.pogs_solver_data_p, lib.pogs_solver_flags_p] ###
+	lib.pogs_init.argtypes = [lib.pogs_solver_data_p, lib.pogs_solver_flags_p]
 	lib.pogs_solve.argtypes = [
 			lib.pogs_solver_p, lib.function_vector_p, lib.function_vector_p,
 			lib.pogs_settings_p, lib.pogs_info_p, lib.pogs_output_p]
@@ -504,7 +512,7 @@ def _attach_pogs_generic_ccalls(lib):
 			lib.pogs_solver_flags_p, lib.pogs_solver_p]
 	lib.pogs_load_solver.argtypes = [
 			lib.pogs_solver_priv_data_p, lib.ok_float_p, lib.ok_float,
-			lib.pogs_solver_flags_p] ####
+			lib.pogs_solver_flags_p]
 
 	lib.pogs_solver_save_state.argtypes = [
 			lib.ok_float_p, lib.ok_float_p, lib.pogs_solver_p]
@@ -512,7 +520,7 @@ def _attach_pogs_generic_ccalls(lib):
 			lib.pogs_solver_p, lib.ok_float_p, lib.ok_float]
 
 	## return types
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.pogs_work_alloc,
 			lib.pogs_work_free,
 			lib.pogs_solver_alloc,
@@ -534,7 +542,7 @@ def _attach_pogs_generic_ccalls(lib):
 			lib.pogs_export_solver,
 			lib.pogs_solver_save_state,
 			lib.pogs_solver_load_state,
-	])
+	)
 
 	lib.pogs_init.restype = lib.pogs_solver_p
 	lib.pogs_load_solver.restype = lib.pogs_solver_p
@@ -544,6 +552,7 @@ def attach_pogs_ccalls(lib, single_precision=False):
 	include_ok_pogs(lib, single_precision=single_precision)
 	c_uint_p = ct.POINTER(ct.c_uint)
 
+	_attach_pogs_adaptrho_ccalls(lib)
 	_attach_pogs_impl_common_ccalls(lib)
 	_attach_pogs_generic_ccalls(lib)
 
