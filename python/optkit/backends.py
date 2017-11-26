@@ -5,7 +5,7 @@ import ctypes as ct
 
 # from optkit.libs.linsys import DenseLinsysLibs, SparseLinsysLibs
 # from optkit.libs.prox import ProxLibs
-from optkit.libs.pogs import PogsLibs, PogsAbstractLibs
+from optkit.libs.pogs import PogsDenseLibs, PogsAbstractLibs
 from optkit.libs.clustering import ClusteringLibs
 from optkit.utils.pyutils import version_string
 
@@ -24,7 +24,7 @@ class OKBackend(object):
 		# self.dense_lib_loader = DenseLinsysLibs()
 		# self.sparse_lib_loader = SparseLinsysLibs()
 		# self.prox_lib_loader = ProxLibs()
-		self.pogs_lib_loader = PogsLibs()
+		self.pogs_lib_loader = PogsDenseLibs()
 		self.pogs_abstract_lib_loader = PogsAbstractLibs()
 		self.cluster_lib_loader = ClusteringLibs()
 
