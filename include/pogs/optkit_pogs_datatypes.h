@@ -20,14 +20,16 @@ extern "C" {
 #define POGS_CONSTANTS
 #define kALPHA (ok_float) 1.7
 #define kMAXITER 2000u
-#define kANDERSON 10u
+#define kANDERSON 30u
+/* #define kANDERSON 10u */
+/* #define kANDERSON 3u */
 #define kRHO (ok_float) 1
 #define kATOL (ok_float) 1e-4
 #define kRTOL (ok_float) 1e-3
 #define kTOLPROJ (ok_float) 1e-6
 #define kMU (ok_float) 1e-3
 #define kADAPTIVE 1
-#define kACCELERATE 1
+#define kACCELERATE 0 /* CHANGE THIS TO 1 AFTER DEBUGGING */
 #define kGAPSTOP 0
 #define kWARMSTART 0
 #define kVERBOSE 2u

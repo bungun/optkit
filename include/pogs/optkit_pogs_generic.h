@@ -127,3 +127,4 @@ ok_status pogs_solver_load_state(pogs_solver * solver, const ok_float * state,
 #endif
 
 #endif /* OPTKIT_POGS_H_ */
+
