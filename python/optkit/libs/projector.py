@@ -3,7 +3,7 @@ from optkit.compat import *
 import ctypes as ct
 
 from optkit.libs.loader import OptkitLibs
-from optkit.libs.linsys import include_ok_dense, ok_linsys_API
+from optkit.libs.linsys import include_ok_dense, ok_dense_API
 from optkit.libs.operator import include_ok_operator
 from optkit.libs.cg import ok_cg_API
 
@@ -86,12 +86,12 @@ def attach_projector_ccalls(lib, single_precision=False):
 
 	# returns:
 	# -direct
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.direct_projector_alloc,
 			lib.direct_projector_initialize,
 			lib.direct_projector_project,
 			lib.direct_projector_free,
-	])
+	)
 	lib.dense_direct_projector_alloc.restype = projector_p
 
 def attach_operator_projector_ctypes_ccalls(lib, single_precision=False):
@@ -100,12 +100,12 @@ def attach_operator_projector_ctypes_ccalls(lib, single_precision=False):
 
 	ok_float = lib.ok_float
 	vector_p = lib.vector_p
-	operator_p = lib.operator_p
+	abstract_operator_p = lib.abstract_operator_p
 	projector_p = lib.projector_p
 
 	# types
 	class indirect_projector(ct.Structure):
-		_fields_ = [('A', operator_p),
+		_fields_ = [('A', abstract_operator_p),
 					('cgls_work', ct.c_void_p),
 					('flag', ct.c_uint)]
 
@@ -114,7 +114,7 @@ def attach_operator_projector_ctypes_ccalls(lib, single_precision=False):
 	indirect_projector_p = lib.indirect_projector_p
 
 	class indirect_projector_generic(ct.Structure):
-		_fields_ = [('A', operator_p),
+		_fields_ = [('A', abstract_operator_p),
 					('cgls_work', ct.c_void_p),
 					('linalg_handle', ct.c_void_p),
 					('normA', ok_float),
@@ -126,19 +126,20 @@ def attach_operator_projector_ctypes_ccalls(lib, single_precision=False):
 			lib.indirect_projector_generic)
 
 	# calls
-	lib.indirect_projector_alloc.argtypes = [indirect_projector_p, operator_p]
+	lib.indirect_projector_alloc.argtypes = [
+			indirect_projector_p, abstract_operator_p]
 	lib.indirect_projector_initialize.argtypes = [
 			ct.c_void_p, indirect_projector_p, ct.c_int]
 	lib.indirect_projector_project.argtypes = [
 			ct.c_void_p, indirect_projector_p, vector_p, vector_p, vector_p,
 			vector_p]
 	lib.indirect_projector_free.argtypes = [indirect_projector_p]
-	lib.indirect_projector_generic_alloc.argtypes = [operator_p]
+	lib.indirect_projector_generic_alloc.argtypes = [abstract_operator_p]
 
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.indirect_projector_alloc,
 			lib.indirect_projector_initialize,
 			lib.indirect_projector_project,
 			lib.indirect_projector_free,
-	])
+	)
 	lib.indirect_projector_generic_alloc.restype = projector_p

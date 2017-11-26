@@ -9,7 +9,7 @@ def include_ok_cg(lib, **include_args):
 	OptkitLibs.conditional_include(
 		lib, 'pcg_helper_p', attach_cg_ctypes, **include_args)
 
-def ok_cg_API(): return ok_operator_API() + [attach_cg_calls]
+def ok_cg_API(): return ok_operator_API() + [attach_cg_ccalls]
 
 class ConjugateGradientLibs(OptkitLibs):
 	def __init__(self):
@@ -59,7 +59,7 @@ def attach_cg_ccalls(lib, single_precision=False):
 
 	ok_float = lib.ok_float
 	vector_p = lib.vector_p
-	operator_p = lib.operator_p
+	abstract_operator_p = lib.abstract_operator_p
 	cgls_helper_p = lib.cgls_helper_p
 	pcg_helper_p = lib.pcg_helper_p
 
@@ -70,15 +70,15 @@ def attach_cg_ccalls(lib, single_precision=False):
 	lib.cgls_helper_free.argtypes = [cgls_helper_p]
 
 	lib.cgls_nonallocating.argtypes = [
-			cgls_helper_p, operator_p, vector_p, vector_p, ok_float, ok_float,
-			ct.c_size_t, ct.c_int, c_uint_p]
+			cgls_helper_p, abstract_operator_p, vector_p, vector_p, ok_float,
+			ok_float, ct.c_size_t, ct.c_int, c_uint_p]
 	lib.cgls.argtypes = [
-			operator_p, vector_p, vector_p, ok_float, ok_float, ct.c_size_t,
-			ct.c_int, c_uint_p]
+			abstract_operator_p, vector_p, vector_p, ok_float, ok_float,
+			ct.c_size_t, ct.c_int, c_uint_p]
 	lib.cgls_init.argtypes = [ct.c_size_t, ct.c_size_t]
 	lib.cgls_solve.argtypes = [
-			ct.c_void_p, operator_p, vector_p, vector_p, ok_float, ok_float,
-			ct.c_size_t, ct.c_int, c_uint_p]
+			ct.c_void_p, abstract_operator_p, vector_p, vector_p, ok_float,
+			ok_float, ct.c_size_t, ct.c_int, c_uint_p]
 	lib.cgls_finish.argtypes = [ct.c_void_p]
 	lib.CGLS_MAXFLAG = 4;
 
@@ -86,22 +86,22 @@ def attach_cg_ccalls(lib, single_precision=False):
 	lib.pcg_helper_free.argtypes = [pcg_helper_p]
 
 	lib.diagonal_preconditioner.argtypes = [
-			operator_p, vector_p, ok_float]
+			abstract_operator_p, vector_p, ok_float]
 
 	lib.pcg_nonallocating.argtypes = [
-			pcg_helper_p, operator_p, operator_p, vector_p, vector_p, ok_float,
-			ok_float, ct.c_size_t, ct.c_int, c_uint_p]
+			pcg_helper_p, abstract_operator_p, abstract_operator_p, vector_p,
+			vector_p, ok_float, ok_float, ct.c_size_t, ct.c_int, c_uint_p]
 	lib.pcg.argtypes = [
-			operator_p, operator_p, vector_p, vector_p, ok_float, ok_float,
-			ct.c_size_t, ct.c_int, c_uint_p]
+			abstract_operator_p, abstract_operator_p, vector_p, vector_p,
+			ok_float, ok_float, ct.c_size_t, ct.c_int, c_uint_p]
 	lib.pcg_init.argtypes = [ct.c_size_t, ct.c_size_t]
 	lib.pcg_solve.argtypes = [
-			ct.c_void_p, operator_p, operator_p, vector_p, vector_p, ok_float,
-			ok_float, ct.c_size_t, ct.c_int, c_uint_p]
+			ct.c_void_p, abstract_operator_p, abstract_operator_p, vector_p,
+			vector_p, ok_float, ok_float, ct.c_size_t, ct.c_int, c_uint_p]
 	lib.pcg_finish.argtypes = [ct.c_void_p]
 
 	# return types
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.cgls_helper_free,
 			lib.cgls_nonallocating,
 			lib.cgls,
@@ -112,7 +112,7 @@ def attach_cg_ccalls(lib, single_precision=False):
 			lib.pcg,
 			lib.pcg_solve,
 			lib.pcg_finish,
-	])
+	)
 	lib.cgls_helper_alloc.restype = cgls_helper_p
 	lib.cgls_init.restype = ct.c_void_p
 	lib.pcg_helper_alloc.restype = pcg_helper_p

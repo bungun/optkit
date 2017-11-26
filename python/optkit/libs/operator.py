@@ -40,7 +40,7 @@ def attach_operator_ctypes(lib, single_precision=False):
 					('free', ct.CFUNCTYPE(ct.c_uint, ct.c_void_p)),
 					('kind', ct.c_uint)]
 
-	lib.abstract_operator = ok_operator
+	lib.abstract_operator = ok_abstract_operator
 	lib.abstract_operator_p = ct.POINTER(lib.abstract_operator)
 
 def attach_operator_ccalls(lib, single_precision=False):

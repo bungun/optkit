@@ -41,6 +41,13 @@ def attach_base_ctypes(lib, single_precision=False):
 	lib.ok_float_p = ct.POINTER(lib.ok_float)
 	lib.ok_int_p = ct.POINTER(lib.ok_int)
 
+	def ok_float_pointerize(numpy_array):
+		return numpy_array.ctypes.data_as(lib.ok_float_p)
+	def ok_int_pointerize(numpy_array):
+		return numpy_array.ctypes.data_as(lib.ok_int_p)
+	lib.ok_float_pointerize = ok_float_pointerize
+	lib.ok_int_pointerize = ok_int_pointerize
+
 def attach_dense_linsys_ctypes(lib, single_precision=False):
 	include_ok_defs(lib, single_precision=single_precision)
 
@@ -152,7 +159,7 @@ def attach_vector_ccalls(lib, single_precision=False):
 	lib.indvector_min.argtypes = [indvector_p, c_size_t_p]
 
 	## return values
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.vector_alloc,
 			lib.vector_calloc,
 			lib.vector_free,
@@ -177,8 +184,8 @@ def attach_vector_ccalls(lib, single_precision=False):
 			lib.vector_indmin,
 			lib.vector_min,
 			lib.vector_max,
-	])
-	OptkitLibs.attach_default_restype([
+	)
+	OptkitLibs.attach_default_restype(
 			lib.indvector_alloc,
 			lib.indvector_calloc,
 			lib.indvector_free,
@@ -192,7 +199,7 @@ def attach_vector_ccalls(lib, single_precision=False):
 			lib.indvector_indmin,
 			lib.indvector_min,
 			lib.indvector_max,
-	])
+	)
 
 def attach_dense_linsys_ccalls(lib, single_precision=False):
 	include_ok_dense(lib, single_precision=single_precision)
@@ -231,7 +238,7 @@ def attach_dense_linsys_ccalls(lib, single_precision=False):
 	lib.matrix_pow.argtypes = [matrix_p, ok_float]
 
 	## return values
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.matrix_alloc,
 			lib.matrix_calloc,
 			lib.matrix_free,
@@ -250,7 +257,7 @@ def attach_dense_linsys_ccalls(lib, single_precision=False):
 			lib.matrix_scale_right,
 			lib.matrix_abs,
 			lib.matrix_pow,
-	])
+	)
 
 	# BLAS
 	# ----
@@ -284,7 +291,7 @@ def attach_dense_linsys_ccalls(lib, single_precision=False):
 			matrix_p, matrix_p]
 
 	## return values
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.blas_make_handle,
 			lib.blas_destroy_handle,
 			lib.blas_axpy,
@@ -299,7 +306,7 @@ def attach_dense_linsys_ccalls(lib, single_precision=False):
 			lib.blas_syrk,
 			lib.blas_gemm,
 			lib.blas_trsm,
-	])
+	)
 
 	# LINALG
 	# -------
@@ -315,7 +322,7 @@ def attach_dense_linsys_ccalls(lib, single_precision=False):
 	lib.linalg_matrix_reduce_max.argtypes = [vector_p, matrix_p, ct.c_uint]
 
 	## return values
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.linalg_cholesky_decomp,
 			lib.linalg_cholesky_svx,
 			lib.linalg_matrix_row_squares,
@@ -323,7 +330,7 @@ def attach_dense_linsys_ccalls(lib, single_precision=False):
 			lib.linalg_matrix_reduce_indmin,
 			lib.linalg_matrix_reduce_min,
 			lib.linalg_matrix_reduce_max,
-	])
+	)
 
 def attach_sparse_linsys_ccalls(lib, single_precision=False):
 	include_ok_dense(lib, single_precision=single_precision)
@@ -373,7 +380,7 @@ def attach_sparse_linsys_ccalls(lib, single_precision=False):
 	# lib.sp_matrix_print_transpose.argtypes = [sparse_matrix_p]
 
 	## return values
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.sp_matrix_alloc,
 			lib.sp_matrix_calloc,
 			lib.sp_matrix_free,
@@ -389,7 +396,7 @@ def attach_sparse_linsys_ccalls(lib, single_precision=False):
 			lib.sp_matrix_scale_left,
 			lib.sp_matrix_scale_right,
 			lib.sp_matrix_print,
-	])
+	)
 	# lib.sp_matrix_print_transpose.restype = None
 
 	# Sparse BLAS
@@ -399,4 +406,4 @@ def attach_sparse_linsys_ccalls(lib, single_precision=False):
 								 vector_p, ok_float, vector_p]
 
 	## return values
-	OptkitLibs.attach_default_restype([lib.sp_blas_gemv])
+	OptkitLibs.attach_default_restype(lib.sp_blas_gemv)

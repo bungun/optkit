@@ -145,7 +145,7 @@ def attach_clustering_ccalls(lib, single_precision=False):
 	lib.kmeans_easy_finish.argtypes = [ct.c_void_p]
 
 	# return types
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.upsamplingvec_alloc,
 			lib.upsamplingvec_free,
 			lib.upsamplingvec_check_bounds,
@@ -166,6 +166,6 @@ def attach_clustering_ccalls(lib, single_precision=False):
 			lib.kmeans_easy_resize,
 			lib.kmeans_easy_run,
 			lib.kmeans_easy_finish,
-	])
+	)
 	lib.kmeans_easy_init.restype = ct.c_void_p
 

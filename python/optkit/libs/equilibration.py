@@ -14,7 +14,7 @@ def ok_equil_API(): return (
 
 class EquilibrationLibs(OptkitLibs):
 	def __init__(self):
-		OptkitLibs.__init__(self, 'libequil_', ok_equil_generic_API())
+		OptkitLibs.__init__(self, 'libequil_', ok_equil_API())
 
 def attach_equilibration_ccalls(lib, single_precision=False):
 	include_ok_dense(lib, single_precision=single_precision)
@@ -28,7 +28,7 @@ def attach_equilibration_ccalls(lib, single_precision=False):
 			ct.c_void_p, ok_float_p, matrix_p, vector_p, vector_p, ct.c_uint]
 
 	# return types
-	OptkitLibs.attach_default_restype([lib.regularized_sinkhorn_knopp])
+	OptkitLibs.attach_default_restype(lib.regularized_sinkhorn_knopp)
 
 def attach_operator_equilibration_ccalls(lib, single_precision=False):
 	include_ok_operator(lib, single_precision=single_precision)
@@ -45,8 +45,8 @@ def attach_operator_equilibration_ccalls(lib, single_precision=False):
 	lib.operator_estimate_norm.argtypes = [ct.c_void_p, abstract_operator_p]
 
 	# return types
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.operator_regularized_sinkhorn,
 			lib.operator_equilibrate,
 			lib.operator_estimate_norm,
-	])
+	)

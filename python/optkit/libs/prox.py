@@ -11,7 +11,7 @@ def include_ok_prox(lib, **include_args):
 	OptkitLibs.conditional_include(
 		lib, 'function_p', attach_prox_ctypes, **include_args)
 
-ok_prox_API = ok_vector_API() + [attach_prox_ccalls]
+def ok_prox_API(): return ok_vector_API() + [attach_prox_ccalls]
 
 class ProxLibs(OptkitLibs):
 	def __init__(self):
@@ -42,7 +42,7 @@ def attach_prox_ctypes(lib, single_precision=False):
 	lib.function_enums = OKFunctionEnums()
 
 def attach_prox_ccalls(lib, single_precision=False):
-	include_ok_prox(lib, single_precision)
+	include_ok_prox(lib, single_precision=single_precision)
 
 	ok_float = lib.ok_float
 	ok_float_p = lib.ok_float_p
@@ -63,7 +63,7 @@ def attach_prox_ccalls(lib, single_precision=False):
 	lib.function_vector_print.argtypes = [function_vector_p]
 
 	## return values
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.function_vector_alloc,
 			lib.function_vector_calloc,
 			lib.function_vector_free,
@@ -72,7 +72,7 @@ def attach_prox_ccalls(lib, single_precision=False):
 			lib.function_vector_mul,
 			lib.function_vector_div,
 			lib.function_vector_print
-	])
+	)
 
 	# Prox & Function evaluation
 	# --------------------------
@@ -83,7 +83,7 @@ def attach_prox_ccalls(lib, single_precision=False):
 										 ok_float_p]
 
 	## return values
-	OptkitLibs.attach_default_restype([
+	OptkitLibs.attach_default_restype(
 			lib.prox_eval_vector,
 			lib.function_eval_vector,
-	])
+	)

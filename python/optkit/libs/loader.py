@@ -95,7 +95,7 @@ class OptkitLibs(object):
 
 	@staticmethod
 	def conditional_include(lib, token, include_call, **include_args):
-		if not token in lib:
+		if not token in dir(lib):
 			include_call(lib, **include_args)
 
 	@staticmethod
