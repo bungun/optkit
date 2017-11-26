@@ -28,8 +28,13 @@ def vec_equal(first, second, atol, rtol):
 def scalar_equal(first, second, tol):
     return abs(first - second) <= tol * (1 + abs(second))
 
-def standard_tolerances(lib, m, n):
-    rtol = 10**(7 - 2 * lib.FLOAT)
+def standard_vector_tolerances(lib, m, modulate_gpu=0):
+    rtol = 10**(7 - 2 * lib.FLOAT) - modulate_gpu * lib.GPU
+    atol = rtol * m**0.5
+    return rtol, atol
+
+def standard_tolerances(lib, m, n, modulate_gpu=0):
+    rtol = 10**(7 - 2 * lib.FLOAT - modulate_gpu * lib.GPU)
     atolm = rtol * m**0.5
     atoln = rtol * n**0.5
     atolmn = rtol * (m + n)**0.5
