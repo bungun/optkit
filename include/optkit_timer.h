@@ -15,7 +15,7 @@ typedef struct OK_TIMER{
 } OK_TIMER;
 
 OK_TIMER ok_timer_tic(){
-	struct timeval tv;
+	struct timeval tv = (struct timeval){OK_NULL};
 	OK_TIMER timer = (OK_TIMER){tv, 0, 0};
 	gettimeofday(&(timer.tv), OK_NULL);
 	timer.tic = (double) timer.tv.tv_sec + (double) timer.tv.tv_usec * 1e-6;
