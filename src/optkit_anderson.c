@@ -8,12 +8,9 @@ ok_status anderson_accelerator_init(anderson_accelerator * aa,
 	size_t vector_dim, size_t lookback_dim)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	anderson_accelerator * aa = OK_NULL;
-
 	OK_CHECK_PTR(aa);
 	if (aa->F)
 		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
-
 	if (lookback_dim > vector_dim)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
@@ -22,6 +19,7 @@ ok_status anderson_accelerator_init(anderson_accelerator * aa,
 	aa->mu_regularization = (ok_float) 0.01;
 	aa->iter = 0;
 
+	ok_alloc(aa->F, sizeof(*aa->F));
 	OK_CHECK_ERR( err, matrix_calloc(aa->F, vector_dim, lookback_dim + 1,
 		CblasColMajor) );
 	ok_alloc(aa->G, sizeof(*aa->G));
@@ -80,7 +78,7 @@ ok_status anderson_set_x0(anderson_accelerator * aa, vector * x_initial){
 	if (!x_initial || !x_initial->data)
 		err = OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	else
-		if (x_initial->size != aa->vector_dim);
+		if (x_initial->size != aa->vector_dim)
 			err = OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 	/*
 	 * update F, G:
@@ -230,9 +228,7 @@ ok_status anderson_accelerate(anderson_accelerator * aa, vector * x)
 	 */
 	OK_CHECK_ERR( err, anderson_update_F_x(aa, aa->F, x, next_index) );
 
-
 	aa->iter += 1;
-
 	return err;
 }
 
