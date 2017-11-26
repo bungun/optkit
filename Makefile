@@ -29,7 +29,7 @@ POGSSRC=$(SRC)$(POGS)
 POGSOUT=$(OUT)$(POGS)
 
 IFLAGS=-I. -I$(INCLUDE) -I$(INCLUDE)external -I$(INCLUDE)linsys 
-IFLAGS+=-I$(INCLUDE)operator -I$(INCLUDE)clustering
+IFLAGS+=-I$(INCLUDE)operator -I$(INCLUDE)clustering -I$(INCLUDE)pogs
 
 # C Flags
 CC=gcc
@@ -223,7 +223,7 @@ libpogs_abstract: $(OUT)libpogs_abstract$(LIBCONFIG).$(SHARED)
 $(OUT)libpogs_abstract$(LIBCONFIG).$(SHARED): pogs_abstract \
 	$(POGS_ABSTRACT_LIB_DEPS)
 	mkdir -p $(OUT)
-	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs -shared -o $@ \
+	$(CC) $(CCFLAGS) -shared -o $@ \
 	$(POGS_ABSTRACT_STATIC_DEPS) $(LDFLAGS) 
 
 libpogs_sparse: $(OUT)libpogs_sparse$(LIBCONFIG).$(SHARED)
@@ -417,13 +417,13 @@ $(CLUOUT)clustering_common$(LIBCONFIG).o: $(CLUSRC)clustering_common.c \
 cpu_upsampling_vector: upsampling_vector_common cpu_upsampling_vector_ 
 gpu_upsampling_vector: upsampling_vector_common gpu_upsampling_vector_
 
-cpu_upsampling_vector: $(CLUOUT)upsampling_vector_cpu$(PRECISION).o
+cpu_upsampling_vector_: $(CLUOUT)upsampling_vector_cpu$(PRECISION).o
 $(CLUOUT)upsampling_vector_cpu$(PRECISION).o: $(CLUSRC)upsampling_vector.c
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)clustering/
 	$(CC) $(CCFLAGS) $< -c -o $@
 
-gpu_upsampling_vector: $(CLUOUT)upsampling_vector_gpu$(PRECISION).o
+gpu_upsampling_vector_: $(CLUOUT)upsampling_vector_gpu$(PRECISION).o
 $(CLUOUT)upsampling_vector_gpu$(PRECISION).o: $(CLUSRC)upsampling_vector.cu
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)clustering/
