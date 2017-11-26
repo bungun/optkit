@@ -7,7 +7,8 @@ import collections
 
 from optkit.utils import proxutils
 from optkit.tests.C.base import OptkitCTestCase
-import optkit.tests.C.base_layer as okctest
+import optkit.tests.C.statements as okctest
+import optkit.tests.C.context_managers as okcctx
 
 
 ALPHA_DEFAULT = 1.7
@@ -26,8 +27,8 @@ class PogsBaseTestContext(object):
     def __init__(self, libctx, m, n, obj='Abs'):
         lib = libctx.lib
         self._libctx = libctx
-        self._f = okctest.CFunctionVectorContext(lib, m)
-        self._g = okctest.CFunctionVectorContext(lib, n)
+        self._f = okcctx.CFunctionVectorContext(lib, m)
+        self._g = okcctx.CFunctionVectorContext(lib, n)
         self._objstring = obj
         self.params = collections.namedtuple(
                 'TestParams',
@@ -37,7 +38,7 @@ class PogsBaseTestContext(object):
         self.params.output = PogsOutputLocal(lib, m, n)
         self.params.info = lib.pogs_info()
         self.params.settings = settings = lib.pogs_settings()
-        okctest.assert_noerr( lib.pogs_set_default_settings(settings) )
+        assert okctest.noerr( lib.pogs_set_default_settings(settings) )
         self.params.settings.verbose = int(okctest.VERBOSE_TEST)
         self.params.res = lib.pogs_residuals()
         self.params.tol = lib.pogs_tolerances()
@@ -58,8 +59,8 @@ class PogsBaseTestContext(object):
         for j in xrange(n):
             g_py[j] = lib.function(
                     lib.function_enums.IndGe0, 1, 0, 1, 0, 0, 1)
-        okctest.assert_noerr( lib.function_vector_memcpy_va(f, f_ptr) )
-        okctest.assert_noerr( lib.function_vector_memcpy_va(g, g_ptr) )
+        assert okctest.noerr( lib.function_vector_memcpy_va(f, f_ptr) )
+        assert okctest.noerr( lib.function_vector_memcpy_va(g, g_ptr) )
         self.params.f = f
         self.params.g = g
         self.params.f_py = f_py
@@ -127,7 +128,7 @@ class PogsOutputLocal():
                                    self.nu.ctypes.data_as(lib.ok_float_p))
 
 def load_to_local(lib, py_vector, c_vector):
-    okctest.assert_noerr( lib.vector_memcpy_av(
+    assert okctest.noerr( lib.vector_memcpy_av(
             py_vector.ctypes.data_as(lib.ok_float_p), c_vector, 1) )
 
 def load_all_local(lib, py_vars, solver):
@@ -164,24 +165,19 @@ class OptkitCPogsTestCase(OptkitCTestCase):
     def assert_default_settings(self, lib):
         settings = lib.pogs_settings()
 
-        TOL = 1e-3
-        self.assertCall( lib.pogs_set_default_settings(settings) )
-        self.assertScalarEqual(settings.alpha, ALPHA_DEFAULT, TOL )
-        self.assertScalarEqual(settings.rho, RHO_DEFAULT, TOL )
-        self.assertScalarEqual(settings.abstol, ABSTOL_DEFAULT, TOL )
-        self.assertScalarEqual(settings.reltol, RELTOL_DEFAULT, TOL )
-        self.assertScalarEqual(settings.maxiter, MAXITER_DEFAULT,
-                                     TOL )
-        self.assertScalarEqual(settings.verbose, VERBOSE_DEFAULT,
-                                     TOL )
-        self.assertScalarEqual(settings.suppress, SUPPRESS_DEFAULT,
-                                     TOL )
-        self.assertScalarEqual(settings.adaptiverho,
-                                     ADAPTIVE_DEFAULT, TOL )
-        self.assertScalarEqual(settings.gapstop, GAPSTOP_DEFAULT, TOL )
-        self.assertScalarEqual(settings.warmstart, WARMSTART_DEFAULT,
-                                     TOL )
-        self.assertScalarEqual(settings.resume, RESUME_DEFAULT, TOL )
+        TOL = 1e-7
+        assert okctest.noerr(lib.pogs_set_default_settings(settings))
+        assert okctest.scalar_equal(settings.alpha, ALPHA_DEFAULT, TOL)
+        assert okctest.scalar_equal(settings.rho, RHO_DEFAULT, TOL)
+        assert okctest.scalar_equal(settings.abstol, ABSTOL_DEFAULT, TOL)
+        assert okctest.scalar_equal(settings.reltol, RELTOL_DEFAULT, TOL)
+        assert okctest.scalar_equal(settings.maxiter, MAXITER_DEFAULT, TOL)
+        assert okctest.scalar_equal(settings.verbose, VERBOSE_DEFAULT, TOL)
+        assert okctest.scalar_equal(settings.suppress, SUPPRESS_DEFAULT, TOL)
+        assert okctest.scalar_equal(settings.adaptiverho, ADAPTIVE_DEFAULT, TOL)
+        assert okctest.scalar_equal(settings.gapstop, GAPSTOP_DEFAULT, TOL)
+        assert okctest.scalar_equal(settings.warmstart, WARMSTART_DEFAULT, TOL)
+        assert okctest.scalar_equal(settings.resume, RESUME_DEFAULT, TOL)
 
     def assert_pogs_scaling(self, lib, solver, test_params):
         f, f_py = test_params.f, test_params.f_py
@@ -208,19 +204,19 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         # copy function vector
         f_py_ptr = f_py.ctypes.data_as(lib.function_p)
         g_py_ptr = g_py.ctypes.data_as(lib.function_p)
-        self.assertCall( lib.function_vector_memcpy_va(f, f_py_ptr) )
-        self.assertCall( lib.function_vector_memcpy_va(g, g_py_ptr) )
+        assert okctest.noerr( lib.function_vector_memcpy_va(f, f_py_ptr) )
+        assert okctest.noerr( lib.function_vector_memcpy_va(g, g_py_ptr) )
 
         # scale function vector
-        self.assertCall( lib.pogs_scale_objectives(
+        assert okctest.noerr( lib.pogs_scale_objectives(
                 solver.contents.f, solver.contents.g,
                 solver.contents.W.contents.d,
                 solver.contents.W.contents.e, f, g) )
 
         # retrieve scaled function vector parameters
-        self.assertCall( lib.function_vector_memcpy_av(f_py_ptr,
+        assert okctest.noerr( lib.function_vector_memcpy_av(f_py_ptr,
                                                        solver.contents.f) )
-        self.assertCall( lib.function_vector_memcpy_av(g_py_ptr,
+        assert okctest.noerr( lib.function_vector_memcpy_av(g_py_ptr,
                                                        solver.contents.g) )
         f_list = [lib.function(*f_) for f_ in f_py]
         g_list = [lib.function(*f_) for f_ in g_py]
@@ -231,20 +227,20 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         load_all_local(lib, local_vars, solver)
 
         # scaled vars
-        self.assertVecEqual( f_a0, local_vars.d * f_a1, self.ATOLM, self.RTOL )
-        self.assertVecEqual( f_d0, local_vars.d * f_d1, self.ATOLM, self.RTOL )
-        self.assertVecEqual( f_e0, local_vars.d * f_e1, self.ATOLM, self.RTOL )
-        self.assertVecEqual( g_a0 * local_vars.e, g_a1, self.ATOLN, self.RTOL )
-        self.assertVecEqual( g_d0 * local_vars.e, g_d1, self.ATOLN, self.RTOL )
-        self.assertVecEqual( g_e0 * local_vars.e, g_e1, self.ATOLN, self.RTOL )
+        assert okctest.vec_equal( f_a0, local_vars.d * f_a1, self.ATOLM, self.RTOL )
+        assert okctest.vec_equal( f_d0, local_vars.d * f_d1, self.ATOLM, self.RTOL )
+        assert okctest.vec_equal( f_e0, local_vars.d * f_e1, self.ATOLM, self.RTOL )
+        assert okctest.vec_equal( g_a0 * local_vars.e, g_a1, self.ATOLN, self.RTOL )
+        assert okctest.vec_equal( g_d0 * local_vars.e, g_d1, self.ATOLN, self.RTOL )
+        assert okctest.vec_equal( g_e0 * local_vars.e, g_e1, self.ATOLN, self.RTOL )
 
         # unchanged vars
-        self.assertVecEqual( f_h0, f_h1, self.ATOLM, self.RTOL )
-        self.assertVecEqual( f_b0, f_b1, self.ATOLM, self.RTOL )
-        self.assertVecEqual( f_c0, f_c1, self.ATOLM, self.RTOL )
-        self.assertVecEqual( g_h0, g_h1, self.ATOLN, self.RTOL )
-        self.assertVecEqual( g_b0, g_b1, self.ATOLN, self.RTOL )
-        self.assertVecEqual( g_c0, g_c1, self.ATOLN, self.RTOL )
+        assert okctest.vec_equal( f_h0, f_h1, self.ATOLM, self.RTOL )
+        assert okctest.vec_equal( f_b0, f_b1, self.ATOLM, self.RTOL )
+        assert okctest.vec_equal( f_c0, f_c1, self.ATOLM, self.RTOL )
+        assert okctest.vec_equal( g_h0, g_h1, self.ATOLN, self.RTOL )
+        assert okctest.vec_equal( g_b0, g_b1, self.ATOLN, self.RTOL )
+        assert okctest.vec_equal( g_c0, g_c1, self.ATOLN, self.RTOL )
 
     def build_A_equil(self, lib, solver_work, A_orig):
         m, n = A_orig.shape
@@ -268,17 +264,17 @@ class OptkitCPogsTestCase(OptkitCTestCase):
             A = solver_work.contents.A
             hdl = solver_work.contents.linalg_handle
             tr = lib.enums.CblasNoTrans
-            self.assertCall( lib.blas_gemv(hdl, tr, 1, A, x, 0, y) )
+            assert okctest.noerr( lib.blas_gemv(hdl, tr, 1, A, x, 0, y) )
         elif lib.py_pogs_impl == 'abstract':
             opA = solver_work.contents.A
-            self.assertCall( opA.contents.apply(opA.contents.data, x, y) )
+            assert okctest.noerr( opA.contents.apply(opA.contents.data, x, y) )
         else:
             raise ValueError('UNKNOWN POGS IMPLEMENTATION')
 
         load_to_local(lib, y_py, y)
 
         DAEX = d_local * A_orig.dot(e_local * x_py)
-        self.assertVecEqual( y_py, DAEX, self.ATOLM, self.RTOL )
+        assert okctest.vec_equal( y_py, DAEX, self.ATOLM, self.RTOL )
         self.free_vars('x', 'y')
 
     def assert_apply_matrix(self, lib, work, A_equil):
@@ -289,17 +285,17 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         beta = np.random.random()
 
         if lib.py_pogs_impl == 'dense':
-            self.assertCall( lib.pogs_dense_apply_matrix(
+            assert okctest.noerr( lib.pogs_dense_apply_matrix(
                     work, alpha, x, beta, y) )
         elif lib.py_pogs_impl == 'abstract':
-            self.assertCall( lib.pogs_abstract_apply_matrix(
+            assert okctest.noerr( lib.pogs_abstract_apply_matrix(
                     work, alpha, x, beta, y) )
         else:
             raise ValueError('UNKNOWN POGS IMPLEMENTATION')
 
         AXPY = alpha * A_equil.dot(x_py) + beta * y_py
         load_to_local(lib, y_py, y)
-        self.assertVecEqual( y_py, AXPY, self.ATOLM, self.RTOL )
+        assert okctest.vec_equal( y_py, AXPY, self.ATOLM, self.RTOL )
 
         self.free_vars('x', 'y')
 
@@ -311,17 +307,17 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         beta = np.random.random()
 
         if lib.py_pogs_impl == 'dense':
-            self.assertCall( lib.pogs_dense_apply_adjoint(
+            assert okctest.noerr( lib.pogs_dense_apply_adjoint(
                     work, alpha, y, beta, x) )
         elif lib.py_pogs_impl == 'abstract':
-            self.assertCall( lib.pogs_abstract_apply_adjoint(
+            assert okctest.noerr( lib.pogs_abstract_apply_adjoint(
                     work, alpha, y, beta, x) )
         else:
             raise ValueError('UNKNOWN POGS IMPLEMENTATION')
 
         ATYPX = alpha * A_equil.T.dot(y_py) + beta * x_py
         load_to_local(lib, x_py, x)
-        self.assertVecEqual( x_py, ATYPX, self.ATOLN, self.RTOL )
+        assert okctest.vec_equal( x_py, ATYPX, self.ATOLN, self.RTOL )
 
         self.free_vars('x', 'y')
 
@@ -337,10 +333,10 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         y_out, y_out_py, _ = self.register_vector(lib, m, 'y_out')
 
         if lib.py_pogs_impl == 'dense':
-            self.assertCall( lib.pogs_dense_project_graph(
+            assert okctest.noerr( lib.pogs_dense_project_graph(
                     work, x_in, y_in, x_out, y_out, RTOL) )
         elif lib.py_pogs_impl == 'abstract':
-            self.assertCall( lib.pogs_abstract_project_graph(
+            assert okctest.noerr( lib.pogs_abstract_project_graph(
                     work, x_in, y_in, x_out, y_out, RTOL) )
         else:
             raise ValueError('UNKNOWN POGS IMPLEMENTATION')
@@ -348,7 +344,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         load_to_local(lib, x_out_py, x_out)
         load_to_local(lib, y_out_py, y_out)
         AX = A_equil.dot(x_out_py)
-        self.assertVecEqual( y_out_py, AX, ATOLM, RTOL )
+        assert okctest.vec_equal( y_out_py, AX, ATOLM, RTOL )
 
         self.free_vars('x_in', 'y_in', 'x_out', 'y_out')
 
@@ -365,9 +361,9 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 
             holds elementwise
         """
-        self.assertCall( lib.pogs_primal_update(solver.contents.z) )
+        assert okctest.noerr( lib.pogs_primal_update(solver.contents.z) )
         load_all_local(lib, local_vars, solver)
-        self.assertVecEqual( local_vars.z, local_vars.prev, self.ATOLMN, self.RTOL )
+        assert okctest.vec_equal( local_vars.z, local_vars.prev, self.ATOLMN, self.RTOL )
 
     def assert_pogs_prox(self, lib, solver, test_params):
         """proximal operator application test
@@ -388,7 +384,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         hdl = solver.contents.linalg_handle
         load_all_local(lib, local_vars, solver)
 
-        self.assertCall( lib.pogs_prox(hdl, f, g, z, rho) )
+        assert okctest.noerr( lib.pogs_prox(hdl, f, g, z, rho) )
         load_all_local(lib, local_vars, solver)
 
         f_list = [lib.function(*f_) for f_ in f_py]
@@ -406,8 +402,8 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         y_arg = local_vars.y - local_vars.yt
         x_out = proxutils.prox_eval_python(g_list, rho, x_arg)
         y_out = proxutils.prox_eval_python(f_list, rho, y_arg)
-        self.assertVecEqual( local_vars.x12, x_out, self.ATOLN, self.RTOL )
-        self.assertVecEqual( local_vars.y12, y_out, self.ATOLM, self.RTOL )
+        assert okctest.vec_equal( local_vars.x12, x_out, self.ATOLN, self.RTOL )
+        assert okctest.vec_equal( local_vars.y12, y_out, self.ATOLM, self.RTOL )
 
     def assert_pogs_project_graph(self, lib, solver, A_equil, local_vars):
         """primal projection test
@@ -417,12 +413,12 @@ class OptkitCPogsTestCase(OptkitCTestCase):
                 y^{k+1} == A * x^{k+1}
             holds to numerical tolerance
         """
-        self.assertCall( lib.pogs_project_graph(
+        assert okctest.noerr( lib.pogs_project_graph(
                 solver.contents.W, solver.contents.z,
                 solver.contents.settings.contents.alpha, self.RTOL) )
 
         load_all_local(lib, local_vars, solver)
-        self.assertVecEqual(
+        assert okctest.vec_equal(
                 A_equil.dot(local_vars.x), local_vars.y, self.ATOLM, self.RTOL)
 
     def assert_pogs_dual_update(self, lib, solver, local_vars):
@@ -445,10 +441,10 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         zt_py = local_vars.zt - local_vars.z + (
                     alpha * local_vars.z12 + (1-alpha) * local_vars.prev)
 
-        self.assertCall( lib.pogs_dual_update(blas_handle, z, alpha) )
+        assert okctest.noerr( lib.pogs_dual_update(blas_handle, z, alpha) )
         load_all_local(lib, local_vars, solver)
-        self.assertVecEqual( local_vars.zt12, zt12_py, self.ATOLMN, self.RTOL )
-        self.assertVecEqual( local_vars.zt, zt_py, self.ATOLMN, self.RTOL )
+        assert okctest.vec_equal( local_vars.zt12, zt12_py, self.ATOLMN, self.RTOL )
+        assert okctest.vec_equal( local_vars.zt, zt_py, self.ATOLMN, self.RTOL )
 
 
     def assert_pogs_adapt_rho(self, lib, solver, test_params):
@@ -477,13 +473,13 @@ class OptkitCPogsTestCase(OptkitCTestCase):
             rho_params = lib.adapt_params(1.05, 0, 0, 1)
             zt_before = local_vars.zt
             rho_before = solver.contents.rho
-            self.assertCall( lib.pogs_adapt_rho(
+            assert okctest.noerr( lib.pogs_adapt_rho(
                     z, rho_p, rho_params, solver.contents.settings, residuals,
                     tolerances, 1) )
             load_all_local(lib, local_vars, solver)
             zt_after = local_vars.zt
             rho_after = rho_p.contents
-            self.assertVecEqual(
+            assert okctest.vec_equal(
                     rho_after * zt_after, rho_before * zt_before, self.ATOLMN,
                     self.RTOL )
 
@@ -524,7 +520,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         converged = np.zeros(1, dtype=int)
         cvg_ptr = converged.ctypes.data_as(ct.POINTER(ct.c_int))
 
-        self.assertCall( lib.pogs_check_convergence(
+        assert okctest.noerr( lib.pogs_check_convergence(
                 solver, objectives, residuals, tolerances, cvg_ptr) );
 
         load_all_local(lib, local_vars, solver)
@@ -538,23 +534,23 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         tol_dual = tolerances.atoln + (
                 tolerances.reltol * np.linalg.norm(local_vars.xt12))
 
-        self.assertScalarEqual( objectives.gap, obj_gap_py, self.RTOL )
-        self.assertScalarEqual( tolerances.primal, tol_primal, self.RTOL )
-        self.assertScalarEqual( tolerances.dual, tol_dual, self.RTOL )
+        assert okctest.scalar_equal( objectives.gap, obj_gap_py, self.RTOL )
+        assert okctest.scalar_equal( tolerances.primal, tol_primal, self.RTOL )
+        assert okctest.scalar_equal( tolerances.dual, tol_dual, self.RTOL )
 
         Ax = A_equil.dot(local_vars.x12)
         ATnu = A_equil.T.dot(local_vars.yt12)
         res_primal = np.linalg.norm(Ax - local_vars.y12)
         res_dual = np.linalg.norm(ATnu + local_vars.xt12)
 
-        self.assertScalarEqual( residuals.primal, res_primal, self.RTOL )
-        self.assertScalarEqual( residuals.dual, res_dual, self.RTOL )
-        self.assertScalarEqual( residuals.gap, abs(obj_gap_py), self.RTOL )
+        assert okctest.scalar_equal( residuals.primal, res_primal, self.RTOL )
+        assert okctest.scalar_equal( residuals.dual, res_dual, self.RTOL )
+        assert okctest.scalar_equal( residuals.gap, abs(obj_gap_py), self.RTOL )
 
         converged_py = res_primal <= tolerances.primal and \
                        res_dual <= tolerances.dual
 
-        self.assertEqual( converged, converged_py )
+        assert (converged == converged_py)
 
     def assert_pogs_unscaling(self, lib, output, solver, local_vars):
         """pogs unscaling test
@@ -592,20 +588,20 @@ class OptkitCPogsTestCase(OptkitCTestCase):
             raise ValueError('argument "lib" must contain a field named'
                              '"pogs_matrix_p" or "pogs_work_p"')
 
-        self.assertCall( lib.pogs_unscale_output(
+        assert okctest.noerr( lib.pogs_unscale_output(
                 output.ptr, solver.contents.z, solver_work.contents.d,
                 solver_work.contents.e, rho, suppress) )
 
-        self.assertVecEqual(
+        assert okctest.vec_equal(
                 local_vars.x12 * local_vars.e, output.x,
                 self.ATOLN, self.RTOL )
-        self.assertVecEqual(
+        assert okctest.vec_equal(
                 local_vars.y12, local_vars.d * output.y,
                 self.ATOLM, self.RTOL )
-        self.assertVecEqual(
+        assert okctest.vec_equal(
                 -rho * local_vars.xt12, local_vars.e * output.mu,
                 self.ATOLN, self.RTOL )
-        self.assertVecEqual(
+        assert okctest.vec_equal(
                 -rho * local_vars.yt12 * local_vars.d, output.nu,
                 self.ATOLM, self.RTOL )
 
@@ -623,8 +619,8 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 
         Ax = A_orig.dot(output.x)
         ATnu = A_orig.T.dot(output.nu)
-        self.assertVecEqual( Ax, output.y, RFP * atolm, RFP * P * rtol )
-        self.assertVecEqual( ATnu, -output.mu, RFD * atoln, RFD * D * rtol )
+        assert okctest.vec_equal( Ax, output.y, RFP * atolm, RFP * P * rtol )
+        assert okctest.vec_equal( ATnu, -output.mu, RFD * atoln, RFD * D * rtol )
 
     def assert_scaled_variables(self, A_equil, x0, nu0, local_vars, rho):
         x_scal = local_vars.e * local_vars.x
@@ -632,10 +628,10 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         y0_unscal = A_equil.dot(x0 / local_vars.e)
         mu0_unscal = A_equil.T.dot(nu0 / (rho * local_vars.d))
 
-        self.assertVecEqual( x0, x_scal, self.ATOLN, self.RTOL )
-        self.assertVecEqual( nu0, nu_scal, self.ATOLM, self.RTOL )
-        self.assertVecEqual( y0_unscal, local_vars.y, self.ATOLM, self.RTOL )
-        self.assertVecEqual( mu0_unscal, local_vars.xt, self.ATOLN, self.RTOL )
+        assert okctest.vec_equal( x0, x_scal, self.ATOLN, self.RTOL )
+        assert okctest.vec_equal( nu0, nu_scal, self.ATOLM, self.RTOL )
+        assert okctest.vec_equal( y0_unscal, local_vars.y, self.ATOLM, self.RTOL )
+        assert okctest.vec_equal( mu0_unscal, local_vars.xt, self.ATOLN, self.RTOL )
 
     def assert_coldstart_components(self, test_context):
         lib = test_context.lib
@@ -645,7 +641,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         W = solver.contents.W
         params = test_context.params
 
-        self.assertCall( lib.pogs_initialize_conditions(
+        assert okctest.noerr( lib.pogs_initialize_conditions(
                     params.obj, params.res, params.tol, params.settings, m, n) )
 
         self.assert_equilibrate_matrix(lib, W, A)
@@ -670,7 +666,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         f, g = params.f, params.g
         settings, info, output = params.settings, params.info, params.output
 
-        self.assertCall( lib.pogs_solve(solver, params.f, params.g, settings, info, output.ptr) )
+        assert okctest.noerr( lib.pogs_solve(solver, params.f, params.g, settings, info, output.ptr) )
         if info.converged:
             self.assert_pogs_convergence(lib, ctx.A_dense, settings, output)
 
@@ -694,9 +690,9 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         nu0, nu0_ptr = self.gen_py_vector(lib, m, random=True)
         settings.x0 = x0_ptr
         settings.nu0 = nu0_ptr
-        self.assertCall( lib.pogs_update_settings(solver.contents.settings,
+        assert okctest.noerr( lib.pogs_update_settings(solver.contents.settings,
                                              ct.byref(settings)) )
-        self.assertCall( lib.pogs_set_z0(solver) )
+        assert okctest.noerr( lib.pogs_set_z0(solver) )
         load_all_local(lib, local_vars, solver)
         self.assert_scaled_variables(A_equil, x0, nu0, local_vars, rho)
 
@@ -710,11 +706,11 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 
         if okctest.VERBOSE_TEST:
             print('\nwarm start variable loading test (maxiter = 0)')
-        self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
                                         output.ptr) )
         rho = solver.contents.rho
-        self.assertEqual( info.err, 0 )
-        self.assertTrue( info.converged or info.k >= settings.maxiter )
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
         load_all_local(lib, local_vars, solver)
         self.assert_scaled_variables(A_equil, x0, nu0, local_vars, rho)
 
@@ -735,26 +731,26 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         print('\ncold')
         settings.warmstart = 0
         settings.maxiter = MAXITER_DEFAULT
-        self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
                          output.ptr) )
-        self.assertEqual( info.err, 0 )
-        self.assertTrue( info.converged or info.k >= settings.maxiter )
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
 
         # REPEAT
         print('\nrepeat')
-        self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
                          output.ptr) )
-        self.assertEqual( info.err, 0 )
-        self.assertTrue( info.converged or info.k >= settings.maxiter )
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
 
         # RESUME
         print('\nresume')
         settings.resume = 1
         settings.rho = info.rho
-        self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
                          output.ptr) )
-        self.assertEqual( info.err, 0 )
-        self.assertTrue( info.converged or info.k >= settings.maxiter )
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
 
         # WARM START: x0
         print('\nwarm start x0')
@@ -762,10 +758,10 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         settings.rho = 1
         settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)
         settings.warmstart = 1
-        self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
                          output.ptr) )
-        self.assertEqual( info.err, 0 )
-        self.assertTrue( info.converged or info.k >= settings.maxiter )
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
 
         # WARM START: x0, rho
         print('\nwarm start x0, rho')
@@ -773,10 +769,10 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         settings.rho = info.rho
         settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)
         settings.warmstart = 1
-        self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
                          output.ptr) )
-        self.assertEqual( info.err, 0 )
-        self.assertTrue( info.converged or info.k >= settings.maxiter )
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
 
         # WARM START: x0, nu0
         print('\nwarm start x0, nu0')
@@ -785,10 +781,10 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)
         settings.nu0 = output.nu.ctypes.data_as(lib.ok_float_p)
         settings.warmstart = 1
-        self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
                          output.ptr) )
-        self.assertEqual( info.err, 0 )
-        self.assertTrue( info.converged or info.k >= settings.maxiter )
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
 
         # WARM START: x0, nu0
         print('\nwarm start x0, nu0, rho')
@@ -797,10 +793,10 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)
         settings.nu0 = output.nu.ctypes.data_as(lib.ok_float_p)
         settings.warmstart = 1
-        self.assertCall( lib.pogs_solve(solver, f, g, settings, info,
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
                          output.ptr) )
-        self.assertEqual( info.err, 0 )
-        self.assertTrue( info.converged or info.k >= settings.maxiter )
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
 
     def assert_pogs_accelerate(self, test_context):
         ctx = test_context
@@ -814,46 +810,46 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         settings.maxiter = 5000
 
         print('POGS, -adaptive rho, -anderson')
-        okctest.assert_noerr( lib.vector_set_all(state, 0.) )
+        assert okctest.noerr( lib.vector_set_all(state, 0.) )
         settings.adaptiverho = 0
         settings.accelerate = 0
         settings.rho = 1
         settings.warmstart = 0
         settings.resume = 0
-        self.assertCall( lib.pogs_solve(solver, params.f, params.g, settings, info, output.ptr) )
+        assert okctest.noerr( lib.pogs_solve(solver, params.f, params.g, settings, info, output.ptr) )
         # if info.converged:
         #     self.assert_pogs_convergence(lib, ctx.A_dense, settings, output)
 
         print('POGS, +adaptive rho, -anderson')
-        okctest.assert_noerr( lib.vector_set_all(state, 0.) )
+        assert okctest.noerr( lib.vector_set_all(state, 0.) )
         settings.adaptiverho = 1
         settings.accelerate = 0
         settings.rho = 1
         settings.warmstart = 0
         settings.resume = 0
-        self.assertCall( lib.pogs_solve(solver, params.f, params.g, settings, info, output.ptr) )
+        assert okctest.noerr( lib.pogs_solve(solver, params.f, params.g, settings, info, output.ptr) )
         # if info.converged:
         #     self.assert_pogs_convergence(lib, ctx.A_dense, settings, output)
 
         print('POGS, -adaptive rho, +anderson')
-        okctest.assert_noerr( lib.vector_set_all(state, 0.) )
+        assert okctest.noerr( lib.vector_set_all(state, 0.) )
         settings.adaptiverho = 0
         settings.accelerate = 1
         settings.rho = 1
         settings.warmstart = 0
         settings.resume = 0
-        self.assertCall( lib.pogs_solve(solver, params.f, params.g, settings, info, output.ptr) )
+        assert okctest.noerr( lib.pogs_solve(solver, params.f, params.g, settings, info, output.ptr) )
         # if info.converged:
         #     self.assert_pogs_convergence(lib, ctx.A_dense, settings, output)
 
         print('POGS, +adaptive rho, +anderson')
-        okctest.assert_noerr( lib.vector_set_all(state, 0.) )
+        assert okctest.noerr( lib.vector_set_all(state, 0.) )
         settings.adaptiverho = 1
         settings.accelerate = 1
         settings.rho = 1
         settings.warmstart = 0
         settings.resume = 0
-        self.assertCall( lib.pogs_solve(solver, params.f, params.g, settings, info, output.ptr) )
+        assert okctest.noerr( lib.pogs_solve(solver, params.f, params.g, settings, info, output.ptr) )
         # if info.converged:
         #     self.assert_pogs_convergence(lib, ctx.A_dense, settings, output)
 
@@ -867,7 +863,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         settings, info, output = params.settings, params.info, params.output
 
         settings.verbose = 1
-        self.assertCall(lib.pogs(data, flags, f, g, settings, info, output.ptr, 0))
+        assert okctest.noerr(lib.pogs(data, flags, f, g, settings, info, output.ptr, 0))
         if info.converged:
             self.assert_pogs_convergence(lib, ctx.A_dense, settings, output)
 
@@ -887,7 +883,7 @@ class OptkitCPogsTestCase(OptkitCTestCase):
 
         # solve
         print('initial solve -> export data')
-        self.assertCall( lib.pogs_solve(
+        assert okctest.noerr( lib.pogs_solve(
                 solver, f, g, settings, info, output.ptr) )
         k_orig = info.k
 
@@ -899,16 +895,16 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         state_ptr = lib.ok_float_pointerize(state_out)
         rho_ptr = lib.ok_float_pointerize(rho_out)
 
-        okctest.assert_noerr( lib.pogs_solver_save_state(
+        assert okctest.noerr( lib.pogs_solver_save_state(
                 state_ptr, rho_ptr, solver) )
 
         build_solver = lambda: lib.pogs_init(ctx.data, ctx.flags)
         free_solver = lambda s: lib.pogs_finish(s, 0)
-        with okctest.CVariableContext(build_solver, free_solver) as solver2:
+        with okcctx.VariableContext(build_solver, free_solver) as solver2:
             settings.resume = 1
-            okctest.assert_noerr( lib.pogs_solver_load_state(
+            assert okctest.noerr( lib.pogs_solver_load_state(
                     solver2, state_ptr, rho_ptr[0]))
-            okctest.assert_noerr( lib.pogs_solve(
+            assert okctest.noerr( lib.pogs_solve(
                     solver2, f, g, settings, info, output.ptr) )
 
             assert (info.k <= k_orig or not info.converged)
@@ -917,12 +913,12 @@ class OptkitCPogsTestCase(OptkitCTestCase):
         priv_data = lib.pogs_solver_priv_data()
         flags = lib.pogs_solver_flags()
 
-        okctest.assert_noerr( lib.pogs_export_solver(
+        assert okctest.noerr( lib.pogs_export_solver(
                 priv_data, state_ptr, rho_ptr, flags, solver))
 
         build_solver = lambda: lib.pogs_load_solver(
                 priv_data, state_ptr, rho_out[0], flags)
-        with okctest.CVariableContext(build_solver, free_solver) as solver3:
+        with okcctx.VariableContext(build_solver, free_solver) as solver3:
             settings.resume = 1
-            okctest.assert_noerr( lib.pogs_solve(
+            assert okctest.noerr( lib.pogs_solve(
                     solver3, f, g, settings, info, output.ptr) )

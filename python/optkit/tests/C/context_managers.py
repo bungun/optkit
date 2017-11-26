@@ -1,39 +1,19 @@
 from optkit.compat import *
 
-import os
 import numpy as np
 import scipy.sparse as sp
 import ctypes as ct
 
 import optkit.libs.enums as enums
-import optkit.libs.error as okerr
+import optkit.tests.C.statements as okctest
 
-PRINTERR = okerr.optkit_print_error
-TEST_ITERATE = int(os.getenv('OPTKIT_REPEAT_NUMERICALTEST', '0'))
-VERBOSE_TEST = os.getenv('OPTKIT_TEST_VERBOSE', False)
-
-def assert_noerr(c_call_status):
-    assert PRINTERR(c_call_status) == 0
-
-def assert_vec_equal(first, second, atol, rtol):
-    lhs = la.norm(first - second)
-    rhs = atol + rtol * la.norm(second)
-    if not lhs <= rhs:
-        print('vector comparison failure:\n'
-              '||a - b||: {}\n'
-              'atol + rol||b||: {}'
-              ''.format(LHS, RHS))
-    assert lhs <= rhs
-
-def assert_scalar_equal(first, second, tol):
-    assert abs(first - second) <= tol * (1 + abs(second))
 
 def gen_py_vector(lib, size, random=False):
     v_py = np.zeros(size).astype(lib.pyfloat)
     v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
     if random:
         v_py += np.random.random(size)
-    assert v_py, v_ptr
+    return v_py, v_ptr
 
 def gen_py_matrix(lib, size1, size2, order, random=False):
     pyorder = 'C' if order == lib.enums.CblasRowMajor else 'F'
@@ -58,7 +38,7 @@ class CLibContext:
     def __enter__(self):
         return self.lib
     def __exit__(self, *exc):
-        assert_noerr( self.lib.ok_device_reset() )
+        assert okctest.noerr( self.lib.ok_device_reset() )
 
 class CVariableContext:
     def __init__(self, alloc, free):
@@ -67,7 +47,7 @@ class CVariableContext:
     def __enter__(self):
         return self._alloc()
     def __exit__(self, *exc):
-        assert_noerr(self._free())
+        assert okctest.noerr(self._free())
 
 class CArrayContext:
     def __init__(self, c, py, pyptr, build, free):
@@ -81,7 +61,7 @@ class CArrayContext:
         self._build()
         return self
     def __exit__(self, *exc):
-        assert_noerr(self._free())
+        assert okctest.noerr(self._free())
 
 class CArrayIO:
     def __init__(self, py_array, copy_py2c, copy_c2py):
@@ -91,17 +71,17 @@ class CArrayIO:
         self._dtype = type(py_ptr)
 
     def sync_to_py(self):
-        assert_noerr( self._c2py(self._pyarray) )
+        assert okctest.noerr( self._c2py(self._pyarray) )
 
     def sync_to_c(self):
-        assert_noerr( self._py2c(self._pyarray) )
+        assert okctest.noerr( self._py2c(self._pyarray) )
 
     def copy_to_py(self, py_array):
-        assert_noerr( self._c2py(py_array) )
+        assert okctest.noerr( self._c2py(py_array) )
 
     def copy_to_c(self, py_array):
         pyptr = py_array.ravel().ctypes.data_as(self._dtype)
-        assert_noerr( self._py2c(py_array) )
+        assert okctest.noerr( self._py2c(py_array) )
 
 class CVectorContext(CArrayContext, CArrayIO):
     def __init__(self, lib, size, random=False):
@@ -114,9 +94,9 @@ class CVectorContext(CArrayContext, CArrayIO):
         def c2py(py_array):
             return lib.vector_memcpy_av(arr2ptr(py_array), v, 1)
         def build():
-            assert_noerr( lib.vector_calloc(vec, size) )
+            assert okctest.noerr( lib.vector_calloc(vec, size) )
             if random:
-                assert_noerr(py2c(v_py))
+                assert okctest.noerr(py2c(v_py))
         def free(): return lib.vector_free(v)
 
         CArrayContext.__init__(self, v, v_py, v_ptr, build, free)
@@ -135,9 +115,9 @@ class CIndvectorContext(CArrayContext, CArrayIO):
         def c2py(py_array):
             return lib.indvector_memcpy_av(arr2ptr(py_array), v, 1)
         def build():
-            assert_noerr( lib.matrix_calloc(v, size, order) )
+            assert okctest.noerr( lib.matrix_calloc(v, size, order) )
             if random:
-                assert_noerr( py2c(v_py) )
+                assert okctest.noerr( py2c(v_py) )
         def free(): return lib.indvector_free(v)
 
         CArrayContext.__init__(self, v, v_py, v_ptr, build, lib.indvector_free)
@@ -155,9 +135,9 @@ class CDenseMatrixContext(CArrayContext, CArrayIO):
         def py2c(arr): return lib.matrix_memcpy_ma(A, arr2ptr(arr), arr2order(arr))
         def c2py(arr): return lib.matrix_memcpy_am(arr2ptr(arr), A, arr2order(arr))
         def build():
-            assert_noerr( lib.matrix_calloc(A, size1, size2, order) )
+            assert okctest.noerr( lib.matrix_calloc(A, size1, size2, order) )
             if random:
-                assert_noerr( py2c(A_py) )
+                assert okctest.noerr( py2c(A_py) )
         def free(): return lib.matrix_free(A)
 
         CArrayContext.__init__(self, A, A_py, A_ptr, build, free)
@@ -214,10 +194,10 @@ class CLinalgContext:
         self._hdl = ct.c_void_p()
         self._destroy = destroy
     def __enter__(self):
-        assert_noerr(make(ct.byref(self._hdl)))
+        assert okctest.noerr(make(ct.byref(self._hdl)))
         return self._hdl
     def __exit__(sef, *exc):
-        assert_noerr(self._destroy(self._hdl))
+        assert okctest.noerr(self._destroy(self._hdl))
 
 class CDenseLinalgContext(CLinalgContext):
     def __init__(self, lib):
@@ -254,7 +234,7 @@ class CDenseOperatorContext:
         return self.o
 
     def __exit__(self, *exc):
-        assert_noerr(self.o.contents.free(self.o.contents.data))
+        assert okctest.noerr(self.o.contents.free(self.o.contents.data))
         self.A.__exit__(*exc)
 
 class CSparseOperatorContext:
@@ -274,6 +254,5 @@ class CSparseOperatorContext:
             return self.o
 
     def __exit__(self, *exc):
-        assert_noerr(self.o.contents.free(self.o.contents.data))
+        assert okctest.noerr(self.o.contents.free(self.o.contents.data))
         self.A.__exit__(*exc)
-
