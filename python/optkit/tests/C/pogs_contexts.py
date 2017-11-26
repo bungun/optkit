@@ -9,51 +9,35 @@ import optkit.tests.C.statements as okctest
 import optkit.tests.C.context_managers as okcctx
 
 
-class PogsVariablesLocal():
-    def __init__(self, m, n, pytype):
+class PogsVariablesLocal:
+    def __init__(self, lib, m, n):
         self.m = m
         self.n = n
-        self.z = np.zeros(m + n).astype(pytype)
-        self.z12 = np.zeros(m + n).astype(pytype)
-        self.zt = np.zeros(m + n).astype(pytype)
-        self.zt12 = np.zeros(m + n).astype(pytype)
-        self.prev = np.zeros(m + n).astype(pytype)
-        self.d = np.zeros(m).astype(pytype)
-        self.e = np.zeros(n).astype(pytype)
+        self._state = np.zeros(6 * (m+n)).astype(lib.pyfloat)
+        self._lib = lib
 
-    @property
-    def x(self):
-        return self.z[self.m:]
+        for i, label in enumerate(['z', 'zt', 'z12', 'zt12', 'prev', 'temp']):
+            setattr(self, label, self._state[i * (m+n) : (i+1) * (m+n)])
+            if 'z' in label:
+                xlabel = label.replace('z', 'x')
+                ylabel = label.replace('z', 'y')
+                setattr(self, ylabel, getattr(self, label)[:m])
+                setattr(self, xlabel, getattr(self, label)[m:])
 
-    @property
-    def y(self):
-        return self.z[:self.m]
+        self.d = np.zeros(m).astype(lib.pyfloat)
+        self.e = np.zeros(n).astype(lib.pyfloat)
 
-    @property
-    def x12(self):
-        return self.z12[self.m:]
+        def _arr2ptr(arr): return np.ravel(arr).ctypes.data_as(lib.ok_float_p)
+        def _c2py(py, c): return okctest.noerr(
+                lib.vector_memcpy_av(_arr2ptr(py), c, 1))
+        def load_all(solver):
+            assert _c2py(self.d, solver.contents.W.contents.d)
+            assert _c2py(self.e, solver.contents.W.contents.e)
+            assert _c2py(self._state, solver.contents.z.contents.state)
 
-    @property
-    def y12(self):
-        return self.z12[:self.m]
+        self.load_all_from = load_all
 
-    @property
-    def xt(self):
-        return self.zt[self.m:]
-
-    @property
-    def yt(self):
-        return self.zt[:self.m]
-
-    @property
-    def xt12(self):
-        return self.zt12[self.m:]
-
-    @property
-    def yt12(self):
-        return self.zt12[:self.m]
-
-class PogsOutputLocal():
+class PogsOutputLocal:
     def __init__(self, lib, m, n):
         self.x = np.zeros(n).astype(lib.pyfloat)
         self.y = np.zeros(m).astype(lib.pyfloat)
@@ -67,27 +51,6 @@ class PogsOutputLocal():
 def load_to_local(lib, py_vector, c_vector):
     assert okctest.noerr( lib.vector_memcpy_av(
             py_vector.ctypes.data_as(lib.ok_float_p), c_vector, 1) )
-
-def load_all_local(lib, py_vars, solver):
-    if not isinstance(py_vars, PogsVariablesLocal):
-        raise TypeError('argument "py_vars" must be of type {}'.format(
-                        PogsVariablesLocal))
-    elif 'pogs_solver_p' not in lib.__dict__:
-        raise ValueError('argument "lib" must contain field named '
-                         '"pogs_solver_p"')
-    elif not isinstance(solver, lib.pogs_solver_p):
-        raise TypeError('argument "solver" must be of type {}'.format(
-                        lib.pogs_solver_p))
-
-    z = solver.contents.z
-    W = solver.contents.W
-    load_to_local(lib, py_vars.z, z.contents.primal.contents.vec)
-    load_to_local(lib, py_vars.z12, z.contents.primal12.contents.vec)
-    load_to_local(lib, py_vars.zt, z.contents.dual.contents.vec)
-    load_to_local(lib, py_vars.zt12, z.contents.dual12.contents.vec)
-    load_to_local(lib, py_vars.prev, z.contents.prev.contents.vec)
-    load_to_local(lib, py_vars.d, W.contents.d)
-    load_to_local(lib, py_vars.e, W.contents.e)
 
 class EquilibratedMatrix(object):
     def __init__(self, d, A, e):
@@ -109,7 +72,7 @@ class Base:
                 'TestParams',
                 'shape z output info setings res tol obj f f_py g g_py')
         self.params.shape = (m, n)
-        self.params.z = PogsVariablesLocal(m, n, lib.pyfloat)
+        self.params.z = PogsVariablesLocal(lib, m, n)
         self.params.output = PogsOutputLocal(lib, m, n)
         self.params.info = lib.pogs_info()
         self.params.settings = settings = lib.pogs_settings()

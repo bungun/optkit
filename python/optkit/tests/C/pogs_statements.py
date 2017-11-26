@@ -83,7 +83,8 @@ def objectives_are_scaled(lib, solver, test_params):
     g_h1, g_a1, g_b1, g_c1, g_d1, g_e1 = fv_list2arrays(g_list)
 
     # retrieve scaling
-    pogsctx.load_all_local(lib, local_vars, solver)
+    local_vars.load_all_from(solver)
+    # pogsctx.load_all_local(lib, local_vars, solver)
 
     # scaled vars
     assert okctest.vec_equal( f_a0, local_vars.d * f_a1, ATOLM, RTOL )
@@ -205,7 +206,8 @@ def primal_update_is_correct(lib, solver, local_vars):
     m, n = local_vars.m, local_vars.n
     RTOL, _, _, ATOLMN = okctest.standard_tolerances(lib, m, n)
     assert okctest.noerr( lib.pogs_primal_update(solver.contents.z) )
-    pogsctx.load_all_local(lib, local_vars, solver)
+    local_vars.load_all_from(solver)
+    # pogsctx.load_all_local(lib, local_vars, solver)
     return okctest.vec_equal( local_vars.z, local_vars.prev, ATOLMN, RTOL )
 
 def proximal_update_is_correct(lib, solver, test_params):
@@ -228,10 +230,12 @@ def proximal_update_is_correct(lib, solver, test_params):
     rho = test_params.settings.rho
 
     hdl = solver.contents.linalg_handle
-    pogsctx.load_all_local(lib, local_vars, solver)
+    local_vars.load_all_from(solver)
+    # pogsctx.load_all_local(lib, local_vars, solver)
 
     assert okctest.noerr( lib.pogs_prox(hdl, f, g, z, rho) )
-    pogsctx.load_all_local(lib, local_vars, solver)
+    local_vars.load_all_from(solver)
+    # pogsctx.load_all_local(lib, local_vars, solver)
 
     f_list = [lib.function(*f_) for f_ in f_py]
     g_list = [lib.function(*f_) for f_ in g_py]
@@ -267,7 +271,8 @@ def projection_update_is_correct(lib, solver, A_equil, local_vars):
             solver.contents.W, solver.contents.z,
             solver.contents.settings.contents.alpha, RTOL) )
 
-    pogsctx.load_all_local(lib, local_vars, solver)
+    local_vars.load_all_from(solver)
+    # pogsctx.load_all_local(lib, local_vars, solver)
     assert okctest.vec_equal(
             A_equil.dot(local_vars.x), local_vars.y, ATOLM, RTOL)
     return True
@@ -289,14 +294,16 @@ def dual_update_is_correct(lib, solver, local_vars):
     blas_handle = solver.contents.linalg_handle
     z = solver.contents.z
 
-    pogsctx.load_all_local(lib, local_vars, solver)
+    local_vars.load_all_from(solver)
+    # pogsctx.load_all_local(lib, local_vars, solver)
     alpha = solver.contents.settings.contents.alpha
     zt12_py = local_vars.z12 - local_vars.prev + local_vars.zt
     zt_py = local_vars.zt - local_vars.z + (
                 alpha * local_vars.z12 + (1-alpha) * local_vars.prev)
 
     assert okctest.noerr( lib.pogs_dual_update(blas_handle, z, alpha) )
-    pogsctx.load_all_local(lib, local_vars, solver)
+    local_vars.load_all_from(solver)
+    # pogsctx.load_all_local(lib, local_vars, solver)
     assert okctest.vec_equal( local_vars.zt12, zt12_py, ATOLMN, RTOL )
     assert okctest.vec_equal( local_vars.zt, zt_py, ATOLMN, RTOL )
     return True
@@ -332,7 +339,8 @@ def rho_update_is_correct(lib, solver, test_params):
         assert okctest.noerr( lib.pogs_adapt_rho(
                 z, rho_p, rho_params, solver.contents.settings, residuals,
                 tolerances, 1) )
-        pogsctx.load_all_local(lib, local_vars, solver)
+        local_vars.load_all_from(solver)
+        # pogsctx.load_all_local(lib, local_vars, solver)
         zt_after = local_vars.zt
         rho_after = rho_p.contents
         assert okctest.vec_equal(
@@ -382,7 +390,8 @@ def convergence_test_is_consistent(lib, solver, A_equil, test_params):
     assert okctest.noerr( lib.pogs_check_convergence(
             solver, objectives, residuals, tolerances, cvg_ptr) );
 
-    pogsctx.load_all_local(lib, local_vars, solver)
+    local_vars.load_all_from(solver)
+    # pogsctx.load_all_local(lib, local_vars, solver)
     obj_py = proxutils.func_eval_python(g_list, local_vars.x12)
     obj_py += proxutils.func_eval_python(f_list, local_vars.y12)
     obj_gap_py = abs(local_vars.z12.dot(local_vars.zt12))
@@ -429,7 +438,8 @@ def output_is_unscaled(lib, output, solver, local_vars):
     suppress = solver.contents.settings.contents.suppress
     RTOL, ATOLM, ATOLN, ATOLMN = okctest.standard_tolerances(lib, m, n)
 
-    pogsctx.load_all_local(lib, local_vars, solver)
+    local_vars.load_all_from(solver)
+    # pogsctx.load_all_local(lib, local_vars, solver)
 
     assert okctest.noerr( lib.pogs_unscale_output(
             output.ptr, solver.contents.z, work.contents.d,
@@ -543,7 +553,8 @@ def solver_scales_warmstart_inputs(test_context):
     assert okctest.noerr( lib.pogs_update_settings(solver.contents.settings,
                                          ct.byref(settings)) )
     assert okctest.noerr( lib.pogs_set_z0(solver) )
-    pogsctx.load_all_local(lib, local_vars, solver)
+    local_vars.load_all_from(solver)
+    # pogsctx.load_all_local(lib, local_vars, solver)
     assert inputs_are_scaled(lib, A_equil, x0, nu0, local_vars, rho)
 
     # TEST SOLVER WARMSTART
@@ -561,7 +572,8 @@ def solver_scales_warmstart_inputs(test_context):
     rho = solver.contents.rho
     assert ( info.err == 0 )
     assert ( info.converged or info.k >= settings.maxiter )
-    pogsctx.load_all_local(lib, local_vars, solver)
+    local_vars.load_all_from(solver)
+    # pogsctx.load_all_local(lib, local_vars, solver)
     return inputs_are_scaled(lib, A_equil, x0, nu0, local_vars, rho)
 
 def warmstart_reduces_iterations(test_context):
