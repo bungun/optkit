@@ -144,8 +144,10 @@ class CDenseMatrixContext(CArrayContext, CArrayIO):
         row = enums.OKEnums.CblasRowMajor
         col = enums.OKEnums.CblasColMajor
         def arr2order(arr): return row if arr.flags.c_contiguous else col
-        def arr2ptr(arr): return np.ravel(arr).ctypes.data_as(type(v_ptr))
-        def py2c(arr): return lib.matrix_memcpy_ma(A, arr2ptr(arr), arr2order(arr))
+        def arr2ptr(arr): return arr.ctypes.data_as(type(A_ptr))
+        def py2c(arr):
+            print("ORDER OF COPY: {}".format(arr2order(arr)))
+            return lib.matrix_memcpy_ma(A, arr2ptr(arr), arr2order(arr))
         def c2py(arr): return lib.matrix_memcpy_am(arr2ptr(arr), A, arr2order(arr))
         def build():
             assert NO_ERR( lib.matrix_calloc(A, size1, size2, order) )
@@ -154,7 +156,7 @@ class CDenseMatrixContext(CArrayContext, CArrayIO):
         def free(): return lib.matrix_free(A)
 
         CArrayContext.__init__(self, A, A_py, A_ptr, build, free)
-        CArrayIO.__init__(self, A, A_py, py2c, c2py)
+        CArrayIO.__init__(self, A_py, py2c, c2py)
 
 
 class CSparseMatrixContext(CArrayContext):
