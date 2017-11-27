@@ -3,6 +3,7 @@ from optkit.compat import *
 import numpy as np
 import scipy.sparse as sp
 import ctypes as ct
+import collections
 
 import optkit.libs.enums as enums
 from optkit.tests import defs
@@ -191,8 +192,9 @@ class CSparseMatrixContext(CArrayContext):
         self.sync_to_c = lambda hdl: py2c(hdl, self.py)
         self.sync_to_py = lambda hdl: c2py(hdl, self.py)
 
-class CFunctionVectorContext(CArrayContext):
+class CFunctionVectorContext(CArrayContext, CArrayIO):
     def __init__(self, lib, size):
+        self._lib = lib
         f = lib.function_vector(0, None)
         f_py = np.zeros(size, dtype=lib.function)
         f_ptr = f_py.ctypes.data_as(lib.function_p)
@@ -200,6 +202,27 @@ class CFunctionVectorContext(CArrayContext):
         def build(): return lib.function_vector_calloc(f, size)
         def free(): return lib.function_vector_free(f)
         CArrayContext.__init__(self, f, f_py, f_ptr, build, free)
+
+        def arr2ptr(arr): return np.ravel(arr).ctypes.data_as(type(f_ptr))
+        def py2c(py_array):
+            return lib.function_vector_memcpy_va(f, arr2ptr(py_array))
+        def c2py(py_array):
+            return lib.function_vector_memcpy_av(arr2ptr(py_array), f)
+        CArrayIO.__init__(self, f_py, py2c, c2py)
+
+
+    @property
+    def list(self):
+        return [self._lib.function(*f) for f in self.py]
+
+    @property
+    def vectors(self):
+        f_list = self.list
+        FVL = collections.namedtuple('FunctionVectorLists', 'h a b c d e s')
+        vecs = dict()
+        for attr in ('h', 'a', 'b', 'c', 'd', 'e', 's'):
+            vecs[attr] =  np.array([getattr(f, attr) for f in f_list])
+        return FVL(**vecs)
 
 class CLinalgContext:
     def __init__(self, make, destroy):

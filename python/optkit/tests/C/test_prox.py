@@ -3,13 +3,48 @@ from optkit.compat import *
 import os
 import numpy as np
 import ctypes as ct
+import itertools
+import unittest
 
 from optkit.libs.prox import ProxLibs
+from optkit.libs import enums
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
+from optkit.tests import defs
 from optkit.tests.defs import OptkitTestCase, TEST_ITERATE
 from optkit.tests.C.base import OptkitCTestCase
+from optkit.tests.C import statements
+import optkit.tests.C.context_managers as okcctx
 
-class ProxLibsTestCase(OptkitTestCase):
+SCALING = 5
+FUNCTIONS = enums.OKFunctionEnums().dict.items()
+
+NO_ERR = statements.noerr
+VEC_EQ = statements.vec_equal
+SCAL_EQ = statements.scalar_equal
+STANDARD_VEC_TOLS = statements.standard_vector_tolerances
+
+def function_vector_values_are(lib, func_ctx, h, a, b, c, d, e, s, tol):
+	fh, fa, fb, fc, fd, fe, fs = func_ctx.vectors
+	assert VEC_EQ( h, fh, 0, 0 )
+	assert VEC_EQ( a, fa, tol, tol )
+	assert VEC_EQ( b, fb, tol, tol )
+	assert VEC_EQ( c, fc, tol, tol )
+	assert VEC_EQ( d, fd, tol, tol )
+	assert VEC_EQ( e, fe, tol, tol )
+	assert VEC_EQ( s, fs, tol, tol )
+	return True
+
+def function_vector_set_constants(lib, func_ctx, h, a, b, c, d, e, s):
+	for i in xrange(func_ctx.py.size):
+		func_ctx.py[i] = lib.function(h, a, b, c, d, e, s)
+	func_ctx.sync_to_c()
+
+def function_vector_set_vectors(lib, func_ctx, h, a, b, c, d, e, s):
+	for i in xrange(func_ctx.py.size):
+		func_ctx.py[i] = lib.function(h, a[i], b[i], c[i], d[i], e[i], s[i])
+	func_ctx.sync_to_c()
+
+class ProxLibsTestCase(unittest.TestCase):
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
@@ -22,24 +57,24 @@ class ProxLibsTestCase(OptkitTestCase):
 
 	def test_libs_exist(self):
 		libs = []
-		for (gpu, single_precision) in self.CONDITIONS:
+		for (gpu, single_precision) in defs.LIB_CONDITIONS:
 			libs.append(self.libs.get(single_precision=single_precision,
 									  gpu=gpu))
-		self.assertTrue( any(libs) )
+		assert any(libs)
 
 	def test_lib_types(self):
-		for (gpu, single_precision) in self.CONDITIONS:
+		for (gpu, single_precision) in defs.LIB_CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
 
-			self.assertTrue('function' in dir(lib))
-			self.assertTrue('function_p' in dir(lib))
-			self.assertTrue('function_vector' in dir(lib))
-			self.assertTrue('function_vector_p' in dir(lib))
+			assert 'function' in dir(lib)
+			assert 'function_p' in dir(lib)
+			assert 'function_vector' in dir(lib)
+			assert 'function_vector_p' in dir(lib)
 
 	def test_version(self):
-		for (gpu, single_precision) in self.CONDITIONS:
+		for (gpu, single_precision) in defs.LIB_CONDITIONS:
 			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
 			if lib is None:
 				continue
@@ -53,319 +88,187 @@ class ProxLibsTestCase(OptkitTestCase):
 					ct.byref(major), ct.byref(minor), ct.byref(change),
 					ct.byref(status))
 
-			version = self.version_string(major.value, minor.value,
+			version = defs.version_string(major.value, minor.value,
 										  change.value, status.value)
 
-			self.assertNotEqual(version, '0.0.0')
-			if self.VERBOSE_TEST:
+			assert not version.startswith('0.0.0')
+			if defs.VERBOSE_TEST:
 				print("proxlib version", version)
 
-class ProxTestCase(OptkitCTestCase):
+class ProxTestCase(unittest.TestCase):
 	@classmethod
 	def setUpClass(self):
 		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
 		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.libs = ProxLibs()
-		self.scalefactor = 5
+		self.libs = okcctx.lib_contexts(ProxLibs())
 
 	@classmethod
 	def tearDownClass(self):
 		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
-	def setUp(self):
-		pass
-
-	def tearDown(self):
-		self.free_all_vars()
-		self.exit_call()
-
 	def test_alloc(self):
-		m, n = self.shape
+		m, n = defs.shape()
+		for lib in self.libs:
+			with lib as lib:
+				f = lib.function_vector(0, None)
+				assert ( f.size == 0 )
 
-		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-			if lib is None:
-				continue
-			self.register_exit(lib.ok_device_reset)
-
-			# calloc
-			f = lib.function_vector(0, None)
-			self.assertEqual( f.size, 0 )
-
-			self.assertCall( lib.function_vector_calloc(f, m) )
-			self.register_var('f', f, lib.function_vector_free)
-			self.assertEqual( f.size, m )
-
-			# free
-			self.free_var('f')
-			self.assertEqual( f.size, 0 )
-
-			self.assertCall( lib.ok_device_reset() )
+				def f_alloc(): return lib.function_vector_calloc(f, m)
+				def f_free(): return lib.function_vector_free(f)
+				with okcctx.CVariableContext(f_alloc, f_free):
+					assert ( f.size == m )
+				assert ( f.size == 0 )
 
 	def test_io(self):
-		m, n = self.shape
-		scal = self.scalefactor
-		a = scal * np.random.rand()
-		b = np.random.rand()
-		c = np.random.rand()
-		d = np.random.rand()
-		e = np.random.rand()
-		s = np.random.rand()
+		m, _ = defs.shape()
+		_, hval = FUNCTIONS[int(len(FUNCTIONS) * np.random.random())]
+		a = SCALING * np.random.random()
+		b = np.random.random()
+		c = np.random.random()
+		d = np.random.random()
+		e = np.random.random()
+		s = np.random.random()
 
-		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-			if lib is None:
-				continue
-			self.register_exit(lib.ok_device_reset)
+		for lib in self.libs:
+			with lib as lib:
+				TOL, _ = STANDARD_VEC_TOLS(lib, m)
 
-			DIGITS = 7 - 2 * single_precision
-			RTOL = 10**(-DIGITS)
-			ATOLM = RTOL * m**0.5
-			ATOLN = RTOL * n**0.5
+				# initialize to default values
+				h0 = enums.OKFunctionEnums().dict['Zero']
+				a0, b0, c0, d0, e0, s0 = (1., 0., 1., 0., 0., 1.)
 
-			f, f_py, f_ptr = self.register_fnvector(lib, m, 'f')
+				f = okcctx.CFunctionVectorContext(lib, m)
+				with f:
+					for i in xrange(m):
+						f.py[i] = lib.function(hval, a, b, c, d, e, s)
+					assert function_vector_values_are(
+							lib, f, hval, a, b, c, d, e, s, TOL)
 
-			# initialize to default values
-			hlast = 0
-			alast = 1.
-			blast = 0.
-			clast = 1.
-			dlast = 0.
-			elast = 0.
-			slast = 1.
+					# memcpy af
+					assert NO_ERR( lib.function_vector_memcpy_av(f.pyptr, f.c) )
+					assert function_vector_values_are(
+							lib, f, h0, a0, b0, c0, d0, e0, s0, TOL)
 
-			for hkey, hval in lib.function_enums.dict.items():
-				if self.VERBOSE_TEST:
-					print(hkey)
-
-				for i in xrange(m):
-					f_py[i] = lib.function(hval, a, b, c, d, e, s)
-
-				f_list = [lib.function(*f_) for f_ in f_py]
-				fh = np.array([f_.h - hval for f_ in f_list])
-				fa = np.array([f_.a - a for f_ in f_list])
-				fb = np.array([f_.b - b for f_ in f_list])
-				fc = np.array([f_.c - c for f_ in f_list])
-				fd = np.array([f_.d - d for f_ in f_list])
-				fe = np.array([f_.e - e for f_ in f_list])
-				fs = np.array([f_.s - s for f_ in f_list])
-				self.assertVecEqual( 0, fh, ATOLM, 0 )
-				self.assertVecEqual( 0, fa, ATOLM, 0 )
-				self.assertVecEqual( 0, fb, ATOLM, 0 )
-				self.assertVecEqual( 0, fc, ATOLM, 0 )
-				self.assertVecEqual( 0, fd, ATOLM, 0 )
-				self.assertVecEqual( 0, fe, ATOLM, 0 )
-				self.assertVecEqual( 0, fs, ATOLM, 0 )
-
-				# memcpy af
-				self.assertCall( lib.function_vector_memcpy_av(f_ptr, f) )
-				f_list = [lib.function(*f_) for f_ in f_py]
-
-				fh = np.array([f_.h - hlast for f_ in f_list])
-				fa = np.array([f_.a - alast for f_ in f_list])
-				fb = np.array([f_.b - blast for f_ in f_list])
-				fc = np.array([f_.c - clast for f_ in f_list])
-				fd = np.array([f_.d - dlast for f_ in f_list])
-				fe = np.array([f_.e - elast for f_ in f_list])
-				fs = np.array([f_.s - slast for f_ in f_list])
-				self.assertVecEqual( 0, fh, ATOLM, 0 )
-				self.assertVecEqual( 0, fa, ATOLM, 0 )
-				self.assertVecEqual( 0, fb, ATOLM, 0 )
-				self.assertVecEqual( 0, fc, ATOLM, 0 )
-				self.assertVecEqual( 0, fd, ATOLM, 0 )
-				self.assertVecEqual( 0, fe, ATOLM, 0 )
-				self.assertVecEqual( 0, fs, ATOLM, 0 )
-
-				# memcpy fa
-				for i in xrange(m):
-					f_py[i] = lib.function(hval, a, b, c, d, e, s)
-
-				self.assertCall( lib.function_vector_memcpy_va(f, f_ptr) )
-				self.assertCall( lib.function_vector_memcpy_av(f_ptr, f) )
-
-				f_list = [lib.function(*f_) for f_ in f_py]
-				fh = np.array([f_.h - hval for f_ in f_list])
-				fa = np.array([f_.a - a for f_ in f_list])
-				fb = np.array([f_.b - b for f_ in f_list])
-				fc = np.array([f_.c - c for f_ in f_list])
-				fd = np.array([f_.d - d for f_ in f_list])
-				fe = np.array([f_.e - e for f_ in f_list])
-				fs = np.array([f_.s - s for f_ in f_list])
-				self.assertVecEqual( 0, fh, ATOLM, 0 )
-				self.assertVecEqual( 0, fa, ATOLM, 0 )
-				self.assertVecEqual( 0, fb, ATOLM, 0 )
-				self.assertVecEqual( 0, fc, ATOLM, 0 )
-				self.assertVecEqual( 0, fd, ATOLM, 0 )
-				self.assertVecEqual( 0, fe, ATOLM, 0 )
-				self.assertVecEqual( 0, fs, ATOLM, 0 )
-
-				hlast = hval
-				alast = a
-				blast = b
-				clast = c
-				dlast = d
-				elast = e
-				slast = s
-
-			self.free_var('f')
-			self.assertCall( lib.ok_device_reset() )
+					# memcpy fa
+					function_vector_set_constants(
+							lib, f, hval, a, b, c, d, e, s)
+					assert NO_ERR( lib.function_vector_memcpy_va(f.c, f.pyptr) )
+					assert NO_ERR( lib.function_vector_memcpy_av(f.pyptr, f.c) )
+					assert function_vector_values_are(
+							lib, f, hval, a, b, c, d, e, s, TOL)
 
 	def test_math(self):
-		m, n = self.shape
-		a = 1 + np.random.rand(m)
-		b = 1 + np.random.rand(m)
-		c = 1 + np.random.rand(m)
-		d = 1 + np.random.rand(m)
-		e = 1 + np.random.rand(m)
-		s = 1 + np.random.rand(m)
+		m, _ = defs.shape()
+		a = 1 + np.random.random(m)
+		b = 1 + np.random.random(m)
+		c = 1 + np.random.random(m)
+		d = 1 + np.random.random(m)
+		e = 1 + np.random.random(m)
+		s = 1 + np.random.random(m)
 		# (add 1 above to make sure no divide by zero below)
 
 		hval = 0
 
-		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-			if lib is None:
+		for lib in self.libs:
+			with lib as lib:
+				TOL, _ = STANDARD_VEC_TOLS(lib, m)
+
+				f = okcctx.CFunctionVectorContext(lib, m)
+				v = okcctx.CVectorContext(lib, m, random=True)
+
+				with f, v:
+					function_vector_set_vectors(lib, f, hval, a, b, c, d, e, s)
+
+					# mul
+					assert NO_ERR( lib.function_vector_mul(f.c, v.c) )
+					f.sync_to_py()
+					assert function_vector_values_are(
+							lib, f, hval, a * v.py, b, c, d * v.py, e * v.py,
+							s, TOL)
+
+					# div
+					assert NO_ERR( lib.function_vector_div(f.c, v.c) )
+					f.sync_to_py()
+					assert function_vector_values_are(
+							lib, f, hval, a, b, c, d, e, s, TOL)
+
+
+	def test_func_eval(self):
+		m, _ = defs.shape()
+		# m = 5
+		a = 1 + np.random.random(m)
+		b = np.random.random(m)
+		c = 1 + np.random.random(m)
+		d = np.random.random(m)
+		e = np.random.random(m)
+		s = 1 + 0.1 * np.random.random(m)
+		x_rand = 10 * np.random.random(m)
+
+		for lib, (hkey, hval) in itertools.product(self.libs, FUNCTIONS):
+			# avoid domain errors with randomly generated data
+			if 'Log' in hkey or 'Exp' in hkey or 'Entr' in hkey:
 				continue
-			self.register_exit(lib.ok_device_reset)
 
-			DIGITS = 7 - 2 * single_precision
-			RTOL = 10**(-DIGITS)
-			ATOLM = RTOL * m**0.5
-			ATOLN = RTOL * n**0.5
+			if defs.VERBOSE_TEST:
+				print(hkey)
 
-			f, f_py, f_ptr = self.register_fnvector(lib, m, 'f')
-			self.register_var('f', f, lib.function_vector_free)
+			with lib as lib:
+				RTOL, ATOL = STANDARD_VEC_TOLS(lib, m)
+				repeat_factor = min(4, 2**defs.TEST_ITERATE)
+				RTOL *= repeat_factor
+				ATOL *= repeat_factor
 
-			v = lib.vector(0, 0, None)
-			self.assertCall( lib.vector_calloc(v, m) )
-			self.register_var('v', v, lib.vector_free)
+				f = okcctx.CFunctionVectorContext(lib, m)
+				x = okcctx.CVectorContext(lib, m, random=True)
 
-			v_py = np.zeros(m).astype(lib.pyfloat)
-			v_ptr = v_py.ctypes.data_as(lib.ok_float_p)
+				with f, x:
+					function_vector_set_vectors(lib, f, hval, a, b, c, d, e, s)
 
-			for i in xrange(m):
-				f_py[i] = lib.function(
-						hval, a[i], b[i], c[i], d[i], e[i], s[i])
-			self.assertCall( lib.function_vector_memcpy_va(f, f_ptr) )
-			v_py[:] = np.random.rand(m)
-			self.assertCall( lib.vector_memcpy_va(v, v_ptr, 1) )
+					# function evaluation
+					fval_py = func_eval_python(f.list, x.py)
 
-			# mul
-			self.assertCall( lib.function_vector_mul(f, v) )
-			self.assertCall( lib.function_vector_memcpy_av(f_ptr, f) )
-			for i in xrange(m):
-				a[i] *= v_py[i]
-				d[i] *= v_py[i]
-				e[i] *= v_py[i]
-			f_list = [lib.function(*f_) for f_ in f_py]
-			fh = np.array([f_.h - hval for f_ in f_list])
-			fa = np.array([f_.a for f_ in f_list])
-			fb = np.array([f_.b for f_ in f_list])
-			fc = np.array([f_.c for f_ in f_list])
-			fd = np.array([f_.d for f_ in f_list])
-			fe = np.array([f_.e for f_ in f_list])
-			fs = np.array([f_.s for f_ in f_list])
-			self.assertVecEqual( 0, fh, ATOLM, 0 )
-			self.assertVecEqual( fa, a , ATOLM, RTOL )
-			self.assertVecEqual( fb, b , ATOLM, RTOL )
-			self.assertVecEqual( fc, c , ATOLM, RTOL )
-			self.assertVecEqual( fd, d , ATOLM, RTOL )
-			self.assertVecEqual( fe, e , ATOLM, RTOL )
-			self.assertVecEqual( fe, e , ATOLM, RTOL )
-			self.assertVecEqual( fs, s , ATOLM, RTOL )
-			# div
-			self.assertCall( lib.function_vector_div(f, v) )
-			self.assertCall( lib.function_vector_memcpy_av(f_ptr, f) )
-			for i in xrange(m):
-				a[i] /= v_py[i]
-				d[i] /= v_py[i]
-				e[i] /= v_py[i]
-			f_list = [lib.function(*f_) for f_ in f_py]
-			fh = np.array([f_.h - hval for f_ in f_list])
-			fa = np.array([f_.a for f_ in f_list])
-			fb = np.array([f_.b for f_ in f_list])
-			fc = np.array([f_.c for f_ in f_list])
-			fd = np.array([f_.d for f_ in f_list])
-			fe = np.array([f_.e for f_ in f_list])
-			fs = np.array([f_.s for f_ in f_list])
-			self.assertVecEqual( 0, fh, ATOLM, 0)
-			self.assertVecEqual( fa, a , ATOLM, RTOL )
-			self.assertVecEqual( fb, b , ATOLM, RTOL )
-			self.assertVecEqual( fc, c , ATOLM, RTOL )
-			self.assertVecEqual( fd, d , ATOLM, RTOL )
-			self.assertVecEqual( fe, e , ATOLM, RTOL )
-			self.assertVecEqual( fs, s , ATOLM, RTOL )
+					fval_c, fval_c_ptr = okcctx.gen_py_vector(lib, 1)
+					assert NO_ERR( lib.function_eval_vector(f.c, x.c, fval_c_ptr) )
 
-			self.free_vars('f', 'v')
-			self.assertCall( lib.ok_device_reset() )
+					tolmod = 2e3 if 'Asymm' in hkey else 1.
+					assert SCAL_EQ( fval_py, fval_c, RTOL * tolmod )
 
-	def test_eval(self):
-		# m, _ = self.shape
-		m = 5
-		scal = self.scalefactor
-		a = 1 + np.random.rand(m)
-		b = np.random.rand(m)
-		c = 1 + np.random.rand(m)
-		d = np.random.rand(m)
-		e = np.random.rand(m)
-		s = 1 + 0.1 * np.random.rand(m)
-		x_rand = 10 * np.random.rand(m)
 
-		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-			if lib is None:
+	def test_prox_eval(self):
+		m, _ = defs.shape()
+		# m = 5
+		a = 1 + np.random.random(m)
+		b = np.random.random(m)
+		c = 1 + np.random.random(m)
+		d = np.random.random(m)
+		e = np.random.random(m)
+		s = 1 + 0.1 * np.random.random(m)
+		x_rand = 10 * np.random.random(m)
+
+		for lib, (hkey, hval) in itertools.product(self.libs, FUNCTIONS):
+			# avoid domain errors with randomly generated data
+			if 'Log' in hkey or 'Exp' in hkey or 'Entr' in hkey:
 				continue
-			self.register_exit(lib.ok_device_reset)
 
-			repeat_factor = 2**(TEST_ITERATE > 0) * 2**(TEST_ITERATE > 1)
-			DIGITS = 7 - 2 * single_precision
-			RTOL = 10**(-DIGITS) * repeat_factor
-			ATOLM = RTOL * m**0.5 * repeat_factor
+			if defs.VERBOSE_TEST:
+				print(hkey)
 
-			f, f_py, f_ptr = self.register_fnvector(lib, m, 'f')
-			x, x_py, x_ptr = self.register_vector(lib, m, 'x')
-			xout, xout_py, xout_ptr = self.register_vector(lib, m, 'xout')
+			with lib as lib:
+				RTOL, ATOL = STANDARD_VEC_TOLS(lib, m)
+				repeat_factor = min(4, 2**defs.TEST_ITERATE)
+				RTOL *= repeat_factor
+				ATOL *= repeat_factor
 
-			# populate
-			x_py += x_rand
-			self.assertCall( lib.vector_memcpy_va(x, x_ptr, 1) )
+				f = okcctx.CFunctionVectorContext(lib, m)
+				x = okcctx.CVectorContext(lib, m, random=True)
+				xout = okcctx.CVectorContext(lib, m)
 
-			for hkey, hval in lib.function_enums.dict.items():
-				if self.VERBOSE_TEST:
-					print(hkey)
+				with f, x, xout:
+					function_vector_set_vectors(lib, f, hval, a, b, c, d, e, s)
 
-				# avoid domain errors with randomly generated data
-				if 'Log' in hkey or 'Exp' in hkey or 'Entr' in hkey:
-					continue
-
-				for i in xrange(m):
-					f_py[i] = lib.function(
-							hval, a[i], b[i], c[i], d[i], e[i], s[i])
-				self.assertCall( lib.function_vector_memcpy_va(f, f_ptr) )
-
-				# function evaluation
-				f_list = [lib.function(*f_) for f_ in f_py]
-				funcval_py = func_eval_python(f_list, x_rand)
-
-				funcval_c = np.zeros(1).astype(lib.pyfloat)
-				funcval_c_ptr = funcval_c.ctypes.data_as(lib.ok_float_p)
-				self.assertCall( lib.function_eval_vector(f, x,
-														  funcval_c_ptr) )
-
-				if funcval_c[0] in (np.inf, np.nan):
-					self.assertTrue( 1 )
-				else:
-					rtol = RTOL
-					if 'Asymm' in hkey:
-						rtol *= 2e3
-					self.assertScalarEqual( funcval_py, funcval_c, rtol )
-
-				# proximal operator evaluation, random rho
-				rho = 5 * np.random.rand()
-				prox_py = prox_eval_python(f_list, rho, x_rand)
-				self.assertCall( lib.prox_eval_vector(f, rho, x, xout) )
-				self.assertCall( lib.vector_memcpy_av(xout_ptr, xout, 1) )
-				self.assertVecEqual( xout_py, prox_py, ATOLM, RTOL )
-
-			self.free_vars('f', 'x', 'xout')
-			self.assertCall( lib.ok_device_reset() )
+					# proximal operator evaluation, random rho
+					rho = SCALING * np.random.random()
+					prox_py = prox_eval_python(f.list, rho, x.py)
+					assert NO_ERR( lib.prox_eval_vector(f.c, rho, x.c, xout.c) )
+					xout.sync_to_py()
+					assert VEC_EQ( xout.py, prox_py, ATOL, RTOL )

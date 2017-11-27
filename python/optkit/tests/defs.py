@@ -65,7 +65,6 @@ def A_test_sparse_gen():
     self.__nnz = sum(sum(mask))
     return A_ * mask
 
-@staticmethod
 def version_string(major, minor, change, status):
     v = '{}.{}.{}'.format(major, minor, change)
     if status:
