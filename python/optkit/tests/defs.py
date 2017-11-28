@@ -62,8 +62,8 @@ def shape():
 def A_test_sparse_gen():
     A_ = DEFAULT_MATRIX if DEFAULT_MATRIX else np.random.rand(*DEFAULT_SHAPE)
     mask = np.random.rand(*A_.shape) < DEFAULT_SPARSE_OCCUPANCY
-    self.__nnz = sum(sum(mask))
-    return A_ * mask
+    nnz = sum(sum(mask))
+    return A_ * mask, nnz
 
 def version_string(major, minor, change, status):
     v = '{}.{}.{}'.format(major, minor, change)

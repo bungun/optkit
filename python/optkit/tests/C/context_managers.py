@@ -30,7 +30,7 @@ def gen_py_matrix(lib, size1, size2, order, random=False):
     A_py = np.zeros((size1, size2), order=pyorder).astype(lib.pyfloat)
     A_ptr = A_py.ctypes.data_as(lib.ok_float_p)
     if random:
-        A_py += np.random.rand(size1, size2)
+        A_py += np.random.random((size1, size2))
 
         # attempt some matrix conditioning: normalize columns and
         # divide by sqrt(# columns)
@@ -89,8 +89,6 @@ class CArrayIO:
 
     def copy_to_c(self, py_array):
         assert NO_ERR( self._py2c(py_array) )
-
-
 
 class CVectorContext(CArrayContext, CArrayIO):
     def __init__(self, lib, size, random=False):
@@ -170,10 +168,13 @@ class CSparseMatrixContext(CArrayContext):
         m, n = A_sp.shape
         nnz = A_sp.nnz
 
-        def build(): return lib.sp_matrix_calloc(A, m, n, nnz, order)
+        spp = collections.namedtuple('SparsePointers', 'val ind ptr')
+        self.sparse = A_sp
+        def build():
+            assert NO_ERR(lib.sp_matrix_calloc(A, m, n, nnz, order))
         def free(): return lib.sp_matrix_free(A)
         def arr2ptrs(sparse_arr):
-            return(
+            return spp(
                 sparse_arr.data.ctypes.data_as(lib.ok_float_p),
                 sparse_arr.indices.ctypes.data_as(lib.ok_int_p),
                 sparse_arr.indptr.ctypes.data_as(lib.ok_int_p)
@@ -186,13 +187,13 @@ class CSparseMatrixContext(CArrayContext):
             return lib.sp_matrix_memcpy_ma(hdl, A, v, i, p)
         def c2py(hdl, sp_arr):
             v, i, p = arr2ptrs(sp_arr)
-            return lib.sp_matrix_memcpy_ma(hdl, v, i, p, A)
+            return lib.sp_matrix_memcpy_am(v, i, p, A)
 
         CArrayContext.__init__(self, A, A_py, A_ptr, build, free)
         self.copy_to_c = py2c
         self.copy_to_py = c2py
-        self.sync_to_c = lambda hdl: py2c(hdl, self.py)
-        self.sync_to_py = lambda hdl: c2py(hdl, self.py)
+        self.sync_to_c = lambda hdl: py2c(hdl, self.sparse)
+        self.sync_to_py = lambda hdl: c2py(hdl, self.sparse)
 
 class CFunctionVectorContext(CArrayContext, CArrayIO):
     def __init__(self, lib, size):
@@ -229,11 +230,12 @@ class CFunctionVectorContext(CArrayContext, CArrayIO):
 class CLinalgContext:
     def __init__(self, make, destroy):
         self._hdl = ct.c_void_p()
+        self._make = make
         self._destroy = destroy
     def __enter__(self):
-        assert NO_ERR(make(ct.byref(self._hdl)))
+        assert NO_ERR(self._make(ct.byref(self._hdl)))
         return self._hdl
-    def __exit__(sef, *exc):
+    def __exit__(self, *exc):
         assert NO_ERR(self._destroy(self._hdl))
 
 class CDenseLinalgContext(CLinalgContext):
@@ -286,7 +288,7 @@ class CSparseOperatorContext:
         with CSparseLinalgContext(self._lib) as hdl:
             self.A = CSparseMatrixContext(self._lib, self._A, self._order)
             self.A.__enter__()
-            self.A.sync_to_c(self.hdl._hdl)
+            self.A.sync_to_c(hdl)
             self.o = self._lib.sparse_operator_alloc(self.A.cptr)
             return self.o
 
