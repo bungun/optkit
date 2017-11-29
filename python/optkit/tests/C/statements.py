@@ -18,8 +18,6 @@ def noerr(c_call_status):
 def vec_equal(first, second, atol, rtol):
     lhs = la.norm(first - second)
     rhs = atol + rtol * la.norm(second)
-    print "LHS", lhs
-    print "RHS", rhs
     if not lhs <= rhs:
         print('vector comparison failure:\n'
               '||a - b||: {}\n'
@@ -35,9 +33,15 @@ def standard_vector_tolerances(lib, m, modulate_gpu=0):
     atol = rtol * m**0.5
     return rtol, atol
 
-def standard_tolerances(lib, m, n, modulate_gpu=0):
-    rtol = 10**(-7 + 2 * lib.FLOAT + modulate_gpu * lib.GPU)
-    atolm = rtol * m**0.5
-    atoln = rtol * n**0.5
-    atolmn = rtol * (m + n)**0.5
-    return rtol, atolm, atoln, atolmn
+def tols(rtol, m, n):
+    return rtol, rtol * m**0.5, rtol * n**0.5, rtol * (m+n)**0.5
+
+def standard_tolerances(lib, m, n, modulate_gpu=False):
+    return tols(
+            10**(-7 + 2 * lib.FLOAT + int(modulate_gpu) * lib.GPU),
+            m, n)
+
+def custom_tolerances(lib, m, n, modulate_gpu=0, modulate_float=2, base=7):
+    return tols(
+            10**(-base + modulate_float * lib.FLOAT + modulate_gpu * lib.GPU),
+            m, n)

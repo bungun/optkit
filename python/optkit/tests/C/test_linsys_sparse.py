@@ -10,7 +10,6 @@ import unittest
 from optkit.libs import enums
 from optkit.libs.linsys import SparseLinsysLibs
 from optkit.tests import defs
-from optkit.tests.C.base import OptkitCTestCase
 from optkit.tests.C import statements
 import optkit.tests.C.context_managers as okcctx
 
