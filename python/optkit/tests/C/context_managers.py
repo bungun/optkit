@@ -135,21 +135,23 @@ class CIndvectorContext(CArrayContext, CArrayIO):
         CArrayIO.__init__(self, v_py, py2c, c2py)
 
 class CDenseMatrixContext(CArrayContext, CArrayIO):
-    def __init__(self, lib, size1, size2, order, random=False):
+    def __init__(self, lib, size1, size2, order, random=False, value=None):
         A = lib.matrix(0, 0, 0, None, order)
         A_py, A_ptr = gen_py_matrix(lib, size1, size2, order, random=random)
+        if value is not None:
+            A_py *= 0
+            A_py += value
 
         row = enums.OKEnums.CblasRowMajor
         col = enums.OKEnums.CblasColMajor
         def arr2order(arr): return row if arr.flags.c_contiguous else col
         def arr2ptr(arr): return arr.ctypes.data_as(type(A_ptr))
         def py2c(arr):
-            print("ORDER OF COPY: {}".format(arr2order(arr)))
             return lib.matrix_memcpy_ma(A, arr2ptr(arr), arr2order(arr))
         def c2py(arr): return lib.matrix_memcpy_am(arr2ptr(arr), A, arr2order(arr))
         def build():
             assert NO_ERR( lib.matrix_calloc(A, size1, size2, order) )
-            if random:
+            if random or (value is not None):
                 assert NO_ERR( py2c(A_py) )
         def free(): return lib.matrix_free(A)
 
