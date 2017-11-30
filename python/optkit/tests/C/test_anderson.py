@@ -3,280 +3,306 @@ from optkit.compat import *
 import os
 import numpy as np
 import numpy.linalg as la
+import itertools
+import unittest
 
+from optkit.libs import enums
 from optkit.libs.anderson import AndersonLibs
-from optkit.tests.C.base import OptkitCTestCase
+from optkit.tests import defs
+from optkit.tests.C import statements
+import optkit.tests.C.context_managers as okcctx
 
-class AndersonLibsTestCase(OptkitCTestCase):
-	""" Python unit tests for optkit_anderson """
+NO_ERR = statements.noerr
+VEC_EQ = statements.vec_equal
+SCAL_EQ = statements.scalar_equal
 
-	@classmethod
-	def setUpClass(self):
-		self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
-		os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-		self.libs = AndersonLibs()
-		self.n = 5#0
-		self.lookback = 3
+STANDARD_TOLS = statements.standard_tolerances
 
-	@classmethod
-	def tearDownClass(self):
-		os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
+class AndersonContext(okcctx.CVariableContext):
+    def __init__(self, lib, n, lookback):
+        aa = lib.anderson_accelerator()
+        def build():
+            assert NO_ERR(lib.anderson_accelerator_init(aa, n, lookback))
+            return aa
+        def free():
+            return lib.anderson_accelerator_free(aa)
+        okcctx.CVariableContext.__init__(self, build, free)
 
-	def tearDown(self):
-		self.free_all_vars()
-		self.exit_call()
+class AndersonLibsTestCase(unittest.TestCase):
+    """ Python unit tests for optkit_anderson """
 
-	def test_libs_exist(self):
-		libs = []
-		for (gpu, single_precision) in self.CONDITIONS:
-			libs.append(self.libs.get(
-					single_precision=single_precision, gpu=gpu))
-		self.assertTrue( any(libs) )
+    @classmethod
+    def setUpClass(self):
+        self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
+        os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
+        self.libs = AndersonLibs()
 
-	def test_accelerator_alloc_free(self):
-		n, lookback = self.n, self.lookback
+    @classmethod
+    def tearDownClass(self):
+        os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
-		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-			if lib is None:
-				continue
-			self.register_exit(lib.ok_device_reset)
+    def test_libs_exist(self):
+        libs = []
+        for (gpu, single_precision) in defs.LIB_CONDITIONS:
+            libs.append(self.libs.get(
+                    single_precision=single_precision, gpu=gpu))
+        self.assertTrue( any(libs) )
 
-			aa = lib.anderson_accelerator()
-			self.assertCall(lib.anderson_accelerator_init(aa, n, lookback))
-			self.register_var('aa', aa, lib.anderson_accelerator_free)
-			self.assertIsInstance( aa.F, lib.matrix_p )
-			self.assertIsInstance( aa.G, lib.matrix_p )
-			self.assertIsInstance( aa.F_gram, lib.matrix_p )
-			self.assertIsInstance( aa.f, lib.vector_p )
-			self.assertIsInstance( aa.g, lib.vector_p )
-			self.assertIsInstance( aa.diag, lib.vector_p )
-			self.assertIsInstance( aa.alpha, lib.vector_p )
-			self.assertIsInstance( aa.ones, lib.vector_p )
-			self.assertEqual( aa.mu_regularization, 0.01 )
-			self.assertEqual( aa.iter, 0 )
-			self.assertCall( lib.anderson_accelerator_free(aa) )
-			self.unregister_var('aa')
+class AndersonTestCase(unittest.TestCase):
+    """ Python unit tests for optkit_anderson """
+    @classmethod
+    def setUpClass(self):
+        self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
+        os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
+        self.libs = okcctx.lib_contexts(AndersonLibs())
+        self.n = 50
+        self.lookback = 3
 
-			self.assertCall( lib.ok_device_reset() )
+    def setUp(self):
+        self.LIBS_LAYOUTS = itertools.product(
+                self.libs, enums.OKEnums.MATRIX_ORDERS)
 
-	def test_anderson_update_matrices(self):
-		n, lookback = self.n, self.lookback
+    @classmethod
+    def tearDownClass(self):
+        os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
-		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-			if lib is None:
-				continue
-			self.register_exit(lib.ok_device_reset)
+    def test_accelerator_alloc_free(self):
+        n, lookback = self.n, self.lookback
 
-			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
-				F, F_py, F_ptr = self.register_matrix(
-						lib, n, lookback + 1, order, 'F')
-				G, G_py, G_ptr = self.register_matrix(
-						lib, n, lookback + 1, order, 'G')
+        for lib in self.libs:
+            with lib as lib:
+                aa = lib.anderson_accelerator()
+                try:
+                    assert NO_ERR(lib.anderson_accelerator_init(aa, n, lookback))
+                    assert isinstance(aa.F, lib.matrix_p)
+                    assert isinstance(aa.G, lib.matrix_p)
+                    assert isinstance(aa.F_gram, lib.matrix_p)
+                    assert isinstance(aa.f, lib.vector_p)
+                    assert isinstance(aa.g, lib.vector_p)
+                    assert isinstance(aa.diag, lib.vector_p)
+                    assert isinstance(aa.alpha, lib.vector_p)
+                    assert isinstance(aa.ones, lib.vector_p)
+                    assert (aa.mu_regularization == 0.01)
+                    assert (aa.iter == 0 )
+                finally:
+                    assert NO_ERR(lib.anderson_accelerator_free(aa))
 
-				x, x_, x_ptr = self.register_vector(lib, n, 'x', random=True)
-				g, g_, g_ptr = self.register_vector(lib, n, 'g', random=True)
+    def test_anderson_update_matrices(self):
+        n, lookback = self.n, self.lookback
+        for lib, order in self.LIBS_LAYOUTS:
+            with lib as lib:
+                F = okcctx.CDenseMatrixContext(lib, n, lookback + 1, order)
+                G = okcctx.CDenseMatrixContext(lib, n, lookback + 1, order)
+                x = okcctx.CVectorContext(lib, n, random=True)
+                g = okcctx.CVectorContext(lib, n, random=True)
+                aa = AndersonContext(lib, n, lookback)
 
-				aa = lib.anderson_accelerator()
-				self.assertCall(lib.anderson_accelerator_init(aa, n, lookback))
-				self.register_var('aa', aa, lib.anderson_accelerator_free)
+                with F, G, x, g, aa as aa:
+                    i = int(lookback * np.random.rand(1))
 
-				i = int(lookback * np.random.rand(1))
+                    assert NO_ERR( lib.anderson_update_F_x(aa, F.c, x.c, i) )
+                    F.sync_to_py()
+                    assert VEC_EQ( F.py[:, i], - x.py, 1e-7, 1e-7 )
 
-				self.assertCall( lib.anderson_update_F_x(aa, F, x, i) )
-				self.assertCall( lib.matrix_memcpy_am(F_ptr, F, order) )
-				self.assertVecEqual( F_py[:, i], - x_, 1e-7, 1e-7 )
+                    assert NO_ERR( lib.anderson_update_F_g(aa, F.c, g.c, i) )
+                    F.sync_to_py()
+                    assert VEC_EQ( F.py[:, i], g.py - x.py, 1e-7, 1e-7 )
 
-				self.assertCall( lib.anderson_update_F_g(aa, F, g, i) )
-				self.assertCall( lib.matrix_memcpy_am(F_ptr, F, order) )
-				self.assertVecEqual( F_py[:, i], g_ - x_, 1e-7, 1e-7 )
+                    assert NO_ERR( lib.anderson_update_G(aa, G.c, g.c, i) )
+                    G.sync_to_py()
+                    assert VEC_EQ( G.py[:, i], g.py, 1e-7, 1e-7 )
 
-				self.assertCall( lib.anderson_update_G(aa, G, g, i) )
-				self.assertCall( lib.matrix_memcpy_am(G_ptr, G, order) )
-				self.assertVecEqual( G_py[:, i], g_, 1e-7, 1e-7 )
+    def test_anderson_set_x0(self):
+        n, lookback = self.n, self.lookback
+        for lib, order in self.LIBS_LAYOUTS:
+            with lib as lib:
+                F = okcctx.CDenseMatrixContext(lib, n, lookback + 1, order)
+                x = okcctx.CVectorContext(lib, n, random=True)
+                aa = AndersonContext(lib, n, lookback)
 
-				self.free_vars('aa', 'F', 'G', 'g', 'x')
-				self.assertCall( lib.ok_device_reset() )
+                with F, x, aa as aa:
+                    assert NO_ERR( lib.anderson_set_x0(aa, x.c) )
+                    assert NO_ERR( lib.matrix_memcpy_am(F.pyptr, aa.F, order) )
+                    assert VEC_EQ( F.py[:, 0], - x.py, 1e-7, 1e-7 )
 
-	def test_anderson_set_x0(self):
-		n, lookback = self.n, self.lookback
+    def test_anderson_gramian(self):
+        n, lookback = self.n, self.lookback
+        for lib, order in self.LIBS_LAYOUTS:
+            with lib as lib:
+                F = okcctx.CDenseMatrixContext(
+                        lib, n, lookback + 1, order, random=True)
+                F_gram = okcctx.CDenseMatrixContext(
+                        lib, lookback + 1, lookback + 1, order)
+                aa = AndersonContext(lib, n, lookback)
 
-		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-			if lib is None:
-				continue
-			self.register_exit(lib.ok_device_reset)
+                RTOL, ATOL, _, _ = STANDARD_TOLS(lib, n, lookback + 1)
 
-			aa = lib.anderson_accelerator()
-			self.assertCall(lib.anderson_accelerator_init(aa, n, lookback))
-			self.register_var('aa', aa, lib.anderson_accelerator_free)
+                with F, F_gram, aa as aa:
+                    F_gram_calc = F.py.T.dot(F.py)
+                    F_gram_calc += np.eye(lookback + 1) * np.sqrt(
+                            aa.mu_regularization)
 
-			order = lib.enums.CblasRowMajor
-			x, x_py, x_ptr = self.register_vector(lib, n, 'x', random=True)
-			F_py, F_ptr = self.gen_py_matrix(lib, n, lookback + 1, order)
+                    assert NO_ERR( lib.anderson_regularized_gram(
+                            aa, F.c, F_gram.c, aa.mu_regularization) )
+                    F_gram.sync_to_py()
+                    assert VEC_EQ( F_gram.py, F_gram_calc, ATOL, RTOL)
 
-			self.assertCall( lib.anderson_set_x0(aa, x) )
+    @staticmethod
+    def py_anderson_solve(F, mu):
+        m = F.shape[1]
+        F_gram = F.T.dot(F) + np.sqrt(mu) * np.eye(m)
+        alpha = la.solve(F_gram, np.ones(m))
+        return alpha / np.sum(alpha)
 
-			self.assertCall( lib.matrix_memcpy_am(F_ptr, aa.F, order) )
-			self.assertVecEqual( F_py[:, 0], - x_py, 1e-7, 1e-7 )
+    def test_anderson_solve(self):
+        n, lookback = self.n, self.lookback
+        for lib in self.libs:
+            with lib as lib:
+                order = lib.enums.CblasColMajor
+                RTOL, ATOL, _, _ = STANDARD_TOLS(lib, n, lookback + 1)
 
-			self.free_vars('aa', 'x')
-			self.assertCall( lib.ok_device_reset() )
+                F = okcctx.CDenseMatrixContext(
+                        lib, n, lookback + 1, order, random=True)
+                alpha = okcctx.CVectorContext(lib, lookback + 1)
+                aa = AndersonContext(lib, n, lookback)
 
-	def test_anderson_gramian(self):
-		n, lookback = self.n, self.lookback
+                with F, alpha, aa as aa:
+                    alpha_expect = self.py_anderson_solve(
+                            F.py, aa.mu_regularization)
+                    assert NO_ERR( lib.anderson_solve(
+                            aa, F.c, alpha.c, aa.mu_regularization) )
+                    alpha.sync_to_py()
+                    assert VEC_EQ( alpha.py, alpha_expect, ATOL, RTOL )
 
-		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-			if lib is None:
-				continue
-			self.register_exit(lib.ok_device_reset)
-			DIGITS = 7 - 2 * single_precision - 1 * gpu
-			RTOL = 10**(-DIGITS)
-			ATOL = RTOL * (lookback + 1) # sqrt{lookback^2}
+    def test_anderson_mix(self):
+        n, lookback = self.n, self.lookback
+        for lib, order in self.LIBS_LAYOUTS:
+            with lib as lib:
+                RTOL, ATOL, _, _ = STANDARD_TOLS(lib, n, lookback + 1, 1)
 
-			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
-				F, F_py, F_ptr = self.register_matrix(
-						lib, n, lookback + 1, order, 'F', random=True)
-				F_gram, F_gram_py, F_gram_ptr = self.register_matrix(
-						lib, lookback + 1, lookback + 1, order, 'F_gram')
+                G = okcctx.CDenseMatrixContext(
+                        lib, n, lookback + 1, order, random=True)
+                alpha = okcctx.CVectorContext(lib, lookback + 1, random=True)
+                x = okcctx.CVectorContext(lib, n, random=True)
+                aa = AndersonContext(lib, n, lookback)
 
-				aa = lib.anderson_accelerator()
-				self.assertCall(lib.anderson_accelerator_init(aa, n, lookback))
-				self.register_var('aa', aa, lib.anderson_accelerator_free)
+                with G, alpha, x, aa as aa:
+                    assert NO_ERR( lib.anderson_mix(aa, G.c, alpha.c, x.c) )
+                    x.sync_to_py()
+                    assert VEC_EQ(
+                            x.py, np.dot(G.py, alpha.py), ATOL, RTOL )
 
-				F_gram_calc = F_py.T.dot(F_py)
-				F_gram_calc += np.eye(lookback + 1) * np.sqrt(
-						aa.mu_regularization)
+    def test_anderson_accelerate(self):
+        n, lookback = self.n, self.lookback
+        for lib in self.libs:
+            with lib as lib:
+                RTOL, ATOL, _, _ = STANDARD_TOLS(lib, n, lookback + 1, 1)
+                x = okcctx.CVectorContext(lib, n)
+                aa = AndersonContext(lib, n, lookback)
 
-				self.assertCall( lib.anderson_regularized_gram(
-						aa, F, F_gram, aa.mu_regularization) )
-				self.assertCall( lib.matrix_memcpy_am(
-						F_gram_ptr, F_gram, order) )
-				self.assertVecEqual( F_gram_py, F_gram_calc, ATOL, RTOL)
+                F = np.zeros((n, lookback + 1))
+                G = np.zeros((n, lookback + 1))
 
-				self.free_vars('aa', 'F', 'F_gram')
-				self.assertCall( lib.ok_device_reset() )
+                with x, aa as aa:
+                    mu = aa.mu_regularization
+                    assert NO_ERR( lib.anderson_set_x0(aa, x.c) )
 
-	@staticmethod
-	def py_anderson_solve(F, mu):
-		m = F.shape[1]
-		F_gram = F.T.dot(F) + np.sqrt(mu) * np.eye(m)
-		alpha = la.solve(F_gram, np.ones(m))
-		return alpha / np.sum(alpha)
+                    # TEST THE BEHAVIOR < LOOKBACK AND >= LOOKBACK
+                    for k in xrange(lookback + 5):
+                        index = k % (lookback + 1)
+                        index_next = (k + 1) % (lookback + 1)
 
-	def test_anderson_solve(self):
-		n, lookback = self.n, self.lookback
+                        xcurr = np.random.rand(n)
+                        x.py[:] = xcurr
 
-		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-			if lib is None:
-				continue
-			self.register_exit(lib.ok_device_reset)
-			DIGITS = 7 - 2 * single_precision - 1 * gpu
-			RTOL = 10**(-DIGITS)
-			ATOL = RTOL * (lookback + 1)**0.5
-			ORDER = lib.enums.CblasColMajor
+                        F[:, index] += xcurr
+                        G[:, index] = xcurr
 
-			F, F_py, F_ptr = self.register_matrix(
-					lib, n, lookback + 1, ORDER, 'F', random=True)
-			alpha, alpha_py, alpha_ptr = self.register_vector(
-					lib, lookback + 1, 'alpha')
+                        if k < lookback:
+                            xnext = xcurr
+                        else:
+                            xnext = np.dot(G, self.py_anderson_solve(F, mu))
 
-			aa = lib.anderson_accelerator()
-			self.assertCall(lib.anderson_accelerator_init(aa, n, lookback))
-			self.register_var('aa', aa, lib.anderson_accelerator_free)
+                        F[:, index_next] = -xnext
 
-			####
-			alpha__ = self.py_anderson_solve(F_py, aa.mu_regularization)
-			####
+                        x.sync_to_c()
+                        assert NO_ERR( lib.anderson_accelerate(aa, x.c) )
 
-			self.assertCall( lib.anderson_solve(
-					aa, F, alpha, aa.mu_regularization) )
-			self.assertCall( lib.vector_memcpy_av(alpha_ptr, alpha, 1) )
-			self.assertVecEqual( alpha_py, alpha__, ATOL, RTOL )
+                        x.sync_to_py()
+                        assert VEC_EQ( xnext, x.py, ATOL, RTOL )
 
-			self.free_vars('aa', 'F', 'alpha')
-			self.assertCall( lib.ok_device_reset() )
+    def test_anderson_accelerates_gradient_descent(self):
+        """ Test Anderson acceleration for gradient descent on a LS problem
 
-	def test_anderson_mix(self):
-		n, lookback = self.n, self.lookback
+            min. (1/2)||Ax - b||_2^2
 
-		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-			if lib is None:
-				continue
-			self.register_exit(lib.ok_device_reset)
-			DIGITS = 7 - 2 * single_precision - 1 * gpu
-			RTOL = 10**(-DIGITS)
-			ATOL = RTOL * n**0.5
+            GD:
+                x_{k+1} -= alpha_k grad(x_k)
+        """
+        m = 100
+        n, lookback = self.n, self.lookback
+        def descent_ls(A, b, x, maxiter=5000, tol=1e-4, accelerate=None):
+            def fn(A, b, x):
+                residual = A.dot(x) - b
+                return residual.dot(residual)
 
-			for order in (lib.enums.CblasRowMajor, lib.enums.CblasColMajor):
-				G, G_py, G_ptr = self.register_matrix(
-						lib, n, lookback + 1, order, 'G', random=True)
+            def linesearch(A, b, x, dx, alpha_):
+                armijo = 0.1
+                backtrack = 0.1
+                step = dx.dot(dx)
+                fprev = fn(A, b, x)
+                fcurr = fprev
+                for i in range(100):
+                    fcurr = fn(A, b, x - alpha_ * dx)
+                    diff = fprev - fcurr
+                    if diff > armijo * alpha_ * step:
+                        break
+                    alpha_ *= backtrack
+                return alpha_
 
-				alpha, alpha_py, alpha_ptr = self.register_vector(
-						lib, lookback + 1, 'alpha', random=True)
-				x, x_py, x_ptr = self.register_vector(lib, n, 'x', random=True)
+            def grad(A, b, x):
+                return A.T.dot(A.dot(x) - b)
 
-				aa = lib.anderson_accelerator()
-				self.assertCall(lib.anderson_accelerator_init(aa, n, lookback))
-				self.register_var('aa', aa, lib.anderson_accelerator_free)
-				self.assertCall( lib.anderson_mix(aa, G, alpha, x) )
+            def calc_tol(A, b, x):
+                return np.linalg.norm(grad(A, b, x))
 
-				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
-				self.assertVecEqual( x_py, np.dot(G_py, alpha_py), ATOL, RTOL )
+            def iterate(A, b, x, alpha_):
+                gradx = grad(A, b, x.py)
+                alpha_ = linesearch(A, b, x.py, gradx, alpha_)
+                x.py -= alpha_ * gradx
+                return alpha
 
-				self.free_vars('aa', 'G', 'x', 'alpha')
-				self.assertCall( lib.ok_device_reset() )
+            if accelerate is None:
+                accelerate = lambda iter: None
 
-	def test_anderson_accelerate(self):
-		n, lookback = self.n, self.lookback
+            x.py *= 0
+            alpha = 1.
+            for k in range(maxiter):
+                alpha = iterate(A, b, x, alpha)
+                accelerate(x)
+                if calc_tol(A, b, x.py) < tol:
+                    break
+            return x, k
 
-		for (gpu, single_precision) in self.CONDITIONS:
-			lib = self.libs.get(single_precision=single_precision, gpu=gpu)
-			if lib is None:
-				continue
-			self.register_exit(lib.ok_device_reset)
-			DIGITS = 7 - 2 * single_precision - 1 * gpu
-			RTOL = 10**(-DIGITS)
-			ATOL = RTOL * n**0.5
+        for lib in self.libs:
+            with lib as lib:
+                TOL = 1e-4
 
-			x, x_py, x_ptr = self.register_vector(lib, n, 'x')
+                x = okcctx.CVectorContext(lib, n)
+                aa = AndersonContext(lib, n, lookback)
+                A = np.random.random((m, n))
+                b = np.random.random(m)
 
-			F = np.zeros((n, lookback + 1))
-			G = np.zeros((n, lookback + 1))
+                with x, aa as aa:
+                    x0, k0 = descent_ls(A, b, x)
+                    assert np.linalg.norm(A.T.dot(A .dot(x0.py) - b)) <= TOL
 
-			aa = lib.anderson_accelerator()
-			self.assertCall( lib.anderson_accelerator_init(aa, n, lookback) )
-			self.register_var('aa', aa, lib.anderson_accelerator_free)
-			mu = aa.mu_regularization
-			self.assertCall( lib.anderson_set_x0(aa, x) )
+                    def accelerate(x_):
+                        x_.sync_to_c()
+                        assert NO_ERR( lib.anderson_accelerate(aa, x_.c) )
+                        x_.sync_to_py()
 
-			# TEST THE BEHAVIOR < LOOKBACK AND >= LOOKBACK
-			for k in xrange(lookback + 5):
-				index = k % (lookback + 1)
-				index_next = (k + 1) % (lookback + 1)
-
-				xcurr = np.random.rand(n)
-				x_py[:] = xcurr
-
-				F[:, index] += xcurr
-				G[:, index] = xcurr
-
-				if k < lookback:
-					xnext = xcurr
-				else:
-					xnext = np.dot(G, self.py_anderson_solve(F, mu))
-
-				F[:, index_next] = -xnext
-
-				self.assertCall( lib.vector_memcpy_va(x, x_ptr, 1) )
-				self.assertCall( lib.anderson_accelerate(aa, x) )
-
-				self.assertCall( lib.vector_memcpy_av(x_ptr, x, 1) )
-				self.assertVecEqual( xnext, x_py, ATOL, RTOL )
-
-			self.free_vars('aa', 'x')
-			self.assertCall( lib.ok_device_reset() )
+                    aa.mu_regularization = 0
+                    x1, k1 = descent_ls(A, b, x, accelerate=accelerate)
+                    assert np.linalg.norm(A.T.dot(A.dot(x0.py) - b)) <= TOL
+                    assert k1 < k0
