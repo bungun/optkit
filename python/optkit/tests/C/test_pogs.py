@@ -1,6 +1,7 @@
 from optkit.compat import *
 
 import os
+import numpy as np
 import itertools
 import unittest
 
@@ -77,11 +78,14 @@ class PogsDenseTestCase(unittest.TestCase):
     def test_pogs_dense_accelerate(self):
         for (lib, layout) in self.LIBS_LAYOUTS:
             with DenseTest(lib, self.A_test, layout) as ctx:
+                assert pogs_test.overrelaxation_reduces_iterations(ctx)
+                assert pogs_test.adaptive_rho_reduces_iterations(ctx)
                 assert pogs_test.anderson_reduces_iterations(ctx)
+                break
 
     def test_pogs_dense_call_unified(self):
         for (lib, layout) in self.LIBS_LAYOUTS:
-            with DenseTest(lib, self.A_test, layout, solver=False) as ctx:
+            with DenseTest(lib, self.A_test, layout) as ctx:
                 assert pogs_test.integrated_pogs_call_executes(ctx)
 
     def test_pogs_dense_warmstart_scaling(self):

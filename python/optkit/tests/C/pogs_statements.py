@@ -4,6 +4,7 @@ import numpy as np
 import ctypes as ct
 
 from optkit.utils import proxutils
+from optkit.tests.C import statements
 import optkit.tests.C.statements as okctest
 import optkit.tests.C.context_managers as okcctx
 import optkit.tests.C.pogs_contexts as pogsctx
@@ -19,6 +20,9 @@ WARMSTART_DEFAULT = 0
 VERBOSE_DEFAULT = 2
 SUPPRESS_DEFAULT = 0
 RESUME_DEFAULT = 0
+
+NO_ERR = statements.noerr
+
 
 def settings_are_default(lib):
     settings = lib.pogs_settings()
@@ -495,86 +499,88 @@ def solver_components_work(test_context):
     lib = test_context.lib
     A = test_context.A_dense
     m, n = A.shape
-    solver = test_context.solver
-    W = solver.contents.W
     params = test_context.params
 
-    assert okctest.noerr( lib.pogs_initialize_conditions(
-                params.obj, params.res, params.tol, params.settings, m, n) )
+    with test_context.solver as solver:
+        W = solver.contents.W
 
-    assert matrix_is_equilibrated(lib, W, A)
-    A_equil = build_A_equil(lib, W, A)
-    assert matrix_multiply_works(lib, W, A_equil)
-    assert adjoint_multiply_works(lib, W, A_equil)
-    assert graph_projector_works(lib, W, A_equil)
-    assert objectives_are_scaled(lib, solver, params)
-    assert primal_update_is_correct(lib, solver, params.z)
-    assert proximal_update_is_correct(lib, solver, params)
-    assert projection_update_is_correct(lib, solver, A_equil, params.z)
-    assert dual_update_is_correct(lib, solver, params.z)
-    assert convergence_test_is_consistent(lib, solver, A_equil, params)
-    assert rho_update_is_correct(lib, solver, params)
-    assert output_is_unscaled(lib, params.output, solver, params.z)
-    return True
+        assert okctest.noerr( lib.pogs_initialize_conditions(
+                    params.obj, params.res, params.tol, params.settings, m, n) )
+
+        assert matrix_is_equilibrated(lib, W, A)
+        A_equil = build_A_equil(lib, W, A)
+        assert matrix_multiply_works(lib, W, A_equil)
+        assert adjoint_multiply_works(lib, W, A_equil)
+        assert graph_projector_works(lib, W, A_equil)
+        assert objectives_are_scaled(lib, solver, params)
+        assert primal_update_is_correct(lib, solver, params.z)
+        assert proximal_update_is_correct(lib, solver, params)
+        assert projection_update_is_correct(lib, solver, A_equil, params.z)
+        assert dual_update_is_correct(lib, solver, params.z)
+        assert convergence_test_is_consistent(lib, solver, A_equil, params)
+        assert rho_update_is_correct(lib, solver, params)
+        assert output_is_unscaled(lib, params.output, solver, params.z)
+        return True
 
 def solve_call_executes(test_context):
     ctx = test_context
     lib = ctx.lib
-    solver = ctx.solver
     params = ctx.params
     f, g = params.f, params.g
     settings, info, output = params.settings, params.info, params.output
 
-    assert okctest.noerr( lib.pogs_solve(solver, params.f, params.g, settings, info, output.ptr) )
-    if info.converged:
-        assert output_is_converged(lib, ctx.A_dense, settings, output)
-    return True
+    with ctx.solver as solver:
+        assert okctest.noerr(lib.pogs_solve(
+                solver, params.f, params.g, settings, info, output.ptr) )
+        if info.converged:
+            assert output_is_converged(lib, ctx.A_dense, settings, output)
+        return True
 
 def solver_scales_warmstart_inputs(test_context):
     lib = test_context.lib
     A = test_context.A_dense
-    solver = test_context.solver
     test_params = test_context.params
 
-    A_equil = build_A_equil(lib, solver.contents.W, A)
+    with test_context.solver as solver:
+        A_equil = build_A_equil(lib, solver.contents.W, A)
 
-    m, n = A_equil.shape
-    settings = test_params.settings
-    local_vars = test_params.z
-    f, g, = test_params.f, test_params.g
-    info, output = test_params.info, test_params.output
+        m, n = A_equil.shape
+        settings = test_params.settings
+        local_vars = test_params.z
+        f, g, = test_params.f, test_params.g
+        info, output = test_params.info, test_params.output
 
-    # TEST POGS_SET_Z0
-    rho = settings.rho
-    x0, x0_ptr = okcctx.gen_py_vector(lib, n, random=True)
-    nu0, nu0_ptr = okcctx.gen_py_vector(lib, m, random=True)
-    settings.x0 = x0_ptr
-    settings.nu0 = nu0_ptr
-    assert okctest.noerr( lib.pogs_update_settings(solver.contents.settings,
-                                         ct.byref(settings)) )
-    assert okctest.noerr( lib.pogs_set_z0(solver) )
-    local_vars.load_all_from(solver)
-    # pogsctx.load_all_local(lib, local_vars, solver)
-    assert inputs_are_scaled(lib, A_equil, x0, nu0, local_vars, rho)
+        # TEST POGS_SET_Z0
+        rho = settings.rho
+        x0, x0_ptr = okcctx.gen_py_vector(lib, n, random=True)
+        nu0, nu0_ptr = okcctx.gen_py_vector(lib, m, random=True)
+        settings.x0 = x0_ptr
+        settings.nu0 = nu0_ptr
+        assert okctest.noerr( lib.pogs_update_settings(
+                solver.contents.settings, ct.byref(settings)) )
+        assert okctest.noerr( lib.pogs_set_z0(solver) )
+        local_vars.load_all_from(solver)
+        # pogsctx.load_all_local(lib, local_vars, solver)
+        assert inputs_are_scaled(lib, A_equil, x0, nu0, local_vars, rho)
 
-    # TEST SOLVER WARMSTART
-    x0, x0_ptr = okcctx.gen_py_vector(lib, n, random=True)
-    nu0, nu0_ptr = okcctx.gen_py_vector(lib, m, random=True)
-    settings.x0 = x0_ptr
-    settings.nu0 = nu0_ptr
-    settings.warmstart = 1
-    settings.maxiter = 0
+        # TEST SOLVER WARMSTART
+        x0, x0_ptr = okcctx.gen_py_vector(lib, n, random=True)
+        nu0, nu0_ptr = okcctx.gen_py_vector(lib, m, random=True)
+        settings.x0 = x0_ptr
+        settings.nu0 = nu0_ptr
+        settings.warmstart = 1
+        settings.maxiter = 0
 
-    if okctest.VERBOSE_TEST:
-        print('\nwarm start variable loading test (maxiter = 0)')
-    assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
-                                    output.ptr) )
-    rho = solver.contents.rho
-    assert ( info.err == 0 )
-    assert ( info.converged or info.k >= settings.maxiter )
-    local_vars.load_all_from(solver)
-    # pogsctx.load_all_local(lib, local_vars, solver)
-    return inputs_are_scaled(lib, A_equil, x0, nu0, local_vars, rho)
+        if okctest.VERBOSE_TEST:
+            print('\nwarm start variable loading test (maxiter = 0)')
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
+                                        output.ptr) )
+        rho = solver.contents.rho
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
+        local_vars.load_all_from(solver)
+        # pogsctx.load_all_local(lib, local_vars, solver)
+        return inputs_are_scaled(lib, A_equil, x0, nu0, local_vars, rho)
 
 def warmstart_reduces_iterations(test_context):
     lib = test_context.lib
@@ -589,132 +595,157 @@ def warmstart_reduces_iterations(test_context):
 
     settings.verbose = 1
 
-    # COLD START
-    print('\ncold')
-    settings.warmstart = 0
-    settings.maxiter = MAXITER_DEFAULT
-    assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
-                     output.ptr) )
-    assert ( info.err == 0 )
-    assert ( info.converged or info.k >= settings.maxiter )
+    with test_context.solver as solver:
+        # COLD START
+        print('\ncold')
+        settings.warmstart = 0
+        settings.maxiter = MAXITER_DEFAULT
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
+                         output.ptr) )
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
 
-    # REPEAT
-    print('\nrepeat')
-    assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
-                     output.ptr) )
-    assert ( info.err == 0 )
-    assert ( info.converged or info.k >= settings.maxiter )
+        # REPEAT
+        print('\nrepeat')
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
+                         output.ptr) )
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
 
-    # RESUME
-    print('\nresume')
-    settings.resume = 1
-    settings.rho = info.rho
-    assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
-                     output.ptr) )
-    assert ( info.err == 0 )
-    assert ( info.converged or info.k >= settings.maxiter )
+        # RESUME
+        print('\nresume')
+        settings.resume = 1
+        settings.rho = info.rho
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
+                         output.ptr) )
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
 
-    # WARM START: x0
-    print('\nwarm start x0')
-    settings.resume = 0
-    settings.rho = 1
-    settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)
-    settings.warmstart = 1
-    assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
-                     output.ptr) )
-    assert ( info.err == 0 )
-    assert ( info.converged or info.k >= settings.maxiter )
+        # WARM START: x0
+        print('\nwarm start x0')
+        settings.resume = 0
+        settings.rho = 1
+        settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)
+        settings.warmstart = 1
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
+                         output.ptr) )
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
 
-    # WARM START: x0, rho
-    print('\nwarm start x0, rho')
-    settings.resume = 0
-    settings.rho = info.rho
-    settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)
-    settings.warmstart = 1
-    assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
-                     output.ptr) )
-    assert ( info.err == 0 )
-    assert ( info.converged or info.k >= settings.maxiter )
+        # WARM START: x0, rho
+        print('\nwarm start x0, rho')
+        settings.resume = 0
+        settings.rho = info.rho
+        settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)
+        settings.warmstart = 1
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
+                         output.ptr) )
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
 
-    # WARM START: x0, nu0
-    print('\nwarm start x0, nu0')
-    settings.resume = 0
-    settings.rho = 1
-    settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)
-    settings.nu0 = output.nu.ctypes.data_as(lib.ok_float_p)
-    settings.warmstart = 1
-    assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
-                     output.ptr) )
-    assert ( info.err == 0 )
-    assert ( info.converged or info.k >= settings.maxiter )
+        # WARM START: x0, nu0
+        print('\nwarm start x0, nu0')
+        settings.resume = 0
+        settings.rho = 1
+        settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)
+        settings.nu0 = output.nu.ctypes.data_as(lib.ok_float_p)
+        settings.warmstart = 1
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
+                         output.ptr) )
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
 
-    # WARM START: x0, nu0
-    print('\nwarm start x0, nu0, rho')
-    settings.resume = 0
-    settings.rho = info.rho
-    settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)
-    settings.nu0 = output.nu.ctypes.data_as(lib.ok_float_p)
-    settings.warmstart = 1
-    assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
-                     output.ptr) )
-    assert ( info.err == 0 )
-    assert ( info.converged or info.k >= settings.maxiter )
+        # WARM START: x0, nu0
+        print('\nwarm start x0, nu0, rho')
+        settings.resume = 0
+        settings.rho = info.rho
+        settings.x0 = output.x.ctypes.data_as(lib.ok_float_p)
+        settings.nu0 = output.nu.ctypes.data_as(lib.ok_float_p)
+        settings.warmstart = 1
+        assert okctest.noerr( lib.pogs_solve(solver, f, g, settings, info,
+                         output.ptr) )
+        assert ( info.err == 0 )
+        assert ( info.converged or info.k >= settings.maxiter )
+    return True
+
+def overrelaxation_reduces_iterations(test_context):
+    ctx = test_context
+    lib = ctx.lib
+    params = ctx.params
+    f, g = params.f, params.g
+    settings, info, output = params.settings, params.info, params.output
+    settings.maxiter = 50000
+    settings.adaptiverho = 0
+    settings.accelerate = 0
+    settings.rho = 1.
+
+    k0 = 0
+
+    with ctx.solver as solver:
+        settings.alpha = 1.
+        assert okctest.noerr( lib.pogs_solve(
+                solver, params.f, params.g, settings, info, output.ptr) )
+        k0 = info.k
+
+    with ctx.solver as solver:
+        settings.alpha = 1.7
+        assert okctest.noerr( lib.pogs_solve(
+                solver, params.f, params.g, settings, info, output.ptr) )
+        assert info.k < k0
+    return True
+
+def adaptive_rho_reduces_iterations(test_context):
+    ctx = test_context
+    lib = ctx.lib
+    params = ctx.params
+    f, g = params.f, params.g
+    settings, info, output = params.settings, params.info, params.output
+    settings.maxiter = 50000
+    settings.accelerate = 0
+    settings.rho = 1.
+
+    k0 = 0
+
+    with ctx.solver as solver:
+        settings.adaptiverho = 0
+        assert okctest.noerr( lib.pogs_solve(
+                solver, params.f, params.g, settings, info, output.ptr) )
+        k0 = info.k
+
+    with ctx.solver as solver:
+        settings.adaptiverho = 1
+        assert okctest.noerr( lib.pogs_solve(
+                solver, params.f, params.g, settings, info, output.ptr) )
+        assert info.k < k0
     return True
 
 def anderson_reduces_iterations(test_context):
     ctx = test_context
     lib = ctx.lib
-    solver = ctx.solver
-    state = solver.contents.z.contents.state
     params = ctx.params
     f, g = params.f, params.g
     settings, info, output = params.settings, params.info, params.output
     settings.verbose = 1
-    settings.maxiter = 5000
+    settings.maxiter = 50000
+    k0 = 0
 
-    print('POGS, -adaptive rho, -anderson')
-    assert okctest.noerr( lib.vector_set_all(state, 0.) )
-    settings.adaptiverho = 0
-    settings.accelerate = 0
-    settings.rho = 1
-    settings.warmstart = 0
-    settings.resume = 0
-    assert okctest.noerr( lib.pogs_solve(solver, params.f, params.g, settings, info, output.ptr) )
-    # if info.converged:
-    #     assert output_is_converged(lib, ctx.A_dense, settings, output)
+    with ctx.solver as solver:
+        print('without anderson')
+        settings.accelerate = 0
+        settings.rho = 1
+        assert okctest.noerr( lib.pogs_solve(
+                solver, params.f, params.g, settings, info, output.ptr) )
+        k0 = info.k
 
-    print('POGS, +adaptive rho, -anderson')
-    assert okctest.noerr( lib.vector_set_all(state, 0.) )
-    settings.adaptiverho = 1
-    settings.accelerate = 0
-    settings.rho = 1
-    settings.warmstart = 0
-    settings.resume = 0
-    assert okctest.noerr( lib.pogs_solve(solver, params.f, params.g, settings, info, output.ptr) )
-    # if info.converged:
-    #     assert output_is_converged(lib, ctx.A_dense, settings, output)
+    print('with anderson')
+    with ctx.solver as solver:
+        settings.accelerate = 1
+        settings.rho = 1
+        assert okctest.noerr( lib.pogs_solve(
+                solver, params.f, params.g, settings, info, output.ptr) )
+        if info.converged:
+            assert info.k < k0
 
-    print('POGS, -adaptive rho, +anderson')
-    assert okctest.noerr( lib.vector_set_all(state, 0.) )
-    settings.adaptiverho = 0
-    settings.accelerate = 1
-    settings.rho = 1
-    settings.warmstart = 0
-    settings.resume = 0
-    assert okctest.noerr( lib.pogs_solve(solver, params.f, params.g, settings, info, output.ptr) )
-    # if info.converged:
-    #     assert output_is_converged(lib, ctx.A_dense, settings, output)
-
-    print('POGS, +adaptive rho, +anderson')
-    assert okctest.noerr( lib.vector_set_all(state, 0.) )
-    settings.adaptiverho = 1
-    settings.accelerate = 1
-    settings.rho = 1
-    settings.warmstart = 0
-    settings.resume = 0
-    assert okctest.noerr( lib.pogs_solve(solver, params.f, params.g, settings, info, output.ptr) )
-    # if info.converged:
-    #     assert output_is_converged(lib, ctx.A_dense, settings, output)
     return True
 
 def integrated_pogs_call_executes(test_context):
@@ -736,7 +767,6 @@ def solver_data_transferable(test_context):
     ctx = test_context.lib
     lib = ctx.lib
     A = ctx.A_dense
-    solver = ctx.solver
     params = ctx.params
     f, g = params.f, params.g
     settings, info, output = params.settings, params.info, params.output
@@ -746,45 +776,46 @@ def solver_data_transferable(test_context):
     nu_rand, _ = okcctx.gen_py_vector(lib, m)
     settings.verbose = 1
 
-    # solve
-    print('initial solve -> export data')
-    assert okctest.noerr( lib.pogs_solve(
-            solver, f, g, settings, info, output.ptr) )
-    k_orig = info.k
 
-    # EXPORT/IMPORT STATE
-    n_state = solver.contents.z.contents.state.contents.size
-    state_out = np.array(n_state, dtype=lib.pyfloat)
-    rho_out = np.array(1, dtype=lib.pyfloat)
+#     # solve
+#     print('initial solve -> export data')
+#     assert okctest.noerr( lib.pogs_solve(
+#             solver, f, g, settings, info, output.ptr) )
+#     k_orig = info.k
 
-    state_ptr = lib.ok_float_pointerize(state_out)
-    rho_ptr = lib.ok_float_pointerize(rho_out)
+#     # EXPORT/IMPORT STATE
+#     n_state = solver.contents.z.contents.state.contents.size
+#     state_out = np.array(n_state, dtype=lib.pyfloat)
+#     rho_out = np.array(1, dtype=lib.pyfloat)
 
-    assert okctest.noerr( lib.pogs_solver_save_state(
-            state_ptr, rho_ptr, solver) )
+#     state_ptr = lib.ok_float_pointerize(state_out)
+#     rho_ptr = lib.ok_float_pointerize(rho_out)
 
-    build_solver = lambda: lib.pogs_init(ctx.data, ctx.flags)
-    free_solver = lambda s: lib.pogs_finish(s, 0)
-    with okcctx.CVariableContext(build_solver, free_solver) as solver2:
-        settings.resume = 1
-        assert okctest.noerr( lib.pogs_solver_load_state(
-                solver2, state_ptr, rho_ptr[0]))
-        assert okctest.noerr( lib.pogs_solve(
-                solver2, f, g, settings, info, output.ptr) )
+#     assert okctest.noerr( lib.pogs_solver_save_state(
+#             state_ptr, rho_ptr, solver) )
 
-        assert (info.k <= k_orig or not info.converged)
+#     build_solver = lambda: lib.pogs_init(ctx.data, ctx.flags)
+#     free_solver = lambda s: lib.pogs_finish(s, 0)
+#     with okcctx.CVariableContext(build_solver, free_solver) as solver2:
+#         settings.resume = 1
+#         assert okctest.noerr( lib.pogs_solver_load_state(
+#                 solver2, state_ptr, rho_ptr[0]))
+#         assert okctest.noerr( lib.pogs_solve(
+#                 solver2, f, g, settings, info, output.ptr) )
 
-    # EXPORT/IMPORT SOLVER
-    priv_data = lib.pogs_solver_priv_data()
-    flags = lib.pogs_solver_flags()
+#         assert (info.k <= k_orig or not info.converged)
 
-    assert okctest.noerr( lib.pogs_export_solver(
-            priv_data, state_ptr, rho_ptr, flags, solver))
+#     # EXPORT/IMPORT SOLVER
+#     priv_data = lib.pogs_solver_priv_data()
+#     flags = lib.pogs_solver_flags()
 
-    build_solver = lambda: lib.pogs_load_solver(
-            priv_data, state_ptr, rho_out[0], flags)
-    with okcctx.CVariableContext(build_solver, free_solver) as solver3:
-        settings.resume = 1
-        assert okctest.noerr( lib.pogs_solve(
-                solver3, f, g, settings, info, output.ptr) )
-    return True
+#     assert okctest.noerr( lib.pogs_export_solver(
+#             priv_data, state_ptr, rho_ptr, flags, solver))
+
+#     build_solver = lambda: lib.pogs_load_solver(
+#             priv_data, state_ptr, rho_out[0], flags)
+#     with okcctx.CVariableContext(build_solver, free_solver) as solver3:
+#         settings.resume = 1
+#         assert okctest.noerr( lib.pogs_solve(
+#                 solver3, f, g, settings, info, output.ptr) )
+#     return True

@@ -5,9 +5,10 @@ import collections
 
 from optkit.utils import proxutils
 from optkit.tests.C.base import OptkitCTestCase
-import optkit.tests.C.statements as okctest
+from optkit.tests.C import statements
 import optkit.tests.C.context_managers as okcctx
 
+NO_ERR = statements.noerr
 
 class PogsVariablesLocal:
     def __init__(self, lib, m, n):
@@ -28,8 +29,7 @@ class PogsVariablesLocal:
         self.e = np.zeros(n).astype(lib.pyfloat)
 
         def _arr2ptr(arr): return np.ravel(arr).ctypes.data_as(lib.ok_float_p)
-        def _c2py(py, c): return okctest.noerr(
-                lib.vector_memcpy_av(_arr2ptr(py), c, 1))
+        def _c2py(py, c): return NO_ERR(lib.vector_memcpy_av(_arr2ptr(py), c, 1))
         def load_all(solver):
             assert _c2py(self.d, solver.contents.W.contents.d)
             assert _c2py(self.e, solver.contents.W.contents.e)
@@ -49,7 +49,7 @@ class PogsOutputLocal:
                                    self.nu.ctypes.data_as(lib.ok_float_p))
 
 def load_to_local(lib, py_vector, c_vector):
-    assert okctest.noerr( lib.vector_memcpy_av(
+    assert NO_ERR( lib.vector_memcpy_av(
             py_vector.ctypes.data_as(lib.ok_float_p), c_vector, 1) )
 
 class EquilibratedMatrix(object):
@@ -76,11 +76,22 @@ class Base:
         self.params.output = PogsOutputLocal(lib, m, n)
         self.params.info = lib.pogs_info()
         self.params.settings = settings = lib.pogs_settings()
-        assert okctest.noerr( lib.pogs_set_default_settings(settings) )
-        self.params.settings.verbose = int(okctest.VERBOSE_TEST)
+        assert NO_ERR( lib.pogs_set_default_settings(settings) )
+        self.params.settings.verbose = int(statements.VERBOSE_TEST)
         self.params.res = lib.pogs_residuals()
         self.params.tol = lib.pogs_tolerances()
         self.params.obj = lib.pogs_objective_values()
+
+        class SolverCtx:
+            def __init__(self, data, flags):
+                self._data = data
+                self._flags = flags
+            def __enter__(self):
+                self._s = lib.pogs_init(self._data, self._flags)
+                return self._s
+            def __exit__(self, *exc):
+                assert NO_ERR( lib.pogs_finish(self._s, 0) )
+        self.SolverCtx = SolverCtx
 
     def __enter__(self):
         m, n = self.params.shape
@@ -97,8 +108,8 @@ class Base:
         for j in xrange(n):
             g_py[j] = lib.function(
                     lib.function_enums.IndGe0, 1, 0, 1, 0, 0, 1)
-        assert okctest.noerr( lib.function_vector_memcpy_va(f, f_ptr) )
-        assert okctest.noerr( lib.function_vector_memcpy_va(g, g_ptr) )
+        assert NO_ERR( lib.function_vector_memcpy_va(f, f_ptr) )
+        assert NO_ERR( lib.function_vector_memcpy_va(g, g_ptr) )
         self.params.f = f
         self.params.g = g
         self.params.f_py = f_py
@@ -111,7 +122,7 @@ class Base:
         self._libctx.__exit__(*exc)
 
 class Dense(Base):
-    def __init__(self, libctx, A, layout, obj='Abs', solver=True):
+    def __init__(self, libctx, A, layout, obj='Abs'):
         m, n = A.shape
         lib = libctx.lib
         Base.__init__(self, libctx, m, n, obj=obj)
@@ -120,18 +131,15 @@ class Dense(Base):
         self.A_dense += A
         self.data = self.A_dense.ctypes.data_as(lib.ok_float_p)
         self.flags = lib.pogs_solver_flags(m, n, layout)
-        self._solver = solver
 
     def __enter__(self):
         Base.__enter__(self)
-        if self._solver:
-            self.solver = self.lib.pogs_init(self.data, self.flags)
+        self.solver = self.SolverCtx(self.data, self.flags)
         return self
 
     def __exit__(self, *exc):
-        if self._solver:
-            assert okctest.noerr(self.lib.pogs_finish(self.solver, 0))
         Base.__exit__(self, *exc)
+        del self.solver
 
 class Abstract(Base):
     def __init__(self, lib, A, optype, direct, equil, obj='Abs', solver=True):
@@ -146,13 +154,11 @@ class Abstract(Base):
         self._op = okcctx.c_operator_context(lib, optype, A, rowmajor)
         self.data = None
         self.flags = lib.pogs_solver_flags(direct, equil)
-        self._solver = solver
 
     def __enter__(self):
         Base.__enter__(self)
         self.op = self.data = self._op.__enter__()
-        if self._solver:
-            self.solver = self.lib.pogs_init(self.data, self.flags)
+        self.solver = self.SolverCtx(self.data, self.flags)
         return self
 
     def __exit__(self):
