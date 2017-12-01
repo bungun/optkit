@@ -134,6 +134,8 @@ def attach_pogs_datatypes_ctypes(lib, single_precision=False):
 					('anderson_lookback', ct.c_uint),
 					('verbose', ct.c_uint),
 					('suppress', ct.c_uint),
+					('state_begin', ct.c_uint),
+					('state_length', ct.c_uint),
 					('adaptiverho', ct.c_int),
 					('accelerate', ct.c_int),
 					('gapstop', ct.c_int),

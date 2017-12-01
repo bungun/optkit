@@ -167,8 +167,8 @@ ok_status pogs_variables_alloc(pogs_variables * z, size_t m, size_t n)
 		5 * (m + n), m + n) );
 
 	ok_alloc(z->fixed_point_iterate, sizeof(*(z->fixed_point_iterate)));
-	OK_CHECK_ERR( err, vector_subvector(z->fixed_point_iterate, z->state,
-		2 * (m + n), 1 * (m + n)) );
+	// OK_CHECK_ERR( err, vector_subvector(z->fixed_point_iterate, z->state,
+	// 	2 * (m + n), 1 * (m + n)) );
 
 	if (err)
 		OK_MAX_ERR( err, pogs_variables_free(z) );

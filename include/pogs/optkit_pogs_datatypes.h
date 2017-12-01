@@ -20,14 +20,12 @@ extern "C" {
 #define POGS_CONSTANTS
 #define kALPHA (ok_float) 1.7
 #define kMAXITER 2000u
-#define kANDERSON 30u
-/* #define kANDERSON 10u */
-/* #define kANDERSON 3u */
+#define kANDERSON 20u
 #define kRHO (ok_float) 1
 #define kATOL (ok_float) 1e-4
 #define kRTOL (ok_float) 1e-3
 #define kTOLPROJ (ok_float) 1e-6
-#define kMU (ok_float) 1e-3
+#define kMU (ok_float) 0
 #define kADAPTIVE 1
 #define kACCELERATE 0 /* CHANGE THIS TO 1 AFTER DEBUGGING */
 #define kGAPSTOP 0
@@ -59,6 +57,8 @@ typedef struct POGSObjectiveValues {
 typedef struct POGSSettings {
 	ok_float alpha, rho, abstol, reltol, tolproj, anderson_regularization;
 	uint maxiter, anderson_lookback, verbose, suppress;
+	/* TODO: remove after testing */
+	uint state_begin, state_length;
 	int adaptiverho, accelerate, gapstop, warmstart, resume;
 	ok_float * x0, * nu0;
 } pogs_settings;
