@@ -13,6 +13,7 @@ ok_status anderson_accelerator_init(anderson_accelerator * aa,
 		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
 	if (lookback_dim > vector_dim)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+		// lookback_dim = vector_dim;
 
 	aa->vector_dim = vector_dim;
 	aa->lookback_dim = lookback_dim;
@@ -51,7 +52,9 @@ ok_status anderson_accelerator_init(anderson_accelerator * aa,
 
 ok_status anderson_accelerator_free(anderson_accelerator * aa)
 {
-	ok_status err = OK_SCAN_ERR( blas_destroy_handle(aa->linalg_handle) );
+	ok_status err = OPTKIT_SUCCESS;
+	OK_CHECK_PTR(aa);
+	OK_MAX_ERR( err, blas_destroy_handle(aa->linalg_handle) );
 	OK_MAX_ERR( err, matrix_free(aa->F) );
 	OK_MAX_ERR( err, matrix_free(aa->G) );
 	OK_MAX_ERR( err, matrix_free(aa->F_gram) );
