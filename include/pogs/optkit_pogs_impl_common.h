@@ -139,7 +139,7 @@ ok_status pogs_variables_alloc(pogs_variables * z, size_t m, size_t n)
 	z->n = n;
 
 	ok_alloc(z->state, sizeof(*(z->state)));
-	OK_CHECK_ERR( err, vector_alloc(z->state, 6 * (m + n)) );
+	OK_CHECK_ERR( err, vector_calloc(z->state, 6 * (m + n)) );
 
 	ok_alloc(z->primal, sizeof(*z));
 	OK_CHECK_ERR( err, pogs_graph_vector_alloc(z->primal, m, n) );
@@ -184,7 +184,7 @@ ok_status pogs_variables_free(pogs_variables * z)
 	OK_MAX_ERR( err, pogs_graph_vector_free(z->primal12) );
 	ok_free(z->primal12);
 	OK_MAX_ERR( err, pogs_graph_vector_free(z->dual) );
-	ok_free(z->primal12);
+	ok_free(z->dual);
 	OK_MAX_ERR( err, pogs_graph_vector_free(z->dual12) );
 	ok_free(z->dual12);
 	OK_MAX_ERR( err, pogs_graph_vector_free(z->prev) );
