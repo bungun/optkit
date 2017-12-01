@@ -241,48 +241,39 @@ class AndersonTestCase(unittest.TestCase):
         """
         m = 100
         n, lookback = self.n, self.lookback
-        def descent_ls(A, b, x, maxiter=5000, tol=1e-4, accelerate=None):
-            def fn(A, b, x):
-                residual = A.dot(x) - b
-                return residual.dot(residual)
 
-            def linesearch(A, b, x, dx, alpha_):
-                armijo = 0.1
-                backtrack = 0.1
-                step = dx.dot(dx)
-                fprev = fn(A, b, x)
-                fcurr = fprev
-                for i in range(100):
-                    fcurr = fn(A, b, x - alpha_ * dx)
-                    diff = fprev - fcurr
-                    if diff > armijo * alpha_ * step:
+        class GradientDescent:
+            def __init__(self, loss, gradient, condition):
+                self.loss = loss
+                self.gradient = gradient
+                self.condition = condition
+
+            def linesearch(self, loss, x, dx, stepsize, backtrack=0.1,
+                           armijo=0.1, maxiter_linesearch=100, **options):
+                step = armijo * np.dot(dx, dx)
+                fprev = loss(x)
+                for i in range(maxiter_linesearch):
+                    if fprev - loss(x - stepsize * dx) > stepsize * step:
                         break
-                    alpha_ *= backtrack
-                return alpha_
+                    stepsize *= backtrack
+                return stepsize
 
-            def grad(A, b, x):
-                return A.T.dot(A.dot(x) - b)
+            def __call__(self, x, stepsize=1., tol=1e-4, maxiter=50000, **options):
+                self.accelerate = options.pop('accelerate', lambda x: None)
+                verbose = options.pop('verbose', False)
+                print_iter = options.pop('print_iter', 100)
 
-            def calc_tol(A, b, x):
-                return np.linalg.norm(grad(A, b, x))
-
-            def iterate(A, b, x, alpha_):
-                gradx = grad(A, b, x.py)
-                alpha_ = linesearch(A, b, x.py, gradx, alpha_)
-                x.py -= alpha_ * gradx
-                return alpha
-
-            if accelerate is None:
-                accelerate = lambda iter: None
-
-            x.py *= 0
-            alpha = 1.
-            for k in range(maxiter):
-                alpha = iterate(A, b, x, alpha)
-                accelerate(x)
-                if calc_tol(A, b, x.py) < tol:
-                    break
-            return x, k
+                x.py *= 0
+                for k in range(maxiter):
+                    gradx = self.gradient(x.py)
+                    stepsize = self.linesearch(self.loss, x.py, gradx, stepsize, **options)
+                    x.py -= stepsize * gradx
+                    self.accelerate(x)
+                    if verbose and k % print_iter == 0:
+                        print '{:8}{:20}'.format(k, self.condition(x.py, gradx))
+                    if self.condition(x.py, gradx) < tol:
+                        break
+                return x, k
 
         for lib in self.libs:
             with lib as lib:
@@ -293,9 +284,16 @@ class AndersonTestCase(unittest.TestCase):
                 A = np.random.random((m, n))
                 b = np.random.random(m)
 
+                def least_squares(x_):
+                    residual = A.dot(x_) - b
+                    return residual.dot(residual)
+                def grad_LS(x_): return A.T.dot(A.dot(x_) - b)
+                def tol_LS(x_, dx): return np.linalg.norm(dx)
+                gradient_descent = GradientDescent(least_squares, grad_LS, tol_LS)
+
                 with x, aa as aa:
-                    x0, k0 = descent_ls(A, b, x)
-                    assert np.linalg.norm(A.T.dot(A .dot(x0.py) - b)) <= TOL
+                    x0, k0 = gradient_descent(x, tol=TOL)
+                    assert np.linalg.norm(A.T.dot(A.dot(x0.py) - b)) <= TOL
 
                     def accelerate(x_):
                         x_.sync_to_c()
@@ -303,6 +301,6 @@ class AndersonTestCase(unittest.TestCase):
                         x_.sync_to_py()
 
                     aa.mu_regularization = 0
-                    x1, k1 = descent_ls(A, b, x, accelerate=accelerate)
+                    x1, k1 = gradient_descent(x, accelerate=accelerate)
                     assert np.linalg.norm(A.T.dot(A.dot(x0.py) - b)) <= TOL
                     assert k1 < k0
