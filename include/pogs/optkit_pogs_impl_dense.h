@@ -91,6 +91,7 @@ ok_status pogs_dense_problem_data_free(pogs_dense_work * W)
 	ok_status err = OK_SCAN_ERR( PROJECTOR(free)(W->P) );
 	ok_free(W->P);
 	OK_MAX_ERR( err, matrix_free(W->A) );
+	ok_free(W->A);
 	return err;
 }
 
