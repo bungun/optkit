@@ -68,6 +68,7 @@ typedef struct POGSSolver {
 	void * linalg_handle;
 	ok_float init_time;
 	anderson_accelerator * aa;
+	pogs_convergence * convergence;
 } pogs_solver;
 
 ok_pogs_impl get_pogs_impl(void);
@@ -98,6 +99,12 @@ ok_status pogs_update_residuals(pogs_solver * solver,
 ok_status pogs_check_convergence(pogs_solver * solver,
 	pogs_objective_values * obj, pogs_residuals * res,
 	pogs_tolerances * tol, int * converged);
+
+ok_status pogs_setup_diagnostics(pogs_solver * solver, const uint iters);
+ok_status pogs_record_diagnostics(pogs_solver * solver,
+	const pogs_residuals * res, const uint iter);
+ok_status pogs_emit_diagnostics(pogs_output * output, pogs_solver * solver);
+
 ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info);
 
 pogs_solver * pogs_init(pogs_solver_data * A, const pogs_solver_flags * flags);

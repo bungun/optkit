@@ -215,6 +215,7 @@ ok_status pogs_set_default_settings(pogs_settings * s)
 	s->gapstop = kGAPSTOP;
 	s->warmstart = kWARMSTART;
 	s->resume = kRESUME;
+	s->diagnostic = kDIAGNOSTIC;
 	s->x0 = OK_NULL;
 	s->nu0 = OK_NULL;
 	return OPTKIT_SUCCESS;
@@ -240,6 +241,7 @@ ok_status pogs_update_settings(pogs_settings * settings,
 	settings->gapstop = input->gapstop;
 	settings->warmstart = input->warmstart;
 	settings->resume = input->resume;
+	settings->diagnostic = input->diagnostic;
 	settings->x0 = input->x0;
 	settings->nu0 = input->nu0;
 	return OPTKIT_SUCCESS;

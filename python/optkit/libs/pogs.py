@@ -141,6 +141,7 @@ def attach_pogs_datatypes_ctypes(lib, single_precision=False):
 					('gapstop', ct.c_int),
 					('warmstart', ct.c_int),
 					('resume', ct.c_int),
+					('diagnostic', ct.c_int),
 					('x0', lib.ok_float_p),
 					('nu0', lib.ok_float_p)]
 
@@ -171,7 +172,9 @@ def attach_pogs_datatypes_ctypes(lib, single_precision=False):
 		_fields_ = [('x', lib.ok_float_p),
 					('y', lib.ok_float_p),
 					('mu', lib.ok_float_p),
-					('nu', lib.ok_float_p)]
+					('nu', lib.ok_float_p),
+					('primal_residuals', lib.ok_float_p),
+					('dual_residuals', lib.ok_float_p)]
 
 	lib.pogs_output = PogsOutput
 	lib.pogs_output_p =  ct.POINTER(lib.pogs_output)
@@ -319,8 +322,7 @@ def _attach_pogs_impl_common_ccalls(lib):
 			ct.c_void_p, lib.pogs_variables_p, lib.pogs_objective_values_p,
 			lib.pogs_tolerances_p]
 
-	c_uint_p = ct.POINTER(ct.c_uint)
-	lib.pogs_set_print_iter.argtypes = [c_uint_p, lib.pogs_settings_p]
+	lib.pogs_set_print_iter.argtypes = [lib.c_uint_p, lib.pogs_settings_p]
 	lib.pogs_print_header_string.argtypes = []
 	lib.pogs_print_iter_string.argtypes = [
 			lib.pogs_residuals_p, lib.pogs_tolerances_p,
@@ -497,6 +499,12 @@ def _attach_pogs_generic_ccalls(lib):
 	lib.pogs_check_convergence.argtypes = [
 			lib.pogs_solver_p, lib.pogs_objective_values_p,
 			lib.pogs_residuals_p, lib.pogs_tolerances_p, lib.c_int_p]
+
+	lib.pogs_setup_diagnostics.argtypes = [lib.pogs_solver_p, ct.c_uint]
+	lib.pogs_record_diagnostics.argtypes = [lib.pogs_solver_p,
+			lib.pogs_residuals_p, ct.c_uint]
+	lib.pogs_emit_diagnostics.argtypes = [lib.pogs_output_p, lib.pogs_solver_p]
+
 	lib.pogs_solver_loop.argtypes = [lib.pogs_solver_p, lib.pogs_info_p]
 
 	lib.pogs_init.argtypes = [lib.pogs_solver_data_p, lib.pogs_solver_flags_p]
@@ -537,6 +545,9 @@ def _attach_pogs_generic_ccalls(lib):
 			lib.pogs_accelerate,
 			lib.pogs_update_residuals,
 			lib.pogs_check_convergence,
+			lib.pogs_setup_diagnostics,
+			lib.pogs_record_diagnostics,
+			lib.pogs_emit_diagnostics,
 			lib.pogs_solver_loop,
 			lib.pogs_solve,
 			lib.pogs_finish,
@@ -552,7 +563,7 @@ def _attach_pogs_generic_ccalls(lib):
 
 def attach_pogs_ccalls(lib, single_precision=False):
 	include_ok_pogs(lib, single_precision=single_precision)
-	c_uint_p = ct.POINTER(ct.c_uint)
+	lib.c_uint_p = ct.POINTER(ct.c_uint)
 
 	_attach_pogs_adaptrho_ccalls(lib)
 	_attach_pogs_impl_common_ccalls(lib)

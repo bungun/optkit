@@ -30,6 +30,7 @@ extern "C" {
 #define kACCELERATE 0 /* CHANGE THIS TO 1 AFTER DEBUGGING */
 #define kGAPSTOP 0
 #define kWARMSTART 0
+#define kDIAGNOSTIC 0
 #define kVERBOSE 2u
 #define kSUPPRESS 0u
 #define kRESUME 0
@@ -59,7 +60,7 @@ typedef struct POGSSettings {
 	uint maxiter, anderson_lookback, verbose, suppress;
 	/* TODO: remove after testing */
 	uint state_begin, state_length;
-	int adaptiverho, accelerate, gapstop, warmstart, resume;
+	int adaptiverho, accelerate, gapstop, warmstart, resume, diagnostic;
 	ok_float * x0, * nu0;
 } pogs_settings;
 
@@ -72,6 +73,7 @@ typedef struct POGSInfo {
 
 typedef struct POGSOutput {
 	ok_float * x, * y, * mu, * nu;
+	ok_float * primal_residuals, * dual_residuals;
 } pogs_output;
 
 typedef struct POGSVariables {
@@ -80,6 +82,11 @@ typedef struct POGSVariables {
 	pogs_graph_vector * prev, * temp;
 	size_t m, n;
 } pogs_variables;
+
+
+typedef struct POGSConvergence {
+	vector * primal, * dual;
+} pogs_convergence;
 
 #ifdef __cplusplus
 } /* extern "C" */

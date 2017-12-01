@@ -20,6 +20,7 @@ src/*graph*
 
 .nv/
 
+*python/notebooks/
 
 *block_prox*
 *python/optkit/extensions/

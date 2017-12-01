@@ -46,7 +46,22 @@ class PogsOutputLocal:
         self.ptr = lib.pogs_output(self.x.ctypes.data_as(lib.ok_float_p),
                                    self.y.ctypes.data_as(lib.ok_float_p),
                                    self.mu.ctypes.data_as(lib.ok_float_p),
-                                   self.nu.ctypes.data_as(lib.ok_float_p))
+                                   self.nu.ctypes.data_as(lib.ok_float_p),
+                                   None, None)
+
+    def attach_convergence_vectors(self, lib, iters):
+        self.primal_residuals = np.zeros(iters).astype(lib.pyfloat)
+        self.dual_residuals = np.zeros(iters).astype(lib.pyfloat)
+        self.primal_tolerances = np.zeros(iters).astype(lib.pyfloat)
+        self.dual_tolerances = np.zeros(iters).astype(lib.pyfloat)
+        self.ptr.primal_residuals = self.primal_residuals.ctypes.data_as(
+                lib.ok_float_p)
+        self.ptr.dual_residuals = self.dual_residuals.ctypes.data_as(
+                lib.ok_float_p)
+        self.ptr.primal_tolerances = self.primal_tolerances.ctypes.data_as(
+                lib.ok_float_p)
+        self.ptr.dual_tolerances = self.dual_tolerances.ctypes.data_as(
+                lib.ok_float_p)
 
 def load_to_local(lib, py_vector, c_vector):
     assert NO_ERR( lib.vector_memcpy_av(

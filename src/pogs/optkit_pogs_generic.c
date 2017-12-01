@@ -339,6 +339,54 @@ ok_status pogs_check_convergence(pogs_solver * solver,
 	return err;
 }
 
+ok_status pogs_setup_diagnostics(pogs_solver * solver, const uint iters)
+{
+	OK_CHECK_PTR(solver);
+	if (solver->convergence)
+		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
+
+	ok_status err = OPTKIT_SUCCESS;
+	ok_alloc(solver->convergence, sizeof(*solver->convergence));
+	ok_alloc(solver->convergence->primal, sizeof(*solver->convergence->primal));
+	ok_alloc(solver->convergence->dual, sizeof(*solver->convergence->dual));
+	OK_CHECK_ERR( err, vector_calloc(solver->convergence->primal, (size_t) iters) );
+	OK_CHECK_ERR( err, vector_calloc(solver->convergence->dual, (size_t) iters) );
+	return err;
+}
+
+ok_status pogs_record_diagnostics(pogs_solver * solver,
+	const pogs_residuals * res, const uint iter)
+{
+	ok_status err = OPTKIT_SUCCESS;
+	vector v = (vector){OK_NULL};
+	OK_CHECK_ERR( err, vector_subvector(&v, solver->convergence->primal,
+		iter - 1, 1) );
+	OK_CHECK_ERR( err, vector_set_all(&v, res->primal) );
+	OK_CHECK_ERR( err, vector_subvector(&v, solver->convergence->dual,
+		iter - 1, 1) );
+	OK_CHECK_ERR( err, vector_set_all(&v, res->dual) );
+	return err;
+}
+
+ok_status pogs_emit_diagnostics(pogs_output * output, pogs_solver * solver)
+{
+	if (!output || !solver || !solver->convergence)
+		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+
+	ok_status err = OPTKIT_SUCCESS;
+	OK_CHECK_ERR( err, vector_memcpy_av(output->primal_residuals,
+		solver->convergence->primal, 1) );
+	OK_CHECK_ERR( err, vector_memcpy_av(output->dual_residuals,
+		solver->convergence->dual, 1) );
+	OK_MAX_ERR( err, vector_free(solver->convergence->primal) );
+	OK_MAX_ERR( err, vector_free(solver->convergence->dual) );
+	ok_free(solver->convergence->primal);
+	ok_free(solver->convergence->dual);
+	ok_free(solver->convergence);
+	return err;
+}
+
+
 ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 {
 	if (!solver || !info)
@@ -378,13 +426,16 @@ ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 			&& settings->verbose)
 			pogs_print_iter_string(&res, &tol, &obj, k);
 
+		if (settings->diagnostic)
+			OK_CHECK_ERR( err, pogs_record_diagnostics(solver,
+				&res, k) );
+
 		if (converged || k == settings->maxiter)
 			break;
 
 		OK_CHECK_ERR( err, pogs_adapt_rho(solver->z, &(solver->rho),
 			&rho_params, settings, &res, &tol, k) );
 	}
-
 
 	if (!converged && k == settings->maxiter)
 		printf("reached max iter = %u\n", k);
@@ -438,6 +489,9 @@ ok_status pogs_solve(pogs_solver * solver, const function_vector * f,
 	/* SETUP */
 	OK_TIMER t = ok_timer_tic();
 
+	if (settings->diagnostic)
+		OK_CHECK_ERR( err, pogs_setup_diagnostics(solver,
+			settings->maxiter) );
 
 	/* TODO: remove after testing */
 	uint fpi_begin = settings->state_begin; /* 0, 1, 2 or 3*/
@@ -448,11 +502,15 @@ ok_status pogs_solve(pogs_solver * solver, const function_vector * f,
 	fpi_len = fpi_begin == 3 ? 1 : fpi_len;
 
 	/* TODO: remove after testing */
-	OK_CHECK_ERR( err, vector_subvector(solver->z->fixed_point_iterate,
-		solver->z->state, fpi_begin * (m + n), fpi_len * (m + n)) );
-	OK_CHECK_ERR( err, anderson_accelerator_init(solver->aa,
-		solver->z->fixed_point_iterate->size,
-		(size_t) settings->anderson_lookback) );
+	if (settings->accelerate) {
+		OK_CHECK_ERR( err, vector_subvector(
+			solver->z->fixed_point_iterate,
+			solver->z->state, fpi_begin * (m + n),
+			fpi_len * (m + n)) );
+		OK_CHECK_ERR( err, anderson_accelerator_init(solver->aa,
+			solver->z->fixed_point_iterate->size,
+			(size_t) settings->anderson_lookback) );
+	}
 
 
 	OK_CHECK_ERR( err, pogs_update_settings(solver->settings, settings) );
@@ -479,11 +537,15 @@ ok_status pogs_solve(pogs_solver * solver, const function_vector * f,
 	info->solve_time = ok_timer_toc(t);
 
 	/* TODO: remove after testing */
-	OK_MAX_ERR( err, anderson_accelerator_free(solver->aa) );
+	if (settings->accelerate)
+		OK_MAX_ERR( err, anderson_accelerator_free(solver->aa) );
 
 	/* UNSCALE */
 	OK_CHECK_ERR( err, pogs_unscale_output(output, solver->z, solver->W->d,
 		solver->W->e, solver->rho, solver->settings->suppress) );
+
+	if (settings->diagnostic)
+		OK_CHECK_ERR( err, pogs_emit_diagnostics(output, solver) );
 
 	return err;
 }
