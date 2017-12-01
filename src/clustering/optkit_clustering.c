@@ -91,7 +91,7 @@ ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 	upsamplingvec * u = &h->a2c_tentative;
 
 	if (!h->A_reducible.data)
-		err = matrix_alloc(&h->A_reducible, kBlockSize, A->size2,
+		err = matrix_calloc(&h->A_reducible, kBlockSize, A->size2,
 			A->order);
 
 	A_blk = &h->A_reducible;

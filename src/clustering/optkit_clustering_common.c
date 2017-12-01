@@ -77,13 +77,13 @@ ok_status kmeans_work_alloc(kmeans_work * w, size_t n_vectors,
 	w->n_clusters = n_clusters;
 	w->vec_length = vec_length;
 	OK_CHECK_ERR( err,
-		matrix_alloc(&w->A, n_vectors, vec_length, CblasRowMajor) );
+		matrix_calloc(&w->A, n_vectors, vec_length, CblasRowMajor) );
 	OK_CHECK_ERR( err,
-		matrix_alloc(&w->C, n_clusters, vec_length, CblasRowMajor) );
+		matrix_calloc(&w->C, n_clusters, vec_length, CblasRowMajor) );
 	OK_CHECK_ERR( err,
 		upsamplingvec_alloc(&w->a2c, n_vectors, n_clusters) );
 	OK_CHECK_ERR( err,
-		vector_alloc(&w->counts, n_clusters) );
+		vector_calloc(&w->counts, n_clusters) );
 	OK_CHECK_ERR( err,
 		cluster_aid_alloc(&w->h, n_vectors, n_clusters,
 			CblasRowMajor) );

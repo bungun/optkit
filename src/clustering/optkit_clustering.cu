@@ -166,7 +166,7 @@ ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	if (!h->A_reducible.data)
-		err = matrix_alloc(&h->A_reducible, kBlockSize, A->size2,
+		err = matrix_calloc(&h->A_reducible, kBlockSize, A->size2,
 			A->order);
 
 	h->reassigned = 0;
