@@ -4,6 +4,7 @@ import numpy as np
 import collections
 
 from optkit.utils import proxutils
+from optkit.libs.enums import OKEnums
 from optkit.tests.C.base import OptkitCTestCase
 from optkit.tests.C import statements
 import optkit.tests.C.context_managers as okcctx
@@ -137,7 +138,7 @@ class Base:
         self._libctx.__exit__(*exc)
 
 class Dense(Base):
-    def __init__(self, libctx, A, layout, obj='Abs'):
+    def __init__(self, libctx, A, layout=OKEnums.CblasRowMajor, obj='Abs'):
         m, n = A.shape
         lib = libctx.lib
         Base.__init__(self, libctx, m, n, obj=obj)
