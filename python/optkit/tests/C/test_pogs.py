@@ -9,11 +9,12 @@ import optkit.libs.enums as enums
 from optkit.libs.pogs import PogsDenseLibs
 from optkit.tests.defs import OptkitTestCase
 from optkit.tests import defs
-import optkit.tests.C.statements as okctest
+from optkit.tests.C import statements
 import optkit.tests.C.context_managers as okcctx
 from optkit.tests.C.pogs_contexts import Dense as DenseTest
-import optkit.tests.C,pogs_statements as pogs_test
+import optkit.tests.C.pogs_statements as pogs_test
 
+NO_ERR = statements.noerr
 
 class PogsDenseLibsTestCase(unittest.TestCase):
     """TODO: docstring"""
@@ -63,7 +64,7 @@ class PogsDenseTestCase(unittest.TestCase):
                 A_py += self.A_test
                 flags = lib.pogs_solver_flags(m, n, layout)
                 solver = lib.pogs_init(A_ptr, flags)
-                assert okctest.noerr(lib.pogs_finish(solver, 0))
+                assert NO_ERR(lib.pogs_finish(solver, 0))
 
     def test_pogs_dense_components(self):
         for (lib, layout, obj) in self.LIBS_LAYOUTS_OBJECTIVES:
