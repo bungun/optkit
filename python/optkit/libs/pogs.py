@@ -174,7 +174,9 @@ def attach_pogs_datatypes_ctypes(lib, single_precision=False):
 					('mu', lib.ok_float_p),
 					('nu', lib.ok_float_p),
 					('primal_residuals', lib.ok_float_p),
-					('dual_residuals', lib.ok_float_p)]
+					('dual_residuals', lib.ok_float_p),
+					('primal_tolerances', lib.ok_float_p),
+					('dual_tolerances', lib.ok_float_p)]
 
 	lib.pogs_output = PogsOutput
 	lib.pogs_output_p =  ct.POINTER(lib.pogs_output)
@@ -502,7 +504,7 @@ def _attach_pogs_generic_ccalls(lib):
 
 	lib.pogs_setup_diagnostics.argtypes = [lib.pogs_solver_p, ct.c_uint]
 	lib.pogs_record_diagnostics.argtypes = [lib.pogs_solver_p,
-			lib.pogs_residuals_p, ct.c_uint]
+			lib.pogs_residuals_p, lib.pogs_tolerances_p, ct.c_uint]
 	lib.pogs_emit_diagnostics.argtypes = [lib.pogs_output_p, lib.pogs_solver_p]
 
 	lib.pogs_solver_loop.argtypes = [lib.pogs_solver_p, lib.pogs_info_p]

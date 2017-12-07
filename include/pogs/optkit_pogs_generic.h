@@ -102,7 +102,8 @@ ok_status pogs_check_convergence(pogs_solver * solver,
 
 ok_status pogs_setup_diagnostics(pogs_solver * solver, const uint iters);
 ok_status pogs_record_diagnostics(pogs_solver * solver,
-	const pogs_residuals * res, const uint iter);
+	const pogs_residuals * res, const pogs_tolerances * tol,
+	const uint iter);
 ok_status pogs_emit_diagnostics(pogs_output * output, pogs_solver * solver);
 
 ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info);

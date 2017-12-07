@@ -74,6 +74,7 @@ typedef struct POGSInfo {
 typedef struct POGSOutput {
 	ok_float * x, * y, * mu, * nu;
 	ok_float * primal_residuals, * dual_residuals;
+	ok_float * primal_tolerances, * dual_tolerances;
 } pogs_output;
 
 typedef struct POGSVariables {
@@ -85,7 +86,7 @@ typedef struct POGSVariables {
 
 
 typedef struct POGSConvergence {
-	vector * primal, * dual;
+	vector * primal, * dual, * primal_tol, * dual_tol;
 } pogs_convergence;
 
 #ifdef __cplusplus

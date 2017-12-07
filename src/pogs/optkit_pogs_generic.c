@@ -349,13 +349,17 @@ ok_status pogs_setup_diagnostics(pogs_solver * solver, const uint iters)
 	ok_alloc(solver->convergence, sizeof(*solver->convergence));
 	ok_alloc(solver->convergence->primal, sizeof(*solver->convergence->primal));
 	ok_alloc(solver->convergence->dual, sizeof(*solver->convergence->dual));
+	ok_alloc(solver->convergence->primal_tol, sizeof(*solver->convergence->primal_tol));
+	ok_alloc(solver->convergence->dual_tol, sizeof(*solver->convergence->dual_tol));
 	OK_CHECK_ERR( err, vector_calloc(solver->convergence->primal, (size_t) iters) );
 	OK_CHECK_ERR( err, vector_calloc(solver->convergence->dual, (size_t) iters) );
+	OK_CHECK_ERR( err, vector_calloc(solver->convergence->primal_tol, (size_t) iters) );
+	OK_CHECK_ERR( err, vector_calloc(solver->convergence->dual_tol, (size_t) iters) );
 	return err;
 }
 
 ok_status pogs_record_diagnostics(pogs_solver * solver,
-	const pogs_residuals * res, const uint iter)
+	const pogs_residuals * res, const pogs_tolerances * tol, const uint iter)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	vector v = (vector){OK_NULL};
@@ -365,6 +369,12 @@ ok_status pogs_record_diagnostics(pogs_solver * solver,
 	OK_CHECK_ERR( err, vector_subvector(&v, solver->convergence->dual,
 		iter - 1, 1) );
 	OK_CHECK_ERR( err, vector_set_all(&v, res->dual) );
+	OK_CHECK_ERR( err, vector_subvector(&v, solver->convergence->primal_tol,
+		iter - 1, 1) );
+	OK_CHECK_ERR( err, vector_set_all(&v, tol->primal) );
+	OK_CHECK_ERR( err, vector_subvector(&v, solver->convergence->dual_tol,
+		iter - 1, 1) );
+	OK_CHECK_ERR( err, vector_set_all(&v, tol->dual) );
 	return err;
 }
 
@@ -378,10 +388,18 @@ ok_status pogs_emit_diagnostics(pogs_output * output, pogs_solver * solver)
 		solver->convergence->primal, 1) );
 	OK_CHECK_ERR( err, vector_memcpy_av(output->dual_residuals,
 		solver->convergence->dual, 1) );
+	OK_CHECK_ERR( err, vector_memcpy_av(output->primal_tolerances,
+		solver->convergence->primal_tol, 1) );
+	OK_CHECK_ERR( err, vector_memcpy_av(output->dual_tolerances,
+		solver->convergence->dual_tol, 1) );
 	OK_MAX_ERR( err, vector_free(solver->convergence->primal) );
 	OK_MAX_ERR( err, vector_free(solver->convergence->dual) );
+	OK_MAX_ERR( err, vector_free(solver->convergence->primal_tol) );
+	OK_MAX_ERR( err, vector_free(solver->convergence->dual_tol) );
 	ok_free(solver->convergence->primal);
 	ok_free(solver->convergence->dual);
+	ok_free(solver->convergence->primal_tol);
+	ok_free(solver->convergence->dual_tol);
 	ok_free(solver->convergence);
 	return err;
 }
@@ -428,7 +446,7 @@ ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 
 		if (settings->diagnostic)
 			OK_CHECK_ERR( err, pogs_record_diagnostics(solver,
-				&res, k) );
+				&res, &tol, k) );
 
 		if (converged || k == settings->maxiter)
 			break;
