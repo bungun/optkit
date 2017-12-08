@@ -142,6 +142,7 @@ def attach_pogs_datatypes_ctypes(lib, single_precision=False):
 					('warmstart', ct.c_int),
 					('resume', ct.c_int),
 					('diagnostic', ct.c_int),
+					('extratol', ct.c_int),
 					('x0', lib.ok_float_p),
 					('nu0', lib.ok_float_p)]
 

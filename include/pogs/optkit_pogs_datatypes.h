@@ -31,6 +31,7 @@ extern "C" {
 #define kGAPSTOP 0
 #define kWARMSTART 0
 #define kDIAGNOSTIC 0
+#define kEXTRATOL 0 /* CHANGE THIS TO 1 AFTER DEBUGGING */
 #define kVERBOSE 2u
 #define kSUPPRESS 0u
 #define kRESUME 0
@@ -60,7 +61,7 @@ typedef struct POGSSettings {
 	uint maxiter, anderson_lookback, verbose, suppress;
 	/* TODO: remove after testing */
 	uint state_begin, state_length;
-	int adaptiverho, accelerate, gapstop, warmstart, resume, diagnostic;
+	int adaptiverho, accelerate, gapstop, warmstart, resume, diagnostic, extratol;
 	ok_float * x0, * nu0;
 } pogs_settings;
 
