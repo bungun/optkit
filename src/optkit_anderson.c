@@ -120,10 +120,25 @@ ok_status anderson_update_G(anderson_accelerator * aa, matrix * G, vector * gx,
 	return OPTKIT_SUCCESS;
 }
 
+ok_status anderson_autoregularize(vector * F_gram_diag, ok_float * mu_auto)
+{
+	ok_status err = OPTKIT_SUCCESS;
+	ok_float mu_requested;
+	OK_CHECK_PTR(mu_auto);
+	OK_CHECK_VECTOR(F_gram_diag);
+
+	mu_requested = *mu_auto;
+	OK_CHECK_ERR( err, vector_abs(F_gram_diag) );
+	OK_CHECK_ERR( err, vector_max(F_gram_diag, mu_auto) );
+	*mu_auto *= mu_requested;
+	return err;
+}
+
 ok_status anderson_regularized_gram(anderson_accelerator * aa, matrix * F,
 	matrix * F_gram, ok_float mu)
 {
 	ok_status err = OPTKIT_SUCCESS;
+	ok_float sqrt_mu = kZero;
 
 	/* F_gram = F'F */
 	OK_CHECK_ERR( err, blas_gemm(aa->linalg_handle, CblasTrans, CblasNoTrans,
@@ -134,22 +149,31 @@ ok_status anderson_regularized_gram(anderson_accelerator * aa, matrix * F,
 
 	/* F_gram = F'F + \sqrt(mu) I */
 	OK_CHECK_ERR( err, matrix_diagonal(aa->diag, F_gram) );
-	OK_CHECK_ERR( err, vector_add_constant(aa->diag, MATH(sqrt)(
-		aa->mu_regularization)) );
+	if (mu > 0) {
+		sqrt_mu = MATH(sqrt)(mu);
+		OK_CHECK_ERR( err, anderson_autoregularize(aa->diag, &sqrt_mu) );
+		OK_CHECK_ERR( err, vector_add_constant(aa->diag, mu) );
+	}
 	return err;
 }
+
 
 ok_status anderson_solve(anderson_accelerator *aa, matrix * F, vector * alpha,
 	ok_float mu)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	ok_float denominator = 1.;
+	ok_float denominator = kOne;
 
 	/* F_gram = F'F + \sqrt(mu)I  */
-	OK_CHECK_ERR( err, anderson_regularized_gram(aa, F, aa->F_gram, mu) );
+	OK_CHECK_ERR( err, anderson_regularized_gram(aa, F, aa->F_gram, kZero) );
 
 	/* LL' = F_gram */
 	OK_CHECK_ERR( err, linalg_cholesky_decomp(aa->linalg_handle, aa->F_gram) );
+	if (err) {
+		err = OPTKIT_SUCCESS;
+		OK_CHECK_ERR( err, anderson_regularized_gram(aa, F, aa->F_gram, mu) );
+		OK_CHECK_ERR( err, linalg_cholesky_decomp(aa->linalg_handle, aa->F_gram) );
+	}
 
 	/* alpha_hat = F_gram^{-1} 1 */
 	OK_CHECK_ERR( err, vector_set_all(alpha, kOne) );
