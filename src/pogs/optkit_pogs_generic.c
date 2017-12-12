@@ -261,6 +261,15 @@ ok_status pogs_dual_update(void * linalg_handle, pogs_variables * z,
 	return OPTKIT_SUCCESS;
 }
 
+ok_status pogs_accelerate(pogs_solver * solver)
+{
+	OK_CHECK_PTR(solver);
+	if (solver->settings->accelerate)
+		OK_RETURNIF_ERR( ACCELERATOR(accelerate)(
+			solver->aa, solver->z->fixed_point_iterate) );
+	return OPTKIT_SUCCESS;
+}
+
 ok_status pogs_iterate(pogs_solver * solver)
 {
 	ok_status err = OPTKIT_SUCCESS;
@@ -269,24 +278,11 @@ ok_status pogs_iterate(pogs_solver * solver)
 	ok_float tolproj = s->settings->tolproj;
 	err = OK_SCAN_ERR( pogs_primal_update(s->z) );
 	OK_CHECK_ERR( err, pogs_prox(s->linalg_handle, s->f, s->g, s->z, s->rho) );
+	// OK_CHECK_ERR( err, pogs_accelerate(solver) );
 	OK_CHECK_ERR( err, pogs_project_graph(s->W, s->z, alpha, tolproj) );
 	OK_CHECK_ERR( err, pogs_dual_update(s->linalg_handle, s->z, alpha) );
 	return err;
 	/* TODO: modify tolproj as monotonic decr function of iteration? */
-}
-
-ok_status pogs_accelerate(pogs_solver * solver)
-{
-	OK_CHECK_PTR(solver);
-	if (solver->settings->accelerate) {
-		// printf("%s\n", "BEFORE");
-		// vector_print(solver->z->fixed_point_iterate);
-		OK_RETURNIF_ERR( anderson_accelerate(
-			solver->aa, solver->z->fixed_point_iterate) );
-		// printf("%s\n", "AFTER");
-		// vector_print(solver->z->fixed_point_iterate);
-	}
-	return OPTKIT_SUCCESS;
 }
 
 /*
@@ -436,7 +432,7 @@ ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 	/* iterate until converged, or error/maxiter reached */
 	for (k = 1; !err && k <= settings->maxiter; ++k) {
 		OK_CHECK_ERR( err, pogs_iterate(solver) );
-		// OK_CHECK_ERR( err, pogs_accelerate(solver) );
+		OK_CHECK_ERR( err, pogs_accelerate(solver) );
 		OK_CHECK_ERR( err, pogs_check_convergence(solver, &obj, &res,
 			&tol, &converged) );
 
@@ -453,7 +449,7 @@ ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 
 		OK_CHECK_ERR( err, pogs_adapt_rho(solver->z, &(solver->rho),
 			&rho_params, settings, &res, &tol, k) );
-		OK_CHECK_ERR( err, pogs_accelerate(solver) );
+		// OK_CHECK_ERR( err, pogs_accelerate(solver) );
 	}
 
 	if (!converged && k == settings->maxiter)
@@ -512,23 +508,25 @@ ok_status pogs_solve(pogs_solver * solver, const function_vector * f,
 		OK_CHECK_ERR( err, pogs_setup_diagnostics(solver,
 			settings->maxiter) );
 
-	/* TODO: remove after testing */
-	uint fpi_begin = settings->state_begin; /* 0, 1, 2 or 3*/
-	uint fpi_len = settings->state_length; /* 1 or 2 */
-	size_t m = solver->z->m, n = solver->z->n;
-	fpi_begin = fpi_begin > 3 ? 3 : fpi_begin;
-	fpi_len = fpi_len > 2 ? 2 : fpi_len;
-	fpi_len = fpi_begin == 3 ? 1 : fpi_len;
+
+	size_t m, n;
+	m = f->size;
+	n = g->size;
+	uint fpi_begin = settings->fenchel_state ? 3 : 0;
+
 
 	/* TODO: remove after testing */
 	if (settings->accelerate) {
 		OK_CHECK_ERR( err, vector_subvector(
 			solver->z->fixed_point_iterate,
 			solver->z->state, fpi_begin * (m + n),
-			fpi_len * (m + n)) );
-		OK_CHECK_ERR( err, anderson_accelerator_init(solver->aa,
+			2 * (m + n)) );
+		// OK_CHECK_ERR( err, anderson_accelerator_init(solver->aa,
+		// 	solver->z->fixed_point_iterate->size,
+		// 	(size_t) settings->anderson_lookback) );
+		OK_CHECK_ERR( err, ACCELERATOR(accelerator_init)(solver->aa,
 			solver->z->fixed_point_iterate->size,
-			(size_t) settings->anderson_lookback) );
+			(size_t) settings->anderson_lookback, (size_t) 2) );
 	}
 
 
@@ -538,10 +536,14 @@ ok_status pogs_solve(pogs_solver * solver, const function_vector * f,
 	if (settings->warmstart)
 		OK_CHECK_ERR( err, pogs_set_z0(solver) );
 
-	solver->aa->mu_regularization = settings->anderson_regularization;
-	if ((settings->warmstart || settings->resume) && settings->accelerate )
-		OK_CHECK_ERR( err, anderson_set_x0(
+	// solver->aa->mu_regularization = settings->anderson_regularization;
+	if ((settings->warmstart || settings->resume) && settings->accelerate){
+		// OK_CHECK_ERR( err, anderson_set_x0(
+		// 	solver->aa, solver->z->fixed_point_iterate) );
+		OK_CHECK_ERR( err, ACCELERATOR(set_x0)(
 			solver->aa, solver->z->fixed_point_iterate) );
+		OK_CHECK_ERR( err, vector_set_all(solver->z->state, kZero) );
+	}
 
 	if (!(settings->resume))
 		solver->rho = settings->rho;
@@ -557,7 +559,8 @@ ok_status pogs_solve(pogs_solver * solver, const function_vector * f,
 
 	/* TODO: remove after testing */
 	if (settings->accelerate)
-		OK_MAX_ERR( err, anderson_accelerator_free(solver->aa) );
+		OK_MAX_ERR( err, ACCELERATOR(accelerator_free)(solver->aa) );
+		// OK_MAX_ERR( err, anderson_accelerator_free(solver->aa) );
 
 	/* UNSCALE */
 	OK_CHECK_ERR( err, pogs_unscale_output(output, solver->z, solver->W->d,

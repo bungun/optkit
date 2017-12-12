@@ -4,6 +4,7 @@
 #include "optkit_timer.h"
 #include "optkit_prox.hpp"
 #include "optkit_anderson.h"
+#include "optkit_anderson_difference.h"
 #include "optkit_pogs_datatypes.h"
 #include "optkit_pogs_adaptive_rho.h"
 #include "optkit_pogs_impl_common.h"
@@ -59,6 +60,11 @@ typedef enum {
 	#define POGS(x) pogs_dense_ ## x
 #endif
 
+#define pogs_accelerator fused_accelerator
+#define ACCELERATOR(x) anderson_fused_ ## x
+
+
+
 typedef struct POGSSolver {
 	pogs_work * W;
 	pogs_variables * z;
@@ -67,7 +73,7 @@ typedef struct POGSSolver {
 	pogs_settings * settings;
 	void * linalg_handle;
 	ok_float init_time;
-	anderson_accelerator * aa;
+	pogs_accelerator * aa;
 	pogs_convergence * convergence;
 } pogs_solver;
 
