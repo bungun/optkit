@@ -57,7 +57,9 @@ class CVariableContext:
     def __enter__(self):
         return self._alloc()
     def __exit__(self, *exc):
+        # print "EXITING VARIABLE CONTEXT"
         assert NO_ERR(self._free())
+        # print "EXIT VARCTX COMPLETE"
 
 class CArrayContext:
     def __init__(self, c, py, pyptr, build, free):
@@ -70,7 +72,9 @@ class CArrayContext:
         self._build()
         return self
     def __exit__(self, *exc):
+        # print "EXITING ARRAY CTX"
         assert NO_ERR(self._free())
+        # print "EXIT ARRCTX COMPLETE"
 
 class CArrayIO:
     def __init__(self, py_array, copy_py2c, copy_c2py):
@@ -133,6 +137,31 @@ class CIndvectorContext(CArrayContext, CArrayIO):
 
         CArrayContext.__init__(self, v, v_py, v_ptr, build, free)
         CArrayIO.__init__(self, v_py, py2c, c2py)
+
+class CIntVectorContext(CArrayContext, CArrayIO):
+    def __init__(self, lib, size, random_maxval=0):
+        v = lib.int_vector(0, 0, None)
+        v_py = np.zeros(size).astype(ct.c_int)
+        v_ptr = v_py.ctypes.data_as(lib.c_int_p)
+        random = False
+        if random_maxval > 0:
+            random = True
+            v_py += (int(random_maxval) * np.random.random(size)).astype(v_py.dtype)
+
+        def arr2ptr(arr): return np.ravel(arr).ctypes.data_as(type(v_ptr))
+        def py2c(py_array):
+            return lib.int_vector_memcpy_va(v, arr2ptr(py_array), 1)
+        def c2py(py_array):
+            return lib.int_vector_memcpy_av(arr2ptr(py_array), v, 1)
+        def build():
+            assert NO_ERR( lib.int_vector_calloc(v, size) )
+            if random:
+                assert NO_ERR( py2c(v_py) )
+        def free(): return lib.int_vector_free(v)
+
+        CArrayContext.__init__(self, v, v_py, v_ptr, build, free)
+        CArrayIO.__init__(self, v_py, py2c, c2py)
+
 
 class CDenseMatrixContext(CArrayContext, CArrayIO):
     def __init__(self, lib, size1, size2, order, random=False, value=None):
@@ -250,6 +279,15 @@ class CSparseLinalgContext(CLinalgContext):
         CLinalgContext.__init__(
             self, lib.sp_make_handle, lib.sp_destroy_handle)
 
+class CDenseLapackContext(CLinalgContext):
+    def __init__(self, lib):
+        CLinalgContext.__init__(
+            self, lib.lapack_make_handle, lib.lapack_destroy_handle)
+
+# class CSparseLapackContext(CLinalgContext):
+#     def __init__(self, lib):
+#         CLinalgContext.__init__(
+#             self, lib.sp_lapack_make_handle, lib.so_lapack_destroy_handle)
 
 def c_operator_context(lib, opkey, A, rowmajor=True):
     if opkey == 'dense':
