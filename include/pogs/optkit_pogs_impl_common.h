@@ -168,7 +168,7 @@ ok_status pogs_variables_alloc(pogs_variables * z, size_t m, size_t n)
 
 	ok_alloc(z->fixed_point_iterate, sizeof(*(z->fixed_point_iterate)));
 	// OK_CHECK_ERR( err, vector_subvector(z->fixed_point_iterate, z->state,
-	// 	2 * (m + n), 1 * (m + n)) );
+	// 	3 * (m + n), 2 * (m + n)) );
 
 	if (err)
 		OK_MAX_ERR( err, pogs_variables_free(z) );
@@ -210,6 +210,7 @@ ok_status pogs_set_default_settings(pogs_settings * s)
 	s->anderson_lookback = kANDERSON;
 	s->verbose = kVERBOSE;
 	s->suppress = kSUPPRESS;
+	s->fenchel_state = 0; /* TODO: remove */
 	s->adaptiverho = kADAPTIVE;
 	s->accelerate = kACCELERATE;
 	s->gapstop = kGAPSTOP;
