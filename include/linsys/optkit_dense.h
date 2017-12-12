@@ -4,6 +4,7 @@
 #include "optkit_vector.h"
 #include "optkit_matrix.h"
 #include "optkit_blas.h"
+#include "optkit_lapack.h"
 
 #ifdef __cplusplus
 extern "C" {

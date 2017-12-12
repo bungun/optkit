@@ -14,6 +14,8 @@ def optkit_print_error(err, print_success=False):
 		print('\nOPTKIT ERROR CUBLAS')
 	elif err == 4:
 		print('\nOPTKIT ERROR CUSPARSE')
+	elif err == 5:
+		print('\nOPTKIT ERROR LAPACK')
 	elif err == 10:
 		print('\nOPTKIT ERROR DOMAIN')
 	elif err == 11:

@@ -67,6 +67,14 @@ def attach_dense_linsys_ctypes(lib, single_precision=False):
 	lib.indvector = ok_indvector
 	lib.indvector_p = ct.POINTER(lib.indvector)
 
+	# integer vector struct
+	class ok_int_vector(ct.Structure):
+		_fields_ = [('size', ct.c_size_t),
+					('stride', ct.c_size_t),
+					('data', lib.c_int_p)]
+	lib.int_vector = ok_int_vector
+	lib.int_vector_p = ct.POINTER(lib.int_vector)
+
 	# matrix struct
 	class ok_matrix(ct.Structure):
 		_fields_ = [('size1', ct.c_size_t),
@@ -110,9 +118,11 @@ def attach_vector_ccalls(lib, single_precision=False):
 
 	ok_float = lib.ok_float
 	ok_float_p = lib.ok_float_p
+	c_int_p = lib.c_int_p
 	c_size_t_p = lib.c_size_t_p
 	vector_p = lib.vector_p
 	indvector_p = lib.indvector_p
+	int_vector_p = lib.int_vector_p
 
 	lib.vector_alloc.argtypes = [vector_p, ct.c_size_t]
 	lib.vector_calloc.argtypes = [vector_p, ct.c_size_t]
@@ -158,6 +168,14 @@ def attach_vector_ccalls(lib, single_precision=False):
 	lib.indvector_max.argtypes = [indvector_p, c_size_t_p]
 	lib.indvector_min.argtypes = [indvector_p, c_size_t_p]
 
+	lib.int_vector_alloc.argtypes = [int_vector_p, ct.c_size_t]
+	lib.int_vector_calloc.argtypes = [int_vector_p, ct.c_size_t]
+	lib.int_vector_free.argtypes = [int_vector_p]
+	lib.int_vector_memcpy_vv.argtypes = [int_vector_p, int_vector_p]
+	lib.int_vector_memcpy_va.argtypes = [int_vector_p, c_int_p, ct.c_size_t]
+	lib.int_vector_memcpy_av.argtypes = [c_int_p, int_vector_p, ct.c_size_t]
+	lib.int_vector_print.argtypes = [int_vector_p]
+
 	## return values
 	OptkitLibs.attach_default_restype(
 			lib.vector_alloc,
@@ -200,6 +218,15 @@ def attach_vector_ccalls(lib, single_precision=False):
 			lib.indvector_min,
 			lib.indvector_max,
 	)
+	OptkitLibs.attach_default_restype(
+			lib.int_vector_alloc,
+			lib.int_vector_calloc,
+			lib.int_vector_free,
+			lib.int_vector_memcpy_vv,
+			lib.int_vector_memcpy_va,
+			lib.int_vector_memcpy_av,
+			lib.int_vector_print,
+	)
 
 def attach_dense_linsys_ccalls(lib, single_precision=False):
 	include_ok_dense(lib, single_precision=single_precision)
@@ -208,6 +235,7 @@ def attach_dense_linsys_ccalls(lib, single_precision=False):
 	ok_float_p = lib.ok_float_p
 	vector_p = lib.vector_p
 	indvector_p = lib.indvector_p
+	int_vector_p = lib.int_vector_p
 	matrix_p = lib.matrix_p
 
 	# Matrix
@@ -306,6 +334,18 @@ def attach_dense_linsys_ccalls(lib, single_precision=False):
 			lib.blas_syrk,
 			lib.blas_gemm,
 			lib.blas_trsm,
+	)
+
+	# LAPACK
+	# ------
+	lib.lapack_make_handle.argtypes = [ct.c_void_p]
+	lib.lapack_destroy_handle.argtypes = [ct.c_void_p]
+	lib.lapack_solve_LU.argtypes = [ct.c_void_p, matrix_p, vector_p, int_vector_p]
+
+	OptkitLibs.attach_default_restype(
+			lib.lapack_make_handle,
+			lib.lapack_destroy_handle,
+			lib.lapack_solve_LU,
 	)
 
 	# LINALG

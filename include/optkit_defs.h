@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include "gsl_cblas.h"
+#include "lapacke.h"
 
 #ifdef __CUDACC__
 #include "cublas_v2.h"
@@ -57,6 +58,7 @@ typedef enum optkit_status {
 	OPTKIT_ERROR_CUDA = 2,
 	OPTKIT_ERROR_CUBLAS = 3,
 	OPTKIT_ERROR_CUSPARSE = 4,
+	OPTKIT_ERROR_LAPACK = 5,
 	OPTKIT_ERROR_DOMAIN = 10,
 	OPTKIT_ERROR_DIVIDE_BY_ZERO = 11,
 	OPTKIT_ERROR_LAYOUT_MISMATCH = 100,
@@ -105,6 +107,8 @@ enum OPTKIT_TRANSFORM {
 #ifndef FLOAT
 	#define CBLAS(x) cblas_d ## x
 	#define CBLASI(x) cblas_id ## x
+	#define LAPACK(x) d ## x
+	#define LAPACKE(x) LAPACKE_d ## x
 	#define MATH(x) x
 	typedef double ok_float;
 	#define MACHINETOL (double) 10e-10
@@ -113,6 +117,8 @@ enum OPTKIT_TRANSFORM {
 #else
 	#define CBLAS(x) cblas_s ## x
 	#define CBLASI(x) cblas_is ## x
+	#define LAPACK(x) s ## x
+	#define LAPACKE(x) LAPACKE_s ## x
 	#define MATH(x) x ## f
 	typedef float ok_float;
 	#define MACHINETOL (float) 10e-5
@@ -148,6 +154,8 @@ static const char * ok_err2string(const ok_status error) {
 		return "OPTKIT_ERROR_CUBLAS";
 	case OPTKIT_ERROR_CUSPARSE:
 		return "OPTKIT_ERROR_CUSPARSE";
+	case OPTKIT_ERROR_LAPACK:
+		return "OPTKIT_ERROR_LAPACK";
 	case OPTKIT_ERROR_DOMAIN:
 		return "OPTKIT_ERROR_DOMAIN";
 	case OPTKIT_ERROR_DIVIDE_BY_ZERO:

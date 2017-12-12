@@ -23,13 +23,20 @@ CLUINC=$(INCLUDE)$(CLUSTER)
 CLUSRC=$(SRC)$(CLUSTER)
 CLUOUT=$(OUT)$(CLUSTER)
 
+ANDERSON=anderson/optkit_
+ANDINC=$(INCLUDE)$(ANDERSON)
+ANDSRC=$(SRC)$(ANDERSON)
+ANDOUT=$(OUT)$(ANDERSON)
+
 POGS=pogs/optkit_pogs_
 POGSINC=$(INCLUDE)$(POGS)
 POGSSRC=$(SRC)$(POGS)
 POGSOUT=$(OUT)$(POGS)
 
 IFLAGS=-I. -I$(INCLUDE) -I$(INCLUDE)external -I$(INCLUDE)linsys 
-IFLAGS+=-I$(INCLUDE)operator -I$(INCLUDE)clustering -I$(INCLUDE)pogs
+IFLAGS+=-I$(INCLUDE)anderson -I$(INCLUDE)operator -I$(INCLUDE)clustering 
+IFLAGS+=-I$(INCLUDE)pogs
+
 
 # C Flags
 CC=gcc
@@ -68,6 +75,11 @@ endif
 
 CULDFLAGS_+=-lcudart -lcublas -lcusparse
 
+ifndef NO_LAPACK
+LDFLAGS_+=-llapack 
+CULDFLAGS_+=-lcusolver
+endif
+
 # make options
 ifndef GPU
 GPU=0
@@ -82,6 +94,7 @@ OPT_FLAGS=
 ifneq ($(FLOAT), 0)
 OPT_FLAGS+=-DFLOAT # use floats rather than doubles
 endif
+
 ifdef OPTKIT_DEBUG_PYTHON
 OPT_FLAGS+=-DOK_DEBUG_PYTHON
 endif
@@ -117,7 +130,8 @@ PROX_TARG=$(DEVICETAG)_prox
 CLUSTER_TARG=$(DEVICETAG)_cluster
 
 
-DENSE_HDR=$(LAINC)vector.h $(LAINC)matrix.h $(LAINC)blas.h $(LAINC)dense.h
+DENSE_HDR=$(LAINC)vector.h $(LAINC)matrix.h $(LAINC)blas.h $(LAINC)lapack.h  
+DENSE_HDR+=$(LAINC)dense.h
 SPARSE_HDR=$(LAINC)vector.h $(LAINC)sparse.h
 ifneq ($(GPU), 0)
 DENSE_HDR+=$(INCLUDE)optkit_thrust.hpp $(GPU_DEF_HDR)
@@ -143,11 +157,15 @@ CG_HDR=$(OPERATOR_HDR) $(INCLUDE)optkit_cg.h
 BASE_OBJ=$(PREFIX_OUT)defs$(LIBCONFIG).o
 VECTOR_OBJ=$(LAOUT)vector$(LIBCONFIG).o
 DENSE_OBJ=$(LAOUT)vector$(LIBCONFIG).o $(LAOUT)matrix$(LIBCONFIG).o
-DENSE_OBJ+=$(LAOUT)blas$(LIBCONFIG).o $(LAOUT)dense$(LIBCONFIG).o
+DENSE_OBJ+=$(LAOUT)blas$(LIBCONFIG).o  $(LAOUT)lapack$(LIBCONFIG).o
+DENSE_OBJ+=$(LAOUT)dense$(LIBCONFIG).o
 SPARSE_OBJ=$(LAOUT)sparse$(LIBCONFIG).o
 PROX_OBJ=$(PREFIX_OUT)prox$(LIBCONFIG).o
 
-ANDERSON_OBJ=$(PREFIX_OUT)anderson$(LIBCONFIG).o
+ANDERSON_OBJ=$(ANDOUT)anderson$(LIBCONFIG).o 
+ANDERSON_OBJ+=$(ANDOUT)anderson_difference$(LIBCONFIG).o
+ANDERSON_OBJ+=$(ANDOUT)anderson_fused$(LIBCONFIG).o
+ANDERSON_OBJ+=$(ANDOUT)anderson_fused_diff$(LIBCONFIG).o
 
 OPERATOR_OBJ=$(OPOUT)dense$(LIBCONFIG).o $(OPOUT)sparse$(LIBCONFIG).o 
 OPERATOR_OBJ+=$(OPOUT)diagonal$(LIBCONFIG).o 
@@ -208,12 +226,15 @@ POGS_ABSTRACT_LIB_DEPS+=operator cg equil projector anderson
 .PHONY: cpu_cluster gpu_cluster cpu_cluster_ gpu_cluster_ clustering_common
 .PHONY: cpu_upsampling_vector_ gpu_upsampling_vector_ cpu_upsampling_vector 
 .PHONY: gpu_upsampling_vector upsampling_vector_common 
+.PHONY: anderson anderson_fused anderson_fused_ anderson_explicit
+.PHONY: anderson_fused_diff anderson_fused_diff_ anderson_difference
 .PHONY: cpu_prox gpu_prox cpu_sparse gpu_sparse
-.PHONY: cpu_dense gpu_dense cpu_dense_ gpu_dense_ cpu_blas gpu_blas
+.PHONY: cpu_dense gpu_dense cpu_dense_ gpu_dense_ 
+.PHONY: cpu_lapack gpu_lapack cpu_blas gpu_blas 
 .PHONY: cpu_matrix gpu_matrix cpu_vector gpu_vector cpu_defs gpu_defs
 
 default: cpu_dense
-all: libs liboperator libcg libequil libprojector libpogs libcluster
+all: libs liboperator libcg libequil libprojector libpogs libcluster libanderson
 libs: libok libprox
 libok: libok_dense libok_sparse
 libpogs: libpogs_dense libpogs_abstract
@@ -437,10 +458,36 @@ $(CLUOUT)upsampling_vector_common$(LIBCONFIG).o: \
 	mkdir -p $(OUT)clustering/
 	$(CC) $(CCFLAGS) $< -c -o $@
 
-anderson: $(PREFIX_OUT)anderson$(LIBCONFIG).o
-$(PREFIX_OUT)anderson$(LIBCONFIG).o: $(SRC)optkit_anderson.c \
-	$(INCLUDE)optkit_anderson.h $(DENSE_HDR)
+anderson: anderson_fused anderson_fused_diff
+anderson_fused: anderson_explicit anderson_fused_
+anderson_fused_diff: anderson_difference anderson_fused_diff_ 
+
+anderson_fused_: $(ANDOUT)anderson_fused$(LIBCONFIG).o
+$(ANDOUT)anderson_fused$(LIBCONFIG).o: $(ANDSRC)anderson_fused.c \
+	$(ANDINC)anderson.h $(ANDINC)anderson_reductions.h $(DENSE_HDR)
 	mkdir -p $(OUT)
+	mkdir -p $(OUT)anderson/
+	$(CC) $(CCFLAGS) $< -c -o $@
+
+anderson_fused_diff_: $(ANDOUT)anderson_fused_diff$(LIBCONFIG).o
+$(ANDOUT)anderson_fused_diff$(LIBCONFIG).o: $(ANDSRC)anderson_fused_diff.c \
+	$(ANDINC)anderson_difference.h $(ANDINC)anderson_reductions.h $(DENSE_HDR)
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)anderson/
+	$(CC) $(CCFLAGS) $< -c -o $@
+
+anderson_explicit: $(ANDOUT)anderson$(LIBCONFIG).o
+$(ANDOUT)anderson$(LIBCONFIG).o: $(ANDSRC)anderson.c \
+	$(ANDINC)anderson.h $(ANDINC)anderson_reductions.h $(DENSE_HDR)
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)anderson/
+	$(CC) $(CCFLAGS) $< -c -o $@
+
+anderson_difference: $(ANDOUT)anderson_difference$(LIBCONFIG).o
+$(ANDOUT)anderson_difference$(LIBCONFIG).o: $(ANDSRC)anderson_difference.c \
+	$(ANDINC)anderson_difference.h $(ANDINC)anderson_reductions.h $(DENSE_HDR)
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)anderson/
 	$(CC) $(CCFLAGS) $< -c -o $@
 
 cpu_prox: $(PREFIX_OUT)prox_cpu$(PRECISION).o
@@ -470,22 +517,38 @@ $(LAOUT)sparse_gpu$(PRECISION).o: $(LASRC)sparse.cu $(LAINC)sparse.h \
 	mkdir -p $(OUT)linsys
 	$(CUXX) $(CUXXFLAGS) $< -c -o $@
 
-cpu_dense: cpu_vector cpu_matrix cpu_blas cpu_dense_
-gpu_dense: gpu_vector gpu_matrix gpu_blas gpu_dense_
+cpu_dense: cpu_vector cpu_matrix cpu_blas cpu_lapack cpu_dense_
+gpu_dense: gpu_vector gpu_matrix gpu_blas gpu_dense_ #gpu_lapack
 
 cpu_dense_: $(LAOUT)dense_cpu$(PRECISION).o
 $(LAOUT)dense_cpu$(PRECISION).o: $(LASRC)dense.c $(LAINC)dense.h \
-	$(LAINC)blas.h $(LAINC)matrix.h $(LAINC)vector.h $(DEF_HDR)
+	$(LAINC)lapack.h $(LAINC)blas.h $(LAINC)matrix.h \
+	$(LAINC)vector.h $(DEF_HDR)
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)linsys
 	$(CC) $(CCFLAGS) $< -c -o $@
 
 gpu_dense_: $(LAOUT)dense_gpu$(PRECISION).o
 $(LAOUT)dense_gpu$(PRECISION).o: $(LASRC)dense.cu $(LAINC)dense.h \
-	$(LAINC)blas.h $(LAINC)matrix.h $(LAINC)vector.h $(GPU_DEF_HDR)
+	$(LAINC)lapack.h $(LAINC)blas.h $(LAINC)matrix.h $(LAINC)vector.h \
+	$(GPU_DEF_HDR)
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)linsys
 	$(CUXX) $(CUXXFLAGS) $< -c -o $@
+
+cpu_lapack: $(LAOUT)lapack_cpu$(PRECISION).o
+$(LAOUT)lapack_cpu$(PRECISION).o: $(LASRC)lapack.c $(LAINC)lapack.h \
+	$(LAINC)matrix.h $(LAINC)vector.h $(DEF_HDR)
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)linsys
+	$(CC) $(CCFLAGS) $< -c -o $@
+
+# gpu_lapack: $(LAOUT)lapack_gpu$(PRECISION).o
+# $(LAOUT)lapack_gpu$(PRECISION).o: $(LASRC)lapack.cu $(LAINC)lapack.h \
+# 	$(LAINC)matrix.h $(LAINC)vector.h $(GPU_DEF_HDR)
+# 	mkdir -p $(OUT)
+# 	mkdir -p $(OUT)linsys
+# 	$(CUXX) $(CUXXFLAGS) $< -c -o $@
 
 cpu_blas: $(LAOUT)blas_cpu$(PRECISION).o
 $(LAOUT)blas_cpu$(PRECISION).o: $(LASRC)blas.c $(LAINC)blas.h \

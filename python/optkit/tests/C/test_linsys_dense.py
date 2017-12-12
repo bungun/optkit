@@ -67,6 +67,21 @@ class DenseLibsTestCase(unittest.TestCase):
             # destroy
             assert NO_ERR( lib.blas_destroy_handle(handle) )
 
+    def test_lapack_handle(self):
+        for (gpu, single_precision) in defs.LIB_CONDITIONS:
+            lib = self.libs.get(single_precision=single_precision, gpu=gpu)
+            if lib is None:
+                    continue
+            if gpu:
+                continue
+                # TODO: GPU IMPLEMENTATION
+
+            handle = ct.c_void_p()
+            # create
+            assert NO_ERR( lib.lapack_make_handle(ct.byref(handle)) )
+            # destroy
+            assert NO_ERR( lib.lapack_destroy_handle(handle) )
+
     def test_device_reset(self):
         for (gpu, single_precision) in defs.LIB_CONDITIONS:
             lib = self.libs.get(single_precision=single_precision, gpu=gpu)
@@ -412,6 +427,61 @@ class DenseBLASTestCase(unittest.TestCase):
                     A.sync_to_py()
                     assert VEC_EQ( A.py, pyresult, ATOLMN, RTOL )
 
+
+class DenseLapackTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(self):
+        self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
+        os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
+        self.libs = okcctx.lib_contexts(DenseLinsysLibs())
+        self.A_test = defs.A_test_gen()
+        self.B_test = defs.A_test_gen()
+
+    @classmethod
+    def tearDownClass(self):
+        os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
+
+    def setUp(self):
+        self.LIBS_LAYOUTS = itertools.product(
+                self.libs, enums.OKEnums.MATRIX_ORDERS)
+
+    def test_vector_LU(self):
+        m, n = defs.shape()
+        mindim = min(m, n)
+
+        # build decently conditioned square matrix
+        C_test = self.A_test.T.dot(self.B_test)[:mindim, :mindim]
+        C_test += np.eye(mindim)
+
+        for lib, order in self.LIBS_LAYOUTS:
+            with lib as lib:
+                imprecision_factor = 5**(int(lib.GPU) + int(lib.FLOAT))
+                atol = 1e-2 * imprecision_factor * mindim
+                rtol = 1e-2 * imprecision_factor
+
+                if lib.GPU:
+                    continue
+                    #TODO: GPU IMPLEMENTATION
+                if order == lib.enums.CblasRowMajor:
+                    continue
+                    #TODO: ROWMAJOR IMPLEMENTATION (LAPACK->LAPACKE)
+
+                C = okcctx.CDenseMatrixContext(lib, mindim, mindim, order)
+                x = okcctx.CVectorContext(lib, mindim, random=True)
+                pivot = okcctx.CIntVectorContext(lib, mindim)
+                hdl = okcctx.CDenseLapackContext(lib)
+
+                with C, x, pivot, hdl as hdl:
+                    # populate L
+                    C.py *= 0
+                    C.py += C_test
+                    C.sync_to_c()
+
+                    pysol = np.linalg.solve(C_test, x.py)
+
+                    assert NO_ERR( lib.lapack_solve_LU(hdl, C.c, x.c, pivot.c) )
+                    x.sync_to_py()
+                    assert VEC_EQ( x.py, pysol, atol * mindim**0.5, rtol )
 
 class DenseLinalgTestCase(unittest.TestCase):
     @classmethod

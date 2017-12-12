@@ -425,6 +425,37 @@ ok_status indvector_min(const indvector * v, size_t * minval)
 ok_status indvector_max(const indvector * v, size_t * maxval)
 	{ return vector_max_<size_t>(v, 0, maxval); }
 
+
+/* INT_VECTOR */
+ok_status int_vector_alloc(int_vector * v, size_t n)
+        { return vector_alloc_<ok_int>(v, n); }
+
+ok_status int_vector_calloc(int_vector * v, size_t n)
+        { return vector_calloc_<ok_int>(v, n); }
+
+ok_status int_vector_free(int_vector * v)
+        { return vector_free_<ok_int>(v); }
+
+ok_status int_vector_memcpy_vv(int_vector * v1, const int_vector * v2)
+        { return vector_memcpy_vv_<ok_int>(v1, v2); }
+
+ok_status int_vector_memcpy_va(int_vector * v, const ok_int * y, size_t stride_y)
+        { return vector_memcpy_va_<ok_int>(v, y, stride_y); }
+
+ok_status int_vector_memcpy_av(ok_int * x, const int_vector * v, size_t stride_x)
+        { return vector_memcpy_av_<ok_int>(x, v, stride_x); }
+
+ok_status int_vector_print(const int_vector * v)
+{
+        uint i;
+        int v_host[v->size];
+        OK_RETURNIF_ERR( int_vector_memcpy_av(v_host, v, 1) );
+        for (i = 0; i < v->size; ++i)
+                printf("%i ", v_host[i]);
+        printf("\n");
+        return OPTKIT_SUCCESS;
+}
+
 #ifdef __cplusplus
 }
 #endif
