@@ -751,6 +751,8 @@ def anderson_reduces_iterations(test_context):
     settings, info, output = params.settings, params.info, params.output
     settings.verbose = 1
     settings.maxiter = 50000
+    settings.reltol = 1e-6
+    settings.abstol = 1e-7
     k0 = 0
 
     with ctx.solver as solver:
@@ -761,8 +763,8 @@ def anderson_reduces_iterations(test_context):
                 solver, params.f, params.g, settings, info, output.ptr) )
         k0 = info.k
 
-    print('with anderson')
     with ctx.solver as solver:
+        print('with anderson')
         settings.accelerate = 1
         settings.rho = 1
         assert NO_ERR( lib.pogs_solve(
