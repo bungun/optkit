@@ -30,7 +30,6 @@ ANDOUT=$(OUT)$(ANDERSON)
 
 POGS=pogs/optkit_pogs_
 POGSINC=$(INCLUDE)$(POGS)
-POGSSRC=$(SRC)$(POGS)
 POGSOUT=$(OUT)$(POGS)
 
 IFLAGS=-I. -I$(INCLUDE) -I$(INCLUDE)external -I$(INCLUDE)linsys 
@@ -319,46 +318,21 @@ $(OUT)libok_dense$(LIBCONFIG).$(SHARED): $(DENSE_TARG) $(BASE_TARG)
 	$(CC) $(CCFLAGS) -shared -o $@ \
 	$(DENSE_OBJ) $(BASE_OBJ) $(LDFLAGS)
 
-# pogs_abstract: pogs_common pogs_abstract_
-# pogs: pogs_common pogs_
-
-# pogs_abstract_: $(POGSOUT)pogs_abstract$(LIBCONFIG).o
-# $(POGSOUT)pogs_abstract$(LIBCONFIG).o: $(POGSSRC)pogs_abstract.c \
-# 	$(POGSINC)pogs_abstract.h $(INCLUDE)optkit_equilibration.h \
-# 	$(INCLUDE)optkit_projector.h
-# 	mkdir -p $(OUT) 
-# 	mkdir -p $(OUT)pogs 	
-# 	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $< -c -o $@
-
-# pogs_: $(POGSOUT)pogs$(LIBCONFIG).o
-# $(POGSOUT)pogs$(LIBCONFIG).o: $(POGSSRC)pogs.c $(POGSINC)pogs.h \
-# 	$(INCLUDE)optkit_equilibration.h $(INCLUDE)optkit_projector.h
-# 	mkdir -p $(OUT) 
-# 	mkdir -p $(OUT)pogs 	
-# 	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $< -c -o $@	
-
-# pogs_common: $(POGSOUT)pogs_common$(LIBCONFIG).o
-# $(POGSOUT)pogs_common$(LIBCONFIG).o: $(POGSSRC)pogs_common.c \
-# 	$(POGSINC)pogs_common.h $(DENSE_HDR) $(INCLUDE)optkit_prox.hpp
-# 	mkdir -p $(OUT) 
-# 	mkdir -p $(OUT)pogs 	
-# 	$(CC) $(CCFLAGS) -I$(INCLUDE)pogs $< -c -o $@
-
 pogs_abstract: $(POGSOUT)abstract$(LIBCONFIG).o
-$(POGSOUT)abstract$(LIBCONFIG).o: $(POGSSRC)generic.c 
+$(POGSOUT)abstract$(LIBCONFIG).o: $(SRC)pogs/optkit_pogs.c 
 	mkdir -p $(OUT) 
 	mkdir -p $(OUT)pogs 	
 	$(CC) $(CCFLAGS) -DOK_COMPILE_POGS_ABSTRACT \
 	-I$(INCLUDE)pogs -I$(INCLUDE)operator $< -c -o $@
 
 pogs_sparse: $(POGSOUT)dense$(LIBCONFIG).o
-$(POGSOUT)sparse$(LIBCONFIG).o: $(POGSSRC)generic.c 
+$(POGSOUT)sparse$(LIBCONFIG).o: $(SRC)pogs/optkit_pogs.c 
 	mkdir -p $(OUT) 
 	mkdir -p $(OUT)pogs 	
 	$(CC) $(CCFLAGS) -DOK_COMPILE_POGS_SPARSE -I$(INCLUDE)pogs $< -c -o $@
 
 pogs_dense: $(POGSOUT)dense$(LIBCONFIG).o
-$(POGSOUT)dense$(LIBCONFIG).o: $(POGSSRC)generic.c 
+$(POGSOUT)dense$(LIBCONFIG).o: $(SRC)pogs/optkit_pogs.c  
 	mkdir -p $(OUT) 
 	mkdir -p $(OUT)pogs 	
 	$(CC) $(CCFLAGS) -DOK_COMPILE_POGS_DENSE -I$(INCLUDE)pogs $< -c -o $@

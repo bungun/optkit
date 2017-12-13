@@ -1,4 +1,4 @@
-#include "optkit_pogs_generic.h"
+#include "optkit_pogs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -278,7 +278,6 @@ ok_status pogs_iterate(pogs_solver * solver)
 	ok_float tolproj = s->settings->tolproj;
 	err = OK_SCAN_ERR( pogs_primal_update(s->z) );
 	OK_CHECK_ERR( err, pogs_prox(s->linalg_handle, s->f, s->g, s->z, s->rho) );
-	// OK_CHECK_ERR( err, pogs_accelerate(solver) );
 	OK_CHECK_ERR( err, pogs_project_graph(s->W, s->z, alpha, tolproj) );
 	OK_CHECK_ERR( err, pogs_dual_update(s->linalg_handle, s->z, alpha) );
 	return err;
@@ -432,7 +431,7 @@ ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 	/* iterate until converged, or error/maxiter reached */
 	for (k = 1; !err && k <= settings->maxiter; ++k) {
 		OK_CHECK_ERR( err, pogs_iterate(solver) );
-		// OK_CHECK_ERR( err, pogs_accelerate(solver) );
+		OK_CHECK_ERR( err, pogs_accelerate(solver) );
 		OK_CHECK_ERR( err, pogs_check_convergence(solver, &obj, &res,
 			&tol, &converged) );
 
@@ -449,7 +448,7 @@ ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 
 		OK_CHECK_ERR( err, pogs_adapt_rho(solver->z, &(solver->rho),
 			&rho_params, settings, &res, &tol, k) );
-		OK_CHECK_ERR( err, pogs_accelerate(solver) );
+		// OK_CHECK_ERR( err, pogs_accelerate(solver) );
 	}
 
 	if (!converged && k == settings->maxiter)
