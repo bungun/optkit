@@ -774,6 +774,34 @@ def anderson_reduces_iterations(test_context):
 
     return True
 
+def extratol_reduces_iterations(test_context):
+    ctx = test_context
+    lib = ctx.lib
+    params = ctx.params
+    f, g = params.f, params.g
+    settings, info, output = params.settings, params.info, params.output
+    settings.verbose = 1
+    settings.maxiter = 50000
+    settings.reltol = 1e-12
+    settings.abstol = 1e-13
+    settings.adaptiverho = 1
+    settings.accelerate = 1
+    k0 = 0
+
+    for toladapt in (1., 0.1):
+        with ctx.solver as solver:
+            print('extra tol adaptive rhot={}'.format(toladapt))
+            settings.rho = 1
+            settings.toladapt = toladapt
+            assert NO_ERR( lib.pogs_solve(
+                    solver, params.f, params.g, settings, info, output.ptr) )
+            if k0 = 9:
+                k0 = info.k
+            else:
+                if info.converged:
+                    assert info.k < k0
+    return True
+
 def integrated_pogs_call_executes(test_context):
     ctx = test_context
     lib = ctx.lib
