@@ -64,7 +64,6 @@ typedef enum {
 #define ACCELERATOR(x) anderson_fused_ ## x
 
 
-
 typedef struct POGSSolver {
 	pogs_work * W;
 	pogs_variables * z;
