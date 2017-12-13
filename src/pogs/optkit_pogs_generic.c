@@ -432,7 +432,7 @@ ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 	/* iterate until converged, or error/maxiter reached */
 	for (k = 1; !err && k <= settings->maxiter; ++k) {
 		OK_CHECK_ERR( err, pogs_iterate(solver) );
-		OK_CHECK_ERR( err, pogs_accelerate(solver) );
+		// OK_CHECK_ERR( err, pogs_accelerate(solver) );
 		OK_CHECK_ERR( err, pogs_check_convergence(solver, &obj, &res,
 			&tol, &converged) );
 
@@ -449,7 +449,7 @@ ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 
 		OK_CHECK_ERR( err, pogs_adapt_rho(solver->z, &(solver->rho),
 			&rho_params, settings, &res, &tol, k) );
-		// OK_CHECK_ERR( err, pogs_accelerate(solver) );
+		OK_CHECK_ERR( err, pogs_accelerate(solver) );
 	}
 
 	if (!converged && k == settings->maxiter)
@@ -509,25 +509,11 @@ ok_status pogs_solve(pogs_solver * solver, const function_vector * f,
 			settings->maxiter) );
 
 
-	size_t m, n;
-	m = f->size;
-	n = g->size;
-	uint fpi_begin = settings->fenchel_state ? 3 : 0;
-
-
-	/* TODO: remove after testing */
-	if (settings->accelerate) {
-		OK_CHECK_ERR( err, vector_subvector(
-			solver->z->fixed_point_iterate,
-			solver->z->state, fpi_begin * (m + n),
-			2 * (m + n)) );
-		// OK_CHECK_ERR( err, anderson_accelerator_init(solver->aa,
-		// 	solver->z->fixed_point_iterate->size,
-		// 	(size_t) settings->anderson_lookback) );
+	/* TODO: accel init here or elsewhere? */
+	if (settings->accelerate)
 		OK_CHECK_ERR( err, ACCELERATOR(accelerator_init)(solver->aa,
 			solver->z->fixed_point_iterate->size,
 			(size_t) settings->anderson_lookback, (size_t) 2) );
-	}
 
 
 	OK_CHECK_ERR( err, pogs_update_settings(solver->settings, settings) );
@@ -538,8 +524,6 @@ ok_status pogs_solve(pogs_solver * solver, const function_vector * f,
 
 	// solver->aa->mu_regularization = settings->anderson_regularization;
 	if ((settings->warmstart || settings->resume) && settings->accelerate){
-		// OK_CHECK_ERR( err, anderson_set_x0(
-		// 	solver->aa, solver->z->fixed_point_iterate) );
 		OK_CHECK_ERR( err, ACCELERATOR(set_x0)(
 			solver->aa, solver->z->fixed_point_iterate) );
 		OK_CHECK_ERR( err, vector_set_all(solver->z->state, kZero) );
@@ -557,10 +541,9 @@ ok_status pogs_solve(pogs_solver * solver, const function_vector * f,
 	OK_CHECK_ERR( err, pogs_solver_loop(solver, info) );
 	info->solve_time = ok_timer_toc(t);
 
-	/* TODO: remove after testing */
+	/* TODO: move with accel init, if needed */
 	if (settings->accelerate)
 		OK_MAX_ERR( err, ACCELERATOR(accelerator_free)(solver->aa) );
-		// OK_MAX_ERR( err, anderson_accelerator_free(solver->aa) );
 
 	/* UNSCALE */
 	OK_CHECK_ERR( err, pogs_unscale_output(output, solver->z, solver->W->d,

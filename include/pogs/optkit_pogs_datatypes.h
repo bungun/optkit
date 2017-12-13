@@ -59,9 +59,6 @@ typedef struct POGSObjectiveValues {
 typedef struct POGSSettings {
 	ok_float alpha, rho, abstol, reltol, tolproj, anderson_regularization;
 	uint maxiter, anderson_lookback, verbose, suppress;
-	/* TODO: remove after testing */
-	/* uint state_begin, state_length; */
-	int fenchel_state;
 	int adaptiverho, accelerate, gapstop, warmstart, resume, diagnostic, extratol;
 	ok_float * x0, * nu0;
 } pogs_settings;
