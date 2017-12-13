@@ -61,7 +61,6 @@ typedef struct POGSSettings {
 	ok_float anderson_regularization;
 	uint maxiter, anderson_lookback, verbose, suppress;
 	int adaptiverho, accelerate, gapstop, warmstart, resume, diagnostic;
-	int anderson_late; /* TODO: delete */
 	ok_float * x0, * nu0;
 } pogs_settings;
 

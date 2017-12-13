@@ -431,9 +431,7 @@ ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 	/* iterate until converged, or error/maxiter reached */
 	for (k = 1; !err && k <= settings->maxiter; ++k) {
 		OK_CHECK_ERR( err, pogs_iterate(solver) );
-		/* TODO: resolve and pick one */
-		if (!solver->settings->anderson_late)
-			OK_CHECK_ERR( err, pogs_accelerate(solver) );
+		OK_CHECK_ERR( err, pogs_accelerate(solver) );
 		OK_CHECK_ERR( err, pogs_check_convergence(solver, &obj, &res,
 			&tol, &converged) );
 
@@ -450,9 +448,6 @@ ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 
 		OK_CHECK_ERR( err, pogs_adapt_rho(solver->z, &(solver->rho),
 			&rho_params, settings, &res, &tol, k) );
-		/* TODO: resolve and pick one */
-		if (solver->settings->anderson_late)
-			OK_CHECK_ERR( err, pogs_accelerate(solver) );
 	}
 
 	if (!converged && k == settings->maxiter)

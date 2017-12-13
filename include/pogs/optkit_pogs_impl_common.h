@@ -217,7 +217,6 @@ ok_status pogs_set_default_settings(pogs_settings * s)
 	s->warmstart = kWARMSTART;
 	s->resume = kRESUME;
 	s->diagnostic = kDIAGNOSTIC;
-	s->anderson_late = 0; /* TODO: delete */
 	s->x0 = OK_NULL;
 	s->nu0 = OK_NULL;
 	return OPTKIT_SUCCESS;
@@ -245,7 +244,6 @@ ok_status pogs_update_settings(pogs_settings * settings,
 	settings->warmstart = input->warmstart;
 	settings->resume = input->resume;
 	settings->diagnostic = input->diagnostic;
-	settings->anderson_late = input->anderson_late; /* TODO: delete */
 	settings->x0 = input->x0;
 	settings->nu0 = input->nu0;
 	return OPTKIT_SUCCESS;
