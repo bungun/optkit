@@ -205,6 +205,7 @@ ok_status pogs_set_default_settings(pogs_settings * s)
 	s->abstol = kATOL;
 	s->reltol = kRTOL;
 	s->tolproj = kTOLPROJ;
+	s->toladapt = kTOLADAPT;
 	s->anderson_regularization = kMU;
 	s->maxiter = kMAXITER;
 	s->anderson_lookback = kANDERSON;
@@ -216,7 +217,6 @@ ok_status pogs_set_default_settings(pogs_settings * s)
 	s->warmstart = kWARMSTART;
 	s->resume = kRESUME;
 	s->diagnostic = kDIAGNOSTIC;
-	s->extratol = kEXTRATOL;
 	s->x0 = OK_NULL;
 	s->nu0 = OK_NULL;
 	return OPTKIT_SUCCESS;
@@ -232,6 +232,7 @@ ok_status pogs_update_settings(pogs_settings * settings,
 	settings->abstol = input->abstol;
 	settings->reltol = input->reltol;
 	settings->tolproj = input->tolproj;
+	settings->toladapt = input->toladapt;
 	settings->anderson_regularization = input->anderson_regularization;
 	settings->maxiter = input->maxiter;
 	settings->anderson_lookback = input->anderson_lookback;
@@ -243,7 +244,6 @@ ok_status pogs_update_settings(pogs_settings * settings,
 	settings->warmstart = input->warmstart;
 	settings->resume = input->resume;
 	settings->diagnostic = input->diagnostic;
-	settings->extratol = input->extratol;
 	settings->x0 = input->x0;
 	settings->nu0 = input->nu0;
 	return OPTKIT_SUCCESS;

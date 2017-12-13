@@ -41,18 +41,14 @@ ok_status pogs_adapt_rho(pogs_variables * z, ok_float * rho,
 	adapt_params * params, const pogs_settings * settings,
 	const pogs_residuals * res, const pogs_tolerances * tol, const uint k)
 {
-	ok_float tol_buffer;
-
 	if (!(settings->adaptiverho))
 		return OPTKIT_SUCCESS;
 
 	if (!z || !rho || !params || !res || !tol)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
-	tol_buffer = settings->extratol ? (ok_float) 0.1 : kOne;
-
-	if (res->dual < params->xi * tol_buffer * tol->dual &&
-		res->primal > params->xi * tol_buffer * tol->primal &&
+	if (res->dual < params->xi * settings->toladapt * tol->dual &&
+		res->primal > params->xi * settings->toladapt * tol->primal &&
 		kTAU * (ok_float) k > params->l) {
 
 		if (*rho < kRHOMAX) {
@@ -64,8 +60,8 @@ ok_status pogs_adapt_rho(pogs_variables * z, ok_float * rho,
 				params->delta * kGAMMA : kDELTAMAX;
 			params->u = (ok_float) k;
 		}
-	} else if (res->dual > params->xi * tol_buffer * tol->dual &&
-			res->primal < params->xi * tol_buffer * tol->primal &&
+	} else if (res->dual > params->xi * settings->toladapt * tol->dual &&
+			res->primal < params->xi * settings->toladapt * tol->primal &&
 			kTAU * (ok_float) k > (ok_float) params->u) {
 
 		if (*rho > kRHOMIN) {
@@ -78,8 +74,8 @@ ok_status pogs_adapt_rho(pogs_variables * z, ok_float * rho,
 				  params->delta * kGAMMA : kDELTAMAX;
 			params->l = (ok_float) k;
 		}
-	} else if (res->dual < params->xi * tol_buffer * tol->dual &&
-			res->primal < params->xi * tol_buffer * tol->primal) {
+	} else if (res->dual < params->xi * settings->toladapt * tol->dual &&
+			res->primal < params->xi * settings->toladapt * tol->primal) {
 		params->xi *= kKAPPA;
 	} else {
 		params->delta = (params->delta / kGAMMA > kDELTAMIN) ?

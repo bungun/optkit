@@ -132,6 +132,7 @@ def attach_pogs_datatypes_ctypes(lib, single_precision=False):
 					('abstol', lib.ok_float),
 					('reltol', lib.ok_float),
 					('tolproj', lib.ok_float),
+					('toladapt', lib.ok_float),
 					('anderson_regularization', lib.ok_float),
 					('maxiter', ct.c_uint),
 					('anderson_lookback', ct.c_uint),
@@ -143,7 +144,6 @@ def attach_pogs_datatypes_ctypes(lib, single_precision=False):
 					('warmstart', ct.c_int),
 					('resume', ct.c_int),
 					('diagnostic', ct.c_int),
-					('extratol', ct.c_int),
 					('x0', lib.ok_float_p),
 					('nu0', lib.ok_float_p)]
 
