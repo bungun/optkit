@@ -30,6 +30,7 @@ ANDOUT=$(OUT)$(ANDERSON)
 
 POGS=pogs/optkit_pogs_
 POGSINC=$(INCLUDE)$(POGS)
+POGSSRC=$(SRC)$(POGS)
 POGSOUT=$(OUT)$(POGS)
 
 IFLAGS=-I. -I$(INCLUDE) -I$(INCLUDE)external -I$(INCLUDE)linsys 
@@ -145,13 +146,13 @@ OPERATOR_HDR=$(LINSYS_HDR) $(OPINC)dense.h $(OPINC)sparse.h $(OPINC)diagonal.h
 OPERATOR_HDR+=$(INCLUDE)optkit_abstract_operator.h $(OPINC)transforms.h
 CG_HDR=$(OPERATOR_HDR) $(INCLUDE)optkit_cg.h
 
-# POGS_BASE_HDR=$(DENSE_HDR) $(INCLUDE)optkit_prox.hpp $(POGSINC)datatypes.h 
-# POGS_BASE_HDR+=$(POGSINC)impl_common.h $(POGSINC)adaptive_rho.h 
-# POGS_BASE_HDR+=$(INCLUDE)optkit_projector.h $(INCLUDE)optkit_equilibration.h
-# POGS_ABSTRACT_HDR=$(POGS_BASE_HDR) $(POGSINC)impl_abstract.h
-# POGS_ABSTRACT_HDR+=
-# POGS_SPARSE_HDR=$(POGS_BASE_HDR) $(POGSINC)impl_sparse.h
-# POGS_DENSE_HDR=$(POGS_BASE_HDR) $(POGSINC)impl_dense.h
+POGS_BASE_HDR=$(DENSE_HDR) $(INCLUDE)optkit_prox.hpp 
+POGS_BASE_HDR+=$(POGSINC)datatypes.h $(POGSINC)adaptive_rho.h 
+POGS_BASE_HDR+=$(POGSINC)impl_common.h $(INCLUDE)pogs/optkit_pogs.h
+POGS_BASE_HDR+=$(INCLUDE)optkit_projector.h $(INCLUDE)optkit_equilibration.h
+POGS_ABSTRACT_HDR=$(POGS_BASE_HDR) $(CG_HDR) $(POGSINC)impl_abstract.h
+# POGS_SPARSE_HDR=$(POGS_BASE_HDR) $(LINSYS_HDR) $(POGSINC)impl_sparse.h
+POGS_DENSE_HDR=$(POGS_BASE_HDR) $(DENSE_HDR) $(POGSINC)impl_dense.h
 
 BASE_OBJ=$(PREFIX_OUT)defs$(LIBCONFIG).o
 VECTOR_OBJ=$(LAOUT)vector$(LIBCONFIG).o
@@ -180,10 +181,6 @@ PROJ_DIRECT_OBJ=$(PREFIX_OUT)projector_direct$(LIBCONFIG).o
 EQUIL_OBJ=$(PREFIX_OUT)equil$(LIBCONFIG).o
 EQUIL_DENSE_OBJ=$(PREFIX_OUT)equil_dense$(LIBCONFIG).o
 
-# POGS_COMMON_OBJ=$(POGSOUT)pogs_common$(LIBCONFIG).o 
-# POGS_OBJ=$(POGS_COMMON_OBJ) $(POGSOUT)pogs$(LIBCONFIG).o
-# POGS_ABSTR_OBJ=$(POGS_COMMON_OBJ) $(POGSOUT)pogs_abstract$(LIBCONFIG).o
-
 POGS_DENSE_OBJ=$(POGSOUT)dense$(LIBCONFIG).o
 POGS_SPARSE_OBJ=$(POGSOUT)sparse$(LIBCONFIG).o
 POGS_ABSTRACT_OBJ=$(POGSOUT)abstract$(LIBCONFIG).o
@@ -194,11 +191,6 @@ OPERATOR_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ) $(SPARSE_OBJ) $(OPERATOR_OBJ)
 CG_STATIC_DEPS=$(OPERATOR_STATIC_DEPS) $(CG_OBJ)
 EQUIL_STATIC_DEPS=$(OPERATOR_STATIC_DEPS) $(EQUIL_OBJ) 
 PROJ_STATIC_DEPS=$(CG_STATIC_DEPS) $(PROJ_OBJ)
-
-# POGS_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ) $(PROX_OBJ) $(EQUIL_DENSE_OBJ) 
-# POGS_STATIC_DEPS+=$(PROJ_DIRECT_OBJ) $(POGS_OBJ) 
-# POGS_ABSTRACT_STATIC_DEPS=$(EQUIL_STATIC_DEPS) $(CG_OBJ) $(PROJ_OBJ) $(PROX_OBJ)
-# POGS_ABSTRACT_STATIC_DEPS+=$(POGS_ABSTR_OBJ)
 
 POGS_DENSE_STATIC_DEPS=$(BASE_OBJ) $(DENSE_OBJ) $(PROX_OBJ) $(EQUIL_DENSE_OBJ) 
 POGS_DENSE_STATIC_DEPS+=$(PROJ_DIRECT_OBJ) $(ANDERSON_OBJ) $(POGS_DENSE_OBJ) 
@@ -319,20 +311,20 @@ $(OUT)libok_dense$(LIBCONFIG).$(SHARED): $(DENSE_TARG) $(BASE_TARG)
 	$(DENSE_OBJ) $(BASE_OBJ) $(LDFLAGS)
 
 pogs_abstract: $(POGSOUT)abstract$(LIBCONFIG).o
-$(POGSOUT)abstract$(LIBCONFIG).o: $(SRC)pogs/optkit_pogs.c 
+$(POGSOUT)abstract$(LIBCONFIG).o: $(SRC)pogs/optkit_pogs.c  $(POGS_ABSTRACT_HDR)
 	mkdir -p $(OUT) 
 	mkdir -p $(OUT)pogs 	
 	$(CC) $(CCFLAGS) -DOK_COMPILE_POGS_ABSTRACT \
 	-I$(INCLUDE)pogs -I$(INCLUDE)operator $< -c -o $@
 
 pogs_sparse: $(POGSOUT)dense$(LIBCONFIG).o
-$(POGSOUT)sparse$(LIBCONFIG).o: $(SRC)pogs/optkit_pogs.c 
+$(POGSOUT)sparse$(LIBCONFIG).o: $(SRC)pogs/optkit_pogs.c $(POGS_SPARSE_HDR)
 	mkdir -p $(OUT) 
 	mkdir -p $(OUT)pogs 	
 	$(CC) $(CCFLAGS) -DOK_COMPILE_POGS_SPARSE -I$(INCLUDE)pogs $< -c -o $@
 
 pogs_dense: $(POGSOUT)dense$(LIBCONFIG).o
-$(POGSOUT)dense$(LIBCONFIG).o: $(SRC)pogs/optkit_pogs.c  
+$(POGSOUT)dense$(LIBCONFIG).o: $(SRC)pogs/optkit_pogs.c $(POGS_DENSE_HDR)
 	mkdir -p $(OUT) 
 	mkdir -p $(OUT)pogs 	
 	$(CC) $(CCFLAGS) -DOK_COMPILE_POGS_DENSE -I$(INCLUDE)pogs $< -c -o $@
@@ -391,13 +383,15 @@ cpu_cluster: cpu_upsampling_vector clustering_common cpu_cluster_
 gpu_cluster: gpu_upsampling_vector clustering_common gpu_cluster_ 
 
 cpu_cluster_: $(CLUOUT)clustering_cpu$(PRECISION).o
-$(CLUOUT)clustering_cpu$(PRECISION).o: $(CLUSRC)clustering.c 
+$(CLUOUT)clustering_cpu$(PRECISION).o: $(CLUSRC)clustering.c \
+	$(CLUINC)clustering.h
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)clustering/
 	$(CC) $(CCFLAGS) $< -c -o $@
 
 gpu_cluster_: $(CLUOUT)clustering_gpu$(PRECISION).o
-$(CLUOUT)clustering_gpu$(PRECISION).o: $(CLUSRC)clustering.cu
+$(CLUOUT)clustering_gpu$(PRECISION).o: $(CLUSRC)clustering.cu \
+	$(CLUINC)clustering.h
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)clustering/
 	$(CUXX) $(CUXXFLAGS) $< -c -o $@
@@ -413,13 +407,15 @@ cpu_upsampling_vector: upsampling_vector_common cpu_upsampling_vector_
 gpu_upsampling_vector: upsampling_vector_common gpu_upsampling_vector_
 
 cpu_upsampling_vector_: $(CLUOUT)upsampling_vector_cpu$(PRECISION).o
-$(CLUOUT)upsampling_vector_cpu$(PRECISION).o: $(CLUSRC)upsampling_vector.c
+$(CLUOUT)upsampling_vector_cpu$(PRECISION).o: $(CLUSRC)upsampling_vector.c \
+	$(CLUINC)upsampling_vector.h 
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)clustering/
 	$(CC) $(CCFLAGS) $< -c -o $@
 
 gpu_upsampling_vector_: $(CLUOUT)upsampling_vector_gpu$(PRECISION).o
-$(CLUOUT)upsampling_vector_gpu$(PRECISION).o: $(CLUSRC)upsampling_vector.cu
+$(CLUOUT)upsampling_vector_gpu$(PRECISION).o: $(CLUSRC)upsampling_vector.cu \
+	$(CLUINC)upsampling_vector.h 
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)clustering/
 	$(CUXX) $(CUXXFLAGS) $< -c -o $@
