@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-ok_status lapack_make_handle(void ** lapack_handle)
+ok_status lapack_make_handle(void **lapack_handle)
 {
 	return OPTKIT_SUCCESS;
 }

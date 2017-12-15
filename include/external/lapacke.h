@@ -45,11 +45,11 @@ extern "C" {
 #endif /* __cplusplus */
 
 lapack_int LAPACKE_sgesv( int matrix_layout, lapack_int n, lapack_int nrhs,
-                          float* a, lapack_int lda, lapack_int* ipiv, float* b,
+                          float *a, lapack_int lda, lapack_int *ipiv, float *b,
                           lapack_int ldb );
 lapack_int LAPACKE_dgesv( int matrix_layout, lapack_int n, lapack_int nrhs,
-                          double* a, lapack_int lda, lapack_int* ipiv,
-                          double* b, lapack_int ldb );
+                          double *a, lapack_int lda, lapack_int *ipiv,
+                          double *b, lapack_int ldb );
 
 #ifdef __cplusplus
 }

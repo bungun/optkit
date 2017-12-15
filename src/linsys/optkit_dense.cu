@@ -2,14 +2,14 @@
 #include "optkit_dense.h"
 
 /* row major data retrieval */
-__device__ inline ok_float& __matrix_get_r(ok_float * A, uint i, uint j,
+__device__ inline ok_float& __matrix_get_r(ok_float *A, uint i, uint j,
 	uint stride)
 {
 	return A[i * stride + j];
 }
 
 /* column major data retrieval */
-__device__ inline ok_float& __matrix_get_c(ok_float * A, uint i, uint j,
+__device__ inline ok_float& __matrix_get_c(ok_float *A, uint i, uint j,
 	uint stride)
 {
 	return A[i + j * stride];
@@ -19,16 +19,16 @@ __device__ inline ok_float& __matrix_get_c(ok_float * A, uint i, uint j,
 extern "C" {
 #endif
 
-void denselib_version(int * maj, int * min, int * change, int * status)
+void denselib_version(int *maj, int *min, int *change, int *status)
 {
-	* maj = OPTKIT_VERSION_MAJOR;
-	* min = OPTKIT_VERSION_MINOR;
-	* change = OPTKIT_VERSION_CHANGE;
-	* status = (int) OPTKIT_VERSION_STATUS;
+	*maj = OPTKIT_VERSION_MAJOR;
+	*min = OPTKIT_VERSION_MINOR;
+	*change = OPTKIT_VERSION_CHANGE;
+	*status = (int) OPTKIT_VERSION_STATUS;
 }
 
 /* cholesky decomposition of a single block */
-static __global__ void __block_chol(ok_float * A, uint iter, uint ld,
+static __global__ void __block_chol(ok_float *A, uint iter, uint ld,
 	const enum CBLAS_ORDER ord)
 {
 	uint col, row, mat_dim, global_col, global_row, i;
@@ -36,7 +36,7 @@ static __global__ void __block_chol(ok_float * A, uint iter, uint ld,
 	__shared__ ok_float L[kTileLD * kTileSize];
 	ok_float a11;
 
-	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride) =
+	ok_float& (* get)(ok_float *A, uint i, uint j, uint stride) =
 		(ord == CblasRowMajor) ? __matrix_get_r : __matrix_get_c;
 
 	col = threadIdx.x;
@@ -72,7 +72,7 @@ static __global__ void __block_chol(ok_float * A, uint iter, uint ld,
 		get(A, global_row, global_col, ld) = get(L, row, col, kTileLD);
 }
 
-static __global__ void __block_trsv(ok_float * A, uint iter, uint n, uint ld,
+static __global__ void __block_trsv(ok_float *A, uint iter, uint n, uint ld,
 	const enum CBLAS_ORDER ord)
 {
 	uint tile_idx, row, global_row, global_col, i, j;
@@ -80,7 +80,7 @@ static __global__ void __block_trsv(ok_float * A, uint iter, uint n, uint ld,
 	__shared__ ok_float L[kTileLD * kTileSize];
 	__shared__ ok_float A12[kTileLD * kTileSize];
 
-	ok_float& (* get)(ok_float * A, uint i, uint j, uint stride) =
+	ok_float& (* get)(ok_float *A, uint i, uint j, uint stride) =
 		(ord == CblasRowMajor) ? __matrix_get_r : __matrix_get_c;
 
 	tile_idx = blockIdx.x;
@@ -127,7 +127,7 @@ static __global__ void __block_trsv(ok_float * A, uint iter, uint n, uint ld,
  *
  * Stores result in Lower triangular part.
  */
-ok_status linalg_cholesky_decomp(void * linalg_handle, matrix * A)
+ok_status linalg_cholesky_decomp(void *linalg_handle, matrix *A)
 {
 	ok_status err;
 	cudaStream_t stm;
@@ -183,8 +183,7 @@ ok_status linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 }
 
 /* Cholesky solve */
-ok_status linalg_cholesky_svx(void * linalg_handle, const matrix * L,
-	vector * x)
+ok_status linalg_cholesky_svx(void *linalg_handle, const matrix *L, vector *x)
 {
 	OK_CHECK_MATRIX(L);
 	OK_CHECK_VECTOR(x);
@@ -228,8 +227,8 @@ static inline uint calc_grid_dim_(uint size, uint block_size)
 }
 
 template <typename T>
-static __global__ void strided_memcpy_(T * out, const uint stride_out,
-	const T * in, const uint stride_in, uint size)
+static __global__ void strided_memcpy_(T *out, const uint stride_out,
+        const T *in, const uint stride_in, uint size)
 {
 	const uint idx = blockIdx.x * blockDim.x + threadIdx.x;
 	uint i;
@@ -239,8 +238,8 @@ static __global__ void strided_memcpy_(T * out, const uint stride_out,
 
 template<typename T>
 struct opUnaryAdd {
-	T * const offset;
-	opUnaryAdd(T * const offset) : offset(offset)
+	T *const offset;
+	opUnaryAdd(T *const offset) : offset(offset)
 		{}
 	__device__ void operator()(T & input)
 		{ input += *offset; }
@@ -248,8 +247,8 @@ struct opUnaryAdd {
 
 template<typename T>
 struct opUnaryMul {
-	T * const scaling;
-	opUnaryMul(T * const scaling) : scaling(scaling)
+	T *const scaling;
+	opUnaryMul(T *const scaling) : scaling(scaling)
 		{}
 	__device__ void operator()(T & input)
 		{ input *= *scaling; }
@@ -257,32 +256,32 @@ struct opUnaryMul {
 
 template<typename T>
 struct opAdd {
-	__device__ void operator()(T * first, T * const second)
+	__device__ void operator()(T *first, T *const second)
 		{ *first += *second; }
 };
 
 template<typename T>
 struct opAddSquare {
-	__device__ void operator()(T * first, T * const second)
-		{ *first += *second * *second; }
+	__device__ void operator()(T *first, T *const second)
+		{ *first += *second * (*second); }
 };
 
 template<typename T>
 struct opMin {
-	__device__ void operator()(T * first, T * const second)
+	__device__ void operator()(T *first, T *const second)
 		{ *first = *second < *first ? *second : *first; }
 };
 
 template<typename T>
 struct opMax {
-	__device__ void operator()(T * first, T * const second)
+	__device__ void operator()(T *first, T *const second)
 		{ *first = *second > *first ? *second : *first; }
 };
 
 template<typename T>
 struct opMinIdx{
-	__device__ void operator()(T * first, T * const second, size_t * idx1,
-		size_t * const idx2)
+	__device__ void operator()(T *first, T *const second, size_t *idx1,
+		size_t *const idx2)
 	{
 		if (*second < *first) {
 			*first = *second;
@@ -292,10 +291,10 @@ struct opMinIdx{
 };
 
 template <typename T, uint blockSize, typename loadingOp, typename reductionOp>
-static __global__ void row_reduce(T * const in, uint rowstride_in,
-	uint colstride_in, T * out, uint rowstride_out,
-	uint colstride_out, uint row, uint n, loadingOp transform_reduce_,
-	reductionOp reduce_, const T default_value)
+static __global__ void row_reduce(T *const in, uint rowstride_in,
+	uint colstride_in, T *out, uint rowstride_out, uint colstride_out,
+        uint row, uint n, loadingOp transform_reduce_, reductionOp reduce_,
+        const T default_value)
 {
 	uint col = threadIdx.x;
 	uint block_stride = blockSize * 2;
@@ -372,8 +371,8 @@ static __global__ void row_reduce(T * const in, uint rowstride_in,
 }
 
 template <typename T, typename loadingOp, typename reductionOp>
-static ok_status reduction_innerloop(T * const A_k, uint rowstride_A,
-	uint colstride_A, T * reduction_k, uint rowstride_r, uint colstride_r,
+static ok_status reduction_innerloop(T *const A_k, uint rowstride_A,
+	uint colstride_A, T *reduction_k, uint rowstride_r, uint colstride_r,
 	uint nrows, uint cols_k, uint width_k, uint blocksize_k,
 	loadingOp transform_reduce_, reductionOp reduce_, T default_value)
 {
@@ -433,13 +432,13 @@ static ok_status reduction_innerloop(T * const A_k, uint rowstride_A,
 }
 
 template <typename T, typename loadingOp, typename reductionOp>
-static ok_status matrix_row_reduce(T * const A, size_t nrows, size_t ncols,
-	size_t rowstride_A, size_t colstride_A, T * output, size_t stride_out,
+static ok_status matrix_row_reduce(T *const A, size_t nrows, size_t ncols,
+	size_t rowstride_A, size_t colstride_A, T *output, size_t stride_out,
 	loadingOp transform_reduce_, reductionOp reduce_, T default_value)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	T * A_k;
-	T * reduction, * reduction_k;
+	T *A_k;
+	T *reduction, *reduction_k;
 
 	uint nreductions = 0, nlaunches = 0, k;
 	uint width_k, blocksize_k, cols_k;
@@ -503,13 +502,13 @@ static ok_status matrix_row_reduce(T * const A, size_t nrows, size_t ncols,
 }
 
 template <typename T, typename unaryOp>
-static __global__ void row_transform(T * in, uint rowstride_in,
+static __global__ void row_transform(T *in, uint rowstride_in,
 	uint colstride_in, uint row, uint n, unaryOp transform_)
 {
 	uint block_stride = blockDim.x;
 	uint grid_stride = block_stride * gridDim.x;
 	uint gc, global_col = blockIdx.x * block_stride + threadIdx.x;
-	T * in_ = in + row * rowstride_in;
+	T *in_ = in + row * rowstride_in;
 
 	/* transform 1 in every <grid_stride> elements */
 	for (gc = global_col; gc < n; gc += grid_stride)
@@ -518,9 +517,9 @@ static __global__ void row_transform(T * in, uint rowstride_in,
 
 
 template<typename T>
-static ok_status matrix_vector_op_setdims(const matrix_<T> * A,
-	const vector_<T> * v, size_t * size1, size_t * size2,
-	size_t * stride1, size_t * stride2, const int manipulate_by_row)
+static ok_status matrix_vector_op_setdims(const matrix_<T> *A,
+	const vector_<T> *v, size_t *size1, size_t *size2, size_t *stride1,
+        size_t *stride2, const int manipulate_by_row)
 {
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_VECTOR(v);
@@ -540,8 +539,8 @@ static ok_status matrix_vector_op_setdims(const matrix_<T> * A,
 }
 
 template <typename T, size_t blockSize>
-static __global__ void row_indmin(T * const in, size_t * const idx_in,
-	size_t rowstride_in, size_t colstride_in, T * out, size_t * idx,
+static __global__ void row_indmin(T *const in, size_t *const idx_in,
+	size_t rowstride_in, size_t colstride_in, T *out, size_t *idx,
 	size_t rowstride_out, size_t colstride_out, size_t row, size_t n,
 	const T default_value, const int first_pass)
 {
@@ -552,8 +551,8 @@ static __global__ void row_indmin(T * const in, size_t * const idx_in,
 	size_t global_col_half = global_col + blockSize;
 	__shared__ T d[blockSize];
 	__shared__ size_t id[blockSize];
-	T * in_ = in + row * rowstride_in;
-	size_t * idx_in_ = idx_in + row * rowstride_in;
+	T *in_ = in + row * rowstride_in;
+	size_t *idx_in_ = idx_in + row * rowstride_in;
 	opMinIdx<T> min_;
 
 	d[col] = default_value;
@@ -643,9 +642,9 @@ static __global__ void row_indmin(T * const in, size_t * const idx_in,
 }
 
 template <typename T>
-static ok_status indmin_innerloop(T * const A_k, size_t * const idx_k,
-	uint rowstride_A, uint colstride_A, T * reduction_k,
-	size_t * idx_reduction_k, uint rowstride_r, uint colstride_r,
+static ok_status indmin_innerloop(T *const A_k, size_t *const idx_k,
+	uint rowstride_A, uint colstride_A, T *reduction_k,
+	size_t *idx_reduction_k, uint rowstride_r, uint colstride_r,
 	uint nrows, uint cols_k, uint width_k, uint blocksize_k,
 	T default_value, const int first_pass)
 {
@@ -699,14 +698,14 @@ static ok_status indmin_innerloop(T * const A_k, size_t * const idx_k,
 }
 
 template <typename T>
-static ok_status matrix_row_indmin(T * const A, size_t nrows, size_t ncols,
-	size_t rowstride_A, size_t colstride_A, T * minima, size_t stride_min,
-	size_t * indices, size_t stride_idx, T default_value)
+static ok_status matrix_row_indmin(T *const A, size_t nrows, size_t ncols,
+	size_t rowstride_A, size_t colstride_A, T *minima, size_t stride_min,
+	size_t *indices, size_t stride_idx, T default_value)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	T * A_k;
-	T * reduction, * reduction_k;
-	size_t * idx_k, * idx_reduction, * idx_reduction_k;
+	T *A_k;
+	T *reduction, *reduction_k;
+	size_t *idx_k, *idx_reduction, *idx_reduction_k;
 
 	uint nreductions = 0, nlaunches = 0, k;
 	uint width_k, blocksize_k, cols_k;
@@ -781,7 +780,7 @@ static ok_status matrix_row_indmin(T * const A, size_t nrows, size_t ncols,
 
 template<typename T>
 static ok_status __linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t,
-	const matrix_<T> * A, vector_<T> * v)
+	const matrix_<T> *A, vector_<T> *v)
 {
 	/*
 	 *	transpose: v_i = multiply A^T * A: work with columns of A
@@ -807,7 +806,7 @@ static ok_status __linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t,
 /*
  * perform
  *
- *	A = diag(v) * A, 	operation == OkTransformScale, side = CblasLeft
+ *	A = diag(v) *A, 	operation == OkTransformScale, side = CblasLeft
  *	A = A * diag(v), 	operation == OkTransformScale, side = CblasRight
  *
  *	A += v * 1^T, 		operation == OkTransformAdd, side == CblasLeft
@@ -815,8 +814,8 @@ static ok_status __linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t,
  *
  */
 template<typename T>
-static ok_status __linalg_matrix_broadcast_vector(matrix_<T> * A,
-	const vector_<T> * v, const enum OPTKIT_TRANSFORM operation,
+static ok_status __linalg_matrix_broadcast_vector(matrix_<T> *A,
+	const vector_<T> *v, const enum OPTKIT_TRANSFORM operation,
 	const enum CBLAS_SIDE side)
 {
 	/*
@@ -866,8 +865,8 @@ static ok_status __linalg_matrix_broadcast_vector(matrix_<T> * A,
 }
 
 template<typename T>
-static ok_status __linalg_matrix_reduce_indmin(vector_<size_t> * indices,
-	vector_<T> * minima, const matrix_<T> * A, const enum CBLAS_SIDE side)
+static ok_status __linalg_matrix_reduce_indmin(vector_<size_t> *indices,
+	vector_<T> *minima, const matrix_<T> *A, const enum CBLAS_SIDE side)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	const int reduce_by_row = side == CblasRight;
@@ -888,8 +887,8 @@ static ok_status __linalg_matrix_reduce_indmin(vector_<size_t> * indices,
 }
 
 template<typename T>
-static ok_status __linalg_matrix_reduce_min(vector_<T> * minima,
-	const matrix_<T> * A, const enum CBLAS_SIDE side)
+static ok_status __linalg_matrix_reduce_min(vector_<T> *minima,
+	const matrix_<T> *A, const enum CBLAS_SIDE side)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	const int reduce_by_row = side == CblasRight;
@@ -907,8 +906,8 @@ static ok_status __linalg_matrix_reduce_min(vector_<T> * minima,
 }
 
 template<typename T>
-static ok_status __linalg_matrix_reduce_max(vector_<T> * maxima,
-	const matrix_<T> * A, const enum CBLAS_SIDE side)
+static ok_status __linalg_matrix_reduce_max(vector_<T> *maxima,
+	const matrix_<T> *A, const enum CBLAS_SIDE side)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	const int reduce_by_row = side == CblasRight;
@@ -930,33 +929,33 @@ extern "C" {
 #endif
 
 ok_status linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t,
-	const matrix * A, vector * v)
+	const matrix *A, vector *v)
 {
 	return OK_SCAN_ERR( __linalg_matrix_row_squares<ok_float>(t, A, v) );
 }
 
-ok_status linalg_matrix_broadcast_vector(matrix * A, const vector * v,
+ok_status linalg_matrix_broadcast_vector(matrix *A, const vector *v,
 	const enum OPTKIT_TRANSFORM operation, const enum CBLAS_SIDE side)
 {
 	return OK_SCAN_ERR( __linalg_matrix_broadcast_vector<ok_float>(A, v,
 		operation, side) );
 }
 
-ok_status linalg_matrix_reduce_indmin(indvector * indices, vector * minima,
-	const matrix * A, const enum CBLAS_SIDE side)
+ok_status linalg_matrix_reduce_indmin(indvector *indices, vector *minima,
+	const matrix *A, const enum CBLAS_SIDE side)
 {
 	return OK_SCAN_ERR( __linalg_matrix_reduce_indmin<ok_float>(indices,
 		minima, A, side) );
 }
 
-ok_status linalg_matrix_reduce_min(vector * minima, const matrix * A,
+ok_status linalg_matrix_reduce_min(vector *minima, const matrix *A,
 	const enum CBLAS_SIDE side)
 {
 	return OK_SCAN_ERR( __linalg_matrix_reduce_min<ok_float>(minima, A,
 		side) );
 }
 
-ok_status linalg_matrix_reduce_max(vector * maxima, const matrix * A,
+ok_status linalg_matrix_reduce_max(vector *maxima, const matrix *A,
 	const enum CBLAS_SIDE side)
 {
 	return OK_SCAN_ERR( __linalg_matrix_reduce_max<ok_float>(maxima, A,

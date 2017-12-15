@@ -8,14 +8,14 @@ extern "C" {
 
 /* struct for cusparse handle and cusparse matrix description*/
 typedef struct ok_sparse_handle{
-	cusparseHandle_t * hdl;
-	cusparseMatDescr_t * descr;
+	cusparseHandle_t *hdl;
+	cusparseMatDescr_t *descr;
 } ok_sparse_handle;
 
-ok_status sp_make_handle(void ** sparse_handle)
+ok_status sp_make_handle(void **sparse_handle)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	ok_sparse_handle * ok_hdl;
+	ok_sparse_handle *ok_hdl;
 	ok_hdl = (ok_sparse_handle *) malloc(sizeof(ok_sparse_handle));
 	ok_hdl->hdl = (cusparseHandle_t *) malloc(sizeof(cusparseHandle_t));
 	ok_hdl->descr = (cusparseMatDescr_t *) malloc(sizeof(
@@ -32,10 +32,10 @@ ok_status sp_make_handle(void ** sparse_handle)
 	return err;
 }
 
-ok_status sp_destroy_handle(void * sparse_handle)
+ok_status sp_destroy_handle(void *sparse_handle)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
+	ok_sparse_handle *sp_hdl = (ok_sparse_handle *) sparse_handle;
 
 	OK_CHECK_PTR(sparse_handle);
 	err = OK_SCAN_CUSPARSE( cusparseDestroy(*sp_hdl->hdl) );
@@ -55,7 +55,7 @@ ok_status sp_destroy_handle(void * sparse_handle)
 
 /* helper methods for CUDA */
 template <typename T>
-__global__ void __set(T * data, T val, size_t stride, size_t size)
+__global__ void __set(T *data, T val, size_t stride, size_t size)
 {
 	uint i, thread_id = blockIdx.x * blockDim.x + threadIdx.x;
 	for (i = thread_id; i < size; i += gridDim.x * blockDim.x)
@@ -63,7 +63,7 @@ __global__ void __set(T * data, T val, size_t stride, size_t size)
 }
 
 template <typename T>
-ok_status __set_all(T * data, T val, size_t stride, size_t size)
+ok_status __set_all(T *data, T val, size_t stride, size_t size)
 {
 	uint grid_dim = calc_grid_dim(size);
 	OK_CHECK_PTR(data);
@@ -73,7 +73,7 @@ ok_status __set_all(T * data, T val, size_t stride, size_t size)
 }
 
 template <typename T, typename I>
-ok_status sp_matrix_alloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
+ok_status sp_matrix_alloc_(sp_matrix_<T, I> *A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
 {
 	if (!A)
@@ -93,7 +93,7 @@ ok_status sp_matrix_alloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
 }
 
 template <typename T, typename I>
-ok_status sp_matrix_calloc_(sp_matrix_<T, I> * A, size_t m, size_t n,
+ok_status sp_matrix_calloc_(sp_matrix_<T, I> *A, size_t m, size_t n,
 	size_t nnz, enum CBLAS_ORDER order)
 {
 	OK_RETURNIF_ERR( (sp_matrix_alloc_<T, I>(A, m, n, nnz, order)) );
@@ -104,7 +104,7 @@ ok_status sp_matrix_calloc_(sp_matrix_<T, I> * A, size_t m, size_t n,
 }
 
 template <typename T, typename I>
-ok_status sp_matrix_free_(sp_matrix_<T, I> * A)
+ok_status sp_matrix_free_(sp_matrix_<T, I> *A)
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_RETURNIF_ERR( ok_free_gpu(A->val) );
@@ -120,7 +120,7 @@ ok_status sp_matrix_free_(sp_matrix_<T, I> * A)
 }
 
 template <typename T, typename I>
-ok_status sp_matrix_memcpy_mm_(sp_matrix_<T, I> * A, const sp_matrix_<T, I> * B)
+ok_status sp_matrix_memcpy_mm_(sp_matrix_<T, I> *A, const sp_matrix_<T, I> *B)
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_SPARSEMAT(B);
@@ -134,8 +134,8 @@ ok_status sp_matrix_memcpy_mm_(sp_matrix_<T, I> * A, const sp_matrix_<T, I> * B)
 }
 
 template <typename T, typename I>
-ok_status sp_matrix_memcpy_vals_mm_(sp_matrix_<T, I> * A,
-	const sp_matrix_<T, I> * B)
+ok_status sp_matrix_memcpy_vals_mm_(sp_matrix_<T, I> *A,
+	const sp_matrix_<T, I> *B)
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_SPARSEMAT(B);
@@ -147,17 +147,17 @@ ok_status sp_matrix_memcpy_vals_mm_(sp_matrix_<T, I> * A,
 extern "C" {
 #endif
 
-static ok_status __transpose_inplace(void * sparse_handle, sp_matrix * A,
+static ok_status __transpose_inplace(void *sparse_handle, sp_matrix *A,
 	SPARSE_TRANSPOSE_DIRECTION dir)
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_PTR(sparse_handle);
 
 	ok_status err = OPTKIT_SUCCESS;
-	ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
+	ok_sparse_handle *sp_hdl = (ok_sparse_handle *) sparse_handle;
 	int size1, size2;
-	ok_int * ptr, * ind, * ptr_T, * ind_T;
-	ok_float * val, * val_T;
+	ok_int *ptr, *ind, *ptr_T, *ind_T;
+	ok_float *val, *val_T;
 
 	if (dir == Forward2Adjoint) {
 		size1 = (A->order == CblasRowMajor) ? A->size1 : A->size2;
@@ -186,22 +186,22 @@ static ok_status __transpose_inplace(void * sparse_handle, sp_matrix * A,
 	return err;
 }
 
-ok_status sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
+ok_status sp_matrix_alloc(sp_matrix *A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
 	{ return sp_matrix_alloc_<ok_float, ok_int>(A, m, n, nnz, order); }
 
-ok_status sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
+ok_status sp_matrix_calloc(sp_matrix *A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
 	{ return sp_matrix_calloc_<ok_float, ok_int>(A, m, n, nnz, order); }
 
-ok_status sp_matrix_free(sp_matrix * A)
+ok_status sp_matrix_free(sp_matrix *A)
 	{ return sp_matrix_free_<ok_float, ok_int>(A); }
 
-ok_status sp_matrix_memcpy_mm(sp_matrix * A, const sp_matrix * B)
+ok_status sp_matrix_memcpy_mm(sp_matrix *A, const sp_matrix *B)
 	{ return sp_matrix_memcpy_mm_<ok_float, ok_int>(A, B); }
 
-ok_status sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A,
-	const ok_float * val, const ok_int * ind, const ok_int * ptr)
+ok_status sp_matrix_memcpy_ma(void *sparse_handle, sp_matrix *A,
+        const ok_float *val, const ok_int *ind, const ok_int *ptr)
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_PTR(sparse_handle);
@@ -216,8 +216,8 @@ ok_status sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A,
 		__transpose_inplace(sparse_handle, A, Forward2Adjoint) );
 }
 
-ok_status sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
-	const sp_matrix * A)
+ok_status sp_matrix_memcpy_am(ok_float *val, ok_int *ind, ok_int *ptr,
+	const sp_matrix *A)
 {
 	OK_CHECK_SPARSEMAT(A);
 	if (!val || !ind || !ptr)
@@ -229,12 +229,12 @@ ok_status sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
 		ok_memcpy_gpu(ptr, A->ptr, A->ptrlen * sizeof(*ptr)) );
 }
 
-ok_status sp_matrix_memcpy_vals_mm(sp_matrix * A, const sp_matrix * B)
+ok_status sp_matrix_memcpy_vals_mm(sp_matrix *A, const sp_matrix *B)
 	{ return sp_matrix_memcpy_vals_mm_<ok_float, ok_int>(A, B); }
 
 
-ok_status sp_matrix_memcpy_vals_ma(void * sparse_handle, sp_matrix * A,
-	const ok_float * val)
+ok_status sp_matrix_memcpy_vals_ma(void *sparse_handle, sp_matrix *A,
+	const ok_float *val)
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_PTR(val);
@@ -245,7 +245,7 @@ ok_status sp_matrix_memcpy_vals_ma(void * sparse_handle, sp_matrix * A,
 		__transpose_inplace(sparse_handle, A, Forward2Adjoint) );
 }
 
-ok_status sp_matrix_memcpy_vals_am(ok_float * val, const sp_matrix * A)
+ok_status sp_matrix_memcpy_vals_am(ok_float *val, const sp_matrix *A)
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_PTR(val);
@@ -253,7 +253,7 @@ ok_status sp_matrix_memcpy_vals_am(ok_float * val, const sp_matrix * A)
 		ok_memcpy_gpu(val, A->val, A->nnz * sizeof(*val)) );
 }
 
-ok_status sp_matrix_abs(sp_matrix * A)
+ok_status sp_matrix_abs(sp_matrix *A)
 {
 	OK_CHECK_SPARSEMAT(A);
 	vector vals = (vector){2 * A->nnz, 1, A->val};
@@ -261,7 +261,7 @@ ok_status sp_matrix_abs(sp_matrix * A)
 	return OK_STATUS_CUDA;
 }
 
-ok_status sp_matrix_pow(sp_matrix * A, const ok_float x)
+ok_status sp_matrix_pow(sp_matrix *A, const ok_float x)
 {
 	OK_CHECK_SPARSEMAT(A);
 	vector vals = (vector){2 * A->nnz, 1, A->val};
@@ -269,7 +269,7 @@ ok_status sp_matrix_pow(sp_matrix * A, const ok_float x)
 	return OK_STATUS_CUDA;
 }
 
-ok_status sp_matrix_scale(sp_matrix * A, const ok_float alpha)
+ok_status sp_matrix_scale(sp_matrix *A, const ok_float alpha)
 {
 	OK_CHECK_SPARSEMAT(A);
 	vector vals = (vector){2 * A->nnz, 1, A->val};
@@ -286,8 +286,8 @@ ok_status sp_matrix_scale(sp_matrix * A, const ok_float alpha)
  *      csc, left scaling -> scale adjoint operator, transpose data A2F
  *      csc, right scaling -> scale forward operator, tranpose data F2A
  */
-ok_status __sp_matrix_scale_diag(void * sparse_handle, sp_matrix * A,
-	const vector * v, enum CBLAS_SIDE side)
+ok_status __sp_matrix_scale_diag(void *sparse_handle, sp_matrix *A,
+	const vector *v, enum CBLAS_SIDE side)
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_VECTOR(v);
@@ -338,15 +338,15 @@ ok_status __sp_matrix_scale_diag(void * sparse_handle, sp_matrix * A,
 	return err;
 }
 
-ok_status sp_matrix_scale_left(void * sparse_handle, sp_matrix * A,
-	const vector * v)
+ok_status sp_matrix_scale_left(void *sparse_handle, sp_matrix *A,
+	const vector *v)
 	{ return __sp_matrix_scale_diag(sparse_handle, A, v, CblasLeft); }
 
-ok_status sp_matrix_scale_right(void * sparse_handle, sp_matrix * A,
-	const vector * v)
+ok_status sp_matrix_scale_right(void *sparse_handle, sp_matrix *A,
+	const vector *v)
 	{ return __sp_matrix_scale_diag(sparse_handle, A, v, CblasRight); }
 
-ok_status sp_matrix_print(const sp_matrix * A)
+ok_status sp_matrix_print(const sp_matrix *A)
 {
 	OK_CHECK_SPARSEMAT(A);
 	size_t i;
@@ -390,7 +390,7 @@ ok_status sp_matrix_print(const sp_matrix * A)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status sp_matrix_print_transpose(const sp_matrix * A)
+ok_status sp_matrix_print_transpose(const sp_matrix *A)
 {
 	OK_CHECK_SPARSEMAT(A);
 	size_t i;
@@ -443,8 +443,8 @@ ok_status sp_matrix_print_transpose(const sp_matrix * A)
  *      csc, forward op -> apply stored adjoint operator
  *      csc, adjoint op -> apply stored forward operator
  */
-ok_status sp_blas_gemv(void * sparse_handle, enum CBLAS_TRANSPOSE transA,
-	ok_float alpha, sp_matrix * A, vector * x, ok_float beta, vector * y)
+ok_status sp_blas_gemv(void *sparse_handle, enum CBLAS_TRANSPOSE transA,
+	ok_float alpha, sp_matrix *A, vector *x, ok_float beta, vector *y)
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_VECTOR(x);
@@ -458,7 +458,7 @@ ok_status sp_blas_gemv(void * sparse_handle, enum CBLAS_TRANSPOSE transA,
 	    	return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	ok_status err = OPTKIT_SUCCESS;
-	ok_sparse_handle * sp_hdl = (ok_sparse_handle *) sparse_handle;
+	ok_sparse_handle *sp_hdl = (ok_sparse_handle *) sparse_handle;
 	int forward = ((A->order == CblasRowMajor) == (transA == CblasNoTrans));
 	int size1 = (transA == CblasNoTrans) ? (int) A->size1 : (int) A->size2;
 	int size2 = (transA == CblasNoTrans) ? (int) A->size2 : (int) A->size1;

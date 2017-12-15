@@ -5,10 +5,10 @@
 extern "C" {
 #endif
 
-ok_status blas_make_handle(void ** handle)
+ok_status blas_make_handle(void **handle)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	cublasHandle_t * hdl;
+	cublasHandle_t *hdl;
 	hdl = (cublasHandle_t *) malloc(sizeof(cublasHandle_t));
 	err = OK_SCAN_CUBLAS( cublasCreate(hdl) );
 	if (err) {
@@ -22,7 +22,7 @@ ok_status blas_make_handle(void ** handle)
 	}
 }
 
-ok_status blas_destroy_handle(void * handle)
+ok_status blas_destroy_handle(void *handle)
 {
 	OK_CHECK_PTR(handle);
 	ok_status err = OK_SCAN_CUBLAS(
@@ -32,8 +32,8 @@ ok_status blas_destroy_handle(void * handle)
 }
 
 /* BLAS LEVEL 1 */
-ok_status blas_axpy(void * linalg_handle, ok_float alpha, const vector * x,
-	vector * y)
+ok_status blas_axpy(void *linalg_handle, ok_float alpha, const vector *x,
+	vector *y)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_PTR(linalg_handle);
@@ -49,7 +49,7 @@ ok_status blas_axpy(void * linalg_handle, ok_float alpha, const vector * x,
 	return err;
 }
 
-ok_status blas_nrm2(void * linalg_handle, const vector *x, ok_float * result)
+ok_status blas_nrm2(void *linalg_handle, const vector *x, ok_float *result)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_PTR(linalg_handle);
@@ -61,7 +61,7 @@ ok_status blas_nrm2(void * linalg_handle, const vector *x, ok_float * result)
 	return err;
 }
 
-ok_status blas_scal(void * linalg_handle, const ok_float alpha, vector *x)
+ok_status blas_scal(void *linalg_handle, const ok_float alpha, vector *x)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_PTR(linalg_handle);
@@ -73,7 +73,7 @@ ok_status blas_scal(void * linalg_handle, const ok_float alpha, vector *x)
 	return err;
 }
 
-ok_status blas_asum(void * linalg_handle, const vector * x, ok_float * result)
+ok_status blas_asum(void *linalg_handle, const vector *x, ok_float *result)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_PTR(linalg_handle);
@@ -85,8 +85,8 @@ ok_status blas_asum(void * linalg_handle, const vector * x, ok_float * result)
 	return err;
 }
 
-ok_status blas_dot(void * linalg_handle, const vector * x, const vector * y,
-	ok_float * result)
+ok_status blas_dot(void *linalg_handle, const vector *x, const vector *y,
+	ok_float *result)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_PTR(linalg_handle);
@@ -100,8 +100,8 @@ ok_status blas_dot(void * linalg_handle, const vector * x, const vector * y,
 	return err;
 }
 
-// void blas_dot_inplace(void * linalg_handle, const vector * x, const vector * y,
-// 	ok_float * deviceptr_result)
+// void blas_dot_inplace(void *linalg_handle, const vector *x, const vector *y,
+// 	ok_float *deviceptr_result)
 // {
 // 	CUBLAS(dot)(*(cublasHandle_t *) linalg_handle, (int) x->size, x->data,
 // 		(int) x->stride, y->data, (int) y->stride, deviceptr_result);
@@ -111,7 +111,7 @@ ok_status blas_dot(void * linalg_handle, const vector * x, const vector * y,
 
 /* BLAS LEVEL 2 */
 
-ok_status blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
+ok_status blas_gemv(void *linalg_handle, enum CBLAS_TRANSPOSE transA,
 	ok_float alpha, const matrix *A, const vector *x, ok_float beta,
 	vector *y)
 {
@@ -144,7 +144,7 @@ ok_status blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 	return err;
 }
 
-ok_status blas_trsv(void * linalg_handle, enum CBLAS_UPLO uplo,
+ok_status blas_trsv(void *linalg_handle, enum CBLAS_UPLO uplo,
 	enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, const matrix *A,
 	vector *x)
 {
@@ -178,9 +178,9 @@ ok_status blas_trsv(void * linalg_handle, enum CBLAS_UPLO uplo,
 	return err;
 }
 
-ok_status blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
+ok_status blas_sbmv(void *linalg_handle, enum CBLAS_ORDER order,
 	enum CBLAS_UPLO uplo, const size_t num_superdiag, const ok_float alpha,
-	const vector * vecA, const vector * x, const ok_float beta, vector * y)
+	const vector *vecA, const vector *x, const ok_float beta, vector *y)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	cublasFillMode_t ul;
@@ -219,8 +219,8 @@ ok_status blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
 	return err;
 }
 
-ok_status blas_diagmv(void * linalg_handle, const ok_float alpha,
-	const vector * vecA, const vector * x, const ok_float beta, vector * y)
+ok_status blas_diagmv(void *linalg_handle, const ok_float alpha,
+	const vector *vecA, const vector *x, const ok_float beta, vector *y)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_PTR(linalg_handle);
@@ -237,9 +237,9 @@ ok_status blas_diagmv(void * linalg_handle, const ok_float alpha,
 }
 
 /* BLAS LEVEL 3 */
-ok_status blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
-	enum CBLAS_TRANSPOSE transA, ok_float alpha, const matrix * A,
-	ok_float beta, matrix * C)
+ok_status blas_syrk(void *linalg_handle, enum CBLAS_UPLO uplo,
+	enum CBLAS_TRANSPOSE transA, ok_float alpha, const matrix *A,
+	ok_float beta, matrix *C)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	cublasOperation_t tA;
@@ -271,9 +271,9 @@ ok_status blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
 	return err;
 }
 
-ok_status blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
-	enum CBLAS_TRANSPOSE transB, ok_float alpha, const matrix * A,
-	const matrix * B, ok_float beta, matrix * C)
+ok_status blas_gemm(void *linalg_handle, enum CBLAS_TRANSPOSE transA,
+	enum CBLAS_TRANSPOSE transB, ok_float alpha, const matrix *A,
+	const matrix *B, ok_float beta, matrix *C)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	cublasOperation_t tA = transA == CblasTrans ? CUBLAS_OP_T : CUBLAS_OP_N;
@@ -324,7 +324,7 @@ ok_status blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 	return err;
 }
 
-ok_status blas_trsm(void * linalg_handle, enum CBLAS_SIDE Side,
+ok_status blas_trsm(void *linalg_handle, enum CBLAS_SIDE Side,
 	enum CBLAS_UPLO uplo, enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag,
 	ok_float alpha, const matrix *A, matrix *B)
 {

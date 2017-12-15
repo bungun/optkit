@@ -4,13 +4,13 @@
 extern "C" {
 #endif
 
-ok_status blas_make_handle(void ** linalg_handle)
+ok_status blas_make_handle(void **linalg_handle)
 {
 	*linalg_handle = OK_NULL;
 	return OPTKIT_SUCCESS;
 }
 
-ok_status blas_destroy_handle(void * linalg_handle)
+ok_status blas_destroy_handle(void *linalg_handle)
 {
 	linalg_handle = OK_NULL;
 	return OPTKIT_SUCCESS;
@@ -18,7 +18,7 @@ ok_status blas_destroy_handle(void * linalg_handle)
 
 /* BLAS LEVEL 1 */
 
-ok_status blas_axpy(void * linalg_handle, ok_float alpha, const vector * x,
+ok_status blas_axpy(void *linalg_handle, ok_float alpha, const vector *x,
 	vector *y)
 {
 	OK_CHECK_VECTOR(x);
@@ -31,29 +31,29 @@ ok_status blas_axpy(void * linalg_handle, ok_float alpha, const vector * x,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status blas_nrm2(void * linalg_handle, const vector * x, ok_float * result)
+ok_status blas_nrm2(void *linalg_handle, const vector *x, ok_float *result)
 {
 	OK_CHECK_VECTOR(x);
 	*result = CBLAS(nrm2)((int) x->size, x->data, (int) x->stride);
 	return OPTKIT_SUCCESS;
 }
 
-ok_status blas_scal(void * linalg_handle, const ok_float alpha, vector * x)
+ok_status blas_scal(void *linalg_handle, const ok_float alpha, vector *x)
 {
 	OK_CHECK_VECTOR(x);
 	CBLAS(scal)((int) x->size, alpha, x->data, (int) x->stride);
 	return OPTKIT_SUCCESS;
 }
 
-ok_status blas_asum(void * linalg_handle, const vector * x, ok_float * result)
+ok_status blas_asum(void *linalg_handle, const vector *x, ok_float *result)
 {
 	OK_CHECK_VECTOR(x);
 	*result = CBLAS(asum)((int) x->size, x->data, (int) x->stride);
 	return OPTKIT_SUCCESS;
 }
 
-ok_status blas_dot(void * linalg_handle, const vector * x, const vector * y,
-	ok_float * result)
+ok_status blas_dot(void *linalg_handle, const vector *x, const vector *y,
+	ok_float *result)
 {
 	OK_CHECK_VECTOR(x);
 	OK_CHECK_VECTOR(y);
@@ -65,8 +65,8 @@ ok_status blas_dot(void * linalg_handle, const vector * x, const vector * y,
 	return OPTKIT_SUCCESS;
 }
 
-// ok_status blas_dot_inplace(void * linalg_handle, const vector * x,
-// 	const vector * y, ok_float * deviceptr_result)
+// ok_status blas_dot_inplace(void *linalg_handle, const vector *x,
+// 	const vector *y, ok_float *deviceptr_result)
 // {
 // 	OK_CHECK_VECTOR(x);
 // 	OK_CHECK_VECTOR(y);
@@ -81,9 +81,9 @@ ok_status blas_dot(void * linalg_handle, const vector * x, const vector * y,
 
 /* BLAS LEVEL 2 */
 
-ok_status blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
-	ok_float alpha, const matrix * A, const vector * x, ok_float beta,
-	vector * y)
+ok_status blas_gemv(void *linalg_handle, enum CBLAS_TRANSPOSE transA,
+	ok_float alpha, const matrix *A, const vector *x, ok_float beta,
+	vector *y)
 {
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_VECTOR(x);
@@ -100,8 +100,8 @@ ok_status blas_gemv(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status blas_trsv(void * linalg_handle, enum CBLAS_UPLO uplo,
-	enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, const matrix * A,
+ok_status blas_trsv(void *linalg_handle, enum CBLAS_UPLO uplo,
+	enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG Diag, const matrix *A,
 	vector *x)
 {
 	OK_CHECK_MATRIX(A);
@@ -113,10 +113,9 @@ ok_status blas_trsv(void * linalg_handle, enum CBLAS_UPLO uplo,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
+ok_status blas_sbmv(void *linalg_handle, enum CBLAS_ORDER order,
 	enum CBLAS_UPLO uplo, const size_t num_superdiag, const ok_float alpha,
-	const vector * vecA, const vector * x, const ok_float beta,
-	vector * y)
+	const vector *vecA, const vector *x, const ok_float beta, vector *y)
 {
 	size_t lenA;
 	OK_CHECK_VECTOR(vecA);
@@ -142,9 +141,8 @@ ok_status blas_sbmv(void * linalg_handle, enum CBLAS_ORDER order,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status blas_diagmv(void * linalg_handle, const ok_float alpha,
-	const vector * vecA, const vector * x, const ok_float beta,
-	vector * y)
+ok_status blas_diagmv(void *linalg_handle, const ok_float alpha,
+	const vector *vecA, const vector *x, const ok_float beta, vector *y)
 {
 	OK_CHECK_VECTOR(vecA);
 	OK_CHECK_VECTOR(x);
@@ -158,9 +156,9 @@ ok_status blas_diagmv(void * linalg_handle, const ok_float alpha,
 
 /* BLAS LEVEL 3 */
 
-ok_status blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
-	enum CBLAS_TRANSPOSE transA, ok_float alpha, const matrix * A,
-	ok_float beta, matrix * C)
+ok_status blas_syrk(void *linalg_handle, enum CBLAS_UPLO uplo,
+	enum CBLAS_TRANSPOSE transA, ok_float alpha, const matrix *A,
+	ok_float beta, matrix *C)
 {
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_MATRIX(C);
@@ -177,9 +175,9 @@ ok_status blas_syrk(void * linalg_handle, enum CBLAS_UPLO uplo,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
-	enum CBLAS_TRANSPOSE transB, ok_float alpha, const matrix * A,
-	const matrix * B, ok_float beta, matrix * C)
+ok_status blas_gemm(void *linalg_handle, enum CBLAS_TRANSPOSE transA,
+	enum CBLAS_TRANSPOSE transB, ok_float alpha, const matrix *A,
+	const matrix *B, ok_float beta, matrix *C)
 {
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_MATRIX(B);
@@ -213,7 +211,7 @@ ok_status blas_gemm(void * linalg_handle, enum CBLAS_TRANSPOSE transA,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status blas_trsm(void * linalg_handle, enum CBLAS_SIDE side,
+ok_status blas_trsm(void *linalg_handle, enum CBLAS_SIDE side,
 	enum CBLAS_UPLO uplo, enum CBLAS_TRANSPOSE transA, enum CBLAS_DIAG diag,
 	ok_float alpha, const matrix *A, matrix *B)
 {

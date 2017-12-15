@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 template<typename T, typename I>
-ok_status sp_matrix_alloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
+ok_status sp_matrix_alloc_(sp_matrix_<T, I> *A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
 {
 	if (!A)
@@ -31,8 +31,8 @@ ok_status sp_matrix_alloc_(sp_matrix_<T, I> * A, size_t m, size_t n, size_t nnz,
 }
 
 template<typename T, typename I>
-ok_status sp_matrix_calloc_(sp_matrix_<T, I> * A, size_t m, size_t n,
-	size_t nnz, enum CBLAS_ORDER order)
+ok_status sp_matrix_calloc_(sp_matrix_<T, I> *A, size_t m, size_t n, size_t nnz,
+	enum CBLAS_ORDER order)
 {
 	OK_RETURNIF_ERR( (sp_matrix_alloc_<T, I>(A, m, n, nnz, order)) );
 	memset(A->val, 0, 2 * nnz * sizeof(T));
@@ -42,7 +42,7 @@ ok_status sp_matrix_calloc_(sp_matrix_<T, I> * A, size_t m, size_t n,
 }
 
 template<typename T, typename I>
-ok_status sp_matrix_free_(sp_matrix_<T, I> * A)
+ok_status sp_matrix_free_(sp_matrix_<T, I> *A)
 {
 	OK_CHECK_SPARSEMAT(A);
 	ok_free(A->val);
@@ -56,8 +56,7 @@ ok_status sp_matrix_free_(sp_matrix_<T, I> * A)
 }
 
 template<typename T, typename I>
-ok_status sp_matrix_memcpy_mm_(sp_matrix_<T, I> * A,
-	const sp_matrix_<T, I> * B)
+ok_status sp_matrix_memcpy_mm_(sp_matrix_<T, I> *A, const sp_matrix_<T, I> *B)
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_SPARSEMAT(B);
@@ -70,8 +69,8 @@ ok_status sp_matrix_memcpy_mm_(sp_matrix_<T, I> * A,
 }
 
 template<typename T, typename I>
-ok_status sp_matrix_memcpy_vals_mm_(sp_matrix_<T, I> * A,
-	const sp_matrix_<T, I> * B)
+ok_status sp_matrix_memcpy_vals_mm_(sp_matrix_<T, I> *A,
+	const sp_matrix_<T, I> *B)
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_SPARSEMAT(B);
@@ -83,9 +82,9 @@ ok_status sp_matrix_memcpy_vals_mm_(sp_matrix_<T, I> * A,
 extern "C" {
 #endif
 
-void __csr2csc(size_t m, size_t n, size_t nnz, ok_float * csr_val,
-	ok_int * row_ptr, ok_int * col_ind, ok_float * csc_val,
-	ok_int * row_ind, ok_int * col_ptr)
+void __csr2csc(size_t m, size_t n, size_t nnz, ok_float *csr_val,
+	ok_int *row_ptr, ok_int *col_ind, ok_float *csc_val, ok_int *row_ind,
+	ok_int *col_ptr)
 {
 	ok_int i, j, k, l;
 	memset(col_ptr, 0, (n + 1) * sizeof(ok_int));
@@ -115,7 +114,7 @@ void __csr2csc(size_t m, size_t n, size_t nnz, ok_float * csr_val,
 	col_ptr[0] = 0;
 }
 
-void __transpose_inplace(sp_matrix * A, SPARSE_TRANSPOSE_DIRECTION dir)
+void __transpose_inplace(sp_matrix *A, SPARSE_TRANSPOSE_DIRECTION dir)
 {
 	if (dir == Forward2Adjoint)
 		if (A->order == CblasRowMajor)
@@ -137,33 +136,33 @@ void __transpose_inplace(sp_matrix * A, SPARSE_TRANSPOSE_DIRECTION dir)
 				A->ind, A->ptr);
 }
 
-ok_status sp_make_handle(void ** sparse_handle)
+ok_status sp_make_handle(void **sparse_handle)
 {
 	* sparse_handle = OK_NULL;
 	return OPTKIT_SUCCESS;
 }
 
-ok_status sp_destroy_handle(void * sparse_handle)
+ok_status sp_destroy_handle(void *sparse_handle)
 {
 	return OPTKIT_SUCCESS;
 }
 
-ok_status sp_matrix_alloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
+ok_status sp_matrix_alloc(sp_matrix *A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
 	{ return sp_matrix_alloc_<ok_float, ok_int>(A, m, n, nnz, order); }
 
-ok_status sp_matrix_calloc(sp_matrix * A, size_t m, size_t n, size_t nnz,
+ok_status sp_matrix_calloc(sp_matrix *A, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
 	{ return sp_matrix_calloc_<ok_float, ok_int>(A, m, n, nnz, order); }
 
-ok_status sp_matrix_free(sp_matrix * A)
+ok_status sp_matrix_free(sp_matrix *A)
 	{ return sp_matrix_free_<ok_float, ok_int>(A); }
 
-ok_status sp_matrix_memcpy_mm(sp_matrix * A, const sp_matrix * B)
+ok_status sp_matrix_memcpy_mm(sp_matrix *A, const sp_matrix *B)
 	{ return sp_matrix_memcpy_mm_<ok_float, ok_int>(A, B); }
 
-ok_status sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A,
-	const ok_float * val, const ok_int * ind, const ok_int * ptr)
+ok_status sp_matrix_memcpy_ma(void *sparse_handle, sp_matrix *A,
+	const ok_float *val, const ok_int *ind, const ok_int *ptr)
 {
 	OK_CHECK_SPARSEMAT(A);
 	if (!val || !ind || !ptr)
@@ -176,8 +175,8 @@ ok_status sp_matrix_memcpy_ma(void * sparse_handle, sp_matrix * A,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
-	const sp_matrix * A)
+ok_status sp_matrix_memcpy_am(ok_float *val, ok_int *ind, ok_int *ptr,
+	const sp_matrix *A)
 {
 	OK_CHECK_SPARSEMAT(A);
 	if (!val || !ind || !ptr)
@@ -189,11 +188,11 @@ ok_status sp_matrix_memcpy_am(ok_float * val, ok_int * ind, ok_int * ptr,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status sp_matrix_memcpy_vals_mm(sp_matrix * A, const sp_matrix * B)
+ok_status sp_matrix_memcpy_vals_mm(sp_matrix *A, const sp_matrix *B)
 	{ return sp_matrix_memcpy_vals_mm_<ok_float, ok_int>(A, B); }
 
-ok_status sp_matrix_memcpy_vals_ma(void * sparse_handle, sp_matrix * A,
-  const ok_float * val)
+ok_status sp_matrix_memcpy_vals_ma(void *sparse_handle, sp_matrix *A,
+  const ok_float *val)
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_PTR(val);
@@ -203,7 +202,7 @@ ok_status sp_matrix_memcpy_vals_ma(void * sparse_handle, sp_matrix * A,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status sp_matrix_memcpy_vals_am(ok_float * val, const sp_matrix * A)
+ok_status sp_matrix_memcpy_vals_am(ok_float *val, const sp_matrix *A)
 {
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_PTR(val);
@@ -212,7 +211,7 @@ ok_status sp_matrix_memcpy_vals_am(ok_float * val, const sp_matrix * A)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status sp_matrix_abs(sp_matrix * A)
+ok_status sp_matrix_abs(sp_matrix *A)
 {
 	size_t i;
 	OK_CHECK_SPARSEMAT(A);
@@ -225,7 +224,7 @@ ok_status sp_matrix_abs(sp_matrix * A)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status sp_matrix_pow(sp_matrix * A, const ok_float x)
+ok_status sp_matrix_pow(sp_matrix *A, const ok_float x)
 {
 	size_t i;
 	OK_CHECK_SPARSEMAT(A);
@@ -238,14 +237,14 @@ ok_status sp_matrix_pow(sp_matrix * A, const ok_float x)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status sp_matrix_scale(sp_matrix * A, const ok_float alpha)
+ok_status sp_matrix_scale(sp_matrix *A, const ok_float alpha)
 {
 	OK_CHECK_SPARSEMAT(A);
 	CBLAS(scal)( (int) (2 * A->nnz), alpha, A->val, 1);
 	return OPTKIT_SUCCESS;
 }
 
-ok_status __sp_matrix_scale_diag(sp_matrix * A, const vector * v,
+ok_status __sp_matrix_scale_diag(sp_matrix *A, const vector *v,
 	enum CBLAS_SIDE side)
 {
 	size_t i, offset, offsetnz, stop;
@@ -282,15 +281,15 @@ ok_status __sp_matrix_scale_diag(sp_matrix * A, const vector * v,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status sp_matrix_scale_left(void * sparse_handle, sp_matrix * A,
-	const vector * v)
+ok_status sp_matrix_scale_left(void *sparse_handle, sp_matrix *A,
+	const vector *v)
 	{ return __sp_matrix_scale_diag(A, v, CblasLeft); }
 
-ok_status sp_matrix_scale_right(void * sparse_handle, sp_matrix * A,
-	const vector * v)
+ok_status sp_matrix_scale_right(void *sparse_handle, sp_matrix *A,
+	const vector *v)
 	{ return __sp_matrix_scale_diag(A, v, CblasRight); }
 
-ok_status sp_matrix_print(const sp_matrix * A)
+ok_status sp_matrix_print(const sp_matrix *A)
 {
 	size_t i;
 	ok_int j, ptr1, ptr2;
@@ -325,13 +324,13 @@ ok_status sp_matrix_print(const sp_matrix * A)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status sp_matrix_print_transpose(const sp_matrix * A)
+ok_status sp_matrix_print_transpose(const sp_matrix *A)
 {
 	size_t i, ptrlen = A->size1 + A->size2 + 2 - A->ptrlen;
 	ok_int j, ptr1, ptr2;
-	ok_int * ptr_base = A->ptr + A->ptrlen;
-	ok_int * ind_base = A->ind + A->nnz;
-	ok_float * val_base = A->val + A->nnz;
+	ok_int *ptr_base = A->ptr + A->ptrlen;
+	ok_int *ind_base = A->ind + A->nnz;
+	ok_float *val_base = A->val + A->nnz;
 
 	OK_CHECK_SPARSEMAT(A);
 	if (A->order == CblasRowMajor)
@@ -370,13 +369,13 @@ ok_status sp_matrix_print_transpose(const sp_matrix * A)
  *      csc, forward op -> adjoint
  *      csc, adjoint op -> forward
  */
-ok_status sp_blas_gemv(void * sparse_handle, enum CBLAS_TRANSPOSE transA,
-	ok_float alpha, sp_matrix * A, vector * x, ok_float beta, vector * y)
+ok_status sp_blas_gemv(void *sparse_handle, enum CBLAS_TRANSPOSE transA,
+	ok_float alpha, sp_matrix *A, vector *x, ok_float beta, vector *y)
 {
 	size_t ptrlen, i;
 	ok_int j;
-	ok_float * val, tmp;
-	ok_int * ind, * ptr;
+	ok_float *val, tmp;
+	ok_int *ind, *ptr;
 
 	OK_CHECK_SPARSEMAT(A);
 	OK_CHECK_VECTOR(x);

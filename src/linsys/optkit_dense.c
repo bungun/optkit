@@ -4,28 +4,28 @@
 extern "C" {
 #endif
 
-inline ok_float __matrix_get_colmajor(const matrix * A, size_t i, size_t j)
+inline ok_float __matrix_get_colmajor(const matrix *A, size_t i, size_t j)
 {
 	return A->data[i + j * A->ld];
 }
 
-inline ok_float __matrix_get_rowmajor(const matrix * A, size_t i, size_t j)
+inline ok_float __matrix_get_rowmajor(const matrix *A, size_t i, size_t j)
 {
 	return A->data[i * A->ld + j];
 }
 
-inline void __matrix_set_rowmajor(matrix * A, size_t i, size_t j, ok_float x)
+inline void __matrix_set_rowmajor(matrix *A, size_t i, size_t j, ok_float x)
 {
 	A->data[i * A->ld + j] = x;
 }
 
-inline void __matrix_set_colmajor(matrix * A, size_t i, size_t j, ok_float x)
+inline void __matrix_set_colmajor(matrix *A, size_t i, size_t j, ok_float x)
 {
 	A->data[i + j * A->ld] = x;
 }
 
 /* Non-Block Cholesky. */
-static ok_status __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A)
+static ok_status __linalg_cholesky_decomp_noblk(void *linalg_handle, matrix *A)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	ok_float l11;
@@ -71,7 +71,7 @@ static ok_status __linalg_cholesky_decomp_noblk(void * linalg_handle, matrix *A)
  *
  * Stores result in Lower triangular part.
  */
-ok_status linalg_cholesky_decomp(void * linalg_handle, matrix * A)
+ok_status linalg_cholesky_decomp(void *linalg_handle, matrix *A)
 {
 	OK_CHECK_MATRIX(A);
 
@@ -119,7 +119,7 @@ ok_status linalg_cholesky_decomp(void * linalg_handle, matrix * A)
 }
 
 /* Cholesky solve */
-ok_status linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x)
+ok_status linalg_cholesky_svx(void *linalg_handle, const matrix *L, vector *x)
 {
 	OK_RETURNIF_ERR( blas_trsv(linalg_handle, CblasLower, CblasNoTrans,
 		CblasNonUnit, L, x) );
@@ -140,7 +140,7 @@ ok_status linalg_cholesky_svx(void * linalg_handle, const matrix * L, vector * x
  *
  */
 ok_status linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t,
-	const matrix * A, vector * v)
+	const matrix *A, vector * v)
 {
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_VECTOR(v);
@@ -179,7 +179,7 @@ ok_status linalg_matrix_row_squares(const enum CBLAS_TRANSPOSE t,
  *	else, set
  *		A += 1v^T
  */
-ok_status linalg_matrix_broadcast_vector(matrix * A, const vector * v,
+ok_status linalg_matrix_broadcast_vector(matrix *A, const vector *v,
 	const enum OPTKIT_TRANSFORM operation, const enum CBLAS_SIDE side)
 {
 	OK_CHECK_MATRIX(A);
@@ -221,8 +221,8 @@ ok_status linalg_matrix_broadcast_vector(matrix * A, const vector * v,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status linalg_matrix_reduce_indmin(indvector * indices, vector * minima,
-	const matrix * A, const enum CBLAS_SIDE side)
+ok_status linalg_matrix_reduce_indmin(indvector *indices, vector *minima,
+	const matrix *A, const enum CBLAS_SIDE side)
 {
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_VECTOR(indices);
@@ -235,8 +235,8 @@ ok_status linalg_matrix_reduce_indmin(indvector * indices, vector * minima,
 	size_t stride_k = (reduce_by_row == rowmajor) ? A->ld : 1;
 	size_t stride_i = (reduce_by_row == rowmajor) ? 1 : A->ld;
 	size_t k, idx;
-	ok_float * min_ = minima->data, * A_ = A->data;
-	size_t * ind_ = indices->data;
+	ok_float *min_ = minima->data, *A_ = A->data;
+	size_t *ind_ = indices->data;
 
 	if (output_dim != minima->size || indices->size != minima->size)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
@@ -257,7 +257,7 @@ ok_status linalg_matrix_reduce_indmin(indvector * indices, vector * minima,
 	return OPTKIT_SUCCESS;
 }
 
-static ok_status __matrix_extrema(vector * extrema, const matrix * A,
+static ok_status __matrix_extrema(vector *extrema, const matrix *A,
 	const enum CBLAS_SIDE side, const int minima)
 {
 	OK_CHECK_MATRIX(A);
@@ -301,13 +301,13 @@ static ok_status __matrix_extrema(vector * extrema, const matrix * A,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status linalg_matrix_reduce_min(vector * minima, const matrix * A,
+ok_status linalg_matrix_reduce_min(vector *minima, const matrix *A,
 	const enum CBLAS_SIDE side)
 {
 	return __matrix_extrema(minima, A, side, 1);
 }
 
-ok_status linalg_matrix_reduce_max(vector * maxima, const matrix * A,
+ok_status linalg_matrix_reduce_max(vector *maxima, const matrix *A,
 	const enum CBLAS_SIDE side)
 {
 	return __matrix_extrema(maxima, A, side, 0);
