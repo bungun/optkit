@@ -139,7 +139,7 @@ enum OPTKIT_TRANSFORM {
 #define __DEVICE__
 #endif
 
-void optkit_version(int * maj, int * min, int * change, int * status);
+void optkit_version(int *maj, int *min, int *change, int *status);
 ok_status ok_device_reset(void);
 
 static const char * ok_err2string(const ok_status error) {
@@ -175,8 +175,8 @@ static const char * ok_err2string(const ok_status error) {
 	}
 }
 
-static ok_status ok_print_status(ok_status err, const char * file,
-	const int line, const char * function)
+static ok_status ok_print_status(ok_status err, const char *file,
+	const int line, const char *function)
 {
 	if (err != OPTKIT_SUCCESS)
 		printf("%s:%d:%s\n ERROR OPTKIT: %s\n", file, line, function,

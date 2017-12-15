@@ -144,8 +144,8 @@ inline ok_status ok_cuda_status(cudaError_t code, const char *file, int line,
 	}
 }
 
-inline ok_status ok_cublas_status(cublasStatus_t code, const char *file, int line,
-	const char *function)
+inline ok_status ok_cublas_status(cublasStatus_t code, const char *file,
+	int line, const char *function)
 {
 	if (code != CUBLAS_STATUS_SUCCESS) {
 		printf("%s:%d:%s\n ERROR CUBLAS: %s\n", file, line, function,
@@ -168,7 +168,7 @@ inline ok_status ok_cusparse_status(cusparseStatus_t code, const char *file,
 	}
 }
 
-inline ok_status ok_cuda_free(void * x, const char *file, int line,
+inline ok_status ok_cuda_free(void *x, const char *file, int line,
 	const char *function)
 {
 	ok_status err = ok_cuda_status( cudaFree(x), file, line, function);
