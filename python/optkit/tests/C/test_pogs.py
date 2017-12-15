@@ -7,7 +7,6 @@ import unittest
 
 import optkit.libs.enums as enums
 from optkit.libs.pogs import PogsDenseLibs
-from optkit.tests.defs import OptkitTestCase
 from optkit.tests import defs
 from optkit.tests.C import statements
 import optkit.tests.C.context_managers as okcctx
