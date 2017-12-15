@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-ok_status cluster_aid_alloc(cluster_aid * h, size_t size_A, size_t size_C,
+ok_status cluster_aid_alloc(cluster_aid *h, size_t size_A, size_t size_C,
 	enum CBLAS_ORDER order)
 {
 	ok_status err = OPTKIT_SUCCESS;
@@ -30,7 +30,7 @@ ok_status cluster_aid_alloc(cluster_aid * h, size_t size_A, size_t size_C,
 	return err;
 }
 
-ok_status cluster_aid_free(cluster_aid * h)
+ok_status cluster_aid_free(cluster_aid *h)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_PTR(h);
@@ -48,7 +48,7 @@ ok_status cluster_aid_free(cluster_aid * h)
 	return err;
 }
 
-static ok_status cluster_aid_subselect(cluster_aid * h, size_t offset_A,
+static ok_status cluster_aid_subselect(cluster_aid *h, size_t offset_A,
 	size_t offset_C, size_t sub_size_A, size_t sub_size_C)
 {
 	OK_CHECK_PTR(h);
@@ -62,11 +62,11 @@ static ok_status cluster_aid_subselect(cluster_aid * h, size_t offset_A,
 		offset_C, sub_size_C) );
 	OK_RETURNIF_ERR( vector_subvector(&h->d_min, &h->d_min_full, offset_A,
 		sub_size_A) );
-	return matrix_submatrix(&h->D, &h->D_full, offset_A, offset_C,
-		sub_size_C, sub_size_A);
+	return OK_SCAN_ERR( matrix_submatrix(&h->D, &h->D_full, offset_A, offset_C,
+		sub_size_C, sub_size_A) );
 }
 
-ok_status kmeans_work_alloc(kmeans_work * w, size_t n_vectors,
+ok_status kmeans_work_alloc(kmeans_work *w, size_t n_vectors,
 	size_t n_clusters, size_t vec_length)
 {
 	ok_status err = OPTKIT_SUCCESS;
@@ -92,7 +92,7 @@ ok_status kmeans_work_alloc(kmeans_work * w, size_t n_vectors,
 	return err;
 }
 
-ok_status kmeans_work_free(kmeans_work * w)
+ok_status kmeans_work_free(kmeans_work *w)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_PTR(w);
@@ -106,7 +106,7 @@ ok_status kmeans_work_free(kmeans_work * w)
 	return err;
 }
 
-ok_status kmeans_work_subselect(kmeans_work * w, size_t n_subvectors,
+ok_status kmeans_work_subselect(kmeans_work *w, size_t n_subvectors,
 	size_t n_subclusters, size_t subvec_length)
 {
 	OK_CHECK_PTR(w);
@@ -126,10 +126,10 @@ ok_status kmeans_work_subselect(kmeans_work * w, size_t n_subvectors,
 	return cluster_aid_subselect(&w->h, 0, 0, n_subvectors, n_subclusters);
 }
 
-ok_status kmeans_work_load(kmeans_work * w, ok_float * A,
-	const enum CBLAS_ORDER orderA, ok_float * C,
-	const enum CBLAS_ORDER orderC, size_t * a2c, size_t stride_a2c,
-	ok_float * counts, size_t stride_counts)
+ok_status kmeans_work_load(kmeans_work *w, ok_float *A,
+	const enum CBLAS_ORDER orderA, ok_float *C,
+	const enum CBLAS_ORDER orderC, size_t *a2c, size_t stride_a2c,
+	ok_float *counts, size_t stride_counts)
 {
 	if (!w || !A || !C || !a2c || !counts)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -140,9 +140,9 @@ ok_status kmeans_work_load(kmeans_work * w, ok_float * A,
 	return vector_memcpy_va(&w->counts, counts, stride_counts);
 }
 
-ok_status kmeans_work_extract(ok_float * C,
-	const enum CBLAS_ORDER orderC, size_t * a2c, size_t stride_a2c,
-	ok_float * counts, size_t stride_counts, kmeans_work * w)
+ok_status kmeans_work_extract(ok_float *C, const enum CBLAS_ORDER orderC,
+	size_t *a2c, size_t stride_a2c, ok_float *counts, size_t stride_counts,
+	kmeans_work *w)
 {
 	if (!w || !C || !a2c || !counts)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -152,40 +152,42 @@ ok_status kmeans_work_extract(ok_float * C,
 	return vector_memcpy_av(counts, &w->counts, stride_counts);
 }
 
-ok_status cluster(matrix * A, matrix * C, upsamplingvec * a2c,
-	cluster_aid * helper, ok_float maxdist)
+ok_status cluster(matrix *A, matrix *C, upsamplingvec *a2c, cluster_aid *helper,
+	ok_float maxdist)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_MATRIX(C);
 	OK_CHECK_UPSAMPLINGVEC(a2c);
 	OK_CHECK_PTR(helper);
-	cluster_aid * h = helper;
+	cluster_aid *h = helper;
 
 	/*
 	 * Prep work: set
 	 *	h->c_squared_k = c_k'c_k,
 	 *	D_ki = - 2 * c_k'a_i
 	 */
-	OK_RETURNIF_ERR(
+	OK_CHECK_ERR( err,
 		linalg_matrix_row_squares(CblasNoTrans, C, &h->c_squared) );
-	OK_RETURNIF_ERR(
+	OK_CHECK_ERR( err,
 		blas_gemm(h->hdl, CblasNoTrans, CblasTrans, -2 * kOne,
 		C, A, kZero, &h->D) );
 
 	/* Form D_{ki} = - 2 * c_k'a_i + c_k^2 */
-	OK_RETURNIF_ERR(
+	OK_CHECK_ERR( err,
 		linalg_matrix_broadcast_vector(&h->D, &h->c_squared,
 			OkTransformAdd, CblasLeft) );
 
 	/* set tentative cluster assigment of vector i argmin_k {D_ki} */
-	OK_RETURNIF_ERR(
+	OK_CHECK_ERR( err,
 		linalg_matrix_reduce_indmin(&h->a2c_tentative.vec, &h->d_min,
 			&h->D, CblasLeft) );
 
+
 	/* finalize cluster assignements */
 	// if (maxdist == OK_INFINITY)
-		return OK_SCAN_ERR(
-			assign_clusters_l2(A, C, a2c, h) );
+	OK_CHECK_ERR( err, assign_clusters_l2(A, C, a2c, h) );
+	return err;
 	// else
 		// return OK_SCAN_ERR(
 			// assign_clusters_l2_lInf_cap(A, C, a2c, h, maxdist) );
@@ -196,21 +198,23 @@ ok_status cluster(matrix * A, matrix * C, upsamplingvec * a2c,
  *
  *	C = diag(U'1)^{-1} * U'A
  */
-ok_status calculate_centroids(matrix * A, matrix * C, upsamplingvec * a2c,
-	vector * counts, cluster_aid * helper)
+ok_status calculate_centroids(matrix *A, matrix *C, upsamplingvec *a2c,
+	vector *counts, cluster_aid *helper)
 {
+	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_MATRIX(C);
 	OK_CHECK_UPSAMPLINGVEC(a2c);
 	OK_CHECK_VECTOR(counts);
 	OK_CHECK_PTR(helper);
 
-	OK_RETURNIF_ERR( upsamplingvec_mul_matrix(helper->hdl, CblasTrans,
+	OK_CHECK_ERR( err, upsamplingvec_mul_matrix(helper->hdl, CblasTrans,
 		CblasNoTrans, CblasNoTrans, kOne, a2c, A, kZero, C) );
-	OK_RETURNIF_ERR( upsamplingvec_count(a2c, counts) );
-	OK_RETURNIF_ERR( vector_safe_recip(counts) );
-	return linalg_matrix_broadcast_vector(C, counts, OkTransformScale,
-		CblasLeft);
+	OK_CHECK_ERR( err, upsamplingvec_count(a2c, counts) );
+	OK_CHECK_ERR( err, vector_safe_recip(counts) );
+	OK_CHECK_ERR( err, linalg_matrix_broadcast_vector(C, counts, OkTransformScale,
+		CblasLeft) );
+	return err;
 }
 
 /*
@@ -222,8 +226,8 @@ ok_status calculate_centroids(matrix * A, matrix * C, upsamplingvec * a2c,
  *
  *	(alpha * reltol + (1 - alpha)) maxA = (1 + alpha (reltol - 1)) maxA
  */
-static void get_distance_tolerance(ok_float *tol, const ok_float * maxA,
-	const ok_float * reltol, const size_t * iter, const size_t * maxiter)
+static void get_distance_tolerance(ok_float *tol, const ok_float *maxA,
+	const ok_float *reltol, const size_t *iter, const size_t *maxiter)
 {
 	if ((*iter) == 0)
 		*tol = OK_INFINITY;
@@ -232,16 +236,16 @@ static void get_distance_tolerance(ok_float *tol, const ok_float * maxA,
 			(*reltol - kOne)) * (*maxA);
 }
 
-static ok_status k_means_finish(cluster_aid * h)
+static ok_status k_means_finish(cluster_aid *h)
 {
-	ok_status err = cluster_aid_free(h);
+	ok_status err = OK_SCAN_ERR( cluster_aid_free(h) );
 	if (h)
 		ok_free(h);
 	return err;
 }
 
-ok_status k_means(matrix * A, matrix * C, upsamplingvec * a2c, vector * counts,
-	cluster_aid * h, const ok_float dist_reltol, const size_t change_abstol,
+ok_status k_means(matrix *A, matrix *C, upsamplingvec *a2c, vector *counts,
+	cluster_aid *h, const ok_float dist_reltol, const size_t change_abstol,
 	const size_t maxiter, const uint verbose)
 {
 	ok_status err = OPTKIT_SUCCESS;
@@ -307,20 +311,20 @@ void * kmeans_easy_init(size_t n_vectors, size_t n_clusters, size_t vec_length)
 	#else
 	ok_alloc(w, sizeof(*w));
 	#endif
-	kmeans_work_alloc(w, n_vectors, n_clusters, vec_length);
+	OK_SCAN_ERR( kmeans_work_alloc(w, n_vectors, n_clusters, vec_length) );
 	return (void * ) w;
 }
 
-ok_status kmeans_easy_resize(const void * work, size_t n_vectors,
+ok_status kmeans_easy_resize(const void *work, size_t n_vectors,
 	size_t n_clusters, size_t vec_length)
 {
 	OK_CHECK_PTR(work);
-	return kmeans_work_subselect((kmeans_work *) work, n_vectors,
-		n_clusters, vec_length);
+	return OK_SCAN_ERR( kmeans_work_subselect((kmeans_work *) work, n_vectors,
+		n_clusters, vec_length) );
 }
 
-ok_status kmeans_easy_run(const void * work, const kmeans_settings * const s,
-	const kmeans_io * io)
+ok_status kmeans_easy_run(const void *work, const kmeans_settings *const s,
+	const kmeans_io *io)
 {
 	if (!work || !s || !io)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -334,12 +338,12 @@ ok_status kmeans_easy_run(const void * work, const kmeans_settings * const s,
 		&w->h, s->dist_reltol, s->change_abstol, s->maxiter,
 		s->verbose) );
 
-	return kmeans_work_extract(io->C, io->orderC,
-		io->a2c, io->stride_a2c, io->counts, io->stride_counts, w);
+	return OK_SCAN_ERR( kmeans_work_extract(io->C, io->orderC,
+		io->a2c, io->stride_a2c, io->counts, io->stride_counts, w) );
 }
-ok_status kmeans_easy_finish(void * work)
+ok_status kmeans_easy_finish(void *work)
 {
-	ok_status err = kmeans_work_free((kmeans_work *) work);
+	ok_status err = OK_SCAN_ERR( kmeans_work_free((kmeans_work *) work) );
 	if (work)
 		ok_free(work);
 	return err;

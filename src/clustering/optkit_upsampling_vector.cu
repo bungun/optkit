@@ -1,8 +1,8 @@
 #include "optkit_defs_gpu.h"
 #include "optkit_upsampling_vector.h"
 
-inline __device__ ok_float& __get(ok_float * data, uint i, uint j,
-	const uint stride_row, const uint stride_col)
+inline __device__ ok_float& __get(ok_float *data, uint i, uint j,
+        const uint stride_row, const uint stride_col)
 {
 	return data[i * stride_row + j * stride_col];
 }
@@ -11,10 +11,10 @@ inline __device__ ok_float& __get(ok_float * data, uint i, uint j,
 extern "C" {
 #endif
 
-ok_status upsamplingvec_mul_matrix(void * linalg_handle,
+ok_status upsamplingvec_mul_matrix(void *linalg_handle,
 	const enum CBLAS_TRANSPOSE transU, const enum CBLAS_TRANSPOSE transI,
 	const enum CBLAS_TRANSPOSE transO, const ok_float alpha,
-	upsamplingvec * u, matrix * M_in, ok_float beta, matrix * M_out)
+	upsamplingvec *u, matrix *M_in, ok_float beta, matrix *M_out)
 {
 	OK_CHECK_UPSAMPLINGVEC(u);
 	OK_CHECK_MATRIX(M_in);
@@ -110,8 +110,8 @@ ok_status upsamplingvec_mul_matrix(void * linalg_handle,
 	return err ? err : OK_STATUS_CUDA;
 }
 
-static __global__ void __upsampling_count(size_t * indices,
-	ok_float * counts, size_t stride_idx, size_t stride_cts, size_t size)
+static __global__ void __upsampling_count(size_t *indices, ok_float *counts,
+        size_t stride_idx, size_t stride_cts, size_t size)
 {
 	size_t i;
 	for (i = blockIdx.x * blockDim.x + threadIdx.x; i < size;
@@ -119,7 +119,7 @@ static __global__ void __upsampling_count(size_t * indices,
 		counts[indices[i * stride_idx] * stride_cts] += kOne;
 }
 
-ok_status upsamplingvec_count(const upsamplingvec * u, vector * counts)
+ok_status upsamplingvec_count(const upsamplingvec *u, vector *counts)
 {
 	if ((!u || !counts) || (!u->indices || !counts->data))
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );

@@ -12,8 +12,8 @@ extern "C" {
  *
  * tally the number of reassignments.
  */
-ok_status assign_clusters_l2(matrix * A, matrix * C, upsamplingvec * a2c,
-	cluster_aid * h)
+ok_status assign_clusters_l2(matrix *A, matrix *C, upsamplingvec *a2c,
+	cluster_aid *h)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	size_t i;
@@ -73,8 +73,8 @@ ok_status assign_clusters_l2(matrix * A, matrix * C, upsamplingvec * a2c,
  */
 
 
-ok_status assign_inner_loop(matrix * A, matrix * C, upsamplingvec * a2c,
-	cluster_aid * h, const size_t block, const ok_float maxdist)
+ok_status assign_inner_loop(matrix *A, matrix *C, upsamplingvec *a2c,
+	cluster_aid *h, const size_t block, const ok_float maxdist)
 {
 	upsamplingvec * a2c_new = &h->a2c_tentative;
 	matrix * A_blk = &h->A_reducible;
@@ -151,8 +151,8 @@ ok_status assign_inner_loop(matrix * A, matrix * C, upsamplingvec * a2c,
 	return err;
 }
 
-ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
-	upsamplingvec * a2c, cluster_aid * h, ok_float maxdist)
+ok_status assign_clusters_l2_lInf_cap(matrix *A, matrix *C, upsamplingvec *a2c,
+        cluster_aid *h, ok_float maxdist)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	uint block;

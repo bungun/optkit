@@ -13,8 +13,8 @@ const size_t kBlockSize = 128;
  *
  * tally the number of reassignments.
  */
-ok_status assign_clusters_l2(matrix * A, matrix * C,
-	upsamplingvec * a2c, cluster_aid * h)
+ok_status assign_clusters_l2(matrix *A, matrix *C, upsamplingvec *a2c,
+	cluster_aid *h)
 {
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_MATRIX(C);
@@ -40,11 +40,11 @@ ok_status assign_clusters_l2(matrix * A, matrix * C,
 	return OPTKIT_SUCCESS;
 }
 
-static ok_float __dist_lInf_A_minus_UC_i(const ok_float * A,
-	const int * strideA, const size_t * iterA, const upsamplingvec * u,
-	const ok_float * C, const int * strideC, const size_t * iterC,
-	ok_float * A_blk, const size_t * strideBlk, const size_t * strideIter,
-	const size_t * block, const size_t * i, const int * row_length)
+static ok_float __dist_lInf_A_minus_UC_i(const ok_float *A, const int *strideA,
+	const size_t *iterA, const upsamplingvec *u, const ok_float *C,
+	const int *strideC, const size_t *iterC, ok_float *A_blk,
+	const size_t *strideBlk, const size_t *strideIter, const size_t *block,
+	const size_t *i, const int *row_length)
 {
 	ok_float dist;
 	size_t idx;
@@ -73,8 +73,8 @@ static ok_float __dist_lInf_A_minus_UC_i(const ok_float * A,
  * tally the number of reassignments.
  *
  */
-ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
-	upsamplingvec * a2c, cluster_aid * h, ok_float maxdist)
+ok_status assign_clusters_l2_lInf_cap(matrix *A, matrix *C, upsamplingvec *a2c,
+	cluster_aid *h, ok_float maxdist)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_MATRIX(A);
@@ -87,7 +87,7 @@ ok_status assign_clusters_l2_lInf_cap(matrix * A, matrix * C,
 
 	size_t i, block, row_stride, idx_stride, row_strideA, row_strideC;
 	int strideA, strideC;
-	matrix * A_blk;
+	matrix *A_blk;
 	upsamplingvec * u = &h->a2c_tentative;
 
 	if (!h->A_reducible.data)

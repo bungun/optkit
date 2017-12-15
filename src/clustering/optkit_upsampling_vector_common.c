@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-ok_status upsamplingvec_alloc(upsamplingvec * u, size_t size1, size_t size2)
+ok_status upsamplingvec_alloc(upsamplingvec *u, size_t size1, size_t size2)
 {
 	if (!u)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -20,7 +20,7 @@ ok_status upsamplingvec_alloc(upsamplingvec * u, size_t size1, size_t size2)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status upsamplingvec_free(upsamplingvec * u)
+ok_status upsamplingvec_free(upsamplingvec *u)
 {
 	OK_CHECK_UPSAMPLINGVEC(u);
 	OK_RETURNIF_ERR( indvector_free(&u->vec) );
@@ -28,7 +28,7 @@ ok_status upsamplingvec_free(upsamplingvec * u)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status upsamplingvec_check_bounds(const upsamplingvec * u)
+ok_status upsamplingvec_check_bounds(const upsamplingvec *u)
 {
 	size_t idx;
 	OK_CHECK_UPSAMPLINGVEC(u);
@@ -39,7 +39,7 @@ ok_status upsamplingvec_check_bounds(const upsamplingvec * u)
 		return OPTKIT_SUCCESS;
 }
 
-ok_status upsamplingvec_update_size(upsamplingvec * u)
+ok_status upsamplingvec_update_size(upsamplingvec *u)
 {
 	OK_CHECK_UPSAMPLINGVEC(u);
 	ok_status err = indvector_max(&u->vec, &u->size2);
@@ -47,7 +47,7 @@ ok_status upsamplingvec_update_size(upsamplingvec * u)
 	return err;
 }
 
-ok_status upsamplingvec_subvector(upsamplingvec * usub, upsamplingvec * u,
+ok_status upsamplingvec_subvector(upsamplingvec *usub, upsamplingvec *u,
 	size_t offset1, size_t length1, size_t size2)
 {
 	if (!u || !u->indices || !usub)
