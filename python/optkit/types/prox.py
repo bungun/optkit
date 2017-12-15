@@ -5,186 +5,186 @@
 # from optkit.utils import UtilMakeCFunctionVector, UtilReleaseCFunctionVector
 
 # class ProxTypes(object):
-# 	def __init__(self, backend):
-# 		backend = backend
-# 		ON_GPU = backend.device == 'gpu'
-# 		function_vector_memcpy_va = backend.prox.function_vector_memcpy_va
-# 		function_vector_memcpy_av = backend.prox.function_vector_memcpy_av
+#   def __init__(self, backend):
+#       backend = backend
+#       ON_GPU = backend.device == 'gpu'
+#       function_vector_memcpy_va = backend.prox.function_vector_memcpy_va
+#       function_vector_memcpy_av = backend.prox.function_vector_memcpy_av
 
-# 		class FunctionVector(object):
-# 			def __init__(self, n, **params):
-# 				if not backend.linalg_contexts_exist:
-# 					backend.make_linalg_contexts()
-# 				backend.increment_cobject_count()
+#       class FunctionVector(object):
+#           def __init__(self, n, **params):
+#               if not backend.linalg_contexts_exist:
+#                   backend.make_linalg_contexts()
+#               backend.increment_cobject_count()
 
-# 				if not isinstance(n,int):
-# 					raise ValueError("optkit.FunctionVector must be initialized "
-# 						"with:\n -one `int`")
+#               if not isinstance(n,int):
+#                   raise ValueError("optkit.FunctionVector must be initialized "
+#                       "with:\n -one `int`")
 
-# 				self.on_gpu = ON_GPU
-# 				self.size = n;
-# 				self.c = backend.make_cfunctionvector(self.size)
-# 				self.py = np.zeros(n, dtype=backend.lowtypes.function)
-# 				for i in xrange(n):
-# 					self.py[i]= backend.lowtypes.function(0, 1, 0, 1, 0, 0)
-# 				self.set(**params)
-# 				if 'f' in params:
-# 					self.copy_from(params['f'])
+#               self.on_gpu = ON_GPU
+#               self.size = n;
+#               self.c = backend.make_cfunctionvector(self.size)
+#               self.py = np.zeros(n, dtype=backend.lowtypes.function)
+#               for i in xrange(n):
+#                   self.py[i]= backend.lowtypes.function(0, 1, 0, 1, 0, 0)
+#               self.set(**params)
+#               if 'f' in params:
+#                   self.copy_from(params['f'])
 
-# 			def copy_from(self, fv):
-# 				if not isinstance(fv, FunctionVector):
-# 					raise TypeError("FunctionVector copy() requires "
-# 						"FunctionVector input")
-# 				if not fv.size==self.size:
-# 					raise ValueError("Incompatible dimensions")
-# 				self.py[:] = fv.py[:]
-# 				self.push()
-
-
-# 			def tolist(self):
-# 				return [backend.lowtypes.function(*self.py[i]) for i in xrange(self.size)]
-
-# 			def toarrays(self):
-# 				l = self.tolist()
-# 				h = np.zeros(self.size, int)
-# 				a = np.zeros(self.size)
-# 				b = np.zeros(self.size)
-# 				c = np.zeros(self.size)
-# 				d = np.zeros(self.size)
-# 				e = np.zeros(self.size)
-
-# 				for i in xrange(self.size):
-# 					h[i] = l[i].h
-# 					a[i] = l[i].a
-# 					b[i] = l[i].b
-# 					c[i] = l[i].c
-# 					d[i] = l[i].d
-# 					e[i] = l[i].e
-
-# 				return h, a, b, c, d, e
-
-# 			def set(self, **params):
-# 				start = int(params['start']) if 'start' in params else 0
-# 				end = int(params['end']) if 'end' in params else self.size
-
-# 				if start < 0 : start = self.size + start
-# 				if end < 0 : end = self.size + end
-
-# 				range_length = len(self.py[start:end])
-# 				if  range_length == 0:
-# 					raise ValueError('index range [{}:{}] results in length-0 array '
-# 						'when python array slicing applied to a FunctionVector '
-# 						' of length {}.'.format(start,end,self.size))
-# 				for item in ['a', 'b', 'c', 'd', 'e', 'h']:
-# 					if item in params:
-# 						if isinstance(params[item],(list, np.ndarray)):
-# 							if len(params[item]) != range_length:
-# 								raise ValueError('keyword argument {} of type {} '
-# 									'is incomptably sized with the requested '
-# 									'FunctionVector slice [{}:{}]'.format(
-# 									item, type(params(item), start, end)))
+#           def copy_from(self, fv):
+#               if not isinstance(fv, FunctionVector):
+#                   raise TypeError("FunctionVector copy() requires "
+#                       "FunctionVector input")
+#               if not fv.size==self.size:
+#                   raise ValueError("Incompatible dimensions")
+#               self.py[:] = fv.py[:]
+#               self.push()
 
 
+#           def tolist(self):
+#               return [backend.lowtypes.function(*self.py[i]) for i in xrange(self.size)]
 
-# 				objectives = self.tolist()
+#           def toarrays(self):
+#               l = self.tolist()
+#               h = np.zeros(self.size, int)
+#               a = np.zeros(self.size)
+#               b = np.zeros(self.size)
+#               c = np.zeros(self.size)
+#               d = np.zeros(self.size)
+#               e = np.zeros(self.size)
 
-# 				#TODO: support complex slicing
+#               for i in xrange(self.size):
+#                   h[i] = l[i].h
+#                   a[i] = l[i].a
+#                   b[i] = l[i].b
+#                   c[i] = l[i].c
+#                   d[i] = l[i].d
+#                   e[i] = l[i].e
 
+#               return h, a, b, c, d, e
 
-# 				if 'h' in params:
-# 					if isinstance(params['h'],(int, str)):
-# 						for i in xrange(start, end):
-# 							objectives[i].h = fcn_enums.safe_enum(params['h'])
-# 					elif isinstance(params['h'],(list, np.ndarray)):
-# 						for i in xrange(start, end):
-# 							objectives[i].h = fcn_enums.safe_enum(params['h'][i])
+#           def set(self, **params):
+#               start = int(params['start']) if 'start' in params else 0
+#               end = int(params['end']) if 'end' in params else self.size
 
-# 				if 'a' in params:
-# 					if isinstance(params['a'],(int, float)):
-# 						for i in xrange(start, end):
-# 							objectives[i].a = params['a']
-# 					elif isinstance(params['a'],(list, np.ndarray)):
-# 						for i in xrange(start, end):
-# 							objectives[i].a = params['a'][i - start]
+#               if start < 0 : start = self.size + start
+#               if end < 0 : end = self.size + end
 
-# 				if 'b' in params:
-# 					if isinstance(params['b'],(int, float)):
-# 						for i in xrange(start, end):
-# 							objectives[i].b = params['b']
-# 					elif isinstance(params['b'],(list, np.ndarray)):
-# 						for i in xrange(start, end):
-# 							objectives[i].b = params['b'][i - start]
-
-# 				if 'c' in params:
-# 					if isinstance(params['c'],(int,float)):
-# 						for i in xrange(start, end):
-# 							objectives[i].c = max(params['c'], 0)
-# 					elif isinstance(params['c'],(list, np.ndarray)):
-# 						for i in xrange(start, end):
-# 							objectives[i].c = max(params['c'][i - start], 0)
-
-# 				if 'd' in params:
-# 					if isinstance(params['d'],(int, float)):
-# 						for i in xrange(start, end):
-# 							objectives[i].d = params['d']
-# 					elif isinstance(params['d'],(list, np.ndarray)):
-# 						for i in xrange(start, end):
-# 							objectives[i].d = params['d'][i - start]
-
-# 				if 'e' in params:
-# 					if isinstance(params['e'],(int,float)):
-# 						for i in xrange(start, end):
-# 							objectives[i].e = max(params['e'], 0)
-# 					elif isinstance(params['e'],(list, np.ndarray)):
-# 						for i in xrange(start, end):
-# 							objectives[i].e = max(params['e'][i - start], 0)
-
-# 				for i in xrange(self.size):
-# 					self.py[i] = objectives[i]
-# 				self.push()
-
-# 			def push(self):
-# 				function_vector_memcpy_va(self.c, np.ndarray_pointer(self.py))
-
-# 			def pull(self):
-# 				function_vector_memcpy_av(np.ndarray_pointer(self.py), self.c)
+#               range_length = len(self.py[start:end])
+#               if  range_length == 0:
+#                   raise ValueError('index range [{}:{}] results in length-0 array '
+#                       'when python array slicing applied to a FunctionVector '
+#                       ' of length {}.'.format(start,end,self.size))
+#               for item in ['a', 'b', 'c', 'd', 'e', 'h']:
+#                   if item in params:
+#                       if isinstance(params[item],(list, np.ndarray)):
+#                           if len(params[item]) != range_length:
+#                               raise ValueError('keyword argument {} of type {} '
+#                                   'is incomptably sized with the requested '
+#                                   'FunctionVector slice [{}:{}]'.format(
+#                                   item, type(params(item), start, end)))
 
 
-# 			def __str__(self):
-# 				self.pull()
-# 				obj = self.tolist()
-# 				h_ = np.zeros(self.size, dtype=int)
-# 				a_ = np.zeros(self.size)
-# 				b_ = np.zeros(self.size)
-# 				c_ = np.zeros(self.size)
-# 				d_ = np.zeros(self.size)
-# 				e_ = np.zeros(self.size)
 
-# 				for i in xrange(self.size):
-# 					h_[i] = obj[i].h
-# 					a_[i] = obj[i].a
-# 					b_[i] = obj[i].b
-# 					c_[i] = obj[i].c
-# 					d_[i] = obj[i].d
-# 					e_[i] = obj[i].e
+#               objectives = self.tolist()
 
-# 				return str("size: {}\nc pointer: {}\non GPU?: {}\n"
-# 					"h: {}\na: {}\nb: {}\nc: {}\nd: {}\ne: {}".format(
-# 					self.size, self.c, self.on_gpu,
-# 					h_, a_, b_, c_, d_, e_))
+#               #TODO: support complex slicing
 
-# 			def __del__(self):
-# 				backend.decrement_cobject_count()
-# 				if self.on_gpu: backend.release_cfunctionvector(self.c)
 
-# 			def isvalid(self):
-# 				for item in ['c','py','size','on_gpu']:
-# 					assert self.__dict__.has_key(item)
-# 					assert self.__dict__[item] is not None
-# 				assert isinstance(self.py, np.ndarray)
-# 				assert len(self.py.shape) == 1
-# 				assert self.py.size == self.size
-# 				assert self.size == self.c.size
-# 				return True
+#               if 'h' in params:
+#                   if isinstance(params['h'],(int, str)):
+#                       for i in xrange(start, end):
+#                           objectives[i].h = fcn_enums.safe_enum(params['h'])
+#                   elif isinstance(params['h'],(list, np.ndarray)):
+#                       for i in xrange(start, end):
+#                           objectives[i].h = fcn_enums.safe_enum(params['h'][i])
 
-# 		self.FunctionVector = FunctionVector
+#               if 'a' in params:
+#                   if isinstance(params['a'],(int, float)):
+#                       for i in xrange(start, end):
+#                           objectives[i].a = params['a']
+#                   elif isinstance(params['a'],(list, np.ndarray)):
+#                       for i in xrange(start, end):
+#                           objectives[i].a = params['a'][i - start]
+
+#               if 'b' in params:
+#                   if isinstance(params['b'],(int, float)):
+#                       for i in xrange(start, end):
+#                           objectives[i].b = params['b']
+#                   elif isinstance(params['b'],(list, np.ndarray)):
+#                       for i in xrange(start, end):
+#                           objectives[i].b = params['b'][i - start]
+
+#               if 'c' in params:
+#                   if isinstance(params['c'],(int,float)):
+#                       for i in xrange(start, end):
+#                           objectives[i].c = max(params['c'], 0)
+#                   elif isinstance(params['c'],(list, np.ndarray)):
+#                       for i in xrange(start, end):
+#                           objectives[i].c = max(params['c'][i - start], 0)
+
+#               if 'd' in params:
+#                   if isinstance(params['d'],(int, float)):
+#                       for i in xrange(start, end):
+#                           objectives[i].d = params['d']
+#                   elif isinstance(params['d'],(list, np.ndarray)):
+#                       for i in xrange(start, end):
+#                           objectives[i].d = params['d'][i - start]
+
+#               if 'e' in params:
+#                   if isinstance(params['e'],(int,float)):
+#                       for i in xrange(start, end):
+#                           objectives[i].e = max(params['e'], 0)
+#                   elif isinstance(params['e'],(list, np.ndarray)):
+#                       for i in xrange(start, end):
+#                           objectives[i].e = max(params['e'][i - start], 0)
+
+#               for i in xrange(self.size):
+#                   self.py[i] = objectives[i]
+#               self.push()
+
+#           def push(self):
+#               function_vector_memcpy_va(self.c, np.ndarray_pointer(self.py))
+
+#           def pull(self):
+#               function_vector_memcpy_av(np.ndarray_pointer(self.py), self.c)
+
+
+#           def __str__(self):
+#               self.pull()
+#               obj = self.tolist()
+#               h_ = np.zeros(self.size, dtype=int)
+#               a_ = np.zeros(self.size)
+#               b_ = np.zeros(self.size)
+#               c_ = np.zeros(self.size)
+#               d_ = np.zeros(self.size)
+#               e_ = np.zeros(self.size)
+
+#               for i in xrange(self.size):
+#                   h_[i] = obj[i].h
+#                   a_[i] = obj[i].a
+#                   b_[i] = obj[i].b
+#                   c_[i] = obj[i].c
+#                   d_[i] = obj[i].d
+#                   e_[i] = obj[i].e
+
+#               return str("size: {}\nc pointer: {}\non GPU?: {}\n"
+#                   "h: {}\na: {}\nb: {}\nc: {}\nd: {}\ne: {}".format(
+#                   self.size, self.c, self.on_gpu,
+#                   h_, a_, b_, c_, d_, e_))
+
+#           def __del__(self):
+#               backend.decrement_cobject_count()
+#               if self.on_gpu: backend.release_cfunctionvector(self.c)
+
+#           def isvalid(self):
+#               for item in ['c','py','size','on_gpu']:
+#                   assert self.__dict__.has_key(item)
+#                   assert self.__dict__[item] is not None
+#               assert isinstance(self.py, np.ndarray)
+#               assert len(self.py.shape) == 1
+#               assert self.py.size == self.size
+#               assert self.size == self.c.size
+#               return True
+
+#       self.FunctionVector = FunctionVector
