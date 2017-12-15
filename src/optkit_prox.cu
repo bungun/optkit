@@ -6,7 +6,7 @@ namespace optkit {
 
 /* CUDA helper kernels */
 template<typename T>
-__global__ static void set_fn_vector(function_t_<T> * objs, const T a,
+__global__ static void set_fn_vector(function_t_<T> *objs, const T a,
 	const T b, const T c, const T d, const T e, const T s,
 	const enum OPTKIT_SCALAR_FUNCTION h, uint n)
 {
@@ -49,7 +49,7 @@ struct FuncEvalF : thrust::binary_function<function_t_<T>, T, T>
 
 /* vectorwise prox evaluation leveraging thrust::binary function */
 template<typename T>
-void prox_eval_gpu(const function_t_<T> * f, T rho, const T * x_in,
+void prox_eval_gpu(const function_t_<T> *f, T rho, const T *x_in,
 	const size_t stride_in, T *x_out, const size_t stride_out, size_t n)
 {
 	strided_range<thrust::device_ptr<const function_t_<T> > > f_strided(
@@ -71,7 +71,7 @@ void prox_eval_gpu(const function_t_<T> * f, T rho, const T * x_in,
 
 /* vectorwise function evaluation using thrust::binary_function */
 template<typename T>
-T function_eval_gpu(function_t_<T> * const f, T * const x, size_t stride,
+T function_eval_gpu(function_t_<T> *const f, T *const x, size_t stride,
 	size_t n)
 {
 	strided_range<thrust::device_ptr<const function_t_<T> > > f_strided(
@@ -86,7 +86,7 @@ T function_eval_gpu(function_t_<T> * const f, T * const x, size_t stride,
 }
 
 template<typename T>
-ok_status function_vector_alloc_(function_vector_<T> * f, size_t n)
+ok_status function_vector_alloc_(function_vector_<T> *f, size_t n)
 {
 	OK_CHECK_PTR(f);
 	if (f->objectives)
@@ -97,7 +97,7 @@ ok_status function_vector_alloc_(function_vector_<T> * f, size_t n)
 }
 
 template<typename T>
-ok_status function_vector_calloc_(function_vector_<T> * f, size_t n)
+ok_status function_vector_calloc_(function_vector_<T> *f, size_t n)
 {
 	uint grid_dim;
 
@@ -113,7 +113,7 @@ ok_status function_vector_calloc_(function_vector_<T> * f, size_t n)
 }
 
 template<typename T>
-ok_status function_vector_free_(function_vector_<T> * f)
+ok_status function_vector_free_(function_vector_<T> *f)
 {
 	OK_CHECK_FNVECTOR(f);
 	f->size = 0;
@@ -121,8 +121,8 @@ ok_status function_vector_free_(function_vector_<T> * f)
 }
 
 template<typename T>
-ok_status function_vector_view_array_(function_vector_<T> * f,
-	function_t_<T> * h, size_t n)
+ok_status function_vector_view_array_(function_vector_<T> *f,
+	function_t_<T> *h, size_t n)
 {
 	OK_CHECK_PTR(f);
 	OK_CHECK_PTR(h);
@@ -132,21 +132,21 @@ ok_status function_vector_view_array_(function_vector_<T> * f,
 }
 
 template<typename T>
-ok_status function_vector_memcpy_va_(function_vector_<T> * f,
-	function_t_<T> * h)
+ok_status function_vector_memcpy_va_(function_vector_<T> *f,
+	function_t_<T> *h)
 {
 	return ok_memcpy_gpu(f->objectives, h, f->size * sizeof(function_t));
 }
 
 template<typename T>
-ok_status function_vector_memcpy_av_(function_t_<T> * h,
-	function_vector_<T> * f)
+ok_status function_vector_memcpy_av_(function_t_<T> *h,
+	function_vector_<T> *f)
 {
 	return ok_memcpy_gpu(h, f->objectives, f->size * sizeof(function_t));
 }
 
 template<typename T>
-ok_status function_vector_mul_(function_vector_<T> * f, const vector_<T> * v)
+ok_status function_vector_mul_(function_vector_<T> *f, const vector_<T> *v)
 {
 	OK_CHECK_FNVECTOR(f);
 	OK_CHECK_VECTOR(v);
@@ -170,7 +170,7 @@ ok_status function_vector_mul_(function_vector_<T> * f, const vector_<T> * v)
 }
 
 template<typename T>
-ok_status function_vector_div_(function_vector_<T> * f, const vector_<T> * v)
+ok_status function_vector_div_(function_vector_<T> *f, const vector_<T> *v)
 {
 	OK_CHECK_FNVECTOR(f);
 	OK_CHECK_VECTOR(v);
@@ -190,11 +190,11 @@ ok_status function_vector_div_(function_vector_<T> * f, const vector_<T> * v)
 }
 
 template<typename T>
-ok_status function_vector_print_(function_vector_<T> * f)
+ok_status function_vector_print_(function_vector_<T> *f)
 {
 	size_t i;
 	ok_status err = OPTKIT_SUCCESS;
-	const char * fmt =
+	const char *fmt =
 		"h: %i, a:%1.2e, b:%1.2e, c:%1.2e, d:%1.2e, e:%1.2e, s:%1.2e\n";
 	OK_CHECK_FNVECTOR(f);
 
@@ -209,8 +209,8 @@ ok_status function_vector_print_(function_vector_<T> * f)
 }
 
 template<typename T>
-ok_status prox_eval_vector_(const function_vector_<T> * f, T rho,
-	const vector_<T> * x_in, vector_<T> * x_out)
+ok_status prox_eval_vector_(const function_vector_<T> *f, T rho,
+	const vector_<T> *x_in, vector_<T> *x_out)
 {
 	OK_CHECK_FNVECTOR(f);
 	OK_CHECK_VECTOR(x_in);
@@ -225,8 +225,8 @@ ok_status prox_eval_vector_(const function_vector_<T> * f, T rho,
 }
 
 template<typename T>
-ok_status function_eval_vector_(const function_vector_<T> * f,
-	const vector_<T> * x, T * fn_val)
+ok_status function_eval_vector_(const function_vector_<T> *f,
+	const vector_<T> *x, T *fn_val)
 {
 	OK_CHECK_FNVECTOR(f);
 	OK_CHECK_VECTOR(x);
@@ -243,39 +243,39 @@ ok_status function_eval_vector_(const function_vector_<T> * f,
 extern "C" {
 #endif
 
-ok_status function_vector_alloc(function_vector * f, size_t n)
+ok_status function_vector_alloc(function_vector *f, size_t n)
 	{ return function_vector_alloc_<ok_float>(f, n); }
 
-ok_status function_vector_calloc(function_vector * f, size_t n)
+ok_status function_vector_calloc(function_vector *f, size_t n)
 	{ return function_vector_calloc_<ok_float>(f, n); }
 
-ok_status function_vector_free(function_vector * f)
+ok_status function_vector_free(function_vector *f)
 	{ return function_vector_free_<ok_float>(f); }
 
-ok_status function_vector_view_array(function_vector * f, function_t * h,
+ok_status function_vector_view_array(function_vector *f, function_t *h,
 	size_t n)
 	{ return function_vector_view_array_<ok_float>(f, h, n); }
 
-ok_status function_vector_memcpy_va(function_vector * f, function_t * h)
+ok_status function_vector_memcpy_va(function_vector *f, function_t *h)
 	{ return function_vector_memcpy_va_<ok_float>(f, h); }
 
-ok_status function_vector_memcpy_av(function_t * h, function_vector * f)
+ok_status function_vector_memcpy_av(function_t *h, function_vector *f)
 	{ return function_vector_memcpy_av_<ok_float>(h, f); }
 
-ok_status function_vector_mul(function_vector * f, const vector * v)
+ok_status function_vector_mul(function_vector *f, const vector *v)
 	{ return function_vector_mul_<ok_float>(f, v); }
 
-ok_status function_vector_div(function_vector * f, const vector * v)
+ok_status function_vector_div(function_vector *f, const vector *v)
 	{ return function_vector_div_<ok_float>(f, v); }
 
 ok_status function_vector_print(function_vector *f)
 	{ return function_vector_print_<ok_float>(f); }
 
-ok_status prox_eval_vector(const function_vector * f, ok_float rho,
-	const vector * x_in, vector * x_out)
+ok_status prox_eval_vector(const function_vector *f, ok_float rho,
+	const vector *x_in, vector *x_out)
 	{ return prox_eval_vector_<ok_float>(f, rho, x_in, x_out); }
-ok_status function_eval_vector(const function_vector * f, const vector * x,
-	ok_float * fn_val)
+ok_status function_eval_vector(const function_vector *f, const vector *x,
+	ok_float *fn_val)
 	{ return function_eval_vector_<ok_float>(f, x, fn_val); }
 
 #ifdef __cplusplus

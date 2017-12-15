@@ -66,7 +66,7 @@ struct function_t_{
 template<typename T>
 struct function_vector_ {
 	size_t size;
-	function_t_<T> * objectives;
+	function_t_<T> *objectives;
 };
 #endif /* __cplusplus */
 
@@ -85,7 +85,7 @@ typedef struct function_t{
 
 typedef struct function_vector {
 	size_t size;
-	function_t * objectives;
+	function_t *objectives;
 } function_vector;
 #endif
 
@@ -370,7 +370,7 @@ __DEVICE__ inline T ProxAbsExp(T v, T rho)
 
 /* Evaluates the proximal operator of f. */
 template<typename T>
-__DEVICE__ inline ok_float ProxEval(const function_t_<T> * f_obj, T v, T rho)
+__DEVICE__ inline ok_float ProxEval(const function_t_<T> *f_obj, T v, T rho)
 {
 	const T a = f_obj->a;
 	const T b = f_obj->b;
@@ -557,7 +557,7 @@ __DEVICE__ inline T FuncAbsExp(T x)
 
 /* Evaluates the function f. */
 template<typename T>
-__DEVICE__ inline T FuncEval(const function_t_<T> * f_obj, T x)
+__DEVICE__ inline T FuncEval(const function_t_<T> *f_obj, T x)
 {
 	const T dx = f_obj->d * x;
 	const T ex = f_obj->e * x * x / 2;
@@ -637,51 +637,51 @@ __DEVICE__ inline T FuncEval(const function_t_<T> * f_obj, T x)
 }
 
 template<typename T>
-ok_status function_vector_alloc(function_vector_<T> * f, size_t n);
+ok_status function_vector_alloc(function_vector_<T> *f, size_t n);
 template<typename T>
-ok_status function_vector_calloc_(function_vector_<T> * f, size_t n);
+ok_status function_vector_calloc_(function_vector_<T> *f, size_t n);
 template<typename T>
-ok_status function_vector_free_(function_vector_<T> * f);
+ok_status function_vector_free_(function_vector_<T> *f);
 template<typename T>
-ok_status function_vector_view_array_(function_vector_<T> * f,
-	function_t_<T> * h, size_t n);
+ok_status function_vector_view_array_(function_vector_<T> *f,
+	function_t_<T> *h, size_t n);
 template<typename T>
-ok_status function_vector_memcpy_va_(function_vector_<T> * f,
-	function_t_<T> * h);
+ok_status function_vector_memcpy_va_(function_vector_<T> *f,
+	function_t_<T> *h);
 template<typename T>
-ok_status function_vector_memcpy_av_(function_t_<T> * h,
-	function_vector_<T> * f);
+ok_status function_vector_memcpy_av_(function_t_<T> *h,
+	function_vector_<T> *f);
 template<typename T>
-ok_status function_vector_mul_(function_vector_<T> * f, const vector_<T> * v);
+ok_status function_vector_mul_(function_vector_<T> *f, const vector_<T> *v);
 template<typename T>
-ok_status function_vector_div_(function_vector_<T> * f, const vector_<T> * v);
+ok_status function_vector_div_(function_vector_<T> *f, const vector_<T> *v);
 template<typename T>
 ok_status function_vector_print_(function_vector_<T> *f);
 template<typename T>
-ok_status prox_eval_vector_(const function_vector_<T> * f, T rho,
-	const vector_<T> * x_in, vector_<T> * x_out);
+ok_status prox_eval_vector_(const function_vector_<T> *f, T rho,
+	const vector_<T> *x_in, vector_<T> *x_out);
 template<typename T>
-ok_status function_eval_vector_(const function_vector_<T> * f,
-	const vector_<T> * x, T * fn_val);
+ok_status function_eval_vector_(const function_vector_<T> *f,
+	const vector_<T> *x, T *fn_val);
 #endif /* __cplusplus */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-ok_status function_vector_alloc(function_vector * f, size_t n);
-ok_status function_vector_calloc(function_vector * f, size_t n);
-ok_status function_vector_free(function_vector * f);
-ok_status function_vector_view_array(function_vector * f, function_t * h, size_t n);
-ok_status function_vector_memcpy_va(function_vector * f, function_t * h);
-ok_status function_vector_memcpy_av(function_t * h, function_vector * f);
-ok_status function_vector_mul(function_vector * f, const vector * v);
-ok_status function_vector_div(function_vector * f, const vector * v);
+ok_status function_vector_alloc(function_vector *f, size_t n);
+ok_status function_vector_calloc(function_vector *f, size_t n);
+ok_status function_vector_free(function_vector *f);
+ok_status function_vector_view_array(function_vector *f, function_t *h, size_t n);
+ok_status function_vector_memcpy_va(function_vector *f, function_t *h);
+ok_status function_vector_memcpy_av(function_t *h, function_vector *f);
+ok_status function_vector_mul(function_vector *f, const vector *v);
+ok_status function_vector_div(function_vector *f, const vector *v);
 ok_status function_vector_print(function_vector *f);
-ok_status prox_eval_vector(const function_vector * f, ok_float rho,
-	const vector * x_in, vector * x_out);
-ok_status function_eval_vector(const function_vector * f, const vector * x,
-	ok_float * fn_val);
+ok_status prox_eval_vector(const function_vector *f, ok_float rho,
+	const vector *x_in, vector *x_out);
+ok_status function_eval_vector(const function_vector *f, const vector *x,
+	ok_float *fn_val);
 
 #ifdef __cplusplus
 }
