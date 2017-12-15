@@ -32,7 +32,7 @@ typedef struct fused_diff_accelerator{
 /* ANDERSON, DIFFERENCE FORMULATION */
 ok_status anderson_difference_solve(void *blas_hdl, void *lapack_hdl, matrix *DX,
 	matrix *DF, matrix *DXDF, vector *f, vector *alpha, int_vector *pivot);
-ok_status anderson_difference_mix(void * blas_hdl, matrix *DG, vector *alpha,
+ok_status anderson_difference_mix(void *blas_hdl, matrix *DG, vector *alpha,
 	vector *x);
 ok_status anderson_difference_accelerate_template(void *blas_handle,
 	void *lapack_handle, matrix *DX, matrix *DF, matrix *DG, matrix *DXDF,

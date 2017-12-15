@@ -33,11 +33,11 @@ ok_status anderson_update_F_g(matrix *F, vector *gx, size_t index);
 ok_status anderson_update_G(matrix *G, vector *gx, size_t index);
 ok_status anderson_regularized_gram(void *hdl, matrix *F, matrix *F_gram,
 	ok_float mu);
-ok_status anderson_autoregularize(vector *F_gram_diag, ok_float * mu_auto);
+ok_status anderson_autoregularize(vector *F_gram_diag, ok_float *mu_auto);
 
 ok_status anderson_solve(void *hdl, matrix *F, matrix *F_gram, vector *alpha,
 	const vector *ones, ok_float mu);
-ok_status anderson_mix(void * hdl, matrix *G, vector *alpha,
+ok_status anderson_mix(void *hdl, matrix *G, vector *alpha,
 	vector *x);
 ok_status anderson_accelerate_template(void *hdl, matrix *F, matrix *G,
 	matrix *F_gram, vector *alpha, const vector *ones, ok_float mu,

@@ -69,7 +69,7 @@ ok_status anderson_autoregularize(vector *F_gram_diag, ok_float *mu_auto)
 	return err;
 }
 
-ok_status anderson_solve(void * hdl, matrix *F, matrix *F_gram, vector *alpha,
+ok_status anderson_solve(void *hdl, matrix *F, matrix *F_gram, vector *alpha,
 	const vector *ones, ok_float mu)
 {
 	ok_status err = OPTKIT_SUCCESS;
