@@ -126,7 +126,7 @@ class SparseMatrixTestCase(unittest.TestCase):
     def test_io(self):
         shape = (m, n) = defs.shape()
         x_rand = np.random.random(n)
-        A_test, _ = defs.A_test_sparse_gen()
+        A_test = defs.A_test_sparse_gen()
         B_test = A_test * (1 + np.random.random((m, n)))
 
         for lib, layout in self.LIBS_LAYOUTS:
@@ -201,7 +201,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 
     def test_multiply(self):
         shape = (m, n) = defs.shape()
-        A_test, _ = defs.A_test_sparse_gen()
+        A_test = defs.A_test_sparse_gen()
 
         for lib, layout in self.LIBS_LAYOUTS:
             with lib as lib:
@@ -238,7 +238,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 
     def test_elementwise_transformations(self):
         shape = (m, n) = defs.shape()
-        A_test, _ = defs.A_test_sparse_gen()
+        A_test = defs.A_test_sparse_gen()
 
         for lib, layout in self.LIBS_LAYOUTS:
             with lib as lib:
@@ -287,7 +287,7 @@ class SparseMatrixTestCase(unittest.TestCase):
 
     def test_diagonal_scaling(self):
         shape = (m, n) = defs.shape()
-        A_test, _ = defs.A_test_sparse_gen()
+        A_test = defs.A_test_sparse_gen()
 
         for lib, layout in self.LIBS_LAYOUTS:
             with lib as lib:

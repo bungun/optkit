@@ -36,12 +36,15 @@ def standard_vector_tolerances(lib, m, modulate_gpu=0):
 def tols(rtol, m, n):
     return rtol, rtol * m**0.5, rtol * n**0.5, rtol * (m+n)**0.5
 
-def standard_tolerances(lib, m, n, modulate_gpu=False):
+def standard_tolerances(lib, m, n, modulate_gpu=False, repeat_factor=1.):
     return tols(
+            float(repeat_factor) *
             10**(-7 + 2 * lib.FLOAT + int(modulate_gpu) * lib.GPU),
             m, n)
 
-def custom_tolerances(lib, m, n, modulate_gpu=0, modulate_float=2, base=7):
+def custom_tolerances(lib, m, n, modulate_gpu=0, modulate_float=2, base=7,
+                      repeat_factor=1.):
     return tols(
+            float(repeat_factor) *
             10**(-base + modulate_float * lib.FLOAT + modulate_gpu * lib.GPU),
             m, n)

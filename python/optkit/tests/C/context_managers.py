@@ -57,9 +57,38 @@ class CVariableContext:
     def __enter__(self):
         return self._alloc()
     def __exit__(self, *exc):
-        # print "EXITING VARIABLE CONTEXT"
         assert NO_ERR(self._free())
-        # print "EXIT VARCTX COMPLETE"
+
+class CPointerContext:
+    def __init__(self, alloc, free):
+        self._alloc = alloc
+        self._free = free
+
+    def __enter__(self):
+        self.var = self._alloc()
+        return self.var
+
+    def __exit__(self, *exc):
+        assert NO_ERR(self._free(self.var))
+
+def cleanup_default(*exc):
+    return None
+
+class CVariableAutoContext:
+    def __init__(self, alloc, cleanup=None):
+        self._alloc = alloc
+        self._cleanup = cleanup
+        if cleanup is None:
+            self._cleanup = cleanup_default
+
+    def __enter__(self):
+        self.var = self._alloc()
+        return self.var
+
+    def __exit__(self, *exc):
+        err = self.var.contents.free(self.var.contents.data)
+        self._cleanup(*exc)
+        assert NO_ERR(err)
 
 class CArrayContext:
     def __init__(self, c, py, pyptr, build, free):
@@ -72,9 +101,7 @@ class CArrayContext:
         self._build()
         return self
     def __exit__(self, *exc):
-        # print "EXITING ARRAY CTX"
         assert NO_ERR(self._free())
-        # print "EXIT ARRCTX COMPLETE"
 
 class CArrayIO:
     def __init__(self, py_array, copy_py2c, copy_c2py):
@@ -95,7 +122,7 @@ class CArrayIO:
         assert NO_ERR( self._py2c(py_array) )
 
 class CVectorContext(CArrayContext, CArrayIO):
-    def __init__(self, lib, size, random=False):
+    def __init__(self, lib, size, random=False, value=None):
         v = lib.vector(0, 0, None)
         v_py, v_ptr = gen_py_vector(lib, size, random=random)
 
@@ -106,9 +133,15 @@ class CVectorContext(CArrayContext, CArrayIO):
             return lib.vector_memcpy_av(arr2ptr(py_array), v, 1)
         def build():
             assert NO_ERR( lib.vector_calloc(v, size) )
-            if random:
+            if value is not None:
+                assert NO_ERR(py2c(value))
+            elif random:
                 assert NO_ERR(py2c(v_py))
-        def free(): return lib.vector_free(v)
+
+        def free():
+            err = lib.vector_free(v)
+            v.data = None
+            return err
 
         CArrayContext.__init__(self, v, v_py, v_ptr, build, free)
         CArrayIO.__init__(self, v_py, py2c, c2py)
@@ -133,7 +166,10 @@ class CIndvectorContext(CArrayContext, CArrayIO):
             assert NO_ERR( lib.indvector_calloc(v, size) )
             if random:
                 assert NO_ERR( py2c(v_py) )
-        def free(): return lib.indvector_free(v)
+        def free():
+            err = lib.indvector_free(v)
+            v.data = None
+            return err
 
         CArrayContext.__init__(self, v, v_py, v_ptr, build, free)
         CArrayIO.__init__(self, v_py, py2c, c2py)
@@ -157,7 +193,10 @@ class CIntVectorContext(CArrayContext, CArrayIO):
             assert NO_ERR( lib.int_vector_calloc(v, size) )
             if random:
                 assert NO_ERR( py2c(v_py) )
-        def free(): return lib.int_vector_free(v)
+        def free():
+            err = lib.int_vector_free(v)
+            v.data = None
+            return err
 
         CArrayContext.__init__(self, v, v_py, v_ptr, build, free)
         CArrayIO.__init__(self, v_py, py2c, c2py)
@@ -182,7 +221,10 @@ class CDenseMatrixContext(CArrayContext, CArrayIO):
             assert NO_ERR( lib.matrix_calloc(A, size1, size2, order) )
             if random or (value is not None):
                 assert NO_ERR( py2c(A_py) )
-        def free(): return lib.matrix_free(A)
+        def free():
+            err = lib.matrix_free(A)
+            A.data = None
+            return err
 
         CArrayContext.__init__(self, A, A_py, A_ptr, build, free)
         CArrayIO.__init__(self, A_py, py2c, c2py)
@@ -203,7 +245,13 @@ class CSparseMatrixContext(CArrayContext):
         self.sparse = A_sp
         def build():
             assert NO_ERR(lib.sp_matrix_calloc(A, m, n, nnz, order))
-        def free(): return lib.sp_matrix_free(A)
+        def free():
+            err = lib.sp_matrix_free(A)
+            A.data = None
+            A.indices = None
+            A.indptr = None
+            return err
+
         def arr2ptrs(sparse_arr):
             return spp(
                 sparse_arr.data.ctypes.data_as(lib.ok_float_p),
@@ -234,7 +282,11 @@ class CFunctionVectorContext(CArrayContext, CArrayIO):
         f_ptr = f_py.ctypes.data_as(lib.function_p)
 
         def build(): return lib.function_vector_calloc(f, size)
-        def free(): return lib.function_vector_free(f)
+        def free():
+            err = lib.function_vector_free(f)
+            f.data = None
+            return err
+
         CArrayContext.__init__(self, f, f_py, f_ptr, build, free)
 
         def arr2ptr(arr): return np.ravel(arr).ctypes.data_as(type(f_ptr))
@@ -297,41 +349,39 @@ def c_operator_context(lib, opkey, A, rowmajor=True):
     else:
         raise ValueError('invalid operator type')
 
-class CDenseOperatorContext:
+class CDenseOperatorContext(CVariableAutoContext):
     def __init__(self, lib, A_py, rowmajor=True):
-        self._lib = lib
-        self._A = A_py
-        self._order = lib.enums.CblasRowMajor if rowmajor else \
-                      lib.enums.CblasColMajor
+        m, n = A_py.shape
+        order = lib.enums.CblasRowMajor if rowmajor else lib.enums.CblasColMajor
+        A = CDenseMatrixContext(lib, m, n, order, value=A_py)
 
-    def __enter__(self):
-        m, n = A.shape
-        self.A = CDenseMatrixContext(self._lib, m, n, self._order)
-        self.A.__enter__()
-        self.A.copy_to_c(self._A)
-        self.o = self._lib.dense_operator_alloc(self.A.cptr)
-        return self.o
+        def alloc_():
+            A.__enter__()
+            return lib.dense_operator_alloc(A.c)
+        def cleanup_(*exc): return A.__exit__(*exc)
+        CVariableAutoContext.__init__(self, alloc_, cleanup_)
 
-    def __exit__(self, *exc):
-        assert NO_ERR(self.o.contents.free(self.o.contents.data))
-        self.A.__exit__(*exc)
-
-class CSparseOperatorContext:
+class CSparseOperatorContext(CVariableAutoContext):
     def __init__(self, lib, A_py, rowmajor=True):
-        self._lib = lib
-        self._A = A_py
-        self._order = lib.enums.CblasRowMajor if rowmajor else \
-                      lib.enums.CblasColMajor
+        order = lib.enums.CblasRowMajor if rowmajor else lib.enums.CblasColMajor
+        A = CSparseMatrixContext(lib, A_py, order)
 
-    def __enter__(self):
-        m, n = A.shape
-        with CSparseLinalgContext(self._lib) as hdl:
-            self.A = CSparseMatrixContext(self._lib, self._A, self._order)
-            self.A.__enter__()
-            self.A.sync_to_c(hdl)
-            self.o = self._lib.sparse_operator_alloc(self.A.cptr)
-            return self.o
+        def alloc_():
+            A.__enter__()
+            hdl = CSparseLinalgContext(lib)
+            with hdl as hdl:
+                A.sync_to_c(hdl)
+            return lib.sparse_operator_alloc(A.c)
+        def cleanup_(*exc): return A.__exit__(*exc)
+        CVariableAutoContext.__init__(self, alloc_, cleanup_)
 
-    def __exit__(self, *exc):
-        assert NO_ERR(self.o.contents.free(self.o.contents.data))
-        self.A.__exit__(*exc)
+class CDiagonalOperatorContext(CVariableAutoContext):
+    def __init__(self, lib, d_py):
+        d = CVectorContext(lib, d_py.size, value=d_py)
+
+        def alloc_():
+            d.__enter__()
+            return lib.diagonal_operator_alloc(d.c)
+        def cleanup_(*exc): return d.__exit__(*exc)
+        CVariableAutoContext.__init__(self, alloc_, cleanup_)
+

@@ -10,8 +10,6 @@ from optkit.libs.prox import ProxLibs
 from optkit.libs import enums
 from optkit.utils.proxutils import func_eval_python, prox_eval_python
 from optkit.tests import defs
-from optkit.tests.defs import OptkitTestCase, TEST_ITERATE
-from optkit.tests.C.base import OptkitCTestCase
 from optkit.tests.C import statements
 import optkit.tests.C.context_managers as okcctx
 
