@@ -62,8 +62,7 @@ def shape():
 def A_test_sparse_gen():
     A_ = DEFAULT_MATRIX if DEFAULT_MATRIX else np.random.rand(*DEFAULT_SHAPE)
     mask = np.random.rand(*A_.shape) < DEFAULT_SPARSE_OCCUPANCY
-    nnz = sum(sum(mask))
-    return A_ * mask, nnz
+    return A_ * mask
 
 def version_string(major, minor, change, status):
     v = '{}.{}.{}'.format(major, minor, change)
@@ -71,43 +70,44 @@ def version_string(major, minor, change, status):
         v.join('-{}'.format(chr(status)))
     return v
 
+OPKEYS = ('dense', 'sparse')
 
-class OptkitTestCase(unittest.TestCase):
-    VERBOSE_TEST = os.getenv('OPTKIT_TEST_VERBOSE', False)
+# class OptkitTestCase(unittest.TestCase):
+#     VERBOSE_TEST = os.getenv('OPTKIT_TEST_VERBOSE', False)
 
-    # library conditions: gpu = True/False, single_precision = True/False
-    CONDITIONS = [(a, b) for a in (True, False) for b in (True, False)]
+#     # library conditions: gpu = True/False, single_precision = True/False
+#     CONDITIONS = [(a, b) for a in (True, False) for b in (True, False)]
 
-    __nnz = 0
+#     __nnz = 0
 
-    @property
-    def nnz(self):
-        return self.__nnz
+#     @property
+#     def nnz(self):
+#         return self.__nnz
 
-    @property
-    def shape(self):
-        if DEFAULT_MATRIX is not None:
-            return DEFAULT_MATRIX.shape
-        else:
-            return DEFAULT_SHAPE
+#     @property
+#     def shape(self):
+#         if DEFAULT_MATRIX is not None:
+#             return DEFAULT_MATRIX.shape
+#         else:
+#             return DEFAULT_SHAPE
 
-    @property
-    def A_test_gen(self):
-        if DEFAULT_MATRIX is not None:
-            return DEFAULT_MATRIX
-        else:
-            return np.random.rand(*self.shape)
+#     @property
+#     def A_test_gen(self):
+#         if DEFAULT_MATRIX is not None:
+#             return DEFAULT_MATRIX
+#         else:
+#             return np.random.rand(*self.shape)
 
-    @property
-    def A_test_sparse_gen(self):
-        A_ = DEFAULT_MATRIX if DEFAULT_MATRIX else np.random.rand(*self.shape)
-        mask = np.random.rand(*self.shape) < DEFAULT_SPARSE_OCCUPANCY
-        self.__nnz = sum(sum(mask))
-        return A_ * mask
+#     @property
+#     def A_test_sparse_gen(self):
+#         A_ = DEFAULT_MATRIX if DEFAULT_MATRIX else np.random.rand(*self.shape)
+#         mask = np.random.rand(*self.shape) < DEFAULT_SPARSE_OCCUPANCY
+#         self.__nnz = sum(sum(mask))
+#         return A_ * mask
 
-    @staticmethod
-    def version_string(major, minor, change, status):
-        v = '{}.{}.{}'.format(major, minor, change)
-        if status:
-            v.join('-{}'.format(chr(status)))
-        return v
+#     @staticmethod
+#     def version_string(major, minor, change, status):
+#         v = '{}.{}.{}'.format(major, minor, change)
+#         if status:
+#             v.join('-{}'.format(chr(status)))
+#         return v
