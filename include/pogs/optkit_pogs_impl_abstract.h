@@ -13,17 +13,17 @@ extern "C" {
 #endif
 
 typedef struct POGSAbstractWork {
-	abstract_operator * A;
-	projector * P;
-	ok_status (* operator_scale)(abstract_operator * o, const
+	abstract_operator *A;
+	projector *P;
+	ok_status (* operator_scale)(abstract_operator *o, const
 		ok_float scaling);
-	ok_status (* operator_equilibrate)(void * linalg_handle,
-		abstract_operator * o, vector * d, vector * e,
+	ok_status (* operator_equilibrate)(void *linalg_handle,
+		abstract_operator *o, vector *d, vector *e,
 		const ok_float pnorm);
-	vector * d, * e;
+	vector *d, *e;
 	ok_float normA;
 	int skinny, normalized, equilibrated;
-	void * linalg_handle;
+	void *linalg_handle;
 } pogs_abstract_work;
 
 typedef struct POGSAbstractSolverFlags {
@@ -32,47 +32,47 @@ typedef struct POGSAbstractSolverFlags {
 } pogs_abstract_solver_flags;
 
 typedef struct POGSAbstractSolverPrivateData {
-	ok_float * d, * e;
+	ok_float *d, *e;
 } pogs_abstract_solver_private_data;
 
-ok_status pogs_abstract_problem_data_alloc(pogs_abstract_work * W,
-	abstract_operator * A, const pogs_abstract_solver_flags * flags);
-ok_status pogs_abstract_problem_data_free(pogs_abstract_work * W);
-ok_status pogs_abstract_get_init_data(abstract_operator * A,
-	const pogs_abstract_solver_private_data * data,
-	const pogs_abstract_solver_flags * flags);
+ok_status pogs_abstract_problem_data_alloc(pogs_abstract_work *W,
+	abstract_operator *A, const pogs_abstract_solver_flags *flags);
+ok_status pogs_abstract_problem_data_free(pogs_abstract_work *W);
+ok_status pogs_abstract_get_init_data(abstract_operator *A,
+	const pogs_abstract_solver_private_data *data,
+	const pogs_abstract_solver_flags *flags);
 
-ok_status pogs_abstract_apply_matrix(pogs_abstract_work * W, ok_float alpha,
-	vector * x, ok_float beta, vector * y);
-ok_status pogs_abstract_apply_adjoint(pogs_abstract_work * W, ok_float alpha,
-	vector * x, ok_float beta, vector * y);
-ok_status pogs_abstract_project_graph(pogs_abstract_work * W, vector * x_in,
-	vector * y_in, vector * x_out, vector * y_out, ok_float tol);
+ok_status pogs_abstract_apply_matrix(pogs_abstract_work *W, ok_float alpha,
+	vector *x, ok_float beta, vector *y);
+ok_status pogs_abstract_apply_adjoint(pogs_abstract_work *W, ok_float alpha,
+	vector *x, ok_float beta, vector *y);
+ok_status pogs_abstract_project_graph(pogs_abstract_work *W, vector *x_in,
+	vector *y_in, vector *x_out, vector *y_out, ok_float tol);
 
-ok_status pogs_abstract_equilibrate_matrix(pogs_abstract_work * W,
-	abstract_operator * A, const pogs_abstract_solver_flags * flags);
-ok_status pogs_abstract_initalize_graph_projector(pogs_abstract_work * W);
-ok_status pogs_abstract_estimate_norm(pogs_abstract_work * W, ok_float * normest);
-ok_status pogs_abstract_work_get_norm(pogs_abstract_work * W);
-ok_status pogs_abstract_work_normalize(pogs_abstract_work * W);
+ok_status pogs_abstract_equilibrate_matrix(pogs_abstract_work *W,
+	abstract_operator *A, const pogs_abstract_solver_flags *flags);
+ok_status pogs_abstract_initalize_graph_projector(pogs_abstract_work *W);
+ok_status pogs_abstract_estimate_norm(pogs_abstract_work *W, ok_float *normest);
+ok_status pogs_abstract_work_get_norm(pogs_abstract_work *W);
+ok_status pogs_abstract_work_normalize(pogs_abstract_work *W);
 
-ok_status pogs_abstract_save_work(pogs_abstract_solver_private_data * data,
-	pogs_abstract_solver_flags * flags, const pogs_abstract_work * W);
-ok_status pogs_abstract_load_work(pogs_abstract_work * W,
-	const pogs_abstract_solver_private_data * data,
-	const pogs_abstract_solver_flags * flags);
+ok_status pogs_abstract_save_work(pogs_abstract_solver_private_data *data,
+	pogs_abstract_solver_flags *flags, const pogs_abstract_work *W);
+ok_status pogs_abstract_load_work(pogs_abstract_work *W,
+	const pogs_abstract_solver_private_data *data,
+	const pogs_abstract_solver_flags *flags);
 
-abstract_operator * pogs_dense_operator_gen(const ok_float * A, size_t m,
+abstract_operator *pogs_dense_operator_gen(const ok_float *A, size_t m,
 	size_t n, enum CBLAS_ORDER order);
-abstract_operator * pogs_sparse_operator_gen(const ok_float * val,
-	const ok_int * ind, const ok_int * ptr, size_t m, size_t n, size_t nnz,
+abstract_operator *pogs_sparse_operator_gen(const ok_float *val,
+	const ok_int *ind, const ok_int *ptr, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order);
-ok_status pogs_dense_operator_free(abstract_operator * A);
-ok_status pogs_sparse_operator_free(abstract_operator * A);
+ok_status pogs_dense_operator_free(abstract_operator *A);
+ok_status pogs_sparse_operator_free(abstract_operator *A);
 
 /* DEFINITIONS */
-ok_status pogs_abstract_problem_data_alloc(pogs_abstract_work * W,
-	abstract_operator * A, const pogs_abstract_solver_flags * flags)
+ok_status pogs_abstract_problem_data_alloc(pogs_abstract_work *W,
+	abstract_operator *A, const pogs_abstract_solver_flags *flags)
 {
 	if (!W || !A || !flags)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -109,7 +109,7 @@ ok_status pogs_abstract_problem_data_alloc(pogs_abstract_work * W,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status pogs_abstract_problem_data_free(pogs_abstract_work * W)
+ok_status pogs_abstract_problem_data_free(pogs_abstract_work *W)
 {
 	OK_CHECK_PTR(W);
 	ok_status err = OK_SCAN_ERR( W->P->free(W->P->data) );
@@ -117,34 +117,34 @@ ok_status pogs_abstract_problem_data_free(pogs_abstract_work * W)
 	return err;
 }
 
-ok_status pogs_abstract_get_init_data(abstract_operator * A,
-	const pogs_abstract_solver_private_data * data,
-	const pogs_abstract_solver_flags * flags)
+ok_status pogs_abstract_get_init_data(abstract_operator *A,
+	const pogs_abstract_solver_private_data *data,
+	const pogs_abstract_solver_flags *flags)
 {
 	return OK_SCAN_ERR( OPTKIT_ERROR_NOT_IMPLEMENTED );
 }
 
-ok_status pogs_abstract_apply_matrix(pogs_abstract_work * W, ok_float alpha,
-	vector * x, ok_float beta, vector * y)
+ok_status pogs_abstract_apply_matrix(pogs_abstract_work *W, ok_float alpha,
+	vector *x, ok_float beta, vector *y)
 {
 	return OK_SCAN_ERR( W->A->fused_apply(W->A->data, alpha, x, beta, y) );
 }
 
-ok_status pogs_abstract_apply_adjoint(pogs_abstract_work * W, ok_float alpha,
-	vector * x, ok_float beta, vector * y)
+ok_status pogs_abstract_apply_adjoint(pogs_abstract_work *W, ok_float alpha,
+	vector *x, ok_float beta, vector *y)
 {
 	return OK_SCAN_ERR( W->A->fused_adjoint(W->A->data, alpha, x, beta, y) );
 }
 
-ok_status pogs_abstract_project_graph(pogs_abstract_work * W, vector * x_in,
-	vector * y_in, vector * x_out, vector * y_out, ok_float tol)
+ok_status pogs_abstract_project_graph(pogs_abstract_work *W, vector *x_in,
+	vector *y_in, vector *x_out, vector *y_out, ok_float tol)
 {
 	return OK_SCAN_ERR( W->P->project(W->P->data, x_in, y_in, x_out, y_out,
 		tol) );
 }
 
-ok_status pogs_abstract_equilibrate_matrix(pogs_abstract_work * W,
-	abstract_operator * A, const pogs_abstract_solver_flags * flags)
+ok_status pogs_abstract_equilibrate_matrix(pogs_abstract_work *W,
+	abstract_operator *A, const pogs_abstract_solver_flags *flags)
 {
 	ok_status err = OK_SCAN_ERR( W->operator_equilibrate(W->linalg_handle,
 		W->A, W->d, W->e, flags->equil_norm) );
@@ -152,19 +152,19 @@ ok_status pogs_abstract_equilibrate_matrix(pogs_abstract_work * W,
 	return err;
 }
 
-ok_status pogs_abstract_initalize_graph_projector(pogs_abstract_work * W)
+ok_status pogs_abstract_initalize_graph_projector(pogs_abstract_work *W)
 {
 	int normalize = (int)(W->P->kind == OkProjectorDenseDirect);
 	return OK_SCAN_ERR( W->P->initialize(W->P->data, normalize) );
 }
 
-ok_status pogs_abstract_estimate_norm(pogs_abstract_work * W, ok_float * normest)
+ok_status pogs_abstract_estimate_norm(pogs_abstract_work *W, ok_float *normest)
 {
 	return OK_SCAN_ERR(
 		operator_estimate_norm(W->linalg_handle, W->A, normest) );
 }
 
-ok_status pogs_abstract_work_get_norm(pogs_abstract_work * W)
+ok_status pogs_abstract_work_get_norm(pogs_abstract_work *W)
 {
 	if (!W || !W->P)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -173,15 +173,15 @@ ok_status pogs_abstract_work_get_norm(pogs_abstract_work * W)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status pogs_abstract_work_normalize(pogs_abstract_work * W)
+ok_status pogs_abstract_work_normalize(pogs_abstract_work *W)
 {
 	if (!W || !W->A)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	return OK_SCAN_ERR( W->operator_scale(W->A, kOne / W->normA) );
 }
 
-ok_status pogs_abstract_save_work(pogs_abstract_solver_private_data * data,
-	pogs_abstract_solver_flags * flags, const pogs_abstract_work * W)
+ok_status pogs_abstract_save_work(pogs_abstract_solver_private_data *data,
+	pogs_abstract_solver_flags *flags, const pogs_abstract_work *W)
 {
 	return OK_SCAN_ERR( OPTKIT_ERROR_NOT_IMPLEMENTED );
 	// ok_status err = OPTKIT_SUCCESS;
@@ -195,9 +195,9 @@ ok_status pogs_abstract_save_work(pogs_abstract_solver_private_data * data,
 	// return err;
 }
 
-ok_status pogs_abstract_load_work(pogs_abstract_work * W,
-	const pogs_abstract_solver_private_data * data,
-	const pogs_abstract_solver_flags * flags)
+ok_status pogs_abstract_load_work(pogs_abstract_work *W,
+	const pogs_abstract_solver_private_data *data,
+	const pogs_abstract_solver_flags *flags)
 {
 	return OK_SCAN_ERR( OPTKIT_ERROR_NOT_IMPLEMENTED );
 	// ok_status err = OPTKIT_SUCCESS;
@@ -211,12 +211,12 @@ ok_status pogs_abstract_load_work(pogs_abstract_work * W,
 	// return err;
 }
 
-abstract_operator * pogs_dense_operator_gen(const ok_float * A, size_t m, size_t n,
+abstract_operator *pogs_dense_operator_gen(const ok_float *A, size_t m, size_t n,
 	enum CBLAS_ORDER order)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	abstract_operator * o = OK_NULL;
-	matrix * A_mat = OK_NULL;
+	abstract_operator *o = OK_NULL;
+	matrix *A_mat = OK_NULL;
 
 	if (!A) {
 		err = OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -230,13 +230,13 @@ abstract_operator * pogs_dense_operator_gen(const ok_float * A, size_t m, size_t
 	return o;
 }
 
-abstract_operator * pogs_sparse_operator_gen(const ok_float * val,
-	const ok_int * ind, const ok_int * ptr, size_t m, size_t n, size_t nnz,
+abstract_operator * pogs_sparse_operator_gen(const ok_float *val,
+	const ok_int *ind, const ok_int *ptr, size_t m, size_t n, size_t nnz,
 	enum CBLAS_ORDER order)
 {
-	void * handle = OK_NULL;
-	abstract_operator * o = OK_NULL;
-	sp_matrix * A = OK_NULL;
+	void *handle = OK_NULL;
+	abstract_operator *o = OK_NULL;
+	sp_matrix *A = OK_NULL;
 	ok_status err = OPTKIT_SUCCESS;
 
 	if (!val || !ind || !ptr)
@@ -257,10 +257,10 @@ abstract_operator * pogs_sparse_operator_gen(const ok_float * val,
 	return o;
 }
 
-ok_status pogs_dense_operator_free(abstract_operator * A)
+ok_status pogs_dense_operator_free(abstract_operator *A)
 {
 	OK_CHECK_OPERATOR(A);
-	matrix * A_mat = dense_operator_get_matrix_pointer(A);
+	matrix *A_mat = dense_operator_get_matrix_pointer(A);
 	ok_status err = A->free(A->data);
 	OK_MAX_ERR( err, matrix_free(A_mat) );
 	ok_free(A_mat);
@@ -268,10 +268,10 @@ ok_status pogs_dense_operator_free(abstract_operator * A)
 	return err;
 }
 
-ok_status pogs_sparse_operator_free(abstract_operator * A)
+ok_status pogs_sparse_operator_free(abstract_operator *A)
 {
 	OK_CHECK_OPERATOR(A);
-	sp_matrix * A_mat = sparse_operator_get_matrix_pointer(A);
+	sp_matrix *A_mat = sparse_operator_get_matrix_pointer(A);
 	ok_status err = A->free(A->data);
 	OK_MAX_ERR( err, sp_matrix_free(A_mat) );
 	ok_free(A_mat);

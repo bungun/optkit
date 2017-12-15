@@ -8,46 +8,46 @@ extern "C" {
 #endif
 
 /* FORWARD DECLARATIONS */
-ok_status pogs_graph_vector_alloc(pogs_graph_vector * z, size_t m, size_t n);
-ok_status pogs_graph_vector_free(pogs_graph_vector * z);
-ok_status pogs_graph_vector_attach_memory(pogs_graph_vector * z);
-ok_status pogs_graph_vector_release_memory(pogs_graph_vector * z);
-ok_status pogs_graph_vector_view_vector(pogs_graph_vector * z, vector * v,
+ok_status pogs_graph_vector_alloc(pogs_graph_vector *z, size_t m, size_t n);
+ok_status pogs_graph_vector_free(pogs_graph_vector *z);
+ok_status pogs_graph_vector_attach_memory(pogs_graph_vector *z);
+ok_status pogs_graph_vector_release_memory(pogs_graph_vector *z);
+ok_status pogs_graph_vector_view_vector(pogs_graph_vector *z, vector *v,
 	size_t offset, size_t length);
 
-ok_status pogs_variables_alloc(pogs_variables * z, size_t m, size_t n);
-ok_status pogs_variables_free(pogs_variables * z);
+ok_status pogs_variables_alloc(pogs_variables *z, size_t m, size_t n);
+ok_status pogs_variables_free(pogs_variables *z);
 
-ok_status pogs_set_default_settings(pogs_settings * s);
-ok_status pogs_update_settings(pogs_settings * settings,
-	const pogs_settings * input);
+ok_status pogs_set_default_settings(pogs_settings *s);
+ok_status pogs_update_settings(pogs_settings *settings,
+	const pogs_settings *input);
 
-ok_status pogs_initialize_conditions(pogs_objective_values * obj,
-	pogs_residuals * res, pogs_tolerances * tol,
-	const pogs_settings * settings, size_t m, size_t n);
+ok_status pogs_initialize_conditions(pogs_objective_values *obj,
+	pogs_residuals *res, pogs_tolerances *tol,
+	const pogs_settings *settings, size_t m, size_t n);
 
-ok_status pogs_update_objective_values(void * linalg_handle,
-	const function_vector * f, const function_vector * g, ok_float rho,
-	pogs_variables * z, pogs_objective_values * obj);
+ok_status pogs_update_objective_values(void *linalg_handle,
+	const function_vector *f, const function_vector *g, ok_float rho,
+	pogs_variables *z, pogs_objective_values *obj);
 
-ok_status pogs_update_tolerances(void * linalg_handle,
-	pogs_variables * z, pogs_objective_values * obj,
-	pogs_tolerances * tol);
+ok_status pogs_update_tolerances(void *linalg_handle,
+	pogs_variables *z, pogs_objective_values *obj,
+	pogs_tolerances *tol);
 
-ok_status pogs_set_print_iter(uint * PRINT_ITER, const pogs_settings * settings);
+ok_status pogs_set_print_iter(uint *PRINT_ITER, const pogs_settings *settings);
 ok_status pogs_print_header_string(void);
-ok_status pogs_print_iter_string(pogs_residuals * res,
-	pogs_tolerances * tol, pogs_objective_values * obj, uint k);
+ok_status pogs_print_iter_string(pogs_residuals *res,
+	pogs_tolerances *tol, pogs_objective_values *obj, uint k);
 
-ok_status pogs_scale_objectives(function_vector * f_solver,
-	function_vector * g_solver, vector * d, vector * e,
-	const function_vector * f, const function_vector * g);
-ok_status pogs_unscale_output(pogs_output * output,
-	const pogs_variables * z, const vector * d, const vector * e,
+ok_status pogs_scale_objectives(function_vector *f_solver,
+	function_vector *g_solver, vector *d, vector *e,
+	const function_vector *f, const function_vector *g);
+ok_status pogs_unscale_output(pogs_output *output,
+	const pogs_variables *z, const vector *d, const vector *e,
 	const ok_float rho, const uint suppress);
 
 /* DEFINITIONS */
-ok_status pogs_graph_vector_alloc(pogs_graph_vector * z, size_t m, size_t n)
+ok_status pogs_graph_vector_alloc(pogs_graph_vector *z, size_t m, size_t n)
 {
 	OK_CHECK_PTR(z);
 	if (z->vec)
@@ -64,7 +64,7 @@ ok_status pogs_graph_vector_alloc(pogs_graph_vector * z, size_t m, size_t n)
 	return err;
 }
 
-ok_status pogs_graph_vector_free(pogs_graph_vector * z)
+ok_status pogs_graph_vector_free(pogs_graph_vector *z)
 {
 	OK_CHECK_PTR(z);
 	ok_status err = OPTKIT_SUCCESS;
@@ -75,7 +75,7 @@ ok_status pogs_graph_vector_free(pogs_graph_vector * z)
 	ok_free(z->vec);
 	return err;
 }
-ok_status pogs_graph_vector_attach_memory(pogs_graph_vector * z)
+ok_status pogs_graph_vector_attach_memory(pogs_graph_vector *z)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	if (!z)
@@ -92,7 +92,7 @@ ok_status pogs_graph_vector_attach_memory(pogs_graph_vector * z)
 	return err;
 }
 
-ok_status pogs_graph_vector_release_memory(pogs_graph_vector * z)
+ok_status pogs_graph_vector_release_memory(pogs_graph_vector *z)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	if (!z)
@@ -104,7 +104,7 @@ ok_status pogs_graph_vector_release_memory(pogs_graph_vector * z)
 	return err;
 }
 
-ok_status pogs_graph_vector_view_vector(pogs_graph_vector * z, vector * v,
+ok_status pogs_graph_vector_view_vector(pogs_graph_vector *z, vector *v,
 	size_t offset, size_t length)
 {
 	ok_status err = OPTKIT_SUCCESS;
@@ -121,14 +121,14 @@ ok_status pogs_graph_vector_view_vector(pogs_graph_vector * z, vector * v,
 	return err;
 }
 
-ok_status pogs_graph_vector_copy(pogs_graph_vector * z_target,
-	const pogs_graph_vector * z_source)
+ok_status pogs_graph_vector_copy(pogs_graph_vector *z_target,
+	const pogs_graph_vector *z_source)
 {
 	if (!z_target || !z_source)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	return OK_SCAN_ERR( vector_memcpy_vv(z_target->vec, z_source->vec) );
 }
-ok_status pogs_variables_alloc(pogs_variables * z, size_t m, size_t n)
+ok_status pogs_variables_alloc(pogs_variables *z, size_t m, size_t n)
 {
 	OK_CHECK_PTR(z);
 	if (z->state)
@@ -175,7 +175,7 @@ ok_status pogs_variables_alloc(pogs_variables * z, size_t m, size_t n)
 	return err;
 }
 
-ok_status pogs_variables_free(pogs_variables * z)
+ok_status pogs_variables_free(pogs_variables *z)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_PTR(z);
@@ -197,7 +197,7 @@ ok_status pogs_variables_free(pogs_variables * z)
 	return err;
 }
 
-ok_status pogs_set_default_settings(pogs_settings * s)
+ok_status pogs_set_default_settings(pogs_settings *s)
 {
 	OK_CHECK_PTR(s);
 	s->alpha = kALPHA;
@@ -222,8 +222,8 @@ ok_status pogs_set_default_settings(pogs_settings * s)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status pogs_update_settings(pogs_settings * settings,
-	const pogs_settings * input)
+ok_status pogs_update_settings(pogs_settings *settings,
+	const pogs_settings *input)
 {
 	OK_CHECK_PTR(settings);
 	OK_CHECK_PTR(input);
@@ -249,9 +249,9 @@ ok_status pogs_update_settings(pogs_settings * settings,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status pogs_initialize_conditions(pogs_objective_values * obj,
-	pogs_residuals * res, pogs_tolerances * tol,
-	const pogs_settings * settings, size_t m, size_t n)
+ok_status pogs_initialize_conditions(pogs_objective_values *obj,
+	pogs_residuals *res, pogs_tolerances *tol,
+	const pogs_settings *settings, size_t m, size_t n)
 {
 	if (!obj || !res || !tol || !settings)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -273,9 +273,9 @@ ok_status pogs_initialize_conditions(pogs_objective_values * obj,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status pogs_update_objective_values(void * linalg_handle,
-	const function_vector * f, const function_vector * g, ok_float rho,
-	pogs_variables * z, pogs_objective_values * obj)
+ok_status pogs_update_objective_values(void *linalg_handle,
+	const function_vector *f, const function_vector *g, ok_float rho,
+	pogs_variables *z, pogs_objective_values *obj)
 {
 	ok_float val_f, val_g;
 
@@ -302,8 +302,8 @@ ok_status pogs_update_objective_values(void * linalg_handle,
  * tol_dual = tol_abs + tol_rel * sqrt(n) * ||xt^k+1/2||
  * tol_gap = tol_abs + tol_rel * sqrt(mn) * ||z^k|| * ||z^k+1/2||
  */
-ok_status pogs_update_tolerances(void * linalg_handle,
-	pogs_variables * z, pogs_objective_values * obj, pogs_tolerances * tol)
+ok_status pogs_update_tolerances(void *linalg_handle,
+	pogs_variables *z, pogs_objective_values *obj, pogs_tolerances *tol)
 {
 	ok_float nrm_z, nrm_z12;
 	if (!z || !obj || !tol)
@@ -323,7 +323,7 @@ ok_status pogs_update_tolerances(void * linalg_handle,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status pogs_set_print_iter(uint * PRINT_ITER, const pogs_settings * settings)
+ok_status pogs_set_print_iter(uint *PRINT_ITER, const pogs_settings *settings)
 {
 	uint iter = 10000u, k;
 
@@ -351,8 +351,8 @@ ok_status pogs_print_header_string(void)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status pogs_print_iter_string(pogs_residuals * res,
-	pogs_tolerances * tol, pogs_objective_values * obj, uint k)
+ok_status pogs_print_iter_string(pogs_residuals *res,
+	pogs_tolerances *tol, pogs_objective_values *obj, uint k)
 {
 	OK_CHECK_PTR(res);
 	OK_CHECK_PTR(tol);
@@ -364,9 +364,9 @@ ok_status pogs_print_iter_string(pogs_residuals * res,
 }
 
 
-ok_status pogs_scale_objectives(function_vector * f_solver,
-	function_vector * g_solver, vector * d, vector * e,
-	const function_vector * f, const function_vector * g)
+ok_status pogs_scale_objectives(function_vector *f_solver,
+	function_vector *g_solver, vector *d, vector *e,
+	const function_vector *f, const function_vector *g)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_FNVECTOR(f_solver);
@@ -399,8 +399,8 @@ ok_status pogs_scale_objectives(function_vector * f_solver,
  *	2: copy (x, nu), suppress (y, mu)
  *	3: copy (x), suppress (y, mu, nu)
  */
-ok_status pogs_unscale_output(pogs_output * output,
-	const pogs_variables * z, const vector * d, const vector * e,
+ok_status pogs_unscale_output(pogs_output *output,
+	const pogs_variables *z, const vector *d, const vector *e,
 	const ok_float rho, const uint suppress)
 {
 	ok_status err = OPTKIT_SUCCESS;

@@ -23,7 +23,7 @@ typedef struct AdaptiveRhoParameters {
 } adapt_params;
 
 
-ok_status pogs_adaptive_rho_initialize(adapt_params * params)
+ok_status pogs_adaptive_rho_initialize(adapt_params *params)
 {
 	OK_CHECK_PTR(params);
 	params->delta = kDELTAMIN;
@@ -37,9 +37,9 @@ ok_status pogs_adaptive_rho_initialize(adapt_params * params)
  * change solver->rho to balance primal and dual convergence
  * (and rescale z->dual accordingly)
  */
-ok_status pogs_adapt_rho(pogs_variables * z, ok_float * rho,
-	adapt_params * params, const pogs_settings * settings,
-	const pogs_residuals * res, const pogs_tolerances * tol, const uint k)
+ok_status pogs_adapt_rho(pogs_variables *z, ok_float *rho, adapt_params *params,
+	const pogs_settings *settings, const pogs_residuals *res,
+	const pogs_tolerances *tol, const uint k)
 {
 	if (!(settings->adaptiverho))
 		return OPTKIT_SUCCESS;

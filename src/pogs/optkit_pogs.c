@@ -9,8 +9,8 @@ ok_pogs_impl get_pogs_impl(void)
 	return OK_POGS_TYPE;
 }
 
-ok_status pogs_work_alloc(pogs_work * W, pogs_solver_data * A,
-	const pogs_solver_flags * flags)
+ok_status pogs_work_alloc(pogs_work *W, pogs_solver_data *A,
+	const pogs_solver_flags *flags)
 {
 	if (!A || !flags)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -30,7 +30,7 @@ ok_status pogs_work_alloc(pogs_work * W, pogs_solver_data * A,
 	return err;
 }
 
-ok_status pogs_work_free(pogs_work * W)
+ok_status pogs_work_free(pogs_work *W)
 {
 	OK_CHECK_PTR(W);
 	ok_status err = OK_SCAN_ERR( POGS(problem_data_free)(W) );
@@ -42,8 +42,8 @@ ok_status pogs_work_free(pogs_work * W)
 	return err;
 }
 
-ok_status pogs_solver_alloc(pogs_solver * solver, pogs_solver_data * A,
-	const pogs_solver_flags * flags)
+ok_status pogs_solver_alloc(pogs_solver *solver, pogs_solver_data *A,
+	const pogs_solver_flags *flags)
 {
 	size_t m, n;
         ok_status err = OPTKIT_SUCCESS;
@@ -74,7 +74,7 @@ ok_status pogs_solver_alloc(pogs_solver * solver, pogs_solver_data * A,
 	return err;
 }
 
-ok_status pogs_solver_free(pogs_solver * solver)
+ok_status pogs_solver_free(pogs_solver *solver)
 {
 	OK_CHECK_PTR(solver);
 	ok_status err = OK_SCAN_ERR( blas_destroy_handle(solver->linalg_handle) );
@@ -119,7 +119,7 @@ ok_status pogs_solver_free(pogs_solver * solver)
  *		E^{-1} * sqrt(||DAE||_2) / (sqrt(n/m) * ||D||_2/||E||_2) x
  *	y = Ax
  */
-ok_status pogs_normalize_DAE(pogs_work * W)
+ok_status pogs_normalize_DAE(pogs_work *W)
 {
 	OK_CHECK_PTR(W);
 
@@ -141,7 +141,7 @@ ok_status pogs_normalize_DAE(pogs_work * W)
 
 	OK_CHECK_ERR( err, blas_nrm2(W->linalg_handle, W->d, &nrm_d) );
 	OK_CHECK_ERR( err, blas_nrm2(W->linalg_handle, W->e, &nrm_e) );
-	factor = MATH(sqrt)(sqrt_n_over_m * nrm_d / nrm_e);
+	factor = MATH(sqrt)(sqrt_n_over_m *nrm_d / nrm_e);
 
 	if (factor == 0 || W->normA == 0)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIVIDE_BY_ZERO );
@@ -153,12 +153,12 @@ ok_status pogs_normalize_DAE(pogs_work * W)
 	return err;
 }
 
-ok_status pogs_set_z0(pogs_solver * solver)
+ok_status pogs_set_z0(pogs_solver *solver)
 {
 	OK_CHECK_PTR(solver);
 
 	ok_status err = OPTKIT_SUCCESS;
-	pogs_variables * z = solver->z;
+	pogs_variables *z = solver->z;
 
 	if (solver->settings->x0 != OK_NULL) {
 		OK_CHECK_ERR( err, vector_memcpy_va(z->temp->x,
@@ -183,7 +183,7 @@ ok_status pogs_set_z0(pogs_solver * solver)
 }
 
 /* z^k <- z^{k+1} */
-ok_status pogs_primal_update(pogs_variables * z)
+ok_status pogs_primal_update(pogs_variables *z)
 {
 	return OK_SCAN_ERR( pogs_graph_vector_copy(z->prev, z->primal) );
 }
@@ -194,8 +194,8 @@ ok_status pogs_primal_update(pogs_variables * z)
  *	y^{k+1/2} = Prox_{rho, f} (y^k - yt^k)
  *	x^{k+1/2} = Prox_{rho, g} (x^k - xt^k)
  */
-ok_status pogs_prox(void * linalg_handle, function_vector * f,
-	function_vector * g, pogs_variables * z, ok_float rho)
+ok_status pogs_prox(void *linalg_handle, function_vector *f,
+	function_vector *g, pogs_variables *z, ok_float rho)
 {
 	OK_RETURNIF_ERR( pogs_graph_vector_copy(z->temp, z->primal) );
 	OK_RETURNIF_ERR(
@@ -215,11 +215,11 @@ ok_status pogs_prox(void * linalg_handle, function_vector * f,
  *	instead of 	z^{k+1} = proj(z^{k+1/2} + zt^k),
  *	perform		z^{k+1} = proj(alpha * z^{k+1/2} + (1-alpha)z^k + zt^k)
  */
-ok_status pogs_project_graph(pogs_work * W, pogs_variables * z, ok_float alpha,
+ok_status pogs_project_graph(pogs_work *W, pogs_variables *z, ok_float alpha,
 	ok_float tol)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	void * linalg_handle = W->linalg_handle;
+	void *linalg_handle = W->linalg_handle;
 	if (!W || !z)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	OK_CHECK_ERR( err, vector_set_all(z->temp->vec, kZero) );
@@ -244,7 +244,7 @@ ok_status pogs_project_graph(pogs_work * W, pogs_variables * z, ok_float alpha,
  *	instead of above update, perform
  *		zt^{k+1} = zt^k + alpha * z^{k+1/2} + (1-alpha)z^k - z^k+1
  */
-ok_status pogs_dual_update(void * linalg_handle, pogs_variables * z,
+ok_status pogs_dual_update(void *linalg_handle, pogs_variables *z,
 	ok_float alpha)
 {
 	ok_status err = OPTKIT_SUCCESS;
@@ -261,7 +261,7 @@ ok_status pogs_dual_update(void * linalg_handle, pogs_variables * z,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status pogs_accelerate(pogs_solver * solver)
+ok_status pogs_accelerate(pogs_solver *solver)
 {
 	OK_CHECK_PTR(solver);
 	if (solver->settings->accelerate)
@@ -270,10 +270,10 @@ ok_status pogs_accelerate(pogs_solver * solver)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status pogs_iterate(pogs_solver * solver)
+ok_status pogs_iterate(pogs_solver *solver)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	pogs_solver * s = solver;
+	pogs_solver *s = solver;
 	ok_float alpha = s->settings->alpha;
 	ok_float tolproj = s->settings->tolproj;
 	err = OK_SCAN_ERR( pogs_primal_update(s->z) );
@@ -291,15 +291,15 @@ ok_status pogs_iterate(pogs_solver * solver)
  * residual for dual feasibility
  * 	||A'yt^(k+1/2) - xt^(k+1/2)||
  */
-ok_status pogs_update_residuals(pogs_solver * solver,
-	pogs_objective_values * obj, pogs_residuals * res)
+ok_status pogs_update_residuals(pogs_solver *solver,
+	pogs_objective_values *obj, pogs_residuals *res)
 {
 	if (!solver || !obj || !res)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
 	ok_status err = OPTKIT_SUCCESS;
-	pogs_variables * z = solver->z;
-	void * linalg_handle = solver->linalg_handle;
+	pogs_variables *z = solver->z;
+	void *linalg_handle = solver->linalg_handle;
 
 	res->gap = obj->gap;
 	OK_CHECK_ERR( err, vector_memcpy_vv(z->temp->y, z->primal12->y) );
@@ -313,14 +313,14 @@ ok_status pogs_update_residuals(pogs_solver * solver,
 	return err;
 }
 
-ok_status pogs_check_convergence(pogs_solver * solver,
-	pogs_objective_values * obj, pogs_residuals * res,
-	pogs_tolerances * tol, int * converged)
+ok_status pogs_check_convergence(pogs_solver *solver,
+	pogs_objective_values *obj, pogs_residuals *res,
+	pogs_tolerances *tol, int *converged)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	if (!solver || !obj || !res || !tol || !converged)
 		err = OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
-	pogs_solver * s = solver;
+	pogs_solver *s = solver;
 	OK_CHECK_ERR( err, pogs_update_objective_values(
 		s->linalg_handle, s->f, s->g, s->rho, s->z, obj) );
 	OK_CHECK_ERR( err, pogs_update_tolerances(
@@ -334,7 +334,7 @@ ok_status pogs_check_convergence(pogs_solver * solver,
 	return err;
 }
 
-ok_status pogs_setup_diagnostics(pogs_solver * solver, const uint iters)
+ok_status pogs_setup_diagnostics(pogs_solver *solver, const uint iters)
 {
 	OK_CHECK_PTR(solver);
 	if (solver->convergence)
@@ -353,8 +353,8 @@ ok_status pogs_setup_diagnostics(pogs_solver * solver, const uint iters)
 	return err;
 }
 
-ok_status pogs_record_diagnostics(pogs_solver * solver,
-	const pogs_residuals * res, const pogs_tolerances * tol, const uint iter)
+ok_status pogs_record_diagnostics(pogs_solver *solver,
+	const pogs_residuals *res, const pogs_tolerances *tol, const uint iter)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	vector v = (vector){OK_NULL};
@@ -373,7 +373,7 @@ ok_status pogs_record_diagnostics(pogs_solver * solver,
 	return err;
 }
 
-ok_status pogs_emit_diagnostics(pogs_output * output, pogs_solver * solver)
+ok_status pogs_emit_diagnostics(pogs_output *output, pogs_solver *solver)
 {
 	if (!output || !solver || !solver->convergence)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -400,7 +400,7 @@ ok_status pogs_emit_diagnostics(pogs_output * output, pogs_solver * solver)
 }
 
 
-ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
+ok_status pogs_solver_loop(pogs_solver *solver, pogs_info *info)
 {
 	if (!solver || !info)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -410,7 +410,7 @@ ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 	int converged = 0;
 	uint k, PRINT_ITER = 10000u;
 	adapt_params rho_params = (adapt_params){kZero, kZero, kZero, kZero};
-	pogs_settings * settings = solver->settings;
+	pogs_settings *settings = solver->settings;
 	pogs_objective_values obj = (pogs_objective_values){
 		OK_NAN, OK_NAN, OK_NAN};
 	pogs_residuals res = (pogs_residuals){OK_NAN, OK_NAN, OK_NAN};
@@ -462,10 +462,10 @@ ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info)
 	return err;
 }
 
-pogs_solver * pogs_init(pogs_solver_data * A, const pogs_solver_flags * flags)
+pogs_solver * pogs_init(pogs_solver_data *A, const pogs_solver_flags *flags)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	pogs_solver * solver = OK_NULL;
+	pogs_solver *solver = OK_NULL;
 
 	OK_TIMER t = ok_timer_tic();
 	ok_alloc(solver, sizeof(*solver));
@@ -488,9 +488,9 @@ pogs_solver * pogs_init(pogs_solver_data * A, const pogs_solver_flags * flags)
 /* TODO: CHANGE BLOCK_VECTOR TO GRAPH_VECTOR (DONE) */
 /* TODO: MAKE GRAPH_VECTORS VIEWS OF STATE (DONE) */
 
-ok_status pogs_solve(pogs_solver * solver, const function_vector * f,
-	const function_vector * g, const pogs_settings * settings,
-	pogs_info * info, pogs_output * output)
+ok_status pogs_solve(pogs_solver *solver, const function_vector *f,
+	const function_vector *g, const pogs_settings *settings,
+	pogs_info *info, pogs_output *output)
 {
 	if (!solver || !settings || !info || !output)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -553,7 +553,7 @@ ok_status pogs_solve(pogs_solver * solver, const function_vector * f,
 	return err;
 }
 
-ok_status pogs_finish(pogs_solver * solver, const int reset)
+ok_status pogs_finish(pogs_solver *solver, const int reset)
 {
 	ok_status err = OK_SCAN_ERR( pogs_solver_free(solver) );
 	ok_free(solver);
@@ -562,13 +562,13 @@ ok_status pogs_finish(pogs_solver * solver, const int reset)
 	return err;
 }
 
-ok_status pogs(pogs_solver_data * A, const pogs_solver_flags * flags,
-	const function_vector * f, const function_vector * g,
-	const pogs_settings * settings, pogs_info * info, pogs_output * output,
+ok_status pogs(pogs_solver_data *A, const pogs_solver_flags *flags,
+	const function_vector *f, const function_vector *g,
+	const pogs_settings *settings, pogs_info *info, pogs_output *output,
 	const int reset)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	pogs_solver * solver = pogs_init(A, flags);
+	pogs_solver *solver = pogs_init(A, flags);
 	if (!solver || !solver->W)
 		err = OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	OK_CHECK_ERR( err, pogs_solve(solver, f, g, settings, info, output) );
@@ -576,8 +576,8 @@ ok_status pogs(pogs_solver_data * A, const pogs_solver_flags * flags,
 	return err;
 }
 
-ok_status pogs_export_solver(pogs_solver_private_data * priv_data, ok_float * state,
-	ok_float * rho, pogs_solver_flags * flags, const pogs_solver * solver)
+ok_status pogs_export_solver(pogs_solver_private_data *priv_data, ok_float *state,
+	ok_float *rho, pogs_solver_flags *flags, const pogs_solver *solver)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	if (!solver)
@@ -587,13 +587,13 @@ ok_status pogs_export_solver(pogs_solver_private_data * priv_data, ok_float * st
 	return err;
 }
 
-pogs_solver * pogs_load_solver(const pogs_solver_private_data * data,
-	const ok_float * state, const ok_float rho,
-	const pogs_solver_flags * flags)
+pogs_solver * pogs_load_solver(const pogs_solver_private_data *data,
+	const ok_float *state, const ok_float rho,
+	const pogs_solver_flags *flags)
 {
 	ok_status err;
-	pogs_solver * solver = OK_NULL;
-	pogs_solver_data * A = OK_NULL;
+	pogs_solver *solver = OK_NULL;
+	pogs_solver_data *A = OK_NULL;
 
 	err = OK_SCAN_ERR( POGS(get_init_data)(A, data, flags) );
 	ok_alloc(solver, sizeof(*solver));
@@ -607,23 +607,23 @@ pogs_solver * pogs_load_solver(const pogs_solver_private_data * data,
 	return solver;
 }
 
-ok_status pogs_solver_save_work(pogs_solver_private_data * priv_data,
-	pogs_solver_flags * flags, const pogs_solver * solver)
+ok_status pogs_solver_save_work(pogs_solver_private_data *priv_data,
+	pogs_solver_flags *flags, const pogs_solver *solver)
 {
 	return OK_SCAN_ERR( POGS(save_work)(priv_data, flags,
 		solver->W) );
 }
 
-ok_status pogs_solver_load_work(pogs_solver * solver,
-	const pogs_solver_private_data * priv_data,
-	const pogs_solver_flags * flags)
+ok_status pogs_solver_load_work(pogs_solver *solver,
+	const pogs_solver_private_data *priv_data,
+	const pogs_solver_flags *flags)
 {
 	return OK_SCAN_ERR( POGS(load_work)(solver->W, priv_data,
 		flags) );
 }
 
-ok_status pogs_solver_save_state(ok_float * state, ok_float * rho,
-	const pogs_solver * solver)
+ok_status pogs_solver_save_state(ok_float *state, ok_float *rho,
+	const pogs_solver *solver)
 {
 	if (!solver || !solver->z || !solver->z->state || !state || !rho)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -631,7 +631,7 @@ ok_status pogs_solver_save_state(ok_float * state, ok_float * rho,
 	*rho = solver->rho;
 	return OPTKIT_SUCCESS;
 }
-ok_status pogs_solver_load_state(pogs_solver * solver, const ok_float * state,
+ok_status pogs_solver_load_state(pogs_solver *solver, const ok_float *state,
 	const ok_float rho)
 {
 	if (!solver || !solver->z || !solver->z->state  || !state)

@@ -65,73 +65,73 @@ typedef enum {
 
 
 typedef struct POGSSolver {
-	pogs_work * W;
-	pogs_variables * z;
-	function_vector * f, * g;
+	pogs_work *W;
+	pogs_variables *z;
+	function_vector *f, *g;
 	ok_float rho;
-	pogs_settings * settings;
-	void * linalg_handle;
+	pogs_settings *settings;
+	void *linalg_handle;
 	ok_float init_time;
-	pogs_accelerator * aa;
-	pogs_convergence * convergence;
+	pogs_accelerator *aa;
+	pogs_convergence *convergence;
 } pogs_solver;
 
 ok_pogs_impl get_pogs_impl(void);
 
-ok_status pogs_work_alloc(pogs_work * W, pogs_solver_data * A,
-	const pogs_solver_flags * flags);
-ok_status pogs_work_free(pogs_work * W);
+ok_status pogs_work_alloc(pogs_work *W, pogs_solver_data *A,
+	const pogs_solver_flags *flags);
+ok_status pogs_work_free(pogs_work *W);
 
-ok_status pogs_solver_alloc(pogs_solver * solver, pogs_solver_data * A,
-	const pogs_solver_flags * flags);
-ok_status pogs_solver_free(pogs_solver * solver);
+ok_status pogs_solver_alloc(pogs_solver *solver, pogs_solver_data *A,
+	const pogs_solver_flags *flags);
+ok_status pogs_solver_free(pogs_solver *solver);
 
-ok_status pogs_normalize_DAE(pogs_work * W);
-ok_status pogs_set_z0(pogs_solver * solver);
+ok_status pogs_normalize_DAE(pogs_work *W);
+ok_status pogs_set_z0(pogs_solver *solver);
 
-ok_status pogs_primal_update(pogs_variables * z);
-ok_status pogs_prox(void * linalg_handle, function_vector * f,
-	function_vector * g, pogs_variables * z, ok_float rho);
-ok_status pogs_project_graph(pogs_work * W, pogs_variables * z, ok_float alpha,
+ok_status pogs_primal_update(pogs_variables *z);
+ok_status pogs_prox(void *linalg_handle, function_vector *f,
+	function_vector *g, pogs_variables *z, ok_float rho);
+ok_status pogs_project_graph(pogs_work *W, pogs_variables *z, ok_float alpha,
 	ok_float tol);
-ok_status pogs_dual_update(void * linalg_handle, pogs_variables * z,
+ok_status pogs_dual_update(void *linalg_handle, pogs_variables *z,
 	ok_float alpha);
 
-ok_status pogs_iterate(pogs_solver * solver);
-ok_status pogs_accelerate(pogs_solver * solver);
-ok_status pogs_update_residuals(pogs_solver * solver,
-	pogs_objective_values * obj, pogs_residuals * res);
-ok_status pogs_check_convergence(pogs_solver * solver,
-	pogs_objective_values * obj, pogs_residuals * res,
-	pogs_tolerances * tol, int * converged);
+ok_status pogs_iterate(pogs_solver *solver);
+ok_status pogs_accelerate(pogs_solver *solver);
+ok_status pogs_update_residuals(pogs_solver *solver,
+	pogs_objective_values *obj, pogs_residuals *res);
+ok_status pogs_check_convergence(pogs_solver *solver,
+	pogs_objective_values *obj, pogs_residuals *res,
+	pogs_tolerances *tol, int *converged);
 
-ok_status pogs_setup_diagnostics(pogs_solver * solver, const uint iters);
-ok_status pogs_record_diagnostics(pogs_solver * solver,
-	const pogs_residuals * res, const pogs_tolerances * tol,
+ok_status pogs_setup_diagnostics(pogs_solver *solver, const uint iters);
+ok_status pogs_record_diagnostics(pogs_solver *solver,
+	const pogs_residuals *res, const pogs_tolerances *tol,
 	const uint iter);
-ok_status pogs_emit_diagnostics(pogs_output * output, pogs_solver * solver);
+ok_status pogs_emit_diagnostics(pogs_output *output, pogs_solver *solver);
 
-ok_status pogs_solver_loop(pogs_solver * solver, pogs_info * info);
+ok_status pogs_solver_loop(pogs_solver *solver, pogs_info *info);
 
-pogs_solver * pogs_init(pogs_solver_data * A, const pogs_solver_flags * flags);
-ok_status pogs_solve(pogs_solver * solver, const function_vector * f,
-	const function_vector * g, const pogs_settings * settings,
-	pogs_info * info, pogs_output * output);
-ok_status pogs_finish(pogs_solver * solver, const int reset);
-ok_status pogs(pogs_solver_data * A, const pogs_solver_flags * flags,
-	const function_vector * f, const function_vector * g,
-	const pogs_settings * settings, pogs_info * info, pogs_output * output,
+pogs_solver *pogs_init(pogs_solver_data *A, const pogs_solver_flags *flags);
+ok_status pogs_solve(pogs_solver *solver, const function_vector *f,
+	const function_vector *g, const pogs_settings *settings,
+	pogs_info *info, pogs_output *output);
+ok_status pogs_finish(pogs_solver *solver, const int reset);
+ok_status pogs(pogs_solver_data *A, const pogs_solver_flags *flags,
+	const function_vector *f, const function_vector *g,
+	const pogs_settings *settings, pogs_info *info, pogs_output *output,
 	const int reset);
 
-ok_status pogs_export_solver(pogs_solver_private_data * data, ok_float * state,
-	ok_float * rho, pogs_solver_flags * flags, const pogs_solver * solver);
-pogs_solver * pogs_load_solver(const pogs_solver_private_data * data,
-	const ok_float * state, const ok_float rho,
-	const pogs_solver_flags * flags);
+ok_status pogs_export_solver(pogs_solver_private_data *data, ok_float *state,
+	ok_float *rho, pogs_solver_flags *flags, const pogs_solver *solver);
+pogs_solver *pogs_load_solver(const pogs_solver_private_data *data,
+	const ok_float *state, const ok_float rho,
+	const pogs_solver_flags *flags);
 
-ok_status pogs_solver_save_state(ok_float * state, ok_float * rho,
-	const pogs_solver * solver);
-ok_status pogs_solver_load_state(pogs_solver * solver, const ok_float * state,
+ok_status pogs_solver_save_state(ok_float *state, ok_float *rho,
+	const pogs_solver *solver);
+ok_status pogs_solver_load_state(pogs_solver *solver, const ok_float *state,
 	const ok_float rho);
 
 

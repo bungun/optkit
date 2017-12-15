@@ -18,12 +18,12 @@ typedef indirect_projector pogs_dense_projector;
 #endif
 
 typedef struct POGSDenseWork {
-	matrix * A;
-	pogs_dense_projector * P;
-	vector * d, * e;
+	matrix *A;
+	pogs_dense_projector *P;
+	vector *d, *e;
 	ok_float normA;
 	int skinny, normalized, equilibrated;
-	void * linalg_handle;
+	void *linalg_handle;
 } pogs_dense_work;
 
 typedef struct POGSDenseSolverFlags {
@@ -32,42 +32,42 @@ typedef struct POGSDenseSolverFlags {
 } pogs_dense_solver_flags;
 
 typedef struct POGSDenseSolverPrivateData {
-	ok_float * A_equil, * d, * e;
+	ok_float *A_equil, *d, *e;
 #ifndef OPTKIT_INDIRECT
-	ok_float * ATA_cholesky;
+	ok_float *ATA_cholesky;
 #endif
 } pogs_dense_solver_private_data;
 
-ok_status pogs_dense_problem_data_alloc(pogs_dense_work * W, ok_float * A,
-	const pogs_dense_solver_flags * flags);
-ok_status pogs_dense_problem_data_free(pogs_dense_work * W);
-ok_status pogs_dense_get_init_data(ok_float * A,
-	const pogs_dense_solver_private_data * data,
-	const pogs_dense_solver_flags * flags);
+ok_status pogs_dense_problem_data_alloc(pogs_dense_work *W, ok_float *A,
+	const pogs_dense_solver_flags *flags);
+ok_status pogs_dense_problem_data_free(pogs_dense_work *W);
+ok_status pogs_dense_get_init_data(ok_float *A,
+	const pogs_dense_solver_private_data *data,
+	const pogs_dense_solver_flags *flags);
 
-ok_status pogs_dense_apply_matrix(pogs_dense_work * W, ok_float alpha,
-	vector * x, ok_float beta, vector * y);
-ok_status pogs_dense_apply_adjoint(pogs_dense_work * W, ok_float alpha,
-	vector * x, ok_float beta, vector * y);
-ok_status pogs_dense_project_graph(pogs_dense_work * W, vector * x_in,
-	vector * y_in, vector * x_out, vector * y_out, ok_float tol);
+ok_status pogs_dense_apply_matrix(pogs_dense_work *W, ok_float alpha,
+	vector *x, ok_float beta, vector *y);
+ok_status pogs_dense_apply_adjoint(pogs_dense_work *W, ok_float alpha,
+	vector *x, ok_float beta, vector *y);
+ok_status pogs_dense_project_graph(pogs_dense_work *W, vector *x_in,
+	vector *y_in, vector *x_out, vector *y_out, ok_float tol);
 
-ok_status pogs_dense_equilibrate_matrix(pogs_dense_work * W, ok_float * A,
-	const pogs_dense_solver_flags * flags);
-ok_status pogs_dense_initalize_graph_projector(pogs_dense_work * W);
-ok_status pogs_dense_estimate_norm(pogs_dense_work * W, ok_float * normest);
-ok_status pogs_dense_work_get_norm(pogs_dense_work * W);
-ok_status pogs_dense_work_normalize(pogs_dense_work * W);
+ok_status pogs_dense_equilibrate_matrix(pogs_dense_work *W, ok_float *A,
+	const pogs_dense_solver_flags *flags);
+ok_status pogs_dense_initalize_graph_projector(pogs_dense_work *W);
+ok_status pogs_dense_estimate_norm(pogs_dense_work *W, ok_float *normest);
+ok_status pogs_dense_work_get_norm(pogs_dense_work *W);
+ok_status pogs_dense_work_normalize(pogs_dense_work *W);
 
-ok_status pogs_dense_save_work(pogs_dense_solver_private_data * data,
-	pogs_dense_solver_flags * flags, const pogs_dense_work * W);
-ok_status pogs_dense_load_work(pogs_dense_work * W,
-	const pogs_dense_solver_private_data * data,
-	const pogs_dense_solver_flags * flags);
+ok_status pogs_dense_save_work(pogs_dense_solver_private_data *data,
+	pogs_dense_solver_flags *flags, const pogs_dense_work *W);
+ok_status pogs_dense_load_work(pogs_dense_work *W,
+	const pogs_dense_solver_private_data *data,
+	const pogs_dense_solver_flags *flags);
 
 /* DEFINITIONS */
-ok_status pogs_dense_problem_data_alloc(pogs_dense_work * W, ok_float * A,
-	const pogs_dense_solver_flags * flags)
+ok_status pogs_dense_problem_data_alloc(pogs_dense_work *W, ok_float *A,
+	const pogs_dense_solver_flags *flags)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	if (!W || !flags)
@@ -85,7 +85,7 @@ ok_status pogs_dense_problem_data_alloc(pogs_dense_work * W, ok_float * A,
 	return err;
 }
 
-ok_status pogs_dense_problem_data_free(pogs_dense_work * W)
+ok_status pogs_dense_problem_data_free(pogs_dense_work *W)
 {
 	OK_CHECK_PTR(W);
 	ok_status err = OK_SCAN_ERR( PROJECTOR(free)(W->P) );
@@ -95,9 +95,9 @@ ok_status pogs_dense_problem_data_free(pogs_dense_work * W)
 	return err;
 }
 
-ok_status pogs_dense_get_init_data(ok_float * A,
-	const pogs_dense_solver_private_data * data,
-	const pogs_dense_solver_flags * flags)
+ok_status pogs_dense_get_init_data(ok_float *A,
+	const pogs_dense_solver_private_data *data,
+	const pogs_dense_solver_flags *flags)
 {
 	OK_CHECK_PTR(data);
 	if (A)
@@ -106,22 +106,22 @@ ok_status pogs_dense_get_init_data(ok_float * A,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status pogs_dense_apply_matrix(pogs_dense_work * W, ok_float alpha,
-	vector * x, ok_float beta, vector * y)
+ok_status pogs_dense_apply_matrix(pogs_dense_work *W, ok_float alpha,
+	vector *x, ok_float beta, vector *y)
 {
 	return OK_SCAN_ERR( blas_gemv(W->linalg_handle, CblasNoTrans, alpha,
 		W->A, x, beta, y) );
 }
 
-ok_status pogs_dense_apply_adjoint(pogs_dense_work * W, ok_float alpha,
-	vector * x, ok_float beta, vector * y)
+ok_status pogs_dense_apply_adjoint(pogs_dense_work *W, ok_float alpha,
+	vector *x, ok_float beta, vector *y)
 {
 	return OK_SCAN_ERR( blas_gemv(W->linalg_handle, CblasTrans, alpha, W->A,
 		x, beta, y) );
 }
 
-ok_status pogs_dense_project_graph(pogs_dense_work * W, vector * x_in,
-	vector * y_in, vector * x_out, vector * y_out, ok_float tol)
+ok_status pogs_dense_project_graph(pogs_dense_work *W, vector *x_in,
+	vector *y_in, vector *x_out, vector *y_out, ok_float tol)
 {
 	/* ignore arg ``tol``, included for method signature consistency */
 	return OK_SCAN_ERR( PROJECTOR(project)(W->linalg_handle, W->P, x_in,
@@ -129,8 +129,8 @@ ok_status pogs_dense_project_graph(pogs_dense_work * W, vector * x_in,
 }
 
 
-ok_status pogs_dense_equilibrate_matrix(pogs_dense_work * W, ok_float * A,
-	const pogs_dense_solver_flags * flags)
+ok_status pogs_dense_equilibrate_matrix(pogs_dense_work *W, ok_float *A,
+	const pogs_dense_solver_flags *flags)
 {
 	ok_status err = OK_SCAN_ERR( regularized_sinkhorn_knopp(
 		W->linalg_handle, A, W->A, W->d, W->e, flags->ord) );
@@ -138,19 +138,19 @@ ok_status pogs_dense_equilibrate_matrix(pogs_dense_work * W, ok_float * A,
 	return err;
 }
 
-ok_status pogs_dense_initalize_graph_projector(pogs_dense_work * W)
+ok_status pogs_dense_initalize_graph_projector(pogs_dense_work *W)
 {
 	return OK_SCAN_ERR( PROJECTOR(initialize)(W->linalg_handle, W->P, 1) );
 }
 
 /* STUB */
-ok_status pogs_dense_estimate_norm(pogs_dense_work * W, ok_float * normest)
+ok_status pogs_dense_estimate_norm(pogs_dense_work *W, ok_float *normest)
 {
 	*normest = kOne;
 	return OPTKIT_SUCCESS;
 }
 
-ok_status pogs_dense_work_get_norm(pogs_dense_work * W)
+ok_status pogs_dense_work_get_norm(pogs_dense_work *W)
 {
 	if (!W || !W->P)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -159,15 +159,15 @@ ok_status pogs_dense_work_get_norm(pogs_dense_work * W)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status pogs_dense_work_normalize(pogs_dense_work * W)
+ok_status pogs_dense_work_normalize(pogs_dense_work *W)
 {
 	if (!W || !W->A)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	return OK_SCAN_ERR( matrix_scale(W->A, kOne / W->normA) );
 }
 
-ok_status pogs_dense_save_work(pogs_dense_solver_private_data * data,
-	pogs_dense_solver_flags * flags, const pogs_dense_work * W)
+ok_status pogs_dense_save_work(pogs_dense_solver_private_data *data,
+	pogs_dense_solver_flags *flags, const pogs_dense_work *W)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_ERR( err, matrix_memcpy_am(data->A_equil, W->A, flags->ord) );
@@ -180,9 +180,9 @@ ok_status pogs_dense_save_work(pogs_dense_solver_private_data * data,
 	return err;
 }
 
-ok_status pogs_dense_load_work(pogs_dense_work * W,
-	const pogs_dense_solver_private_data * data,
-	const pogs_dense_solver_flags * flags)
+ok_status pogs_dense_load_work(pogs_dense_work *W,
+	const pogs_dense_solver_private_data *data,
+	const pogs_dense_solver_flags *flags)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_ERR( err, matrix_memcpy_ma(W->A, data->A_equil, flags->ord) );

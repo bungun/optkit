@@ -39,7 +39,7 @@ extern "C" {
 
 typedef struct POGSGraphVector {
 	size_t size, m, n;
-	vector * x, * y, * vec;
+	vector *x, *y, *vec;
 	int memory_attached;
 } pogs_graph_vector;
 
@@ -61,7 +61,7 @@ typedef struct POGSSettings {
 	ok_float anderson_regularization;
 	uint maxiter, anderson_lookback, verbose, suppress;
 	int adaptiverho, accelerate, gapstop, warmstart, resume, diagnostic;
-	ok_float * x0, * nu0;
+	ok_float *x0, *nu0;
 } pogs_settings;
 
 typedef struct POGSInfo {
@@ -72,21 +72,21 @@ typedef struct POGSInfo {
 } pogs_info;
 
 typedef struct POGSOutput {
-	ok_float * x, * y, * mu, * nu;
-	ok_float * primal_residuals, * dual_residuals;
-	ok_float * primal_tolerances, * dual_tolerances;
+	ok_float *x, *y, *mu, *nu;
+	ok_float *primal_residuals, *dual_residuals;
+	ok_float *primal_tolerances, *dual_tolerances;
 } pogs_output;
 
 typedef struct POGSVariables {
-	vector * state, * fixed_point_iterate;
-	pogs_graph_vector * primal, * primal12, * dual, * dual12;
-	pogs_graph_vector * prev, * temp;
+	vector *state, *fixed_point_iterate;
+	pogs_graph_vector *primal, *primal12, *dual, *dual12;
+	pogs_graph_vector *prev, *temp;
 	size_t m, n;
 } pogs_variables;
 
 
 typedef struct POGSConvergence {
-	vector * primal, * dual, * primal_tol, * dual_tol;
+	vector *primal, *dual, *primal_tol, *dual_tol;
 } pogs_convergence;
 
 #ifdef __cplusplus
