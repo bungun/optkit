@@ -5,14 +5,14 @@ extern "C" {
 #endif
 
 struct sparse_operator_exporter {
-	ok_float * val;
-	ok_int * ind, * ptr;
+	ok_float *val;
+	ok_int *ind, *ptr;
 };
 
-void * sparse_operator_data_alloc(sp_matrix * A)
+void * sparse_operator_data_alloc(sp_matrix *A)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	sparse_operator_data * op_data = OK_NULL;
+	sparse_operator_data *op_data = OK_NULL;
 
 	if (!A || !A->val || !A->ind | !A->ptr)
 		err = OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -30,16 +30,16 @@ void * sparse_operator_data_alloc(sp_matrix * A)
 	return (void *) op_data;
 }
 
-ok_status sparse_operator_data_free(void * data)
+ok_status sparse_operator_data_free(void *data)
 {
-	sparse_operator_data * op_data = (sparse_operator_data *) data;
+	sparse_operator_data *op_data = (sparse_operator_data *) data;
 	OK_CHECK_PTR( op_data );
 	OK_RETURNIF_ERR( sp_destroy_handle(op_data->sparse_handle) );
 	ok_free(op_data);
 	return OPTKIT_SUCCESS;
 }
 
-ok_status sparse_operator_mul(void * data, vector * input, vector * output)
+ok_status sparse_operator_mul(void *data, vector *input, vector *output)
 {
 	OK_CHECK_PTR(data);
 	return sp_blas_gemv(((sparse_operator_data *) data)->sparse_handle,
@@ -47,7 +47,7 @@ ok_status sparse_operator_mul(void * data, vector * input, vector * output)
 		kZero, output);
 }
 
-ok_status sparse_operator_mul_t(void * data, vector * input, vector * output)
+ok_status sparse_operator_mul_t(void *data, vector *input, vector *output)
 {
 	OK_CHECK_PTR(data);
 	return sp_blas_gemv(((sparse_operator_data *) data)->sparse_handle,
@@ -55,8 +55,8 @@ ok_status sparse_operator_mul_t(void * data, vector * input, vector * output)
 		kZero, output);
 }
 
-ok_status sparse_operator_mul_fused(void * data, ok_float alpha, vector * input,
-	ok_float beta, vector * output)
+ok_status sparse_operator_mul_fused(void *data, ok_float alpha, vector *input,
+	ok_float beta, vector *output)
 {
 	OK_CHECK_PTR(data);
 	return sp_blas_gemv(((sparse_operator_data *) data)->sparse_handle,
@@ -64,8 +64,8 @@ ok_status sparse_operator_mul_fused(void * data, ok_float alpha, vector * input,
 		beta, output);
 }
 
-ok_status sparse_operator_mul_t_fused(void * data, ok_float alpha,
-	vector * input, ok_float beta, vector * output)
+ok_status sparse_operator_mul_t_fused(void *data, ok_float alpha,
+	vector *input, ok_float beta, vector *output)
 {
 	OK_CHECK_PTR(data);
 	return sp_blas_gemv(((sparse_operator_data *) data)->sparse_handle,
@@ -73,16 +73,16 @@ ok_status sparse_operator_mul_t_fused(void * data, ok_float alpha,
 		beta, output);
 }
 
-abstract_operator * sparse_operator_alloc(sp_matrix * A)
+abstract_operator * sparse_operator_alloc(sp_matrix *A)
 {
-	abstract_operator * o = OK_NULL;
-	void * data = OK_NULL;
+	abstract_operator *o = OK_NULL;
+	void *data = OK_NULL;
 	if (A && A->val && A->ind && A->ptr) {
 		data = sparse_operator_data_alloc(A);
 		if (data) {
 			ok_alloc(o, sizeof(*o));
-			o->kind = (A->order == CblasColMajor) ? OkOperatorSparseCSC :
-					OkOperatorSparseCSR;
+			o->kind = (A->order == CblasColMajor) ?
+				  OkOperatorSparseCSC : OkOperatorSparseCSR;
 			o->size1 = A->size1;
 			o->size2 = A->size2;
 			o->data = data;
@@ -96,8 +96,8 @@ abstract_operator * sparse_operator_alloc(sp_matrix * A)
 	return o;
 }
 
-static ok_status sparse_operator_typecheck(abstract_operator * A,
-	const char * caller)
+static ok_status sparse_operator_typecheck(abstract_operator *A,
+	const char *caller)
 {
 	OK_CHECK_OPERATOR(A);
 	if (A->kind != OkOperatorSparseCSR && A->kind != OkOperatorSparseCSC) {
@@ -110,7 +110,7 @@ static ok_status sparse_operator_typecheck(abstract_operator * A,
 }
 
 
-sp_matrix * sparse_operator_get_matrix_pointer(abstract_operator * A)
+sp_matrix * sparse_operator_get_matrix_pointer(abstract_operator *A)
 {
 	ok_status err = sparse_operator_typecheck(A, "get_matrix_pointer");
 
@@ -120,11 +120,11 @@ sp_matrix * sparse_operator_get_matrix_pointer(abstract_operator * A)
 		return OK_NULL;
 }
 
-void * sparse_operator_export(abstract_operator * A)
+void * sparse_operator_export(abstract_operator *A)
 {
 	ok_status err = sparse_operator_typecheck(A, "export");
-	sparse_operator_data * op_data = OK_NULL;
-	struct sparse_operator_exporter * export = OK_NULL;
+	sparse_operator_data *op_data = OK_NULL;
+	struct sparse_operator_exporter *export = OK_NULL;
 
 	if (!err) {
 		op_data = (sparse_operator_data *) A->data;
@@ -138,11 +138,11 @@ void * sparse_operator_export(abstract_operator * A)
 	return (void *) export;
 }
 
-void * sparse_operator_import(abstract_operator * A, void * data)
+void * sparse_operator_import(abstract_operator *A, void *data)
 {
 	ok_status err = sparse_operator_typecheck(A, "import");
-	sparse_operator_data * op_data = OK_NULL;
-	struct sparse_operator_exporter * import = OK_NULL;
+	sparse_operator_data *op_data = OK_NULL;
+	struct sparse_operator_exporter *import = OK_NULL;
 
 	if (!err && data) {
 		op_data = (sparse_operator_data *) A->data;
@@ -160,25 +160,25 @@ void * sparse_operator_import(abstract_operator * A, void * data)
 	return data;
 }
 
-ok_status sparse_operator_abs(abstract_operator * A)
+ok_status sparse_operator_abs(abstract_operator *A)
 {
 	OK_RETURNIF_ERR( sparse_operator_typecheck(A, "abs") );
 	return sp_matrix_abs(((sparse_operator_data *) A->data)->A);
 }
 
-ok_status sparse_operator_pow(abstract_operator * A, const ok_float power)
+ok_status sparse_operator_pow(abstract_operator *A, const ok_float power)
 {
 	OK_RETURNIF_ERR( sparse_operator_typecheck(A, "pow") );
 	return sp_matrix_pow(((sparse_operator_data *) A->data)->A, power);
 }
 
-ok_status sparse_operator_scale(abstract_operator * A, const ok_float scaling)
+ok_status sparse_operator_scale(abstract_operator *A, const ok_float scaling)
 {
 	OK_RETURNIF_ERR( sparse_operator_typecheck(A, "scale") );
 	return sp_matrix_scale(((sparse_operator_data *) A->data)->A, scaling);
 }
 
-ok_status sparse_operator_scale_left(abstract_operator * A, const vector * v)
+ok_status sparse_operator_scale_left(abstract_operator *A, const vector *v)
 {
 	OK_RETURNIF_ERR( sparse_operator_typecheck(A, "scale_left") );
 	return sp_matrix_scale_left(
@@ -186,7 +186,7 @@ ok_status sparse_operator_scale_left(abstract_operator * A, const vector * v)
 		((sparse_operator_data *) A->data)->A, v);
 }
 
-ok_status sparse_operator_scale_right(abstract_operator * A, const vector * v)
+ok_status sparse_operator_scale_right(abstract_operator *A, const vector *v)
 {
 	OK_RETURNIF_ERR( sparse_operator_typecheck(A, "scale_right") );
 	return sp_matrix_scale_right(
@@ -194,10 +194,10 @@ ok_status sparse_operator_scale_right(abstract_operator * A, const vector * v)
 		((sparse_operator_data *) A->data)->A, v);
 }
 
-transformable_operator * sparse_operator_to_transformable(abstract_operator * A)
+transformable_operator * sparse_operator_to_transformable(abstract_operator *A)
 {
 	ok_status err = sparse_operator_typecheck(A, "to_transformable");
-	transformable_operator * t = OK_NULL;
+	transformable_operator *t = OK_NULL;
 
 	if (!err) {
 		ok_alloc(t, sizeof(*t));

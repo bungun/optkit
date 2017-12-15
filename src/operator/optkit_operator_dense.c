@@ -5,10 +5,10 @@ extern "C" {
 #endif
 
 /* DENSE LINEAR OPERATOR */
-void * dense_operator_data_alloc(matrix * A)
+void * dense_operator_data_alloc(matrix *A)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	dense_operator_data * op_data = OK_NULL;
+	dense_operator_data *op_data = OK_NULL;
 
 	if (!A || !A->data)
 		err = OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -25,16 +25,16 @@ void * dense_operator_data_alloc(matrix * A)
 	return (void *) op_data;
 }
 
-ok_status dense_operator_data_free(void * data)
+ok_status dense_operator_data_free(void *data)
 {
-	dense_operator_data * op_data = (dense_operator_data *) data;
+	dense_operator_data *op_data = (dense_operator_data *) data;
 	OK_CHECK_PTR(op_data);
 	ok_status err = blas_destroy_handle(op_data->dense_handle);
 	ok_free(op_data);
 	return OK_SCAN_ERR( err );
 }
 
-ok_status dense_operator_mul(void * data, vector * input, vector * output)
+ok_status dense_operator_mul(void *data, vector *input, vector *output)
 {
 	OK_CHECK_PTR(data);
 	return blas_gemv(((dense_operator_data *) data)->dense_handle,
@@ -42,7 +42,7 @@ ok_status dense_operator_mul(void * data, vector * input, vector * output)
 		kZero, output);
 }
 
-ok_status dense_operator_mul_t(void * data, vector * input, vector * output)
+ok_status dense_operator_mul_t(void *data, vector *input, vector *output)
 {
 	OK_CHECK_PTR(data);
 	return blas_gemv(((dense_operator_data *) data)->dense_handle,
@@ -50,8 +50,8 @@ ok_status dense_operator_mul_t(void * data, vector * input, vector * output)
 		kZero, output);
 }
 
-ok_status dense_operator_mul_fused(void * data, ok_float alpha, vector * input,
-	ok_float beta, vector * output)
+ok_status dense_operator_mul_fused(void *data, ok_float alpha, vector *input,
+	ok_float beta, vector *output)
 {
 	OK_CHECK_PTR(data);
 	return blas_gemv(((dense_operator_data *) data)->dense_handle,
@@ -59,8 +59,8 @@ ok_status dense_operator_mul_fused(void * data, ok_float alpha, vector * input,
 		beta, output);
 }
 
-ok_status dense_operator_mul_t_fused(void * data, ok_float alpha,
-	vector * input, ok_float beta, vector * output)
+ok_status dense_operator_mul_t_fused(void *data, ok_float alpha, vector *input,
+	ok_float beta, vector *output)
 {
 	OK_CHECK_PTR(data);
 	return blas_gemv(((dense_operator_data *) data)->dense_handle,
@@ -68,10 +68,10 @@ ok_status dense_operator_mul_t_fused(void * data, ok_float alpha,
 		beta, output);
 }
 
-abstract_operator * dense_operator_alloc(matrix * A)
+abstract_operator * dense_operator_alloc(matrix *A)
 {
-	abstract_operator * o = OK_NULL;
-	void * data = OK_NULL;
+	abstract_operator *o = OK_NULL;
+	void *data = OK_NULL;
 	if (A && A->data) {
 		data = dense_operator_data_alloc(A);
 		if (data) {
@@ -90,7 +90,8 @@ abstract_operator * dense_operator_alloc(matrix * A)
 	return o;
 }
 
-static ok_status dense_operator_typecheck(abstract_operator * A, const char * caller)
+static ok_status dense_operator_typecheck(abstract_operator *A,
+	const char *caller)
 {
 	OK_CHECK_OPERATOR(A);
 	if (A->kind != OkOperatorDense) {
@@ -102,7 +103,7 @@ static ok_status dense_operator_typecheck(abstract_operator * A, const char * ca
 	}
 }
 
-matrix * dense_operator_get_matrix_pointer(abstract_operator * A)
+matrix * dense_operator_get_matrix_pointer(abstract_operator *A)
 {
 	ok_status err = dense_operator_typecheck(A, "get_matrix_pointer");
 
@@ -113,11 +114,11 @@ matrix * dense_operator_get_matrix_pointer(abstract_operator * A)
 }
 
 
-void * dense_operator_export(abstract_operator * A)
+void * dense_operator_export(abstract_operator *A)
 {
 	ok_status err = dense_operator_typecheck(A, "export");
-	dense_operator_data * op_data = OK_NULL;
-	ok_float * export = OK_NULL;
+	dense_operator_data *op_data = OK_NULL;
+	ok_float *export = OK_NULL;
 
 	if (!err) {
 		op_data = (dense_operator_data *) A->data;
@@ -128,11 +129,11 @@ void * dense_operator_export(abstract_operator * A)
 	return (void *) export;
 }
 
-void * dense_operator_import(abstract_operator * A, void * data)
+void * dense_operator_import(abstract_operator *A, void *data)
 {
 	ok_status err = dense_operator_typecheck(A, "import");
-	dense_operator_data * op_data = OK_NULL;
-	ok_float * import = OK_NULL;
+	dense_operator_data *op_data = OK_NULL;
+	ok_float *import = OK_NULL;
 
 	if (!err && data) {
 		op_data = (dense_operator_data *) A->data;
@@ -145,42 +146,42 @@ void * dense_operator_import(abstract_operator * A, void * data)
 	return data;
 }
 
-ok_status dense_operator_abs(abstract_operator * A)
+ok_status dense_operator_abs(abstract_operator *A)
 {
 	OK_RETURNIF_ERR( dense_operator_typecheck(A, "abs") );
 	return matrix_abs(((dense_operator_data *) A->data)->A);
 }
 
-ok_status dense_operator_pow(abstract_operator * A, const ok_float power)
+ok_status dense_operator_pow(abstract_operator *A, const ok_float power)
 {
 	OK_RETURNIF_ERR( dense_operator_typecheck(A, "pow") );
 	return matrix_pow(((dense_operator_data *) A->data)->A, power);
 }
 
-ok_status dense_operator_scale(abstract_operator * A, const ok_float scaling)
+ok_status dense_operator_scale(abstract_operator *A, const ok_float scaling)
 {
 	OK_RETURNIF_ERR( dense_operator_typecheck(A, "scale") );
 	return matrix_scale(((dense_operator_data *) A->data)->A, scaling);
 }
 
-ok_status dense_operator_scale_left(abstract_operator * A, const vector * v)
+ok_status dense_operator_scale_left(abstract_operator *A, const vector *v)
 {
 	OK_RETURNIF_ERR( dense_operator_typecheck(A, "scale_left") );
 	OK_CHECK_VECTOR(v);
 	return matrix_scale_left(((dense_operator_data *) A->data)->A, v);
 }
 
-ok_status dense_operator_scale_right(abstract_operator * A, const vector * v)
+ok_status dense_operator_scale_right(abstract_operator *A, const vector *v)
 {
 	OK_RETURNIF_ERR( dense_operator_typecheck(A, "scale_right") );
 	OK_CHECK_VECTOR(v);
 	return matrix_scale_right(((dense_operator_data *) A->data)->A, v);
 }
 
-transformable_operator * dense_operator_to_transformable(abstract_operator * A)
+transformable_operator * dense_operator_to_transformable(abstract_operator *A)
 {
 	ok_status err = dense_operator_typecheck(A, "to_transformable");
-	transformable_operator * t = OK_NULL;
+	transformable_operator *t = OK_NULL;
 
 	if (!err) {
 		ok_alloc(t, sizeof(*t));

@@ -7,7 +7,7 @@ extern "C" {
 void * difference_operator_data_alloc(size_t offset)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	difference_operator_data * op_data;
+	difference_operator_data *op_data;
 	ok_alloc(op_data, sizeof(*op_data));
 	err = OK_SCAN_ERR( blas_make_handle(&(op_data->dense_handle)) );
 	op_data->offset = offset;
@@ -25,18 +25,18 @@ void * difference_operator_data_alloc(size_t offset)
 	return (void *) op_data;
 }
 
-ok_status difference_operator_data_free(void * data)
+ok_status difference_operator_data_free(void *data)
 {
-	difference_operator_data * op_data = (differnce_operator_data *) data;
+	difference_operator_data *op_data = (differnce_operator_data *) data;
 	OK_CHECK_PTR(op_data);
 	ok_status err = blas_destroy_handle(op_data->dense_handle);
 	ok_free(op_data);
 	return OK_SCAN_ERR( err );
 }
 
-ok_status difference_operator_mul(void * data, vector * input, vector * output)
+ok_status difference_operator_mul(void *data, vector *input, vector *output)
 {
-	difference_operator_data * op_data = (difference_operator_data *) data;
+	difference_operator_data *op_data = (difference_operator_data *) data;
 	OK_RETURNIF_ERR( vector_memcpy_vv(input, output) );
 	op_data->subvec_in.data = input->data + offset;
 	op_data->subvec_in.size = input->size - offset;
@@ -46,9 +46,9 @@ ok_status difference_operator_mul(void * data, vector * input, vector * output)
 		op_data->subvec_out);
 }
 
-ok_status difference_operator_mul_t(void * data, vector * input, vector * output)
+ok_status difference_operator_mul_t(void *data, vector *input, vector *output)
 {
-	difference_operator_data * op_data = (difference_operator_data *) data;
+	difference_operator_data *op_data = (difference_operator_data *) data;
 	OK_RETURNIF_ERR( vector_memcpy_vv(input, output) );
 	op_data->subvec_in.data = input->data;
 	op_data->subvec_in.size = input->size - offset;
@@ -58,10 +58,10 @@ ok_status difference_operator_mul_t(void * data, vector * input, vector * output
 		op_data->subvec_out);
 }
 
-ok_status difference_operator_mul_fused(void * data, ok_float alpha, vector * input,
-	ok_float beta, vector * output)
+ok_status difference_operator_mul_fused(void *data, ok_float alpha,
+	vector *input, ok_float beta, vector *output)
 {
-	difference_operator_data * op_data = (difference_operator_data *) data;
+	difference_operator_data *op_data = (difference_operator_data *) data;
 	OK_RETURNIF_ERR( vector_scale(output, beta) );
 	OK_RETURNIF_ERR( blas_axpy(op_data->dense_handle, alpha, input, output) );
 	op_data->subvec_in.data = input->data + offset;
@@ -72,10 +72,10 @@ ok_status difference_operator_mul_fused(void * data, ok_float alpha, vector * in
 		op_data->subvec_out);
 }
 
-ok_status difference_operator_mul_t_fused(void * data, ok_float alpha,
-	vector * input, ok_float beta, vector * output)
+ok_status difference_operator_mul_t_fused(void *data, ok_float alpha,
+	vector *input, ok_float beta, vector *output)
 {
-	difference_operator_data * op_data = (difference_operator_data *) data;
+	difference_operator_data *op_data = (difference_operator_data *) data;
 	OK_RETURNIF_ERR( vector_scale(output, beta) );
 	OK_RETURNIF_ERR( blas_axpy(op_data->dense_handle, alpha, input, output) );
 	op_data->subvec_in.data = input->data;
@@ -89,8 +89,8 @@ ok_status difference_operator_mul_t_fused(void * data, ok_float alpha,
 
 abstract_operator * difference_operator_alloc(size_t n, size_t offset)
 {
-	abstract_operator * o = OK_NULL;
-	void * data = difference_operator_data_alloc(n, offset);
+	abstract_operator *o = OK_NULL;
+	void *data = difference_operator_data_alloc(n, offset);
 
 	if (data) {
 		ok_alloc(o, sizeof(*o));
@@ -108,10 +108,10 @@ abstract_operator * difference_operator_alloc(size_t n, size_t offset)
 }
 
 void * block_difference_operator_data_alloc(size_t n_blocks,
-	size_t * block_sizes, size_t * offsets)
+	size_t *block_sizes, size_t *offsets)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	block_difference_operator_data * op_data = OK_NULL;
+	block_difference_operator_data *op_data = OK_NULL;
 
 	if (block_sizes && offsets) {
 		ok_alloc(op_data, sizeof(&op_data));
@@ -133,9 +133,9 @@ void * block_difference_operator_data_alloc(size_t n_blocks,
 	return (void *) op_data;
 }
 
-ok_status block_difference_operator_data_free(void * data)
+ok_status block_difference_operator_data_free(void *data)
 {
-	block_difference_operator_data * op_data =
+	block_difference_operator_data *op_data =
 		(block_difference_operator_data *) data;
 	OK_CHECK_PTR(op_data);
 	ok_status err = blas_destroy_handle(op_data->dense_handle);
@@ -143,11 +143,11 @@ ok_status block_difference_operator_data_free(void * data)
 	return OK_SCAN_ERR( err );
 }
 
-ok_status block_difference_operator_mul(void * data, vector * input,
-	vector * output)
+ok_status block_difference_operator_mul(void *data, vector *input,
+	vector *output)
 {
 	size_t b, block_start = 0;
-	block_difference_operator_data * op_data =
+	block_difference_operator_data *op_data =
 		(block_difference_operator_data *) data;
 	OK_CHECK_PTR(op_data);
 
@@ -167,12 +167,12 @@ ok_status block_difference_operator_mul(void * data, vector * input,
 	return err;
 }
 
-ok_status block_difference_operator_mul_t(void * data, vector * input,
-	vector * output)
+ok_status block_difference_operator_mul_t(void *data, vector *input,
+	vector *output)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	size_t b, block_start = 0;
-	block_difference_operator_data * op_data =
+	block_difference_operator_data *op_data =
 		(block_difference_operator_data *) data;
 	OK_CHECK_PTR(op_data);
 
@@ -191,12 +191,12 @@ ok_status block_difference_operator_mul_t(void * data, vector * input,
 	return err;
 }
 
-ok_status block_difference_operator_mul_fused(void * data, ok_float alpha,
-	vector * input, ok_float beta, vector * output)
+ok_status block_difference_operator_mul_fused(void *data, ok_float alpha,
+	vector *input, ok_float beta, vector *output)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	size_t b, block_start = 0;
-	block_difference_operator_data * op_data =
+	block_difference_operator_data *op_data =
 		(block_difference_operator_data *) data;
 	OK_CHECK_PTR(op_data);
 	OK_RETURNIF_ERR( vector_scale(output, beta) );
@@ -219,12 +219,12 @@ ok_status block_difference_operator_mul_fused(void * data, ok_float alpha,
 	return err;
 }
 
-ok_status block_difference_operator_mul_t_fused(void * data, ok_float alpha,
-	vector * input, ok_float beta, vector * output)
+ok_status block_difference_operator_mul_t_fused(void *data, ok_float alpha,
+	vector *input, ok_float beta, vector *output)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	size_t b, block_start = 0;
-	block_difference_operator_data * op_data =
+	block_difference_operator_data *op_data =
 		(block_difference_operator_data *) data;
 	OK_CHECK_PTR(op_data);
 	OK_RETURNIF_ERR( vector_scale(output, beta) );
@@ -248,10 +248,10 @@ ok_status block_difference_operator_mul_t_fused(void * data, ok_float alpha,
 
 
 abstract_operator * block_difference_operator_alloc(size_t n, size_t n_blocks,
-	size_t * block_sizes, size_t * offsets)
+	size_t *block_sizes, size_t *offsets)
 {
-	abstract_operator * o = OK_NULL;
-	void * data = OK_NULL;
+	abstract_operator *o = OK_NULL;
+	void *data = OK_NULL;
 	if (block_sizes && offsets) {
 		data = block_difference_operator_data_alloc(n_blocks,
 			block_sizes, offsets);

@@ -8,24 +8,24 @@ extern "C" {
 #endif
 
 typedef struct diagonal_operator_data{
-	void * dense_handle;
-	vector * d;
+	void *dense_handle;
+	vector *d;
 } diagonal_operator_data;
 
-void * diagonal_operator_data_alloc(vector * d);
-ok_status diagonal_operator_data_free(void * data);
-ok_status diagonal_operator_mul(void * data, vector * input, vector * output);
-ok_status diagonal_operator_mul_t(void * data, vector * input, vector * output);
-ok_status diagonal_operator_mul_fused(void * data, ok_float alpha,
-	vector * input, ok_float beta, vector * output);
-ok_status diagonal_operator_mul_t_fused(void * data, ok_float alpha,
-	vector * input, ok_float beta, vector * output);
+void * diagonal_operator_data_alloc(vector *d);
+ok_status diagonal_operator_data_free(void *data);
+ok_status diagonal_operator_mul(void *data, vector *input, vector *output);
+ok_status diagonal_operator_mul_t(void *data, vector *input, vector *output);
+ok_status diagonal_operator_mul_fused(void *data, ok_float alpha, vector *input,
+	ok_float beta, vector *output);
+ok_status diagonal_operator_mul_t_fused(void *data, ok_float alpha,
+	vector *input, ok_float beta, vector *output);
 
-abstract_operator * diagonal_operator_alloc(vector * d);
+abstract_operator * diagonal_operator_alloc(vector *d);
 
-ok_status diagonal_operator_abs(abstract_operator * A);
-ok_status diagonal_operator_pow(abstract_operator * A, const ok_float power);
-ok_status diagonal_operator_scale(abstract_operator * A, const ok_float scaling);
+ok_status diagonal_operator_abs(abstract_operator *A);
+ok_status diagonal_operator_pow(abstract_operator *A, const ok_float power);
+ok_status diagonal_operator_scale(abstract_operator *A, const ok_float scaling);
 
 #ifdef __cplusplus
 }

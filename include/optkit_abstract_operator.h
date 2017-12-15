@@ -47,14 +47,14 @@ typedef enum OPTKIT_OPERATOR{
 
 typedef struct abstract_linear_operator {
 	size_t size1, size2;
-	void * data;
-	ok_status (* apply)(void * data, vector * input, vector * output);
-	ok_status (* adjoint)(void * data, vector * input, vector * output);
-	ok_status (* fused_apply)(void * data, ok_float alpha, vector * input,
-		ok_float beta, vector * output);
-	ok_status (* fused_adjoint)(void * data, ok_float alpha, vector * input,
-		ok_float beta, vector * output);
-	ok_status (* free)(void * data);
+	void *data;
+	ok_status (* apply)(void *data, vector *input, vector *output);
+	ok_status (* adjoint)(void *data, vector *input, vector *output);
+	ok_status (* fused_apply)(void *data, ok_float alpha, vector *input,
+		ok_float beta, vector *output);
+	ok_status (* fused_adjoint)(void *data, ok_float alpha, vector *input,
+		ok_float beta, vector *output);
+	ok_status (* free)(void *data);
 	OPTKIT_OPERATOR kind;
 } abstract_operator;
 
