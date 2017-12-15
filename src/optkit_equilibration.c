@@ -4,8 +4,8 @@
 extern "C" {
 #endif
 
-ok_status regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
-	matrix * A_out, vector * d, vector * e, enum CBLAS_ORDER ord)
+ok_status regularized_sinkhorn_knopp(void *linalg_handle, ok_float *A_in,
+	matrix *A_out, vector *d, vector *e, enum CBLAS_ORDER ord)
 {
 	OK_CHECK_PTR(A_in);
 	OK_CHECK_MATRIX(A_out);
@@ -96,15 +96,15 @@ ok_status regularized_sinkhorn_knopp(void * linalg_handle, ok_float * A_in,
 }
 
 #ifndef OPTKIT_NO_OPERATOR_EQUIL
-ok_status operator_regularized_sinkhorn(void * linalg_handle,
-	abstract_operator * A, vector * d, vector * e, const ok_float pnorm)
+ok_status operator_regularized_sinkhorn(void *linalg_handle,
+	abstract_operator *A, vector *d, vector *e, const ok_float pnorm)
 {
 	OK_CHECK_OPERATOR(A);
 	OK_CHECK_VECTOR(d);
 	OK_CHECK_VECTOR(e);
 
-	transformable_operator * transform = OK_NULL;
-	void * A_temp = OK_NULL;
+	transformable_operator *transform = OK_NULL;
+	void *A_temp = OK_NULL;
 	const ok_float kSinkhornConst = (ok_float) 1e-4;
 	const ok_float kEps = (ok_float) 1e-2;
 	const size_t kMaxIter = 300;
@@ -199,8 +199,8 @@ ok_status operator_regularized_sinkhorn(void * linalg_handle,
 }
 
 /* STUB */
-ok_status operator_equilibrate(void * linalg_handle, abstract_operator * A,
-	vector * d, vector * e, const ok_float pnorm)
+ok_status operator_equilibrate(void *linalg_handle, abstract_operator *A,
+	vector *d, vector *e, const ok_float pnorm)
 {
 	return OPTKIT_ERROR;
 }
@@ -213,8 +213,8 @@ ok_status operator_equilibrate(void * linalg_handle, abstract_operator * A,
  * where x is a random vector and n <= kNormIter is a
  * given number of iterations.
  */
-ok_status operator_estimate_norm(void * linalg_handle, abstract_operator * A,
-	ok_float * norm_est)
+ok_status operator_estimate_norm(void *linalg_handle, abstract_operator *A,
+	ok_float *norm_est)
 {
 	OK_CHECK_OPERATOR(A);
 	OK_CHECK_PTR(norm_est);
@@ -248,7 +248,7 @@ ok_status operator_estimate_norm(void * linalg_handle, abstract_operator * A,
 		*norm_est = norm_x / *norm_est;
 		vector_scale(&x, 1 / norm_x);
 		if (MATH(fabs)(norm_est_prev - *norm_est) <=
-			kNormTol * *norm_est)
+			kNormTol **norm_est)
 			break;
 	}
 	vector_free(&x);
@@ -256,20 +256,20 @@ ok_status operator_estimate_norm(void * linalg_handle, abstract_operator * A,
 	return OPTKIT_SUCCESS;
 }
 // #else
-// ok_status operator_regularized_sinkhorn(void * linalg_handle,
-// 	abstract_operator * A, vector * d, vector * e, const ok_float pnorm)
+// ok_status operator_regularized_sinkhorn(void *linalg_handle,
+// 	abstract_operator *A, vector *d, vector *e, const ok_float pnorm)
 // {
 // 	return OPTKIT_ERROR;
 // }
 
-// ok_status operator_equilibrate(void * linalg_handle, abstract_operator * A,
-// 	vector * d, vector * e, const ok_float pnorm)
+// ok_status operator_equilibrate(void *linalg_handle, abstract_operator *A,
+// 	vector *d, vector *e, const ok_float pnorm)
 // {
 // 	return OPTKIT_ERROR;
 // }
 
-// ok_status operator_estimate_norm(void * linalg_handle, abstract_operator * A,
-// 	ok_float * norm_est)
+// ok_status operator_estimate_norm(void *linalg_handle, abstract_operator *A,
+// 	ok_float *norm_est)
 // {
 // 	return OPTKIT_ERROR;
 // }
