@@ -7,14 +7,14 @@ extern "C" {
 const int kQuietCG = 1;
 const uint kItersCG = 100;
 
-ok_status projector_normalization(projector * P, int * normalized)
+ok_status projector_normalization(projector *P, int *normalized)
 {
 	OK_CHECK_PROJECTOR(P);
 	OK_CHECK_PTR(normalized);
 
 	ok_status err = OPTKIT_SUCCESS;
-	dense_direct_projector * Pdd = OK_NULL;
-	indirect_projector_generic * Pi = OK_NULL;
+	dense_direct_projector *Pdd = OK_NULL;
+	indirect_projector_generic *Pi = OK_NULL;
 
 	if (P->kind == OkProjectorDenseDirect) {
 		Pdd = (dense_direct_projector *) P->data;
@@ -31,14 +31,14 @@ ok_status projector_normalization(projector * P, int * normalized)
 	return err;
 }
 
-ok_status projector_get_norm(projector * P, ok_float * norm)
+ok_status projector_get_norm(projector *P, ok_float *norm)
 {
 	OK_CHECK_PROJECTOR(P);
 	OK_CHECK_PTR(norm);
 
 	ok_status err = OPTKIT_SUCCESS;
-	dense_direct_projector * Pdd = OK_NULL;
-	indirect_projector_generic * Pi = OK_NULL;
+	dense_direct_projector *Pdd = OK_NULL;
+	indirect_projector_generic *Pi = OK_NULL;
 
 	if (P->kind == OkProjectorDenseDirect) {
 		Pdd = (dense_direct_projector *) P->data;
@@ -57,7 +57,7 @@ ok_status projector_get_norm(projector * P, ok_float * norm)
 
 
 /* Direct Projector methods */
-ok_status direct_projector_alloc(direct_projector * P, matrix * A)
+ok_status direct_projector_alloc(direct_projector *P, matrix *A)
 {
 	OK_CHECK_PTR(P);
 	OK_CHECK_MATRIX(A);
@@ -78,7 +78,7 @@ ok_status direct_projector_alloc(direct_projector * P, matrix * A)
 	return err;
 }
 
-ok_status direct_projector_free(direct_projector * P)
+ok_status direct_projector_free(direct_projector *P)
 {
 	OK_CHECK_PTR(P);
 	ok_status err = OK_SCAN_ERR( matrix_free(P->L) );
@@ -87,8 +87,8 @@ ok_status direct_projector_free(direct_projector * P)
 	return err;
 }
 
-ok_status direct_projector_initialize(void * linalg_handle,
-	direct_projector * P, int normalize)
+ok_status direct_projector_initialize(void *linalg_handle,
+	direct_projector *P, int normalize)
 {
 	if (!P || !P->A || !P->L)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -125,8 +125,8 @@ ok_status direct_projector_initialize(void * linalg_handle,
 	return OK_SCAN_ERR( linalg_cholesky_decomp(linalg_handle, P->L) );
 }
 
-ok_status direct_projector_project(void * linalg_handle, direct_projector * P,
-	vector * x_in, vector * y_in, vector * x_out, vector * y_out)
+ok_status direct_projector_project(void *linalg_handle, direct_projector *P,
+	vector *x_in, vector *y_in, vector *x_out, vector *y_out)
 {
 	if (!P || !P->A || !P->L)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -167,7 +167,7 @@ ok_status direct_projector_project(void * linalg_handle, direct_projector * P,
 
 #ifndef OPTKIT_NO_INDIRECT_PROJECTOR
 /* Indirect Projector methods */
-ok_status indirect_projector_alloc(indirect_projector * P, abstract_operator * A)
+ok_status indirect_projector_alloc(indirect_projector *P, abstract_operator *A)
 {
 	OK_CHECK_PTR(P);
 	OK_CHECK_OPERATOR(A);
@@ -185,8 +185,8 @@ ok_status indirect_projector_alloc(indirect_projector * P, abstract_operator * A
 	return err;
 }
 
-ok_status indirect_projector_initialize(void * linalg_handle,
-	indirect_projector * P, int normalize)
+ok_status indirect_projector_initialize(void *linalg_handle,
+	indirect_projector *P, int normalize)
 {
 	/* no-op*/
 	if (!P || !P->A || !P->cgls_work)
@@ -223,11 +223,10 @@ ok_status indirect_projector_initialize(void * linalg_handle,
  *	minimize ||x - x_in ||^2 + ||Ax - y_in||^2,
  *
  * hence we obtain the desired projection.
- *
  */
-ok_status indirect_projector_project(void * linalg_handle,
-	indirect_projector * P, vector * x_in, vector * y_in, vector * x_out,
-	vector * y_out)
+ok_status indirect_projector_project(void *linalg_handle,
+	indirect_projector *P, vector *x_in, vector *y_in, vector *x_out,
+	vector *y_out)
 {
 	OK_CHECK_PTR(P);
 	OK_CHECK_VECTOR(x_in);
@@ -256,7 +255,7 @@ ok_status indirect_projector_project(void * linalg_handle,
 		P->A->apply(P->A->data, x_out, y_out) );
 }
 
-ok_status indirect_projector_free(indirect_projector * P)
+ok_status indirect_projector_free(indirect_projector *P)
 {
 	OK_CHECK_PTR(P);
 	ok_status err = OK_SCAN_ERR( cgls_finish(P->cgls_work) );
@@ -266,11 +265,11 @@ ok_status indirect_projector_free(indirect_projector * P)
 }
 #endif /* ndef OPTKIT_NO_INDIRECT_PROJECTOR */
 
-void * dense_direct_projector_data_alloc(matrix * A)
+void *dense_direct_projector_data_alloc(matrix *A)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	size_t mindim;
-	dense_direct_projector * P = OK_NULL;
+	dense_direct_projector *P = OK_NULL;
 	if (A && A->data) {
 		mindim = (A->size1 < A->size2) ? A->size1 : A->size2;
 
@@ -294,11 +293,11 @@ void * dense_direct_projector_data_alloc(matrix * A)
 	return (void *) P;
 }
 
-ok_status dense_direct_projector_data_free(void * data)
+ok_status dense_direct_projector_data_free(void *data)
 {
 	OK_CHECK_PTR(data);
 
-	dense_direct_projector * P = (dense_direct_projector *) data;
+	dense_direct_projector *P = (dense_direct_projector *) data;
 	ok_status err = OK_SCAN_ERR( blas_destroy_handle(P->linalg_handle) );
 	OK_MAX_ERR( err, matrix_free(P->L) );
 	ok_free(P->L);
@@ -306,9 +305,9 @@ ok_status dense_direct_projector_data_free(void * data)
 	return err;
 }
 
-ok_status dense_direct_projector_initialize(void * data, int normalize)
+ok_status dense_direct_projector_initialize(void *data, int normalize)
 {
-	dense_direct_projector * P = (dense_direct_projector *) data;
+	dense_direct_projector *P = (dense_direct_projector *) data;
 	direct_projector DP;
 	ok_status err = OPTKIT_SUCCESS;
 
@@ -327,10 +326,10 @@ ok_status dense_direct_projector_initialize(void * data, int normalize)
 	return err;
 }
 
-ok_status dense_direct_projector_project(void * data, vector * x_in, vector * y_in,
-	vector * x_out, vector * y_out, ok_float tol)
+ok_status dense_direct_projector_project(void *data, vector *x_in, vector *y_in,
+	vector *x_out, vector *y_out, ok_float tol)
 {
-	dense_direct_projector * P = (dense_direct_projector *) data;
+	dense_direct_projector *P = (dense_direct_projector *) data;
 	direct_projector DP;
 
 	if (!P || !P->A || !P->L)
@@ -346,9 +345,9 @@ ok_status dense_direct_projector_project(void * data, vector * x_in, vector * y_
 			x_out, y_out) );
 }
 
-projector * dense_direct_projector_alloc(matrix * A)
+projector *dense_direct_projector_alloc(matrix *A)
 {
-	projector * P = OK_NULL;
+	projector *P = OK_NULL;
 	P = malloc(sizeof(*P));
 	P->kind = OkProjectorDenseDirect;
 	P->size1 = A->size1;
@@ -363,10 +362,10 @@ projector * dense_direct_projector_alloc(matrix * A)
 }
 
 #ifndef OPTKIT_NO_INDIRECT_PROJECTOR
-void * indirect_projector_data_alloc(abstract_operator * A)
+void *indirect_projector_data_alloc(abstract_operator *A)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	indirect_projector_generic * P = OK_NULL;
+	indirect_projector_generic *P = OK_NULL;
 	ok_alloc(P, sizeof(*P));
 	P->A = A;
 	P->cgls_work = cgls_init(A->size1, A->size2);
@@ -382,11 +381,11 @@ void * indirect_projector_data_alloc(abstract_operator * A)
 	return (void *) P;
 }
 
-ok_status indirect_projector_data_free(void * data)
+ok_status indirect_projector_data_free(void *data)
 {
 	OK_CHECK_PTR(data);
 
-	indirect_projector_generic * P = (indirect_projector_generic *) data;
+	indirect_projector_generic *P = (indirect_projector_generic *) data;
 	ok_status err = OK_SCAN_ERR( cgls_finish(P->cgls_work) );
 	OK_MAX_ERR( err, blas_destroy_handle(P->linalg_handle) );
 	ok_free(P);
@@ -394,7 +393,7 @@ ok_status indirect_projector_data_free(void * data)
 }
 
 /* STUB??? or ok as no-op? */
-ok_status indirect_projector_g_initialize(void * data, int normalize)
+ok_status indirect_projector_g_initialize(void *data, int normalize)
 {
 	/* estimate norm */
 	/* normalize */
@@ -403,10 +402,10 @@ ok_status indirect_projector_g_initialize(void * data, int normalize)
 
 }
 
-ok_status indirect_projector_g_project(void * data, vector * x_in, vector * y_in,
-	vector * x_out, vector * y_out, ok_float tol)
+ok_status indirect_projector_g_project(void *data, vector *x_in, vector *y_in,
+	vector *x_out, vector *y_out, ok_float tol)
 {
-	indirect_projector_generic * P = (indirect_projector_generic *) data;
+	indirect_projector_generic *P = (indirect_projector_generic *) data;
 	OK_CHECK_PTR(P);
 
 	/* y_out = y_in - Ax_in */
@@ -430,9 +429,9 @@ ok_status indirect_projector_g_project(void * data, vector * x_in, vector * y_in
 		P->A->apply(P->A->data, x_out, y_out) );
 }
 
-projector * indirect_projector_generic_alloc(abstract_operator * A)
+projector *indirect_projector_generic_alloc(abstract_operator *A)
 {
-	projector * P = OK_NULL;
+	projector *P = OK_NULL;
 	ok_alloc(P, sizeof(*P));
 	P->kind = OkProjectorIndirect;
 	P->size1 = A->size1;
