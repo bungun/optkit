@@ -94,7 +94,7 @@ cgls_helper * cgls_helper_alloc(size_t m, size_t n)
 	return h;
 }
 
-ok_status cgls_helper_free(cgls_helper * helper)
+ok_status cgls_helper_free(cgls_helper *helper)
 {
 	if (!helper)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -127,7 +127,7 @@ pcg_helper * pcg_helper_alloc(size_t m, size_t n)
 	return h;
 }
 
-ok_status pcg_helper_free(pcg_helper * helper)
+ok_status pcg_helper_free(pcg_helper *helper)
 {
 	if (!helper || !helper->p.data)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -155,11 +155,9 @@ ok_status pcg_helper_free(pcg_helper * helper)
  * ref: Chris Fougner, POGS
  * https://github.com/foges/pogs/blob/master/src/cpu/include/cgls.h
  */
-ok_status cgls_nonallocating(cgls_helper * helper,
-		abstract_operator * op, vector * b, vector * x,
-		const ok_float rho, const ok_float tol,
-		const size_t maxiter, const int quiet,
-		uint * flag)
+ok_status cgls_nonallocating(cgls_helper *helper, abstract_operator *op,
+	vector *b, vector *x, const ok_float rho, const ok_float tol,
+	const size_t maxiter, const int quiet,uint *flag)
 {
 
 	OK_CHECK_PTR(helper);
@@ -169,12 +167,12 @@ ok_status cgls_nonallocating(cgls_helper * helper,
 	OK_CHECK_PTR(flag);
 
 	/* convenience abbreviations */
-	cgls_helper * h = helper;
+	cgls_helper *h = helper;
 	vector p = h->p;
 	vector q = h->q;
 	vector r = h->r;
 	vector s = h->s;
-	void * blas_hdl = h->blas_handle;
+	void *blas_hdl = h->blas_handle;
 
 	/* variable and constant declarations */
 	char fmt[] = "%5d %9.2e %12.5e\n";
@@ -281,12 +279,12 @@ ok_status cgls_nonallocating(cgls_helper * helper,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status cgls(abstract_operator * op, vector * b, vector * x, const ok_float rho,
-	const ok_float tol, const size_t maxiter, const int quiet, uint * flag)
+ok_status cgls(abstract_operator *op, vector *b, vector *x, const ok_float rho,
+	const ok_float tol, const size_t maxiter, const int quiet, uint *flag)
 {
 	ok_status err = OPTKIT_SUCCESS;
 
-	cgls_helper * helper = cgls_helper_alloc(op->size1, op->size2);
+	cgls_helper *helper = cgls_helper_alloc(op->size1, op->size2);
 
 	/* CGLS call */
 	OK_CHECK_ERR( err,
@@ -303,15 +301,15 @@ void * cgls_init(size_t m, size_t n)
 	return (void *) cgls_helper_alloc(m, n);
 }
 
-ok_status cgls_solve(void * cgls_work, abstract_operator * op, vector * b,
-	vector * x, const ok_float rho, const ok_float tol,
-	const size_t maxiter, int quiet, uint * flag)
+ok_status cgls_solve(void *cgls_work, abstract_operator *op, vector *b,
+	vector *x, const ok_float rho, const ok_float tol, const size_t maxiter,
+	int quiet, uint *flag)
 {
 	return cgls_nonallocating((cgls_helper *) cgls_work, op, b, x,
 		rho, tol, maxiter, quiet, flag);
 }
 
-ok_status cgls_finish(void * cgls_work)
+ok_status cgls_finish(void *cgls_work)
 {
 	return cgls_helper_free((cgls_helper *) cgls_work);
 }
@@ -321,7 +319,7 @@ ok_status cgls_finish(void * cgls_work)
  *
  * 	M = inv ( diag ( rho * I + A'A ) )
  */
-ok_status diagonal_preconditioner(abstract_operator * op, vector * p, ok_float rho)
+ok_status diagonal_preconditioner(abstract_operator *op, vector *p, ok_float rho)
 {
 	OK_CHECK_OPERATOR(op);
 	OK_CHECK_VECTOR(p);
@@ -329,7 +327,7 @@ ok_status diagonal_preconditioner(abstract_operator * op, vector * p, ok_float r
 	ok_status err = OPTKIT_SUCCESS;
 	ok_float col_norm_sq;
 	size_t i;
-	void * blas_handle;
+	void *blas_handle;
 	vector ej, ej_sub, a, p_sub;
 	ej.data = OK_NULL;
 	ej_sub.data = OK_NULL;
@@ -383,9 +381,9 @@ ok_status diagonal_preconditioner(abstract_operator * op, vector * p, ok_float r
  * ref: Brendan O'Donoghue, SCS
  * https://github.com/cvxgrp/scs/blob/master/linsys/indirect/private.c
  */
-ok_status pcg_nonallocating(pcg_helper * helper, abstract_operator * op,
-	abstract_operator * pre_cond, vector * b, vector * x, const ok_float rho,
-	const ok_float tol, const size_t maxiter, const int quiet, uint * iters)
+ok_status pcg_nonallocating(pcg_helper *helper, abstract_operator *op,
+	abstract_operator *pre_cond, vector *b, vector *x, const ok_float rho,
+	const ok_float tol, const size_t maxiter, const int quiet, uint *iters)
 {
 	OK_CHECK_PTR(helper);
 	OK_CHECK_OPERATOR(op);
@@ -403,14 +401,14 @@ ok_status pcg_nonallocating(pcg_helper * helper, abstract_operator * op,
 	 * x0: alias of z for warmstart
 	 * temp: storage for A'A intermediate
 	 */
-	pcg_helper * h = helper;
+	pcg_helper *h = helper;
 	vector p = h->p;
 	vector q = h->q;
 	vector r = h->r;
 	vector z = h->z;
 	vector x0 = h->z;
 	vector temp = h->temp;
-	void * blas_hdl = h->blas_handle;
+	void *blas_hdl = h->blas_handle;
 
 	/* variable/constant declarations */
 	uint k;
@@ -506,12 +504,12 @@ ok_status pcg_nonallocating(pcg_helper * helper, abstract_operator * op,
 	return err;
 }
 
-ok_status pcg(abstract_operator * op, abstract_operator * pre_cond, vector * b,
-	vector * x, const ok_float rho, const ok_float tol, const size_t maxiter,
-	const int quiet, uint * iters)
+ok_status pcg(abstract_operator (op, abstract_operator (pre_cond, vector (b,
+	vector (x, const ok_float rho, const ok_float tol, const size_t maxiter,
+	const int quiet, uint (iters)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	pcg_helper * helper = pcg_helper_alloc(op->size1, op->size2);
+	pcg_helper *helper = pcg_helper_alloc(op->size1, op->size2);
 
 	OK_CHECK_ERR( err,
 		pcg_nonallocating(helper, op, pre_cond, b, x, rho, tol, maxiter,
@@ -527,16 +525,15 @@ void * pcg_init(size_t m, size_t n)
 	return (void *) pcg_helper_alloc(m, n);
 }
 
-ok_status pcg_solve(void * pcg_work, abstract_operator * op,
-	abstract_operator * pre_cond, vector * b, vector * x,
-	const ok_float rho, const ok_float tol, const size_t maxiter,
-	int quiet, uint * iters)
+ok_status pcg_solve(void *pcg_work, abstract_operator *op,
+	abstract_operator *pre_cond, vector *b, vector *x, const ok_float rho,
+	const ok_float tol, const size_t maxiter, int quiet, uint *iters)
 {
 	return pcg_nonallocating((pcg_helper *) pcg_work, op, pre_cond, b, x,
 		rho, tol, maxiter, quiet, iters);
 }
 
-ok_status pcg_finish(void * pcg_work)
+ok_status pcg_finish(void *pcg_work)
 {
 	return pcg_helper_free((pcg_helper *) pcg_work);
 }
