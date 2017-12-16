@@ -1,9 +1,9 @@
 import os
 
 import setuptools
-import setuptools.command.install as sci
-import distutils.command.build as dcb
-import subprocess as sub
+import distutils.command.build
+import setuptools.command.install
+import subprocess
 
 # TODO: use this for OMP thread #?
 # from multiprocessing import cpu_count
@@ -21,7 +21,7 @@ LONG_DESC= str('optkit provides a Python interface for CPU and GPU '
                'of C- or CUDA C-based optimization routines in a Python '
                'environment.')
 
-class OptkitBuild(dcb.build):
+class OptkitBuild(distutils.command.build.build):
     def run(self):
         global RECOMPILE_LIBS
         global BUILD_GPU
@@ -35,7 +35,7 @@ class OptkitBuild(dcb.build):
         EXT = "dylib" if os.uname()[0] == "Darwin" else "so"
 
         # run original build code
-        dcb.build.run(self)
+        distutils.command.build.build.run(self)
 
         if not RECOMPILE_LIBS:
             return
@@ -49,7 +49,7 @@ class OptkitBuild(dcb.build):
         devices = ['cpu', 'gpu'] if BUILD_GPU else ['cpu']
         precisions = ['32', '64']
 
-        sub.call([ 'make', 'clean' ], cwd=BASEPATH)
+        subprocess.call([ 'make', 'clean' ], cwd=BASEPATH)
         for prec in precisions:
             for dev in devices:
                 cmd = [ 'make', 'pylibs' ]
@@ -66,7 +66,7 @@ class OptkitBuild(dcb.build):
 
                 # run Make for each condition (make CPU/GPU, 32/64)
                 def compile():
-                    sub.call(cmd, cwd=BASEPATH)
+                    subprocess.call(cmd, cwd=BASEPATH)
 
                 self.execute(compile, [], message)
 
@@ -119,18 +119,18 @@ class OptkitBuild(dcb.build):
         for target in target_files:
             self.copy_file(os.path.join(LIBPATH, target), libtarg)
 
-class OptkitInstall(sci.install):
+class OptkitInstall(setuptools.command.install.install):
     def initialize_options(self):
-        sci.install.initialize_options(self)
+        setuptools.command.install.install.initialize_options(self)
         self.build_scripts = None
 
     def finalize_options(self):
-        sci.install.finalize_options(self)
+        setuptools.command.install.install.finalize_options(self)
         self.set_undefined_options('build', ('build_scripts', 'build_scripts'))
 
     def run(self):
         # run original install code
-        sci.install.run(self)
+        setuptools.command.install.install.run(self)
 
         # install Optkit executables
         self.copy_tree(self.build_lib, self.install_lib)
