@@ -504,9 +504,9 @@ ok_status pcg_nonallocating(pcg_helper *helper, abstract_operator *op,
 	return err;
 }
 
-ok_status pcg(abstract_operator (op, abstract_operator (pre_cond, vector (b,
-	vector (x, const ok_float rho, const ok_float tol, const size_t maxiter,
-	const int quiet, uint (iters)
+ok_status pcg(abstract_operator *op, abstract_operator *pre_cond, vector *b,
+	vector *x, const ok_float rho, const ok_float tol, const size_t maxiter,
+	const int quiet, uint *iters)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	pcg_helper *helper = pcg_helper_alloc(op->size1, op->size2);
