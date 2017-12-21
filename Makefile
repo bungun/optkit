@@ -148,11 +148,11 @@ CG_HDR=$(OPERATOR_HDR) $(INCLUDE)optkit_cg.h
 
 POGS_BASE_HDR=$(DENSE_HDR) $(INCLUDE)optkit_prox.hpp 
 POGS_BASE_HDR+=$(POGSINC)datatypes.h $(POGSINC)adaptive_rho.h 
-POGS_BASE_HDR+=$(POGSINC)impl_common.h $(INCLUDE)pogs/optkit_pogs.h
+POGS_BASE_HDR+=$(POGSINC)common.h $(INCLUDE)pogs/optkit_pogs.h
 POGS_BASE_HDR+=$(INCLUDE)optkit_projector.h $(INCLUDE)optkit_equilibration.h
-POGS_ABSTRACT_HDR=$(POGS_BASE_HDR) $(CG_HDR) $(POGSINC)impl_abstract.h
-# POGS_SPARSE_HDR=$(POGS_BASE_HDR) $(LINSYS_HDR) $(POGSINC)impl_sparse.h
-POGS_DENSE_HDR=$(POGS_BASE_HDR) $(DENSE_HDR) $(POGSINC)impl_dense.h
+POGS_ABSTRACT_HDR=$(POGS_BASE_HDR) $(CG_HDR) $(POGSINC)abstract.h
+# POGS_SPARSE_HDR=$(POGS_BASE_HDR) $(LINSYS_HDR) $(POGSINC)sparse.h
+POGS_DENSE_HDR=$(POGS_BASE_HDR) $(DENSE_HDR) $(POGSINC)dense.h
 
 BASE_OBJ=$(PREFIX_OUT)defs$(LIBCONFIG).o
 VECTOR_OBJ=$(LAOUT)vector$(LIBCONFIG).o
@@ -229,7 +229,7 @@ all: libs liboperator libcg libequil libprojector libpogs libcluster libanderson
 libs: libok libprox
 libok: libok_dense libok_sparse
 libpogs: libpogs_dense libpogs_abstract
-pylibs: libpogs_dense libpogs_abstract libcluster
+pylibs: libpogs_dense libcluster
 
 libpogs_abstract: $(OUT)libpogs_abstract$(LIBCONFIG).$(SHARED)
 $(OUT)libpogs_abstract$(LIBCONFIG).$(SHARED): pogs_abstract \

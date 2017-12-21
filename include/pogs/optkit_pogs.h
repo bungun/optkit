@@ -7,7 +7,7 @@
 #include "optkit_anderson_difference.h"
 #include "optkit_pogs_datatypes.h"
 #include "optkit_pogs_adaptive_rho.h"
-#include "optkit_pogs_impl_common.h"
+#include "optkit_pogs_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,7 +26,7 @@ typedef enum {
 	#define OK_POGS_TYPE OkPogsAbstract
 	#undef OK_COMPILE_POGS_SPARSE
 	#undef OK_COMPILE_POGS_DENSE
-	#include "optkit_pogs_impl_abstract.h"
+	#include "optkit_pogs_abstract.h"
 	typedef pogs_abstract_work pogs_work;
 	typedef abstract_operator pogs_solver_data;
 	typedef pogs_abstract_solver_flags pogs_solver_flags;
@@ -39,7 +39,7 @@ typedef enum {
 	#define OK_POGS_TYPE OkPogsSparse
 	#undef OK_COMPILE_POGS_ABSTRACT
 	#undef OK_COMPILE_POGS_DENSE
-	#include "optkit_pogs_impl_sparse.h"
+	#include "optkit_pogs_sparse.h"
 	typedef pogs_sparse_matrix pogs_work;
 	typedef pogs_sparse_solver_data pogs_solver_data;
 	typedef pogs_sparse_solver_flags pogs_solver_flags;
@@ -52,7 +52,7 @@ typedef enum {
 	#define OK_POGS_TYPE OkPogsDense
 	#undef OK_COMPILE_POGS_ABSTRACT
 	#undef OK_COMPILE_POGS_SPARSE
-	#include "optkit_pogs_impl_dense.h"
+	#include "optkit_pogs_dense.h"
 	typedef pogs_dense_work pogs_work;
 	typedef ok_float pogs_solver_data;
 	typedef pogs_dense_solver_flags pogs_solver_flags;

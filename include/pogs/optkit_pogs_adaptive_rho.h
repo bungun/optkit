@@ -43,7 +43,6 @@ ok_status pogs_adapt_rho(pogs_variables *z, ok_float *rho, adapt_params *params,
 {
 	if (!(settings->adaptiverho))
 		return OPTKIT_SUCCESS;
-
 	if (!z || !rho || !params || !res || !tol)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 

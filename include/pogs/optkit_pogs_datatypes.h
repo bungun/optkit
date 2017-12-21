@@ -25,8 +25,8 @@ extern "C" {
 #define kATOL (ok_float) 1e-4
 #define kRTOL (ok_float) 1e-3
 #define kTOLPROJ (ok_float) 1e-6
-#define kTOLADAPT (ok_float) 1e-3
-#define kMU (ok_float) 0
+#define kTOLADAPT (ok_float) 1
+#define kMU (ok_float) 1e-3
 #define kADAPTIVE 1
 #define kACCELERATE 0 /* CHANGE THIS TO 1 AFTER DEBUGGING */
 #define kGAPSTOP 0
