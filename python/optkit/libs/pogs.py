@@ -238,10 +238,10 @@ def attach_pogs_ctypes(lib, single_precision=False):
 		work_fields += [('A', lib.abstract_operator_p), ('P', lib.projector_p)]
 		work_fields += [
 				('operator_scale', ct.CFUNCTYPE(
-						ct.c_uint, lib.abstract_operator_p, ok_float)),
+						ct.c_uint, lib.abstract_operator_p, lib.ok_float)),
 				('operator_equilibrate', ct.CFUNCTYPE(
 						ct.c_uint, ct.c_void_p, operator_p, vector_p,
-						vector_p, ok_float))]
+						vector_p, lib.ok_float))]
 		flag_fields = [('direct', ct.c_int), ('equil_norm', lib.ok_float)]
 		priv_fields = [('d', lib.ok_float_p), ('e', lib.ok_float_p)]
 		lib.pogs_solver_data_p = lib.abstract_operator_p
@@ -297,7 +297,7 @@ def _attach_pogs_adaptrho_ccalls(lib):
 	lib.pogs_adaptive_rho_initialize.restype = ct.c_uint
 	OptkitLibs.attach_default_restype(lib.pogs_adapt_rho)
 
-def _attach_pogs_impl_common_ccalls(lib):
+def _attach_pogs_common_ccalls(lib):
 	# arguments
 	lib.pogs_graph_vector_alloc.argtypes = [
 			lib.graph_vector_p, ct.c_size_t, ct.c_size_t]
@@ -360,7 +360,7 @@ def _attach_pogs_impl_common_ccalls(lib):
 			lib.pogs_unscale_output,
 	)
 
-def _attach_pogs_impl_dense_ccalls(lib):
+def _attach_pogs_dense_ccalls(lib):
 	lib.pogs_dense_problem_data_alloc.argtypes = [
 			lib.pogs_work_p, lib.ok_float_p, lib.pogs_solver_flags_p]
 	lib.pogs_dense_problem_data_free.argtypes = [lib.pogs_work_p]
@@ -409,7 +409,7 @@ def _attach_pogs_impl_dense_ccalls(lib):
 	)
 
 
-def _attach_pogs_impl_abstract_ccalls(lib):
+def _attach_pogs_abstract_ccalls(lib):
 	## arguments
 	lib.pogs_abstract_problem_data_alloc.argtypes = [
 			lib.pogs_work_p, lib.abstract_operator_p, lib.pogs_solver_flags_p]
@@ -570,13 +570,13 @@ def attach_pogs_ccalls(lib, single_precision=False):
 	lib.c_uint_p = ct.POINTER(ct.c_uint)
 
 	_attach_pogs_adaptrho_ccalls(lib)
-	_attach_pogs_impl_common_ccalls(lib)
+	_attach_pogs_common_ccalls(lib)
 	_attach_pogs_generic_ccalls(lib)
 
 	# DENSE_IMPL CALLS
 	if lib.py_pogs_impl == 'dense':
-		_attach_pogs_impl_dense_ccalls(lib)
+		_attach_pogs_dense_ccalls(lib)
 
 	# ABSTRACT_IMPL CALLS
 	if lib.py_pogs_impl == 'abstract':
-		_attach_pogs_impl_abstract_ccalls(lib)
+		_attach_pogs_abstract_ccalls(lib)
