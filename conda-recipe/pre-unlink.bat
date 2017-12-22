@@ -1,0 +1,1 @@
+DELTREE %{PREFIX}%\_optkit_libs
