@@ -7,10 +7,9 @@ import ctypes as ct
 
 import optkit.libs.enums as enums
 import optkit.libs.error as okerr
+from optkit.tests import defs
 
 PRINTERR = okerr.optkit_print_error
-TEST_ITERATE = int(os.getenv('OPTKIT_REPEAT_NUMERICALTEST', '0'))
-VERBOSE_TEST = os.getenv('OPTKIT_TEST_VERBOSE', False)
 
 def noerr(c_call_status):
     return PRINTERR(c_call_status) == 0
@@ -34,6 +33,31 @@ def scalar_equal(first, second, tol):
               'tol * (1 + |b|): {}'
               ''.format(lhs, rhs))
     return lhs <= rhs
+
+def relaxed_scalar_equal(first, second, tol_nominal, tol_max):
+    tol = tol_nominal
+    while tol <= tol_max:
+        if scalar_equal(first, second, tol):
+            return True
+        if defs.VERBOSE_TEST:
+            print('relaxing tolerance...')
+            print('tol curr:', tol)
+            print('tol max:', tol_max)
+        tol = max(tol_max, tol * 2.)
+    return False
+
+def relaxed_vec_equal(first, second, atol_nominal, rtol_nominal, rtol_max):
+    atol = atol_nominal
+    rtol = rtol_nominal
+    while rtol <= rtol_max:
+        if vec_equal(first, second, atol, rtol):
+            return True
+        if defs.VERBOSE_TEST:
+            print('relaxing tolerances...')
+        atol *= 2
+        rtol = max(tol_max, tol * 2.)
+    return False
+
 
 def standard_vector_tolerances(lib, m, modulate_gpu=0):
     rtol = 10**(-7 + 2 * lib.FLOAT + modulate_gpu * lib.GPU)

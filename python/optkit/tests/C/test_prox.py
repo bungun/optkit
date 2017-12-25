@@ -19,6 +19,7 @@ FUNCTIONS = enums.OKFunctionEnums().dict.items()
 NO_ERR = statements.noerr
 VEC_EQ = statements.vec_equal
 SCAL_EQ = statements.scalar_equal
+RELAX_SCAL_EQ = statements.relaxed_scalar_equal
 STANDARD_VEC_TOLS = statements.standard_vector_tolerances
 
 def function_vector_values_are(lib, func_ctx, h, a, b, c, d, e, s, tol):
@@ -203,21 +204,33 @@ class ProxTestCase(unittest.TestCase):
         x_rand = 10 * np.random.random(m)
 
         for lib, (hkey, hval) in itertools.product(self.libs, FUNCTIONS):
-            # avoid domain errors with randomly generated data
-            if 'Log' in hkey or 'Exp' in hkey or 'Entr' in hkey:
-                continue
-
             if defs.VERBOSE_TEST:
                 print(hkey)
 
+            # avoid domain errors / poorly conditioned summation
+            asymmetric = ('Asymm' in hkey or hkey == 'AbsQuad')
+            strict_positive = ('Log' in hkey or 'Entr' in hkey)
+            x_test = 1. * x_rand
+            if asymmetric:
+                x_test -= 5.
+            elif strict_positive:
+                x_test += 1.
+            if 'Exp' in hkey:
+                x_test = np.log(0.01 + x_rand)
+
             with lib as lib:
-                RTOL, ATOL = STANDARD_VEC_TOLS(lib, m)
+                RTOL, _ = STANDARD_VEC_TOLS(lib, m)
                 repeat_factor = min(4, 2**defs.TEST_ITERATE)
                 RTOL *= repeat_factor
-                ATOL *= repeat_factor
+
+                TOLMAX = RTOL
+                if asymmetric:
+                    TOLMAX = 1e-3
+                if 'Exp' in hkey:
+                    TOLMAX = 1e-2
 
                 f = okcctx.CFunctionVectorContext(lib, m)
-                x = okcctx.CVectorContext(lib, m, random=True)
+                x = okcctx.CVectorContext(lib, m, value=x_test)
 
                 with f, x:
                     function_vector_set_vectors(lib, f, hval, a, b, c, d, e, s)
@@ -226,10 +239,11 @@ class ProxTestCase(unittest.TestCase):
                     fval_py = func_eval_python(f.list, x.py)
 
                     fval_c, fval_c_ptr = okcctx.gen_py_vector(lib, 1)
-                    assert NO_ERR( lib.function_eval_vector(f.c, x.c, fval_c_ptr) )
 
-                    tolmod = 2e3 if 'Asymm' in hkey else 1.
-                    assert SCAL_EQ( fval_py, fval_c, RTOL * tolmod )
+                    assert NO_ERR( lib.function_eval_vector(f.c, x.c, fval_c_ptr) )
+                    if defs.VERBOSE_TEST:
+                        print("PY:", fval_py, "\tC:", fval_c)
+                    assert RELAX_SCAL_EQ( fval_py, fval_c, RTOL, TOLMAX )
 
 
     def test_prox_eval(self):
@@ -244,12 +258,18 @@ class ProxTestCase(unittest.TestCase):
         x_rand = 10 * np.random.random(m)
 
         for lib, (hkey, hval) in itertools.product(self.libs, FUNCTIONS):
-            # avoid domain errors with randomly generated data
-            if 'Log' in hkey or 'Exp' in hkey or 'Entr' in hkey:
-                continue
-
             if defs.VERBOSE_TEST:
                 print(hkey)
+
+            # avoid domain errors with randomly generated data
+            strict_positive = ('Log' in hkey)
+            x_test = 1. * x_rand
+            if strict_positive:
+                x_test += 0.01
+            if 'Exp' in hkey:
+                x_test = np.log(0.01 * x_rand)
+            if 'Entr' in hkey:
+                x_test = np.log(1 + 0.01 * x_rand)
 
             with lib as lib:
                 RTOL, ATOL = STANDARD_VEC_TOLS(lib, m)
@@ -258,7 +278,7 @@ class ProxTestCase(unittest.TestCase):
                 ATOL *= repeat_factor
 
                 f = okcctx.CFunctionVectorContext(lib, m)
-                x = okcctx.CVectorContext(lib, m, random=True)
+                x = okcctx.CVectorContext(lib, m, value=x_test)
                 xout = okcctx.CVectorContext(lib, m)
 
                 with f, x, xout:
@@ -269,4 +289,7 @@ class ProxTestCase(unittest.TestCase):
                     prox_py = prox_eval_python(f.list, rho, x.py)
                     assert NO_ERR( lib.prox_eval_vector(f.c, rho, x.c, xout.c) )
                     xout.sync_to_py()
+                    if defs.VERBOSE_TEST:
+                        print ("|PY|:", np.linalg.norm(prox_py),
+                               "\t|C|:", np.linalg.norm(xout.py))
                     assert VEC_EQ( xout.py, prox_py, ATOL, RTOL )
