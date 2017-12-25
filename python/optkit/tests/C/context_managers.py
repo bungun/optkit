@@ -125,6 +125,9 @@ class CVectorContext(CArrayContext, CArrayIO):
     def __init__(self, lib, size, random=False, value=None):
         v = lib.vector(0, 0, None)
         v_py, v_ptr = gen_py_vector(lib, size, random=random)
+        if value is not None:
+            v_py *= 0
+            v_py += value
 
         def arr2ptr(arr): return np.ravel(arr).ctypes.data_as(type(v_ptr))
         def py2c(py_array):
