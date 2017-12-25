@@ -316,7 +316,7 @@ __DEVICE__ inline T ProxMaxPos0(T v, T rho)
 template<typename T>
 __DEVICE__ inline T ProxNegEntr(T v, T rho)
 {
-	return LambertWExp((rho * v - 1) * rho) / rho;
+	return LambertWExp(rho * v - 1 + Log(rho)) / rho;
 }
 
 template<typename T>
