@@ -41,13 +41,6 @@ def attach_base_ctypes(lib, single_precision=False):
     lib.ok_float_p = ct.POINTER(lib.ok_float)
     lib.ok_int_p = ct.POINTER(lib.ok_int)
 
-    def ok_float_pointerize(numpy_array):
-        return numpy_array.ctypes.data_as(lib.ok_float_p)
-    def ok_int_pointerize(numpy_array):
-        return numpy_array.ctypes.data_as(lib.ok_int_p)
-    lib.ok_float_pointerize = ok_float_pointerize
-    lib.ok_int_pointerize = ok_int_pointerize
-
 def attach_dense_linsys_ctypes(lib, single_precision=False):
     include_ok_defs(lib, single_precision=single_precision)
 
