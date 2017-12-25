@@ -21,12 +21,19 @@ def vec_equal(first, second, atol, rtol):
     if not lhs <= rhs:
         print('vector comparison failure:\n'
               '||a - b||: {}\n'
-              'atol + rol||b||: {}'
+              'atol + rtol||b||: {}'
               ''.format(lhs, rhs))
     return lhs <= rhs
 
 def scalar_equal(first, second, tol):
-    return abs(first - second) <= tol * (1 + abs(second))
+    lhs = abs(first - second)
+    rhs = tol * (1 + abs(second))
+    if not lhs <= rhs:
+        print('scalar comparison failure:\n'
+              '|a - b|: {}\n'
+              'tol * (1 + |b|): {}'
+              ''.format(lhs, rhs))
+    return lhs <= rhs
 
 def standard_vector_tolerances(lib, m, modulate_gpu=0):
     rtol = 10**(-7 + 2 * lib.FLOAT + modulate_gpu * lib.GPU)
