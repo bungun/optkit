@@ -148,7 +148,7 @@ def ffunc(h, xi):
     elif func =='Exp':
         return np.exp(xi)
     elif func == 'Huber':
-        return abs(xi) - 0.5 if xi >=1 else 0.5 * xi * xi
+        return abs(xi) - 0.5 if abs(xi) >=1 else 0.5 * xi*xi
     elif func == 'Identity':
         return xi
     elif func in ('IndBox01','IndEq0','IndGe0','IndLe0','Zero'):
@@ -166,9 +166,9 @@ def ffunc(h, xi):
     elif func == 'Square':
         return 0.5 * xi**2
     elif func == 'Berhu':
-        return abs(xi) if xi < 1 else (xi**2 + 1) / 2
+        return abs(xi) if abs(xi) < 1 else 0.5 * (xi*xi + 1.)
     elif func == 'AbsQuad':
-        return -xi if xi < 0 else 0.5 * xi * xi
+        return -xi if xi < 0 else 0.5 * xi*xi
     elif func == 'AbsExp':
         return -xi if xi < 0 else np.exp(xi)
     else:
@@ -196,7 +196,7 @@ def pfunc(h, xi, rhoi):
     if func =='Abs':
         return max(xi - 1./rhoi, 0) + min(xi + 1./rhoi, 0)
     elif func == 'NegEntr':
-        return (lambertw_exp(rhoi*xi - 1) * np.log(rhoi)) / rhoi
+        return lambertw_exp(rhoi*xi - 1 + np.log(rhoi)) / rhoi
     elif func == 'Exp':
         return xi - lambertw_exp(xi - np.log(rhoi))
     elif func == 'Huber':
