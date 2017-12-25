@@ -724,9 +724,13 @@ def adaptive_rho_reduces_iterations(test_context):
     params = ctx.params
     f, g = params.f, params.g
     settings, info, output = params.settings, params.info, params.output
-    settings.maxiter = 50000
+    settings.maxiter = 1000
     settings.accelerate = 0
     settings.rho = 1.
+    settings.verbose = 1
+    settings.reltol = 1e-3
+    settings.abstol = 1e-4
+    settings.toladapt = 1e0
 
     k0 = 0
 
@@ -750,9 +754,10 @@ def anderson_reduces_iterations(test_context):
     f, g = params.f, params.g
     settings, info, output = params.settings, params.info, params.output
     settings.verbose = 1
-    settings.maxiter = 50000
-    settings.reltol = 1e-6
-    settings.abstol = 1e-7
+    settings.maxiter = 1000
+    settings.reltol = 1e-4
+    # settings.toladapt = 1e-2
+    settings.adaptiverho = 1
     k0 = 0
 
     with ctx.solver as solver:
@@ -781,7 +786,7 @@ def extratol_reduces_iterations(test_context):
     f, g = params.f, params.g
     settings, info, output = params.settings, params.info, params.output
     settings.verbose = 1
-    settings.maxiter = 50000
+    settings.maxiter = 1000
     settings.reltol = 1e-12
     settings.abstol = 1e-13
     settings.adaptiverho = 1
@@ -795,7 +800,7 @@ def extratol_reduces_iterations(test_context):
             settings.toladapt = toladapt
             assert NO_ERR( lib.pogs_solve(
                     solver, params.f, params.g, settings, info, output.ptr) )
-            if k0 = 9:
+            if k0 == 0:
                 k0 = info.k
             else:
                 if info.converged:
@@ -818,7 +823,7 @@ def integrated_pogs_call_executes(test_context):
     return True
 
 def solver_data_transferable(test_context):
-    ctx = test_context.lib
+    ctx = test_context
     lib = ctx.lib
     A = ctx.A_dense
     params = ctx.params
@@ -830,46 +835,51 @@ def solver_data_transferable(test_context):
     nu_rand, _ = okcctx.gen_py_vector(lib, m)
     settings.verbose = 1
 
+    k_orig = 0
 
-#     # solve
-#     print('initial solve -> export data')
-#     assert NO_ERR( lib.pogs_solve(
-#             solver, f, g, settings, info, output.ptr) )
-#     k_orig = info.k
+    state = None
+    state_ptr = None
+    rho = None
+    rho_ptr = None
 
-#     # EXPORT/IMPORT STATE
-#     n_state = solver.contents.z.contents.state.contents.size
-#     state_out = np.array(n_state, dtype=lib.pyfloat)
-#     rho_out = np.array(1, dtype=lib.pyfloat)
+    state_ = None
+    state_ptr_ = None
+    rho_ = None
+    rho_ptr_ = None
 
-#     state_ptr = lib.ok_float_pointerize(state_out)
-#     rho_ptr = lib.ok_float_pointerize(rho_out)
+    priv_data = ctx.private_data()
 
-#     assert NO_ERR( lib.pogs_solver_save_state(
-#             state_ptr, rho_ptr, solver) )
+    # EXPORT/IMPORT STATE
+    with ctx.solver as solver:
+        # solve
+        print('initial solve -> export data')
+        assert NO_ERR( lib.pogs_solve(solver, f, g, settings, info, output.ptr) )
+        k_orig = info.k
+        n_state = solver.contents.z.contents.state.contents.size
 
-#     build_solver = lambda: lib.pogs_init(ctx.data, ctx.flags)
-#     free_solver = lambda s: lib.pogs_finish(s, 0)
-#     with okcctx.CVariableContext(build_solver, free_solver) as solver2:
-#         settings.resume = 1
-#         assert NO_ERR( lib.pogs_solver_load_state(
-#                 solver2, state_ptr, rho_ptr[0]))
-#         assert NO_ERR( lib.pogs_solve(
-#                 solver2, f, g, settings, info, output.ptr) )
+        state, state_ptr = okcctx.gen_py_vector(lib, n_state)
+        rho, rho_ptr = okcctx.gen_py_vector(lib, 1)
+        assert NO_ERR( lib.pogs_solver_save_state(state_ptr, rho_ptr, solver) )
 
-#         assert (info.k <= k_orig or not info.converged)
+        state_, state_ptr_ = okcctx.gen_py_vector(lib, n_state)
+        rho_, rho_ptr_ = okcctx.gen_py_vector(lib, 1)
+        assert NO_ERR( lib.pogs_export_solver(
+                priv_data, state_ptr_, rho_ptr_, ctx.cache_flags, solver))
 
-#     # EXPORT/IMPORT SOLVER
-#     priv_data = lib.pogs_solver_priv_data()
-#     flags = lib.pogs_solver_flags()
+    build_solver = lambda: lib.pogs_init(ctx.data, ctx.flags)
+    free_solver = lambda s: lib.pogs_finish(s, 0)
+    with okcctx.CPointerContext(build_solver, free_solver) as solver2:
+        settings.resume = 1
+        assert NO_ERR( lib.pogs_solver_load_state(solver2, state_ptr, rho[0]))
+        assert NO_ERR( lib.pogs_solve(
+                solver2, f, g, settings, info, output.ptr) )
+        assert (info.k <= k_orig or not info.converged)
 
-#     assert NO_ERR( lib.pogs_export_solver(
-#             priv_data, state_ptr, rho_ptr, flags, solver))
 
-#     build_solver = lambda: lib.pogs_load_solver(
-#             priv_data, state_ptr, rho_out[0], flags)
-#     with okcctx.CVariableContext(build_solver, free_solver) as solver3:
-#         settings.resume = 1
-#         assert NO_ERR( lib.pogs_solve(
-#                 solver3, f, g, settings, info, output.ptr) )
-#     return True
+    build_solver = lambda: lib.pogs_load_solver(
+            priv_data, state_ptr_, rho_[0], ctx.cache_flags)
+    with okcctx.CPointerContext(build_solver, free_solver) as solver3:
+        settings.resume = 1
+        assert NO_ERR( lib.pogs_solve(
+                solver3, f, g, settings, info, output.ptr) )
+    return True

@@ -41,7 +41,7 @@ typedef struct POGSDenseSolverPrivateData {
 ok_status pogs_dense_problem_data_alloc(pogs_dense_work *W, ok_float *A,
 	const pogs_dense_solver_flags *flags);
 ok_status pogs_dense_problem_data_free(pogs_dense_work *W);
-ok_status pogs_dense_get_init_data(ok_float *A,
+ok_status pogs_dense_get_init_data(ok_float **A,
 	const pogs_dense_solver_private_data *data,
 	const pogs_dense_solver_flags *flags);
 
@@ -95,14 +95,14 @@ ok_status pogs_dense_problem_data_free(pogs_dense_work *W)
 	return err;
 }
 
-ok_status pogs_dense_get_init_data(ok_float *A,
+ok_status pogs_dense_get_init_data(ok_float **A,
 	const pogs_dense_solver_private_data *data,
 	const pogs_dense_solver_flags *flags)
 {
 	OK_CHECK_PTR(data);
-	if (A)
+	if (*A)
 		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
-	A = data->A_equil;
+	*A = data->A_equil;
 	return OPTKIT_SUCCESS;
 }
 
@@ -177,6 +177,8 @@ ok_status pogs_dense_save_work(pogs_dense_solver_private_data *data,
 	#endif
 	OK_CHECK_ERR( err, vector_memcpy_av(data->d, W->d, 1) );
 	OK_CHECK_ERR( err, vector_memcpy_av(data->e, W->e, 1) );
+	flags->m = W->A->size1;
+	flags->n = W->A->size2;
 	return err;
 }
 

@@ -15,21 +15,6 @@ import optkit.tests.C.pogs_statements as pogs_test
 
 NO_ERR = statements.noerr
 
-class PogsDenseLibsTestCase(unittest.TestCase):
-    """TODO: docstring"""
-    @classmethod
-    def setUpClass(self):
-        self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
-        os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-        self.libs = PogsDenseLibs()
-
-    @classmethod
-    def tearDownClass(self):
-        os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
-
-    def test_libs_exist(self):
-        assert any([self.libs.get(*c) for c in defs.LIB_CONDITIONS])
-
 class PogsDenseTestCase(unittest.TestCase):
     """TODO: docstring"""
     @classmethod
@@ -49,6 +34,9 @@ class PogsDenseTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(self):
         os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
+
+    def test_libs_exist(self):
+        assert any(self.libs)
 
     def test_pogs_dense_default_settings(self):
         for lib in self.libs:
@@ -103,8 +91,8 @@ class PogsDenseTestCase(unittest.TestCase):
             with DenseTest(lib, self.A_test, layout) as ctx:
                 assert pogs_test.warmstart_reduces_iterations(ctx)
 
-#     def test_pogs_dense_io(self):
-#         for (lib, layout) in self.LIBS_LAYOUTS:
-#             with DenseTest(lib, self.A_test, layout) as ctx:
-#                 assert pogs_test.solver_data_transferable(ctx)
+    def test_pogs_dense_io(self):
+        for (lib, layout) in self.LIBS_LAYOUTS:
+            with DenseTest(lib, self.A_test, layout) as ctx:
+                assert pogs_test.solver_data_transferable(ctx)
 

@@ -595,7 +595,7 @@ pogs_solver * pogs_load_solver(const pogs_solver_private_data *data,
 	pogs_solver *solver = OK_NULL;
 	pogs_solver_data *A = OK_NULL;
 
-	err = OK_SCAN_ERR( POGS(get_init_data)(A, data, flags) );
+	err = OK_SCAN_ERR( POGS(get_init_data)(&A, data, flags) );
 	ok_alloc(solver, sizeof(*solver));
 	OK_CHECK_ERR( err, pogs_solver_alloc(solver, A, flags) );
 	OK_CHECK_ERR( err, POGS(load_work)(solver->W, data, flags) );

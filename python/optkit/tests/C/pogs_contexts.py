@@ -5,7 +5,6 @@ import collections
 
 from optkit.utils import proxutils
 from optkit.libs.enums import OKEnums
-from optkit.tests.C.base import OptkitCTestCase
 from optkit.tests.C import statements
 import optkit.tests.C.context_managers as okcctx
 
@@ -68,7 +67,31 @@ def load_to_local(lib, py_vector, c_vector):
     assert NO_ERR( lib.vector_memcpy_av(
             py_vector.ctypes.data_as(lib.ok_float_p), c_vector, 1) )
 
-class EquilibratedMatrix(object):
+
+class PogsCache:
+    def __init__(self, lib, m, n):
+        self.lib = lib
+        self.d = self.array(m)
+        self.e = self.array(n)
+
+    def pointer(self, key):
+        if hasattr(self, key):
+            array = getattr(self, key)
+            return array.ctypes.data_as(self.lib.ok_float_p)
+        else:
+            return None
+
+    def array(self, shape):
+        return np.zeros(shape).astype(self.lib.pyfloat)
+
+class PogsCacheDense(PogsCache):
+    def __init__(self, lib, m, n):
+        PogsCache.__init__(self, lib, m, n)
+        mindim = min(m, n)
+        self.A_equil = self.array((m, n))
+        self.ATA_cholesky = self.array((mindim, mindim))
+
+class EquilibratedMatrix:
     def __init__(self, d, A, e):
         self.dot = lambda x: d * A.dot(e * x)
         self.shape = A.shape
@@ -76,6 +99,9 @@ class EquilibratedMatrix(object):
     @property
     def T(self):
         return self.transpose()
+
+def null_fn():
+    return None
 
 class Base:
     def __init__(self, libctx, m, n, obj='Abs'):
@@ -97,6 +123,8 @@ class Base:
         self.params.res = lib.pogs_residuals()
         self.params.tol = lib.pogs_tolerances()
         self.params.obj = lib.pogs_objective_values()
+        self.cache = None
+        self.cache_flags = lib.pogs_solver_flags()
 
         class SolverCtx:
             def __init__(self, data, flags):
@@ -137,6 +165,7 @@ class Base:
         self._g.__exit__(*exc)
         self._libctx.__exit__(*exc)
 
+
 class Dense(Base):
     def __init__(self, libctx, A, layout=OKEnums.CblasRowMajor, obj='Abs'):
         m, n = A.shape
@@ -148,6 +177,23 @@ class Dense(Base):
         self.data = self.A_dense.ctypes.data_as(lib.ok_float_p)
         self.flags = lib.pogs_solver_flags(m, n, layout)
 
+        def cache_constructor():
+            self.cache = PogsCacheDense(lib, m, n)
+            rm = lib.enums.CblasRowMajor
+            cm = lib.enums.CblasColMajor
+            if self.cache.A_equil.flags.c_contiguous:
+                self.cache_flags.ord = lib.enums.CblasRowMajor
+            else:
+                self.cache_flags.ord = ilb.enums.CblasColMajor
+            return self.cache
+        def private_data():
+            cache = cache_constructor()
+            priv_data = lib.pogs_solver_priv_data()
+            for key, _ in priv_data._fields_:
+                setattr(priv_data, key, cache.pointer(key))
+            return priv_data
+        self.private_data = private_data
+
     def __enter__(self):
         Base.__enter__(self)
         self.solver = self.SolverCtx(self.data, self.flags)
@@ -158,7 +204,7 @@ class Dense(Base):
         del self.solver
 
 class Abstract(Base):
-    def __init__(self, lib, A, optype, direct, equil, obj='Abs', solver=True):
+    def __init__(self, lib, A, optype, direct, equil, obj='Abs'):
         m, n = A.shape
         Base.__init__(self, lib, m, n, obj=obj)
         self.optype = optype
@@ -171,6 +217,17 @@ class Abstract(Base):
         self.data = None
         self.flags = lib.pogs_solver_flags(direct, equil)
 
+        def cache_constructor():
+            self.cache = PogsCache(lib, m, n)
+            return self.cache
+        def private_data():
+            cache = cache_constructor()
+            priv_data = lib.pogs_solver_priv_data()
+            for key, _ in priv_data._fields_:
+                setattr(priv_data, key, cache.pointer(key))
+            return priv_data
+        self.private_data = private_data
+
     def __enter__(self):
         Base.__enter__(self)
         self.op = self.data = self._op.__enter__()
@@ -178,7 +235,8 @@ class Abstract(Base):
         return self
 
     def __exit__(self):
-        if self._solver:
+        if self.solver:
             oktest.assert_noerr(self.lib.pogs_free(self.solver))
         self._op.__exit__()
         Base.__exit__(self)
+        del self.solver
