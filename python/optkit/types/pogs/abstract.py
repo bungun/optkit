@@ -5,102 +5,70 @@ import numpy as np
 import ctypes as ct
 
 from optkit.types.operator import OperatorTypes
-from optkit.types.pogs.common import PogsCommonTypes
+from optkit.types.pogs.base import PogsTypesBase
 
 class PogsAbstractTypes(PogsCommonTypes):
     def __init__(self, backend):
         lib = backend.pogs_abstract
-        PogsCommonTypes.__init__(self, lib)
-        Objective = self.Objective
-        SolverSettings = self.SolverSettings
-        SolverInfo = self.SolverInfo
-        SolverOutput = self.SolverOutput
+        PogsTypesBase.__init__(self, lib)
+
+        _SolverBase = self._SolverBase
+        _SolverCacheBase = self._SolverCacheBase
 
         Operator = OperatorTypes(backend, lib).AbstractLinearOperator
 
-        class Solver(object):
-            def __del__(self):
-                self.__unregister_solver()
-                self.A.release_operator()
+        class SolverCache(_SolverCacheBase):
+            def __init__(self, m, n, cache=None):
+                shapes = {
+                        'd': m,
+                        'e': n,
+                }
+                _SolverCacheBase.__init__(self, shapes, cache)
+                # TODO: OTHER PROCESS OPERATOR
 
+        class Solver(_SolverBase):
             def __init__(self, A, **options):
-                self.__A = Operator(A)
-                self.shape = (self.m, self.n) = (m, n) = self.A.shape
-                self.__f = np.zeros(m).astype(lib.function)
-                self.__f_ptr = self.__f.ctypes.data_as(lib.function_p)
-                self.__f_c = lib.function_vector(self.m, self.__f_ptr)
-                self.__g = np.zeros(n).astype(lib.function)
-                self.__g_ptr = self.__g.ctypes.data_as(lib.function_p)
-                self.__g_c = lib.function_vector(self.n, self.__g_ptr)
-                self.__c_solver = None
+                if not isinstance(A, np.ndarray) or len(A.shape) != 2:
+                    raise TypeError('input must be a 2-d {}'.format(np.ndarray))
+                _SolverBase.__init__(self, A, **options)
 
-                NO_INIT = bool(options.pop('no_init', False))
-                DIRECT = int(options.pop('direct', False))
-                EQUILNORM = float(options.pop('equil_norm', 1.))
+            def _unregister_solver(self):
+                _SolverBase._unregister_solver(self)
+                if self.A is not None:
+                    self.A.release_operator()
 
-                if not NO_INIT:
-                    self.__register_solver(lib.pogs_init(
-                            self.A.c_ptr, DIRECT, EQUILNORM))
+            @A.setter
+            def A(self, A):
+                if self.A is not None:
+                    raise AttributeError('solver.A is set-once attribute')
+                self._A = Operator(A)
 
-                self.settings = SolverSettings()
-                self.info = SolverInfo()
-                self.output = SolverOutput(m, n)
-                self.settings.update(**options)
-                self.first_run = True
+            def _build_solver_data(self, A):
+                return A.c_ptr
 
-            @property
-            def A(self):
-                return self.__A
+            def _build_solver_flags(self, A, **options):
+                direct = int(options.pop('direct', False))
+                equil_norm = float(options.pop('equil_norm', 1.))
+                return lib.pogs_solver_flags(direct, equil_norm)
 
-            @property
-            def c_solver(self):
-                return self.__c_solver
+            def _solver_cache_from_dict(self, cache, **options):
+                err = (
+                    'd' not in cache or
+                    'e' not in cache
+                )
+                # TODO: OPERATOR IO
 
-            def __register_solver(self, solver):
-                self.__c_solver = solver
-                self.exit_call = lib.pogs_finish
+                solver_cache = SolverCache(self.m, self.n, cache)
 
-            def __unregister_solver(self):
-                if self.c_solver is None:
-                    return
-                self.exit_call(self.c_solver, 0)
-                self.__c_solver = None
-                self.exit_call = lambda arg1, arg2: None
-
-            def __update_function_vectors(self, f, g):
-                for i in xrange(f.size):
-                    self.__f[i] = lib.function(
-                            f.h[i], f.a[i], f.b[i], f.c[i], f.d[i], f.e[i],
-                            f.s[i])
-
-                for j in xrange(g.size):
-                    self.__g[j] = lib.function(
-                            g.h[j], g.a[j], g.b[j], g.c[j], g.d[j], g.e[j],
-                            g.s[j])
-
-            def solve(self, f, g, **options):
-                if self.c_solver is None:
+                if err:
                     raise ValueError(
-                            'No solver intialized, solve() call invalid')
+                            'Minimal requirements to load solver '
+                            'not met. Specified file(s) must contain '
+                            'at least one .npz file with entries '
+                            '"d" and "e", or the specified folder '
+                            'must contain .npy files of the same names.')
 
-                if not isinstance(f, Objective) and isinstance(g, Objective):
-                    raise TypeError(
-                        'inputs f, g must be of type {} \nprovided: {}, '
-                        '{}'.format(Objective, type(f), type(g)))
-
-                if not (f.size == self.m and g.size == self.n):
-                    raise ValueError(
-                        'inputs f, g not compatibly sized with solver'
-                        '\nsolver dimensions ({}, {})\n provided: '
-                        '({}{})'.format(self.m, self.n, f.size, g.size))
-
-
-#               # TODO : logic around resume, warmstart, rho input
-                self.__update_function_vectors(f, g)
-                self.settings.update(**options)
-                lib.pogs_solve(
-                        self.c_solver, self.__f_c, self.__g_c, self.settings.c,
-                        self.info.c, self.output.c)
-                self.first_run = False
+            def _allocate_solver_cache(self):
+                return SolverCache(lib, self.m, self.n)
 
         self.Solver = Solver

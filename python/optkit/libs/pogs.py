@@ -197,6 +197,7 @@ def attach_pogs_datatypes_ctypes(lib, single_precision=False):
 
 	lib.pogs_variables = PogsVariables
 	lib.pogs_variables_p = ct.POINTER(lib.pogs_variables)
+	lib.POGS_STATE_LENGTH = 6
 
 def attach_pogs_adaptrho_ctypes(lib, single_precision=False):
 	include_ok_pogs_datatypes(lib, single_precision=single_precision)
