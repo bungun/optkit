@@ -18,6 +18,8 @@ ok_status lapack_destroy_handle(void *lapack_handle);
 /* QR SOLVE */
 
 /* LU SOLVE */
+ok_status lapack_solve_LU_flagged(void *hdl, matrix *A, vector *x,
+	int_vector *pivot, int silence_lapack_err);
 ok_status lapack_solve_LU(void *hdl, matrix *A, vector *x, int_vector *pivot);
 ok_status lapack_solve_LU_matrix(void *hdl, matrix *A, matrix *X,
 	int_vector *pivot);

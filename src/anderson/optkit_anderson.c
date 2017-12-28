@@ -81,7 +81,10 @@ ok_status anderson_solve(void *hdl, matrix *F, matrix *F_gram, vector *alpha,
 
 	/* LL' = F_gram */
 	if (!err)
-		cholesky_err = OK_SCAN_ERR(linalg_cholesky_decomp(hdl, F_gram) );
+		cholesky_err = linalg_cholesky_decomp_flagged(hdl, F_gram,
+			kANDERSON_SILENCE_CHOLESKY);
+	if (!kANDERSON_SILENCE_CHOLESKY)
+		OK_SCAN_ERR(cholesky_err);
 
 	if (cholesky_err && mu > 0) {
 		OK_CHECK_ERR( err, anderson_regularized_gram(hdl, F, F_gram, mu) );

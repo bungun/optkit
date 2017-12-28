@@ -4,57 +4,6 @@
 extern "C" {
 #endif
 
-// ok_status anderson_update_params(alternate_accelerator *aa, vector *iterate,
-// 	vector *prev_iterate, size_t index)
-// {
-// 	ok_status err = OPTKIT_SUCCESS;
-// 	vector gcol, fcol, xcol;
-// 	/*
-// 	* g = iterate
-// 	* DG[:, index] = g_prev - g
-// 	*/
-// 	OK_CHECK_ERR( err, matrix_column(&gcol, aa->DG, index) );
-// 	OK_CHECK_ERR( err, vector_memcpy_vv(&gcol, aa->g) );
-// 	OK_CHECK_ERR( err, vector_memcpy_vv(aa->g, iterate) );
-// 	OK_CHECK_ERR( err, vector_sub(&gcol, aa->g) );
-
-// 	/*
-// 	* DF[:, index] = f_prev - f
-// 	* (step 1: add f_prev)
-// 	*/
-// 	OK_CHECK_ERR( err, matrix_column(&fcol, aa->DF, index) );
-// 	OK_CHECK_ERR( err, vector_memcpy_vv(&fcol, aa->f) );
-
-// 	/*
-// 	* DX[:, index] = x_prev - x
-// 	* (step 1: add x_prev)
-// 	*/
-// 	OK_CHECK_ERR( err, matrix_column(&xcol, aa->DX, index) );
-// 	OK_CHECK_ERR( err, vector_memcpy_vv(&xcol, aa->x) );
-
-// 	/* calculate f = g - x */
-// 	OK_CHECK_ERR( err, vector_memcpy_vv(aa->x, prev_iterate) );
-// 	OK_CHECK_ERR( err, vector_memcpy_vv(aa->f, aa->g) );
-// 	OK_CHECK_ERR( err, vector_sub(aa->f, aa->x) );
-
-// 	/*
-// 	* DF[:, index] = f_prev - f
-// 	* (step 2: subtract f)
-// 	*/
-// 	OK_CHECK_ERR( err, vector_sub(&fcol, aa->f) );
-
-// 	/*
-// 	* DX[:, index] = x_prev - x
-// 	* (step 2: subtract x)
-// 	*/
-// 	OK_CHECK_ERR( err, vector_sub(&xcol, aa->x) );
-
-// 	/* DXDF = DX' * DF */
-// 	OK_CHECK_ERR( err, blas_gemm(aa->blas_handle, CblasTrans,
-// 		CblasNoTrans, kOne, aa->DX, aa->DF, kZero, aa->DXDF) );
-// 	return err;
-// }
-
 ok_status anderson_difference_solve(void *blas_hdl, void *lapack_hdl, matrix *DX,
 	matrix *DF, matrix *DXDF, vector *f, vector *alpha, int_vector *pivot)
 {
@@ -68,7 +17,12 @@ ok_status anderson_difference_solve(void *blas_hdl, void *lapack_hdl, matrix *DX
 		kZero, alpha) );
 
 	/* alpha = inv(DX'DF)DX'f */
-	OK_CHECK_ERR( err, lapack_solve_LU(lapack_hdl, DXDF, alpha, pivot) );
+	if (!err)
+		err = lapack_solve_LU_flagged(lapack_hdl, DXDF, alpha, pivot,
+			kANDERSON_SILENCE_LU);
+	if (!kANDERSON_SILENCE_LU)
+		OK_SCAN_ERR(err);
+
 	return err;
 }
 
@@ -93,18 +47,10 @@ ok_status anderson_difference_accelerate_template(void *blas_handle,
 	vector xcol, fcol, gcol;
 
 	/* CHECK POINTERS, COMPATIBILITY OF X */
-	OK_CHECK_MATRIX(DX);
 	OK_CHECK_MATRIX(DF);
 	OK_CHECK_MATRIX(DG);
-	OK_CHECK_MATRIX(DXDF);
-	OK_CHECK_VECTOR(f);
-	OK_CHECK_VECTOR(g);
-	OK_CHECK_VECTOR(x);
-	OK_CHECK_VECTOR(alpha);
-	OK_CHECK_VECTOR(pivot);
 	OK_CHECK_PTR(iter);
 	OK_CHECK_VECTOR(iterate);
-	OK_CHECK_VECTOR(x_reduced);
 	if (DG->size1 != iterate->size)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 

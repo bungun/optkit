@@ -4,6 +4,8 @@
 #include "optkit_dense.h"
 #include "optkit_anderson_reductions.h"
 
+#define kANDERSON_SILENCE_CHOLESKY 1
+
 #ifdef __cplusplus
 extern "C" {
 #endif

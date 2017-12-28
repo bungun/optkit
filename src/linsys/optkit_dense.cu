@@ -127,7 +127,8 @@ static __global__ void __block_trsv(ok_float *A, uint iter, uint n, uint ld,
  *
  * Stores result in Lower triangular part.
  */
-ok_status linalg_cholesky_decomp(void *linalg_handle, matrix *A)
+ok_status linalg_cholesky_decomp_flagged(void *linalg_handle, matrix *A,
+	int silence_domain_err)
 {
 	ok_status err;
 	cudaStream_t stm;
@@ -154,7 +155,14 @@ ok_status linalg_cholesky_decomp(void *linalg_handle, matrix *A)
 			__block_chol<<<1, block_dim, 0, stm>>>(A->data, i,
 				(uint) A->ld, A->order);
 		cudaDeviceSynchronize();
-		OK_RETURNIF_ERR( OK_STATUS_CUDA );
+		if (silence_domain_err) {
+                        err = OK_STATUS_CUDA_QUIET;
+                        if (err)
+                        	return err;
+		} else {
+
+			OK_RETURNIF_ERR( OK_STATUS_CUDA );
+		}
 
 		if (i == num_tiles - 1u)
 			break;
@@ -180,6 +188,11 @@ ok_status linalg_cholesky_decomp(void *linalg_handle, matrix *A)
 			CblasNoTrans, -kOne, &L21, kOne, &A22) );
 	}
 	return err;
+}
+
+ok_status linalg_cholesky_decomp(void *linalg_handle, matrix *A)
+{
+	return linalg_cholesky_decomp_flagged(linalg_handle, A, 0);
 }
 
 /* Cholesky solve */
@@ -228,7 +241,7 @@ static inline uint calc_grid_dim_(uint size, uint block_size)
 
 template <typename T>
 static __global__ void strided_memcpy_(T *out, const uint stride_out,
-        const T *in, const uint stride_in, uint size)
+	const T *in, const uint stride_in, uint size)
 {
 	const uint idx = blockIdx.x * blockDim.x + threadIdx.x;
 	uint i;
@@ -293,8 +306,8 @@ struct opMinIdx{
 template <typename T, uint blockSize, typename loadingOp, typename reductionOp>
 static __global__ void row_reduce(T *const in, uint rowstride_in,
 	uint colstride_in, T *out, uint rowstride_out, uint colstride_out,
-        uint row, uint n, loadingOp transform_reduce_, reductionOp reduce_,
-        const T default_value)
+	uint row, uint n, loadingOp transform_reduce_, reductionOp reduce_,
+	const T default_value)
 {
 	uint col = threadIdx.x;
 	uint block_stride = blockSize * 2;
@@ -519,7 +532,7 @@ static __global__ void row_transform(T *in, uint rowstride_in,
 template<typename T>
 static ok_status matrix_vector_op_setdims(const matrix_<T> *A,
 	const vector_<T> *v, size_t *size1, size_t *size2, size_t *stride1,
-        size_t *stride2, const int manipulate_by_row)
+	size_t *stride2, const int manipulate_by_row)
 {
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_VECTOR(v);

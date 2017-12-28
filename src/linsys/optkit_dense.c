@@ -25,7 +25,8 @@ inline void __matrix_set_colmajor(matrix *A, size_t i, size_t j, ok_float x)
 }
 
 /* Non-Block Cholesky. */
-static ok_status __linalg_cholesky_decomp_noblk(void *linalg_handle, matrix *A)
+static ok_status __linalg_cholesky_decomp_noblk(void *linalg_handle, matrix *A,
+	int silence_domain_err)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	ok_float l11;
@@ -38,10 +39,18 @@ static ok_status __linalg_cholesky_decomp_noblk(void *linalg_handle, matrix *A)
 	for (i = 0; i < n && !err; ++i) {
 		/* L11 = sqrt(A11) */
 		l11 = A->data[i + i * A->ld];
-		if (l11 < 0)
-			return OK_SCAN_ERR( OPTKIT_ERROR_DOMAIN );
-		else if (l11 == 0)
-			return OK_SCAN_ERR( OPTKIT_ERROR_DIVIDE_BY_ZERO );
+		if (l11 < 0) {
+			if (silence_domain_err)
+				return OPTKIT_ERROR_DOMAIN;
+			else
+				return OK_SCAN_ERR( OPTKIT_ERROR_DOMAIN );
+		}
+		if (l11 == 0) {
+			if (silence_domain_err)
+				return OPTKIT_ERROR_DIVIDE_BY_ZERO;
+			else
+				return OK_SCAN_ERR( OPTKIT_ERROR_DIVIDE_BY_ZERO );
+		}
 
 		l11 = MATH(sqrt)(l11);
 		A->data[i + i * A->ld] = l11;
@@ -71,10 +80,12 @@ static ok_status __linalg_cholesky_decomp_noblk(void *linalg_handle, matrix *A)
  *
  * Stores result in Lower triangular part.
  */
-ok_status linalg_cholesky_decomp(void *linalg_handle, matrix *A)
+ok_status linalg_cholesky_decomp_flagged(void *linalg_handle, matrix *A,
+	int silence_domain_err)
 {
 	OK_CHECK_MATRIX(A);
 
+	ok_status err = OPTKIT_SUCCESS;
 	matrix L11, L21, A22;
 	size_t n = A->size1, blk_dim, i, n11;
 
@@ -94,28 +105,37 @@ ok_status linalg_cholesky_decomp(void *linalg_handle, matrix *A)
 		n11 = blk_dim < n - i ? blk_dim : n - i;
 
 		/* L11 = chol(A11) */
-		OK_RETURNIF_ERR( matrix_submatrix(&L11, A, i, i, n11, n11) );
-		OK_RETURNIF_ERR( __linalg_cholesky_decomp_noblk(linalg_handle,
-			&L11) );
+		OK_CHECK_ERR( err, matrix_submatrix(&L11, A, i, i, n11, n11) );
+		if (!err)
+			err = __linalg_cholesky_decomp_noblk(
+				linalg_handle, &L11, silence_domain_err);
+		if (!silence_domain_err)
+			OK_SCAN_ERR(err);
 
 		if (i + blk_dim >= n)
 			break;
 
-                /* L21 = A21 L21^-ok_float */
-		OK_RETURNIF_ERR( matrix_submatrix(&L21, A, i + n11, i,
+		/* L21 = A21 L21^-ok_float */
+		OK_CHECK_ERR( err, matrix_submatrix(&L21, A, i + n11, i,
 			n - i - n11, n11) );
-		OK_RETURNIF_ERR( blas_trsm(linalg_handle, CblasRight,
+		OK_CHECK_ERR( err, blas_trsm(linalg_handle, CblasRight,
 			CblasLower, CblasTrans, CblasNonUnit, kOne, &L11,
 			&L21) );
 
 		/* A22 -= L21*L21^ok_float */
-		OK_RETURNIF_ERR( matrix_submatrix(&A22, A, i + blk_dim,
-			i + blk_dim, n - i - blk_dim, n - i - blk_dim) );
+		OK_CHECK_ERR( err, matrix_submatrix(&A22, A, i + blk_dim,
+			                       i + blk_dim, n - i - blk_dim,
+			                       n - i - blk_dim) );
 
-		OK_RETURNIF_ERR( blas_syrk(linalg_handle, CblasLower,
+		OK_CHECK_ERR( err, blas_syrk(linalg_handle, CblasLower,
 			CblasNoTrans, -kOne, &L21, kOne, &A22) );
 	}
-	return OPTKIT_SUCCESS;
+	return err;
+}
+
+ok_status linalg_cholesky_decomp(void *linalg_handle, matrix *A)
+{
+	return linalg_cholesky_decomp_flagged(linalg_handle, A, 0);
 }
 
 /* Cholesky solve */

@@ -14,7 +14,8 @@ ok_status lapack_destroy_handle(void *lapack_handle)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status lapack_solve_LU(void *hdl, matrix *A, vector *x, int_vector *pivot)
+ok_status lapack_solve_LU_flagged(void *hdl, matrix *A, vector *x,
+	int_vector *pivot, int silence_lapack_err)
 {
 	lapack_int *ipiv = OK_NULL;
 	lapack_int err = 0;
@@ -42,10 +43,19 @@ ok_status lapack_solve_LU(void *hdl, matrix *A, vector *x, int_vector *pivot)
 	LAPACK(gesv)(&n, &nrhs, A->data, &lda, ipiv, x->data, &ldb, &err);
 
 	if (err) {
-		printf("%s%i\n", "LAPACK ERROR: ", (int) err);
-		return OK_SCAN_ERR( OPTKIT_ERROR_LAPACK );
+		if (silence_lapack_err) {
+			return OPTKIT_ERROR_LAPACK;
+		} else {
+			printf("%s%i\n", "LAPACK ERROR: ", (int) err);
+			return OK_SCAN_ERR( OPTKIT_ERROR_LAPACK );
+		}
 	}
 	return OPTKIT_SUCCESS;
+}
+
+ok_status lapack_solve_LU(void *hdl, matrix *A, vector *x, int_vector *pivot)
+{
+	return lapack_solve_LU_flagged(hdl, A, x, pivot, 0);
 }
 
 // ok_status lapack_solve_LU_matrix(void *hdl, matrix *A, matrix *X,

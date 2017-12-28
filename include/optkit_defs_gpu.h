@@ -22,6 +22,8 @@ const unsigned int kMaxGridSize = 65535u;
 #define OK_STATUS_CUDA ok_cuda_status(cudaGetLastError(), __FILE__, __LINE__, \
 		__func__)
 
+#define OK_STATUS_CUDA_QUIET cudaGetLastError() != cudaSuccess ? OPTKIT_ERROR_CUDA : OPTKIT_SUCCESS;
+
 #define OK_CHECK_CUDA(err, expr) \
 	do { \
 		if (!err) \
