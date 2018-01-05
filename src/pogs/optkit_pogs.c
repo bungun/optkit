@@ -71,6 +71,7 @@ ok_status pogs_solver_alloc(pogs_solver *solver, pogs_solver_data *A,
 	// 	(size_t) solver->settings->anderson_lookback) );
 	if (err)
 		OK_MAX_ERR( err, pogs_solver_free(solver) );
+	solver->rho = kOne;
 	return err;
 }
 
