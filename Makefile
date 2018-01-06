@@ -63,7 +63,6 @@ ifdef USE_OPENMP
 CCFLAGS+=-fopenmp=libopenmp
 CXXFLAGS+=-fopenmp=libopenmp
 endif
-C_LAPACKE=0
 else
 LDFLAGS_+=-lblas
 CULDFLAGS_+=-L/usr/local/cuda/lib64 
@@ -72,19 +71,22 @@ ifdef USE_OPENMP
 CCFLAGS+=-fopenmp
 CXXFLAGS+=-fopenmp
 endif
-C_LAPACKE=1
 endif
 
-CULDFLAGS_+=-lcudart -lcublas -lcusparse
+CULDFLAGS_+=-lcudart -lcublas -lcusparse -lcusolver
 
-ifndef NO_LAPACK
-ifneq ($(C_LAPACKE), 0)
+
+C_LAPACKE=0
+ifneq ($(shell uname -s), Darwin)
+LAPACKE_INSTALLED=$(shell ldconfig -p | grep liblapacke)
+ifneq ($(LAPACKE_INSTALLED),)
+C_LAPACKE=1
 LDFLAGS_+=-llapacke
 else
 LDFLAGS_+=-llapack
 endif
-CULDFLAGS_+=-lcusolver
 endif
+
 
 # make options
 ifndef GPU
@@ -94,6 +96,7 @@ endif
 ifndef FLOAT
 FLOAT=0
 endif
+
 
 # optional compiler flags 
 OPT_FLAGS=
