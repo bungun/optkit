@@ -70,9 +70,12 @@ class PogsDenseTestCase(unittest.TestCase):
 
     def test_pogs_dense_accelerate(self):
         for (lib, layout) in self.LIBS_LAYOUTS:
-            with DenseTest(lib, self.A_test, layout) as ctx:
+            with DenseTest(lib, self.A_test, layout, obj='Logistic') as ctx:
+                ctx.params.settings.maxiter = 10000
                 assert pogs_test.overrelaxation_reduces_iterations(ctx)
+                ctx.params.settings.maxiter = 2000
                 assert pogs_test.adaptive_rho_reduces_iterations(ctx)
+                ctx.params.settings.maxiter = 500
                 assert pogs_test.anderson_reduces_iterations(ctx)
                 assert pogs_test.extratol_reduces_iterations(ctx)
 

@@ -1,47 +1,30 @@
 from optkit.compat import *
 
 import os
+import numpy as np
 import itertools
+import unittest
 
 import optkit.libs.enums as enums
-from optkit.libs.pogs import PogsLibs
-from optkit.tests.defs import OptkitTestCase
-import optkit.tests.C.statements as oktest
-import optkit.test.C.context_managers as okcctx
-from  optkit.tests.C import pogs_contexts
-from optkit.tests.C.pogs_base import OptkitCPogsTestCase
+from optkit.libs.pogs import PogsAbstractLibs
+from optkit.tests import defs
+from optkit.tests.C import statements
+from optkit.tests.C import context_managers as okcctx
+from optkit.tests.C.pogs_contexts import Abstract as AbstractTest
+import optkit.tests.C.pogs_statements as pogs_test
 
-class PogsAbstractLibsTestCase(OptkitTestCase):
+NO_ERR = statements.noerr
+
+
+class PogsAbstractTestCase(unittest.TestCase):
     """TODO: docstring"""
     @classmethod
     def setUpClass(self):
         self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
         os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-        self.libs = PogsLibs()
-
-    @classmethod
-    def tearDownClass(self):
-        os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
-
-    def test_libs_exist(self):
-        self.assertTrue( any([self.libs.get(**c) for c in self.CONDITIONS]) )
-
-
-class PogsAbstractTestCase(OptkitCPogsTestCase):
-    """TODO: docstring"""
-    @classmethod
-    def setUpClass(self):
-        self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
-        os.environ['OPTKIT_USE_LOCALLIBS'] = '1'
-        libs = map(lambda c: oktest.CLibContext(
-                None, PogsLibs(), c), self.CONDITIONS)
-        self.libs = filter(lambda ctx: ctx.lib is not None, libs)
-        self.A_test = self.A_test_gen
-        m, n = self.m, self.n = self.shape
-        self.RTOL = 10**(7 - 2 * lib.FLOAT)
-        self.ATOLM = RTOL * m**0.5
-        self.ATOLN = RTOL * n**0.5
-        self.ATOLMN = RTOL * (m + n)**0.5
+        self.libs = okcctx.lib_contexts(PogsAbstractLibs())
+        self.A_test = defs.A_test_gen()
+        m, n = self.m, self.n = defs.shape()
 
     def setUp(self):
         operators = ['dense', 'sparse']
@@ -53,63 +36,103 @@ class PogsAbstractTestCase(OptkitCPogsTestCase):
         self.LIBS_OPS_DIRECT_EQUIL = list(itertools.product(
                 self.libs, operators, direct, equil))
 
-    def tearDown(self):
-        self.free_all_vars()
-        self.exit_call()
-
     @classmethod
     def tearDownClass(self):
         os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
+    def test_libs_exist(self):
+        assert any(self.libs)
+
     def test_pogs_abstract_operator_gen_free(self):
         for (lib, op) in self.LIBS_OPS:
-            with lib:
-                with oktest.c_operator_context(lib, op, self.A_test) as op:
-                    assert isinstance(o, lib.operator_p)
+            with lib as lib:
+                with okcctx.c_operator_context(lib, op, self.A_test) as o:
+                    assert isinstance(o, lib.abstract_operator_p)
 
     def test_pogs_abstract_default_settings(self):
         for lib in self.libs:
-            with CLibContext(lib) as lib:
-                self.assert_default_settings(lib)
+            with lib as lib:
+                assert pogs_test.settings_are_default(lib)
 
     def test_pogs_abstract_init_finish(self, reset=0):
-        m, n = self.shape
         for (lib, op, direct, equil) in self.LIBS_OPS_DIRECT_EQUIL:
-            with lib:
-                with okcctx.c_operator_context(lib, op, self.A_test) as op:
+            with lib as lib:
+                with okcctx.c_operator_context(lib, op, self.A_test) as o:
                     flags = lib.pogs_solver_flags(direct, equil)
-                    solver = lib.pogs_init(op, flags)
-                    oktest.assert_noerr(lib.pogs_finish(solver, 0))
+                    solver = lib.pogs_init(o, flags)
+                    assert NO_ERR(lib.pogs_finish(solver, 0))
 
     def test_pogs_abstract_components(self):
         for (lib, op, direct, equil) in self.LIBS_OPS_DIRECT_EQUIL:
-            with pogs_contexts.Abstract(lib, self.A_test, obj) as ctx:
-                self.set_standard_tolerances(ctx.lib)
-                self.assert_coldstart_components(ctx)
+            if op == 'sparse' and direct:
+                continue
+            with AbstractTest(lib, self.A_test, op, direct, equil) as ctx:
+                assert pogs_test.solver_components_work(ctx)
 
     def test_pogs_abstract_call(self):
         for (lib, op, direct, equil) in self.LIBS_OPS_DIRECT_EQUIL:
-            with pogs_contexts.Abstract(lib, self.A_test, obj) as ctx:
-                self.set_standard_tolerances(ctx.lib)
-                self.assert_pogs_call(ctx)
+            if op == 'sparse' and direct:
+                continue
+            with AbstractTest(lib, self.A_test, op, direct, equil) as ctx:
+                assert pogs_test.solve_call_executes(ctx)
+
+    def test_pogs_abstract_diagnostic(self):
+        for (lib, op, direct, equil) in self.LIBS_OPS_DIRECT_EQUIL:
+            if op == 'sparse' and direct:
+                continue
+            with AbstractTest(lib, self.A_test, op, direct, equil) as ctx:
+                assert pogs_test.residuals_recoverable(ctx)
+
+    def test_pogs_abstract_accelerate(self):
+        for (lib, op, direct, equil) in self.LIBS_OPS_DIRECT_EQUIL:
+            if op == 'sparse' and direct:
+                continue
+            defs.verbose_print('\nOPERATOR={}'.format(op))
+            defs.verbose_print('DIRECT={}'.format(direct))
+            defs.verbose_print('EQUILNORM={}'.format(equil))
+            with AbstractTest(
+                    lib, self.A_test, op, direct, equil, obj='Logistic') as ctx:
+
+                ctx.params.settings.maxiter = 1000
+
+                # OVERRELAXATION
+                assert pogs_test.overrelaxation_reduces_iterations(ctx)
+
+                # ADAPTIVE RHO
+                if direct:
+                    assert pogs_test.adaptive_rho_reduces_iterations(ctx)
+
+                # ANDERSON ACCELERATION
+                if equil == 2:
+                    assert pogs_test.anderson_reduces_iterations(ctx)
+
+                # EXTRATOL
+                if equil == 1 and not direct:
+                    assert pogs_test.extratol_reduces_iterations(ctx)
 
     def test_pogs_abstract_call_unified(self):
         for (lib, op, direct, equil) in self.LIBS_OPS_DIRECT_EQUIL:
-            with pogs_contexts.Abstract(lib, self.A_test, solver=False) as ctx:
-                self.set_standard_tolerances(ctx.lib)
-                self.assert_pogs_unified(ctx)
+            if op == 'sparse' and direct:
+                continue
+            with AbstractTest(lib, self.A_test, op, direct, equil) as ctx:
+                assert pogs_test.integrated_pogs_call_executes(ctx)
 
     def test_pogs_abstract_warmstart(self):
         for (lib, op, direct, equil) in self.LIBS_OPS_DIRECT_EQUIL:
-            with pogs_contexts.Abstract(lib, self.A_test) as ctx:
-                self.set_standard_tolerances(ctx.lib)
-                self.assert_pogs_warmstart(ctx)
+            if op == 'sparse' and direct:
+                continue
+            defs.verbose_print('\nOPERATOR={}'.format(op))
+            defs.verbose_print('DIRECT={}'.format(direct))
+            defs.verbose_print('EQUILNORM={}'.format(equil))
+            with AbstractTest(lib, self.A_test, op, direct, equil) as ctx:
+                assert pogs_test.solver_scales_warmstart_inputs(ctx)
+                # assert pogs_test.warmstart_reduces_iterations(ctx)
 
     def test_pogs_abstract_io(self):
         pass
-        # TODO: FIX
-        equil = 1.
-        for (lib, op, direct) in self.LIBS_OPS_DIRECT:
-            with pogs_contexts.Abstract(lib, self.A_test) as ctx:
-                self.set_standard_tolerances(ctx.lib)
-                self.assert_pogs_io(ctx)
+        # # TODO: FIX
+        # equil = 1.
+        # direct = 0
+        # for (lib, op) in self.LIBS_OPS:
+        #     with AbstractTest(lib, self.A_test, op, direct, equil) as ctx:
+        #         assert pogs_test.solver_data_transferable(ctx)

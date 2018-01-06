@@ -5,6 +5,7 @@ import collections
 
 from optkit.utils import proxutils
 from optkit.libs.enums import OKEnums
+from optkit.tests import defs
 from optkit.tests.C import statements
 import optkit.tests.C.context_managers as okcctx
 
@@ -119,7 +120,7 @@ class Base:
         self.params.info = lib.pogs_info()
         self.params.settings = settings = lib.pogs_settings()
         assert NO_ERR( lib.pogs_set_default_settings(settings) )
-        self.params.settings.verbose = int(statements.VERBOSE_TEST)
+        self.params.settings.verbose = int(defs.VERBOSE_TEST)
         self.params.res = lib.pogs_residuals()
         self.params.tol = lib.pogs_tolerances()
         self.params.obj = lib.pogs_objective_values()
@@ -134,30 +135,30 @@ class Base:
                 self._s = lib.pogs_init(self._data, self._flags)
                 return self._s
             def __exit__(self, *exc):
-                assert NO_ERR( lib.pogs_finish(self._s, 0) )
+                assert NO_ERR(lib.pogs_finish(self._s, 0))
+                del self._s
         self.SolverCtx = SolverCtx
+
 
     def __enter__(self):
         m, n = self.params.shape
         lib = self.lib = self._libctx.__enter__()
         self.f = self._f.__enter__()
         self.g = self._g.__enter__()
-        f, f_py, f_ptr = self.f.cptr, self.f.py, self.f.pyptr
-        g, g_py, g_ptr = self.g.cptr, self.g.py, self.g.pyptr
 
         h = lib.function_enums.dict[self._objstring]
         asymm = 1 + int('Asymm' in self._objstring)
         for i in xrange(m):
-            f_py[i] = lib.function(h, 1, 1, 1, 0, 0, asymm)
+            self.f.py[i] = lib.function(h, 1, 1, 1, 0, 0, asymm)
+        self.f.sync_to_c()
         for j in xrange(n):
-            g_py[j] = lib.function(
+            self.g.py[j] = lib.function(
                     lib.function_enums.IndGe0, 1, 0, 1, 0, 0, 1)
-        assert NO_ERR( lib.function_vector_memcpy_va(f, f_ptr) )
-        assert NO_ERR( lib.function_vector_memcpy_va(g, g_ptr) )
-        self.params.f = f
-        self.params.g = g
-        self.params.f_py = f_py
-        self.params.g_py = g_py
+        self.g.sync_to_c()
+        self.params.f = self.f.c
+        self.params.g = self.g.c
+        self.params.f_py = self.f.py
+        self.params.g_py = self.g.py
         return self
 
     def __exit__(self, *exc):
@@ -204,9 +205,10 @@ class Dense(Base):
         del self.solver
 
 class Abstract(Base):
-    def __init__(self, lib, A, optype, direct, equil, obj='Abs'):
+    def __init__(self, libctx, A, optype, direct, equil, obj='Abs'):
         m, n = A.shape
-        Base.__init__(self, lib, m, n, obj=obj)
+        lib = libctx.lib
+        Base.__init__(self, libctx, m, n, obj=obj)
         self.optype = optype
         self.direct = direct
         self.equil = equil
@@ -234,9 +236,7 @@ class Abstract(Base):
         self.solver = self.SolverCtx(self.data, self.flags)
         return self
 
-    def __exit__(self):
-        if self.solver:
-            oktest.assert_noerr(self.lib.pogs_free(self.solver))
-        self._op.__exit__()
-        Base.__exit__(self)
+    def __exit__(self, *exc):
+        self._op.__exit__(*exc)
+        Base.__exit__(self, *exc)
         del self.solver
