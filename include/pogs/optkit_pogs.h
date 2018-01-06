@@ -13,11 +13,11 @@
 extern "C" {
 #endif
 
-typedef enum {
+enum OK_POGS_IMPL {
 	OkPogsDense = 1001,
 	OkPogsSparse = 1002,
 	OkPogsAbstract = 2001
-} ok_pogs_impl;
+};
 
 #undef OK_POGS_TYPE
 /* SWITCH BETWEEN POGS IMPLEMENTATIONS */
@@ -76,7 +76,7 @@ typedef struct POGSSolver {
 	pogs_convergence *convergence;
 } pogs_solver;
 
-ok_pogs_impl get_pogs_impl(void);
+enum OK_POGS_IMPL get_pogs_impl(void);
 
 ok_status pogs_work_alloc(pogs_work *W, pogs_solver_data *A,
 	const pogs_solver_flags *flags);

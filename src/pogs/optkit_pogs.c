@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-ok_pogs_impl get_pogs_impl(void)
+enum OK_POGS_IMPL get_pogs_impl(void)
 {
 	return OK_POGS_TYPE;
 }
