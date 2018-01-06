@@ -14,6 +14,10 @@ ok_status lapack_destroy_handle(void *lapack_handle)
 	return OPTKIT_SUCCESS;
 }
 
+/*
+ * TODO: no support for row-major matrices when compiling against fortran
+ * LAPACK, as opposed to C LAPACKE interface which accomodates array layout
+ */
 ok_status lapack_solve_LU_flagged(void *hdl, matrix *A, vector *x,
 	int_vector *pivot, int silence_lapack_err)
 {
@@ -38,8 +42,8 @@ ok_status lapack_solve_LU_flagged(void *hdl, matrix *A, vector *x,
 	ipiv = (lapack_int *) pivot->data;
 
 #ifdef OK_C_LAPACKE
-	err = LAPACKE(gesv)((int) A->order, n, nrhs, A->data, (int) A->ld,
-		pivot->data, x->data, (int) x->stride);
+	err = LAPACKE(gesv)((int) A->order, n, nrhs, A->data, lda, ipiv,
+		x->data, ldb);
 #else
 	LAPACK(gesv)(&n, &nrhs, A->data, &lda, ipiv, x->data, &ldb, &err);
 #endif
