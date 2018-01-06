@@ -32,13 +32,15 @@ typedef struct POGSAbstractSolverFlags {
 } pogs_abstract_solver_flags;
 
 typedef struct POGSAbstractSolverPrivateData {
+	abstract_operator *A_equil;
+	ok_float ATA_cholesky;
 	ok_float *d, *e;
 } pogs_abstract_solver_private_data;
 
 ok_status pogs_abstract_problem_data_alloc(pogs_abstract_work *W,
 	abstract_operator *A, const pogs_abstract_solver_flags *flags);
 ok_status pogs_abstract_problem_data_free(pogs_abstract_work *W);
-ok_status pogs_abstract_get_init_data(abstract_operator *A,
+ok_status pogs_abstract_get_init_data(abstract_operator **A,
 	const pogs_abstract_solver_private_data *data,
 	const pogs_abstract_solver_flags *flags);
 
@@ -117,7 +119,7 @@ ok_status pogs_abstract_problem_data_free(pogs_abstract_work *W)
 	return err;
 }
 
-ok_status pogs_abstract_get_init_data(abstract_operator *A,
+ok_status pogs_abstract_get_init_data(abstract_operator **A,
 	const pogs_abstract_solver_private_data *data,
 	const pogs_abstract_solver_flags *flags)
 {
@@ -184,15 +186,23 @@ ok_status pogs_abstract_save_work(pogs_abstract_solver_private_data *data,
 	pogs_abstract_solver_flags *flags, const pogs_abstract_work *W)
 {
 	return OK_SCAN_ERR( OPTKIT_ERROR_NOT_IMPLEMENTED );
-	// ok_status err = OPTKIT_SUCCESS;
-	// OK_CHECK_ERR( err, matrix_memcpy_am(data->A_equil, M->A, flags->ord) );
-	// #ifndef OPTKIT_INDIRECT
-	// OK_CHECK_ERR( err, matrix_memcpy_am(data->ATA_cholesky, M->P->L,
-	// 	flags->ord) );
-	// #endif
-	// OK_CHECK_ERR( err, vector_memcpy_av(data->d, M->d, 1) );
-	// OK_CHECK_ERR( err, vector_memcpy_av(data->e, M->e, 1) );
-	// return err;
+	/*
+	ok_status err = OPTKIT_SUCCESS;
+	// RECOVER DATA
+	data->A_equil = W->A;
+	// RECOVER PROJECTOR
+
+	/* RECOVER PROJECTOR CACHE, IF DIRECT
+	if (W->P->kind == OkProjectorDenseDirect)
+		OK_CHECK_ERR( err, matrix_memcpy_am(data->ATA_cholesky, W->P->L,
+			flags->ord) );
+	// SET FLAGS
+
+	// RECOVER d, e
+	OK_CHECK_ERR( err, vector_memcpy_av(data->d, M->d, 1) );
+	OK_CHECK_ERR( err, vector_memcpy_av(data->e, M->e, 1) );
+	return err;
+	*/
 }
 
 ok_status pogs_abstract_load_work(pogs_abstract_work *W,
