@@ -63,6 +63,7 @@ ifdef USE_OPENMP
 CCFLAGS+=-fopenmp=libopenmp
 CXXFLAGS+=-fopenmp=libopenmp
 endif
+C_LAPACKE=0
 else
 LDFLAGS_+=-lblas
 CULDFLAGS_+=-L/usr/local/cuda/lib64 
@@ -71,12 +72,17 @@ ifdef USE_OPENMP
 CCFLAGS+=-fopenmp
 CXXFLAGS+=-fopenmp
 endif
+C_LAPACKE=1
 endif
 
 CULDFLAGS_+=-lcudart -lcublas -lcusparse
 
 ifndef NO_LAPACK
-LDFLAGS_+=-llapack 
+ifneq ($(C_LAPACKE), 0)
+LDFLAGS_+=-llapacke
+else
+LDFLAGS_+=-llapack
+endif
 CULDFLAGS_+=-lcusolver
 endif
 
@@ -94,6 +100,10 @@ OPT_FLAGS=
 ifneq ($(FLOAT), 0)
 OPT_FLAGS+=-DFLOAT # use floats rather than doubles
 endif
+
+ifneq ($(C_LAPACKE), 0)
+OPT_FLAGS+=-DOK_C_LAPACKE
+endif 
 
 ifdef OPTKIT_DEBUG_PYTHON
 OPT_FLAGS+=-DOK_DEBUG_PYTHON

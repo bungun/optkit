@@ -28,9 +28,6 @@ ok_status lapack_solve_LU_flagged(void *hdl, matrix *A, vector *x,
 	if (A->size1 != A->size2 || x->size != A->size2 || pivot->size != A->size2)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	// err = LAPACKE(gesv)((int) A->order, (lapack_int) A->size1,
-	// (lapack_int) 1, A->data, (int) A->ld, pivot->data, x->data, (int) x->stride);
-
 	if (A->order != CblasColMajor)
 		return OK_SCAN_ERR( OPTKIT_ERROR_LAYOUT_MISMATCH );
 
@@ -40,7 +37,12 @@ ok_status lapack_solve_LU_flagged(void *hdl, matrix *A, vector *x,
 	ldb = (lapack_int) x->size;
 	ipiv = (lapack_int *) pivot->data;
 
+#ifdef OK_C_LAPACKE
+	err = LAPACKE(gesv)((int) A->order, n, nrhs, A->data, (int) A->ld,
+		pivot->data, x->data, (int) x->stride);
+#else
 	LAPACK(gesv)(&n, &nrhs, A->data, &lda, ipiv, x->data, &ldb, &err);
+#endif
 
 	if (err) {
 		if (silence_lapack_err) {
