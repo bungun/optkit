@@ -17,14 +17,14 @@ extern "C" {
 	} while(0)
 #endif
 
-typedef enum OPTKIT_PROJECTOR {
+enum OPTKIT_PROJECTOR {
 	OkProjectorDenseDirect = 101,
 	OkProjectorSparseDirect = 102,
 	OkProjectorIndirect = 103
-} OPTKIT_PROJECTOR;
+};
 
 typedef struct projector {
-	OPTKIT_PROJECTOR kind;
+	enum OPTKIT_PROJECTOR kind;
 	size_t size1, size2;
 	void *data;
 	ok_status (* initialize)(void *data, const int normalize);
