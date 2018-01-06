@@ -4,13 +4,13 @@ import gc
 import os
 import numpy as np
 import ctypes as ct
+import unittest
 
 # from optkit import *
 from optkit.api import backend
 from optkit.types.clustering import *
-from optkit.tests.defs import OptkitTestCase
 
-class ClusteringBindingsTestCase(OptkitTestCase):
+class ClusteringBindingsTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')

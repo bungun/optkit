@@ -4,13 +4,14 @@ import gc
 import os
 import numpy as np
 import scipy.sparse as sp
+import unittest
 
 from optkit import *
 from optkit.api import backend
-from optkit.tests.defs import OptkitTestCase, TEST_ITERATE
+from optkit.tests import defs
 print('BACKEND:', backend.config)
 
-class PogsBindingsTestCase(OptkitTestCase):
+class PogsBindingsTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
@@ -108,7 +109,7 @@ class PogsBindingsTestCase(OptkitTestCase):
         # objectives = ('Abs', 'AbsQuad', 'AbsExp', 'AsymmSquare')
         objectives = ['Abs']
         for h in objectives:
-            if self.VERBOSE_TEST:
+            if defs.VERBOSE_TEST:
                 print('objective:', h)
             asymm = 2. if h != 'Abs' else 1.
             s = solver_constructor(test_matrix)
@@ -155,7 +156,7 @@ class PogsBindingsTestCase(OptkitTestCase):
         s3.solve(f, g, resume=1, maxiter=10000)
 
         factor = 30. if backend.pogs.pyfloat == np.float32 else 10.
-        factor *= 2.**TEST_ITERATE
+        factor *= 2.**defs.TEST_ITERATE
         self.assertTrue(s3.info.c.k <= s2.info.c.k or not s3.info.c.converged)
 
         diff_12 = abs(s2.info.c.obj - s.info.c.obj)

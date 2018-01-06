@@ -4,12 +4,12 @@ import gc
 import os
 import numpy as np
 import scipy.sparse as sp
+import unittest
 
 from optkit.api import backend
 from optkit.types.operator import *
-from optkit.tests.defs import OptkitTestCase
 
-class OperatorBindingsTestCase(OptkitTestCase):
+class OperatorBindingsTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.env_orig = os.getenv('OPTKIT_USE_LOCALLIBS', '0')
