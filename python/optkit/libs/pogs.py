@@ -236,13 +236,13 @@ def attach_pogs_ctypes(lib, single_precision=False):
 		lib.pogs_solver_data_p = lib.ok_float_p
 	elif lib.py_pogs_impl == 'abstract':
 		include_ok_operator(lib, single_precision=single_precision)
-		work_fields += [('A', lib.abstract_operator_p), ('P', lib.projector_p)]
+		work_fields = [('A', lib.abstract_operator_p), ('P', lib.projector_p)]
 		work_fields += [
 				('operator_scale', ct.CFUNCTYPE(
 						ct.c_uint, lib.abstract_operator_p, lib.ok_float)),
 				('operator_equilibrate', ct.CFUNCTYPE(
-						ct.c_uint, ct.c_void_p, operator_p, vector_p,
-						vector_p, lib.ok_float))]
+						ct.c_uint, ct.c_void_p, lib.abstract_operator_p,
+						lib.vector_p, lib.vector_p, lib.ok_float))]
 		flag_fields = [('direct', ct.c_int), ('equil_norm', lib.ok_float)]
 		priv_fields = [('d', lib.ok_float_p), ('e', lib.ok_float_p)]
 		lib.pogs_solver_data_p = lib.abstract_operator_p
@@ -426,7 +426,7 @@ def _attach_pogs_abstract_ccalls(lib):
 			lib.pogs_work_p, lib.ok_float, lib.vector_p, lib.ok_float,
 			lib.vector_p]
 	lib.pogs_abstract_project_graph.argtypes = [
-			lib.pogs_work_p, lib.vector, lib.vector_p, lib.vector_p,
+			lib.pogs_work_p, lib.vector_p, lib.vector_p, lib.vector_p,
 			lib.vector_p, lib.ok_float]
 
 	lib.pogs_abstract_equilibrate_matrix.argtypes = [
@@ -445,10 +445,10 @@ def _attach_pogs_abstract_ccalls(lib):
 			lib.pogs_solver_flags_p]
 
 	lib.pogs_dense_operator_gen.argtypes = [
-			ok_float_p, ct.c_size_t, ct.c_size_t, ct.c_uint]
+			lib.ok_float_p, ct.c_size_t, ct.c_size_t, ct.c_uint]
 	lib.pogs_sparse_operator_gen.argtypes = [
-			ok_float_p, ok_int_p, ok_int_p, ct.c_size_t, ct.c_size_t,
-			ct.c_size_t, ct.c_uint]
+			lib.ok_float_p, lib.ok_int_p, lib.ok_int_p, ct.c_size_t,
+			ct.c_size_t, ct.c_size_t, ct.c_uint]
 	lib.pogs_dense_operator_free.argtypes = [lib.abstract_operator_p]
 	lib.pogs_sparse_operator_free.argtypes = [lib.abstract_operator_p]
 
