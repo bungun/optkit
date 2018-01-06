@@ -1,36 +1,32 @@
 from optkit.compat import *
 
+import collections
+
+error_codes = {
+    0: 'OPTKIT SUCCESS'
+    1: 'OPTKIT ERROR'
+    2: 'OPTKIT ERROR CUDA'
+    3: 'OPTKIT ERROR CUBLAS'
+    4: 'OPTKIT ERROR CUSPARSE'
+    5: 'OPTKIT ERROR LAPACK'
+    10: 'OPTKIT ERROR DOMAIN'
+    11: 'OPTKIT ERROR DIVIDE BY ZERO'
+    100: 'OPTKIT ERROR LAYOUT MISMATCH'
+    101: 'OPTKIT ERROR DIMENSION MISMATCH'
+    102: 'OPTKIT ERROR OUT OF BOUNDS'
+    1000: 'OPTKIT ERROR OVERWRITE'
+    1001: 'OPTKIT ERROR UNALLCOATED'
+    2000: 'OPTKIT ERROR NOT IMPLEMENTED'
+}
+
 def optkit_print_error(err, print_success=False):
     if err is None:
         return
     elif err == 0:
         if print_success:
             print('\nOPTKIT SUCCESS')
-    elif err == 1:
-        print('\nOPTKIT ERROR')
-    elif err == 2:
-        print('\nOPTKIT ERROR CUDA')
-    elif err == 3:
-        print('\nOPTKIT ERROR CUBLAS')
-    elif err == 4:
-        print('\nOPTKIT ERROR CUSPARSE')
-    elif err == 5:
-        print('\nOPTKIT ERROR LAPACK')
-    elif err == 10:
-        print('\nOPTKIT ERROR DOMAIN')
-    elif err == 11:
-        print('\nOPTKIT ERROR DIVIDE BY ZERO')
-    elif err == 100:
-        print('\nOPTKIT ERROR LAYOUT MISMATCH')
-    elif err == 101:
-        print('\nOPTKIT ERROR DIMENSION MISMATCH')
-    elif err == 102:
-        print('\nOPTKIT ERROR OUT OF BOUNDS')
-    elif err == 1000:
-        print('\nOPTKIT ERROR OVERWRITE')
-    elif err == 1001:
-        print('\nOPTKIT ERROR UNALLOCATED')
+    elif err in error_codes:
+        print('\n{}'.format(error_codes[err]))
     else:
         print('\nunrecognized error code: {}'.format(err))
-
     return err

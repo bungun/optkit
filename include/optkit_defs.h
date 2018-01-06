@@ -170,6 +170,8 @@ static const char * ok_err2string(const ok_status error) {
 		return "OPTKIT_ERROR_OVERWRITE";
 	case OPTKIT_ERROR_UNALLOCATED:
 		return "OPTKIT_ERROR_UNALLOCATED";
+	case OPTKIT_ERROR_NOT_IMPLEMENTED:
+		return "OPTKIT_ERROR_NOT_IMPLEMENTED";
 	default:
 		return "<unknown error>";
 	}
