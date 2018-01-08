@@ -261,7 +261,7 @@ ok_status matrix_memcpy_am_(T *A, const matrix_<T> *B,
 }
 
 template<typename T>
-ok_status matrix_scale_left(matrix_<T> *A, const vector_<T> *v)
+ok_status matrix_scale_left_(matrix_<T> *A, const vector_<T> *v)
 {
 	size_t i;
 	vector_<T> col;
@@ -281,7 +281,7 @@ ok_status matrix_scale_left(matrix_<T> *A, const vector_<T> *v)
 }
 
 template<typename T>
-ok_status matrix_scale_right(matrix_<T> *A, const vector_<T> *v)
+ok_status matrix_scale_right_(matrix_<T> *A, const vector_<T> *v)
 {
 	size_t i;
 	vector_<T> row;
