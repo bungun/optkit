@@ -47,6 +47,8 @@ ok_status matrix_diagonal_(vector_<T> *diag, matrix_<T> *A);
 template<typename T>
 ok_status matrix_cast_vector_(vector_<T> *v, matrix_<T> *A);
 template<typename T>
+ok_status matrix_view_vector(matrix_<T> *A, vector_<T> *v, enum CBLAS_ORDER ord);
+template<typename T>
 ok_status matrix_view_array_(matrix_<T> *A, const T *base, size_t n1,
 	size_t n2, enum CBLAS_ORDER ord);
 template<typename T>
@@ -90,6 +92,7 @@ ok_status matrix_row(vector *row, matrix *A, size_t i);
 ok_status matrix_column(vector *col, matrix *A, size_t j);
 ok_status matrix_diagonal(vector *diag, matrix *A);
 ok_status matrix_cast_vector(vector *v, matrix *A);
+ok_status matrix_view_vector(matrix *A, vector *v, enum CBLAS_ORDER ord);
 ok_status matrix_view_array(matrix *A, const ok_float *base, size_t n1,
 	size_t n2, enum CBLAS_ORDER ord);
 ok_status matrix_set_all(matrix *A, ok_float x);
