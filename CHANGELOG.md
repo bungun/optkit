@@ -8,17 +8,37 @@
 check problem size? or...handle allocation failures in python?)
 - TODO: workspaces with independent backends; object transfer (e.g., copy cpu64 solver to gpu32)
 
-###v0.0.5 (next release)
+###v0.0.6 (next release)
 - TODO: license
 - TODO: cite POGS
 - TODO: append version numbers to .so, check version numbers when loading libs in python (?)
 - TODO: add tests for vector_rand, transformable operators, operator export/import 
 - TODO: sparse POGS (entails sparse CG, equil, projection: performance vs. abstract??)
+- TODO: compare lapack cholesky to linalg cholesky
+- TODO: fix test---test_operator_equil
+- TODO: projection as abstract_operator
+- TODO: solver caching for pogs_abstract
+- TODO: POGS IO ABSTRACT
+- TODO: CPU LAPACK ROWMAJOR
+
+###v0.0.5 (current)
 - Python 3 (3.3, 3.4, 3.5) support
 - Add .travis.yml for CI testing
+- Add conda recipe
+- Add LAPACK module to linsys (adds LAPACK dependency to CPU, add cusolver dependency to GPU)
+- Add Anderson acceleration (AA) module to top level
+- Refactor POGS module to have single implementation of algorithm, minimal multiple implementations of components that differ for dense vs. abstract POGS
+- Anderson acceleration (AA) module
+- Add AA to POGS
+- Add "diagnostic" mode to POGS to allow recording and exporting of residuals and tolerances per solver iterate
+- Add setting "toladapt" (default value: 1e-3) to POGS to use relatively tighter tolerances for adaptive rho subroutine of POGS in order to avoid oscillations when POGS solver residuals approach solver tolerances 
+- Refactor tests to be reflect that they are (mostly) functional tests, not unit tests with an eye toward using the nose2.such DSL; add optkit-specific context managers to manage C variables
+- TODO: CONDA RECIPE GPU FEATURE?
+- TODO: GPU LAPACK. 
+- TODO: TEST GPU ANDERSON
+- TODO: TEST GPU POGS
 
-
-###v0.0.4 (current)
+###v0.0.4
 - Migrate tests to unittests
 - Eliminate slow Python implementations (to be replaced with Cython implementations in future, potentially)
 - Abstract linear operators
@@ -29,7 +49,7 @@ check problem size? or...handle allocation failures in python?)
 - Operator POGS for: dense, sparse
 - Matrix, vector reductions (min, max, indmin); 
 - Memory cleanup when tests fail 
-- K-means clustering on rows of dense matrices
+- K-means clustering on *rows* of dense matrices
 - Error checking throughout C libraries (all calls that don't return a pointer return an error code)
 
 ###v0.0.3
