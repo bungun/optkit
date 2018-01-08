@@ -97,7 +97,7 @@ ok_status anderson_fused_diff_set_x0(fused_diff_accelerator *aa,
 	vector *x_initial)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	vector xcol;
+	vector xcol = (vector){OK_NULL};
 	OK_CHECK_VECTOR(x_initial);
 	if (x_initial->size != aa->vector_dim)
 		err = OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );

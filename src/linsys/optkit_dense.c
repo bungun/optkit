@@ -33,9 +33,6 @@ static ok_status __linalg_cholesky_decomp_noblk(void *linalg_handle, matrix *A,
 	matrix l21, a22;
 	size_t n = A->size1, i;
 
-	l21.data = OK_NULL;
-	a22.data = OK_NULL;
-
 	for (i = 0; i < n && !err; ++i) {
 		/* L11 = sqrt(A11) */
 		l11 = A->data[i + i * A->ld];
@@ -59,11 +56,13 @@ static ok_status __linalg_cholesky_decomp_noblk(void *linalg_handle, matrix *A,
 			break;
 
 		/* L21 = A21 / L11 */
+		l21.data = OK_NULL;
 		OK_CHECK_ERR( err, matrix_submatrix(&l21, A, i + 1, i,
 			n - i - 1, 1) );
 		OK_CHECK_ERR( err, matrix_scale(&l21, kOne / l11) );
 
 		/* A22 -= L12*L12'*/
+		a22.data = OK_NULL;
 		OK_CHECK_ERR( err, matrix_submatrix(&a22, A, i + 1, i + 1,
 			n - i - 1, n - i - 1) );
 		OK_CHECK_ERR( err, blas_syrk(linalg_handle, CblasLower,
@@ -105,6 +104,7 @@ ok_status linalg_cholesky_decomp_flagged(void *linalg_handle, matrix *A,
 		n11 = blk_dim < n - i ? blk_dim : n - i;
 
 		/* L11 = chol(A11) */
+		L11.data = OK_NULL;
 		OK_CHECK_ERR( err, matrix_submatrix(&L11, A, i, i, n11, n11) );
 		if (!err)
 			err = __linalg_cholesky_decomp_noblk(
@@ -116,6 +116,7 @@ ok_status linalg_cholesky_decomp_flagged(void *linalg_handle, matrix *A,
 			break;
 
 		/* L21 = A21 L21^-ok_float */
+		L21.data = OK_NULL;
 		OK_CHECK_ERR( err, matrix_submatrix(&L21, A, i + n11, i,
 			n - i - n11, n11) );
 		OK_CHECK_ERR( err, blas_trsm(linalg_handle, CblasRight,
@@ -123,6 +124,7 @@ ok_status linalg_cholesky_decomp_flagged(void *linalg_handle, matrix *A,
 			&L21) );
 
 		/* A22 -= L21*L21^ok_float */
+		A22.data =OK_NULL;
 		OK_CHECK_ERR( err, matrix_submatrix(&A22, A, i + blk_dim,
 			                       i + blk_dim, n - i - blk_dim,
 			                       n - i - blk_dim) );

@@ -7,7 +7,7 @@ extern "C" {
 /* At index i, set f_i = -x */
 ok_status anderson_update_F_x(matrix *F, vector *x, size_t index)
 {
-	vector fcol;
+	vector fcol = (vector){OK_NULL};
 	OK_RETURNIF_ERR( matrix_column(&fcol, F, index) );
 	OK_RETURNIF_ERR( vector_memcpy_vv(&fcol, x) );
 	OK_RETURNIF_ERR( vector_scale(&fcol, -kOne) );
@@ -17,7 +17,7 @@ ok_status anderson_update_F_x(matrix *F, vector *x, size_t index)
 /* At index i, perform f_i += g(x); call after anderson_update_F_x */
 ok_status anderson_update_F_g(matrix *F, vector *gx, size_t index)
 {
-	vector fcol;
+	vector fcol = (vector){OK_NULL};
 	OK_RETURNIF_ERR( matrix_column(&fcol, F, index) );
 	OK_RETURNIF_ERR( vector_add(&fcol, gx) );
 	return OPTKIT_SUCCESS;
@@ -26,7 +26,7 @@ ok_status anderson_update_F_g(matrix *F, vector *gx, size_t index)
 /* At index i, set g_i = x */
 ok_status anderson_update_G(matrix *G, vector *gx, size_t index)
 {
-	vector gcol;
+	vector gcol = (vector){OK_NULL};
 	OK_RETURNIF_ERR( matrix_column(&gcol, G, index) );
 	OK_RETURNIF_ERR( vector_memcpy_vv(&gcol, gx) );
 	return OPTKIT_SUCCESS;
@@ -37,7 +37,7 @@ ok_status anderson_regularized_gram(void *linalg_handle, matrix *F,
 {
 	ok_status err = OPTKIT_SUCCESS;
 	ok_float sqrt_mu = kZero;
-	vector diag;
+	vector diag = (vector){OK_NULL};
 
 	/* F_gram = F'F */
 	OK_CHECK_ERR( err, blas_gemm(linalg_handle, CblasTrans, CblasNoTrans,

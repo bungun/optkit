@@ -64,6 +64,7 @@ ok_status anderson_difference_accelerate_template(void *blas_handle,
 	*/
 	/* anderson_update_D("G")(aa->DG, aa->g, x, index); */
 
+	gcol.data = OK_NULL;
 	OK_CHECK_ERR( err, matrix_column(&gcol, DG, index) );
 	OK_CHECK_ERR( err, vector_memcpy_vv(&gcol, g) );
 	OK_CHECK_ERR( err, vector_memcpy_vv(g, iterate) );
@@ -75,6 +76,7 @@ ok_status anderson_difference_accelerate_template(void *blas_handle,
 	*   step 2: calculate f = g - x = iterate - x
 	*   step 3: subtract f
 	*/
+	fcol.data = OK_NULL;
 	OK_CHECK_ERR( err, matrix_column(&fcol, DF, index) );
 	OK_CHECK_ERR( err, vector_memcpy_vv(&fcol, f) );
 
@@ -99,6 +101,7 @@ ok_status anderson_difference_accelerate_template(void *blas_handle,
 	/*
 	* DX[:, next_index] = x_prev - x
 	*/
+	xcol.data = OK_NULL;
 	OK_CHECK_ERR( err, matrix_column(&xcol, DX, next_index) );
 	OK_CHECK_ERR( err, vector_memcpy_vv(&xcol, x) );
 

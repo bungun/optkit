@@ -146,12 +146,14 @@ class MatrixTestCase(unittest.TestCase):
 
                     # column
                     v_py, v_ptr = okcctx.gen_py_vector(lib, m)
+                    v.data = None
                     assert NO_ERR( lib.matrix_column(v, A.c, n0) )
                     assert NO_ERR( lib.vector_memcpy_av(v_ptr, v, 1) )
                     assert VEC_EQ( A.py[: , n0], v_py, TOL, TOL )
 
                     # diagonal
                     v_py, v_ptr = okcctx.gen_py_vector(lib, min(m, n))
+                    v.data = None
                     assert NO_ERR( lib.matrix_diagonal(v, A.c) )
                     assert NO_ERR( lib.vector_memcpy_av(v_ptr, v, 1) )
                     assert VEC_EQ( np.diag(A.py), v_py, TOL, TOL )

@@ -345,11 +345,13 @@ ok_status diagonal_preconditioner(abstract_operator *op, vector *p, ok_float rho
 
 	for (i = 0; i < op->size2 && !err; ++i) {
 		vector_scale(&ej, kZero);
+		ej_sub.data = OK_NULL;
 		vector_subvector(&ej_sub, &ej, i, 1);
 		vector_add_constant(&ej_sub, 1);
 		op->apply(op->data, &ej, &a);
 
 		blas_dot(blas_handle, &a, &a, &col_norm_sq);
+		p_sub.data = OK_NULL;
 		vector_subvector(&p_sub, p, i, 1);
 		vector_add_constant(&p_sub, rho + col_norm_sq);
 	}

@@ -169,6 +169,7 @@ ok_status linalg_cholesky_decomp_flagged(void *linalg_handle, matrix *A,
 
 		/* L21 = A21 * L21^-T */
 		grid_dim = num_tiles - i - 1u;
+                L21.data = OK_NULL;
 		OK_RETURNIF_ERR( matrix_submatrix(&L21, A, (i + 1) * kTileSize,
 			i * kTileSize, A->size1 - (i + 1) * kTileSize,
 			kTileSize) );
@@ -180,6 +181,7 @@ ok_status linalg_cholesky_decomp_flagged(void *linalg_handle, matrix *A,
 		OK_RETURNIF_ERR( OK_STATUS_CUDA );
 
 		/* A22 -= L21 * L21^T */
+                A22.data = OK_NULL;
 		OK_RETURNIF_ERR( matrix_submatrix(&A22, A, (i + 1) * kTileSize,
 			(i + 1) * kTileSize, A->size1 - (i + 1) * kTileSize,
 			A->size1 - (i + 1) * kTileSize) );

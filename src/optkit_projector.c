@@ -93,12 +93,8 @@ ok_status direct_projector_initialize(void *linalg_handle,
 	if (!P || !P->A || !P->L)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
-	vector diag;
+	vector diag = (vector){OK_NULL};
 	ok_float mean_diag = kZero;
-
-	diag.data = OK_NULL;
-	diag.size = 0;
-	diag.stride = 0;
 
 	if (P->skinny)
 		blas_gemm(linalg_handle, CblasTrans, CblasNoTrans, kOne, P->A,

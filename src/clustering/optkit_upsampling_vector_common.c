@@ -53,6 +53,7 @@ ok_status upsamplingvec_subvector(upsamplingvec *usub, upsamplingvec *u,
 	if (!u || !u->indices || !usub)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
+	usub->vec.data = OK_NULL;
 	OK_RETURNIF_ERR( indvector_subvector(&usub->vec, &u->vec, offset1,
 		length1) );
 	usub->indices = usub->vec.data;

@@ -80,10 +80,12 @@ ok_status regularized_sinkhorn_knopp(void *linalg_handle, ok_float *A_in,
 	OK_CHECK_ERR( err, matrix_memcpy_ma(A_out, A_in, ord) );
 	if (!err) {
 		for (i = 0; i < A_out->size1; ++i) {
+			a.data = OK_NULL;
 			matrix_row(&a, A_out, i);
 			vector_mul(&a, e);
 		}
 		for (i = 0; i < A_out->size2; ++i) {
+			a.data = OK_NULL;
 			matrix_column(&a, A_out, i);
 			vector_mul(&a, d);
 		}

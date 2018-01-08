@@ -52,7 +52,9 @@ static ok_status cluster_aid_subselect(cluster_aid *h, size_t offset_A,
 	size_t offset_C, size_t sub_size_A, size_t sub_size_C)
 {
 	OK_CHECK_PTR(h);
-
+	h->c_squared.data = OK_NULL;
+	h->d_min.data = OK_NULL;
+	h->D.data = OK_NULL;
 	h->reassigned = 0;
 
 	OK_RETURNIF_ERR( upsamplingvec_subvector(&h->a2c_tentative,
@@ -60,6 +62,7 @@ static ok_status cluster_aid_subselect(cluster_aid *h, size_t offset_A,
 
 	OK_RETURNIF_ERR( vector_subvector(&h->c_squared, &h->c_squared_full,
 		offset_C, sub_size_C) );
+
 	OK_RETURNIF_ERR( vector_subvector(&h->d_min, &h->d_min_full, offset_A,
 		sub_size_A) );
 	return OK_SCAN_ERR( matrix_submatrix(&h->D, &h->D_full, offset_A, offset_C,
@@ -272,6 +275,7 @@ ok_status k_means(matrix *A, matrix *C, upsamplingvec *a2c, vector *counts,
 
 	/* calculate max entry of A */
 	for (iter = 0; iter < A->size1 && !err; ++iter) {
+		vA.data = OK_NULL;
 		matrix_row(&vA, A, iter);
 		vector_max(&vA, &rowmax);
 		maxA = maxA > rowmax ? maxA : rowmax;

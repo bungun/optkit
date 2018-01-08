@@ -362,12 +362,15 @@ ok_status pogs_record_diagnostics(pogs_solver *solver,
 	OK_CHECK_ERR( err, vector_subvector(&v, solver->convergence->primal,
 		iter - 1, 1) );
 	OK_CHECK_ERR( err, vector_set_all(&v, res->primal) );
+	v.data = OK_NULL;
 	OK_CHECK_ERR( err, vector_subvector(&v, solver->convergence->dual,
 		iter - 1, 1) );
 	OK_CHECK_ERR( err, vector_set_all(&v, res->dual) );
+	v.data = OK_NULL;
 	OK_CHECK_ERR( err, vector_subvector(&v, solver->convergence->primal_tol,
 		iter - 1, 1) );
 	OK_CHECK_ERR( err, vector_set_all(&v, tol->primal) );
+	v.data = OK_NULL;
 	OK_CHECK_ERR( err, vector_subvector(&v, solver->convergence->dual_tol,
 		iter - 1, 1) );
 	OK_CHECK_ERR( err, vector_set_all(&v, tol->dual) );
