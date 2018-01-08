@@ -168,9 +168,11 @@ POGS_ABSTRACT_HDR=$(POGS_BASE_HDR) $(CG_HDR) $(POGSINC)abstract.h
 POGS_DENSE_HDR=$(POGS_BASE_HDR) $(DENSE_HDR) $(POGSINC)dense.h
 
 BASE_OBJ=$(PREFIX_OUT)defs$(LIBCONFIG).o
-VECTOR_OBJ=$(LAOUT)vector$(LIBCONFIG).o
-DENSE_OBJ=$(LAOUT)vector$(LIBCONFIG).o $(LAOUT)matrix$(LIBCONFIG).o
-DENSE_OBJ+=$(LAOUT)blas$(LIBCONFIG).o  $(LAOUT)lapack$(LIBCONFIG).o
+VECTOR_OBJ=$(LAOUT)vector$(LIBCONFIG).o $(LAOUT)vector_common$(LIBCONFIG).o
+DENSE_OBJ=$(VECTOR_OBJ)
+DENSE_OBJ+=$(LAOUT)matrix$(LIBCONFIG).o $(LAOUT)matrix_common$(LIBCONFIG).o
+DENSE_OBJ+=$(LAOUT)blas$(LIBCONFIG).o  
+DENSE_OBJ+=$(LAOUT)lapack$(LIBCONFIG).o $(LAOUT)lapack_common$(LIBCONFIG).o
 DENSE_OBJ+=$(LAOUT)dense$(LIBCONFIG).o
 SPARSE_OBJ=$(LAOUT)sparse$(LIBCONFIG).o
 PROX_OBJ=$(PREFIX_OUT)prox$(LIBCONFIG).o
@@ -224,7 +226,7 @@ POGS_ABSTRACT_LIB_DEPS+=operator cg equil projector anderson
 .PHONY: libcg liboperator libanderson libcluster 
 .PHONY: libprox libok_sparse libok_dense
 
-.PHONY: pogs_abstract pogs_dense pogs_#pogs_abstract_ pogs_common 
+.PHONY: pogs_abstract pogs_dense pogs_
 .PHONY: equil equil_dense projector projector_direct cg anderson 
 .PHONY: operator dense_operator sparse_operator diagonal_operator
 .PHONY: cpu_cluster gpu_cluster cpu_cluster_ gpu_cluster_ clustering_common
@@ -234,8 +236,11 @@ POGS_ABSTRACT_LIB_DEPS+=operator cg equil projector anderson
 .PHONY: anderson_fused_diff anderson_fused_diff_ anderson_difference
 .PHONY: cpu_prox gpu_prox cpu_sparse gpu_sparse
 .PHONY: cpu_dense gpu_dense cpu_dense_ gpu_dense_ 
-.PHONY: cpu_lapack gpu_lapack cpu_blas gpu_blas 
-.PHONY: cpu_matrix gpu_matrix cpu_vector gpu_vector cpu_defs gpu_defs
+.PHONY: cpu_lapack_ cpu_lapack gpu_lapack_ gpu_lapack lapack_common
+.PHONY: cpu_blas gpu_blas 
+.PHONY: cpu_matrix_ cpu_matrix gpu_matrix_ gpu_matrix matrix_common
+.PHONY: cpu_vector_ cpu_vector gpu_vector_ gpu_vector vector_common
+.PHONY: cpu_defs gpu_defs
 
 default: cpu_dense
 all: libs liboperator libcg libequil libprojector libpogs libcluster libanderson
@@ -501,7 +506,7 @@ $(LAOUT)sparse_gpu$(PRECISION).o: $(LASRC)sparse.cu $(LAINC)sparse.h \
 	$(CUXX) $(CUXXFLAGS) $< -c -o $@
 
 cpu_dense: cpu_vector cpu_matrix cpu_blas cpu_lapack cpu_dense_
-gpu_dense: gpu_vector gpu_matrix gpu_blas gpu_dense_ #gpu_lapack
+gpu_dense: gpu_vector gpu_matrix gpu_blas gpu_lapack gpu_dense_
 
 cpu_dense_: $(LAOUT)dense_cpu$(PRECISION).o
 $(LAOUT)dense_cpu$(PRECISION).o: $(LASRC)dense.c $(LAINC)dense.h \
@@ -519,19 +524,29 @@ $(LAOUT)dense_gpu$(PRECISION).o: $(LASRC)dense.cu $(LAINC)dense.h \
 	mkdir -p $(OUT)linsys
 	$(CUXX) $(CUXXFLAGS) $< -c -o $@
 
-cpu_lapack: $(LAOUT)lapack_cpu$(PRECISION).o
-$(LAOUT)lapack_cpu$(PRECISION).o: $(LASRC)lapack.c $(LAINC)lapack.h \
-	$(LAINC)matrix.h $(LAINC)vector.h $(DEF_HDR)
+cpu_lapack: lapack_common cpu_lapack_
+gpu_lapack: lapack_common gpu_lapack_
+
+lapack_common: $(LAOUT)lapack_common$(LIBCONFIG).o
+$(LAOUT)lapack_common$(LIBCONFIG).o: $(LASRC)lapack_common.c \
+	$(LAINC)lapack.h $(LAINC)matrix.h $(LAINC)vector.h $(DEF_HDR)
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)linsys
 	$(CC) $(CCFLAGS) $< -c -o $@
 
-# gpu_lapack: $(LAOUT)lapack_gpu$(PRECISION).o
-# $(LAOUT)lapack_gpu$(PRECISION).o: $(LASRC)lapack.cu $(LAINC)lapack.h \
-# 	$(LAINC)matrix.h $(LAINC)vector.h $(GPU_DEF_HDR)
-# 	mkdir -p $(OUT)
-# 	mkdir -p $(OUT)linsys
-# 	$(CUXX) $(CUXXFLAGS) $< -c -o $@
+cpu_lapack: $(LAOUT)lapack_cpu$(PRECISION).o
+$(LAOUT)lapack_cpu$(PRECISION).o: $(LASRC)lapack.c \
+	$(LAINC)lapack.h $(LAINC)matrix.h $(LAINC)vector.h $(DEF_HDR)
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)linsys
+	$(CC) $(CCFLAGS) $< -c -o $@
+
+gpu_lapack: $(LAOUT)lapack_gpu$(PRECISION).o
+$(LAOUT)lapack_gpu$(PRECISION).o: $(LASRC)lapack.cu \
+	$(LAINC)lapack.h $(LAINC)matrix.h $(LAINC)vector.h $(GPU_DEF_HDR)
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)linsys
+	$(CUXX) $(CUXXFLAGS) $< -c -o $@
 
 cpu_blas: $(LAOUT)blas_cpu$(PRECISION).o
 $(LAOUT)blas_cpu$(PRECISION).o: $(LASRC)blas.c $(LAINC)blas.h \
@@ -547,29 +562,50 @@ $(LAOUT)blas_gpu$(PRECISION).o: $(LASRC)blas.cu $(LAINC)blas.h \
 	mkdir -p $(OUT)linsys
 	$(CUXX) $(CUXXFLAGS) $< -c -o $@
 
+cpu_matrix: matrix_common cpu_matrix_
+gpu_matrix: matrix_common gpu_matrix_
+
+matrix_common: $(LAOUT)matrix_common$(LIBCONFIG).o
+$(LAOUT)matrix_common$(LIBCONFIG).o: $(LASRC)matrix_common.cpp \
+	$(LAINC)matrix.h $(LAINC)vector.h $(DEF_HDR)
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)linsys
+	$(CXX) $(CXXFLAGS) $< -c -o $@
+
 cpu_matrix: $(LAOUT)matrix_cpu$(PRECISION).o
-$(LAOUT)matrix_cpu$(PRECISION).o: $(LASRC)matrix.cpp $(LAINC)matrix.h \
-	$(LAINC)vector.h $(DEF_HDR)
+$(LAOUT)matrix_cpu$(PRECISION).o: $(LASRC)matrix.cpp \
+	$(LAINC)matrix.h $(LAINC)vector.h $(DEF_HDR)
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)linsys
 	$(CXX) $(CXXFLAGS) $< -c -o $@
 
 gpu_matrix: $(LAOUT)matrix_gpu$(PRECISION).o
-$(LAOUT)matrix_gpu$(PRECISION).o: $(LASRC)matrix.cu $(LAINC)matrix.h \
-	$(LAINC)vector.h $(GPU_DEF_HDR)
+$(LAOUT)matrix_gpu$(PRECISION).o: $(LASRC)matrix.cu \
+	$(LAINC)matrix.h $(LAINC)vector.h $(GPU_DEF_HDR)
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)linsys
 	$(CUXX) $(CUXXFLAGS) $< -c -o $@
 
-cpu_vector: $(LAOUT)vector_cpu$(PRECISION).o
-$(LAOUT)vector_cpu$(PRECISION).o: $(LASRC)vector.cpp $(LAINC)vector.h $(DEF_HDR)
+cpu_vector: vector_common cpu_vector_
+gpu_vector: vector_common gpu_vector_
+
+vector_common: $(LAOUT)vector_common$(LIBCONFIG).o
+$(LAOUT)vector_common$(LIBCONFIG).o: $(LASRC)vector_common.cpp \
+	$(LAINC)vector.h $(DEF_HDR)
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)linsys
 	$(CXX) $(CXXFLAGS) $< -c -o $@
 
-gpu_vector: $(LAOUT)vector_gpu$(PRECISION).o
-$(LAOUT)vector_gpu$(PRECISION).o: $(LASRC)vector.cu $(LAINC)vector.h \
-	$(INCLUDE)optkit_thrust.hpp $(GPU_DEF_HDR)
+cpu_vector_: $(LAOUT)vector_cpu$(PRECISION).o
+$(LAOUT)vector_cpu$(PRECISION).o: $(LASRC)vector.cpp \
+	$(LAINC)vector.h $(DEF_HDR)
+	mkdir -p $(OUT)
+	mkdir -p $(OUT)linsys
+	$(CXX) $(CXXFLAGS) $< -c -o $@
+
+gpu_vector_: $(LAOUT)vector_gpu$(PRECISION).o
+$(LAOUT)vector_gpu$(PRECISION).o: $(LASRC)vector.cu \
+	$(LAINC)vector.h $(INCLUDE)optkit_thrust.hpp $(GPU_DEF_HDR)
 	mkdir -p $(OUT)
 	mkdir -p $(OUT)linsys
 	$(CUXX) $(CUXXFLAGS) $< -c -o $@
