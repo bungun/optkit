@@ -106,7 +106,7 @@ ok_status lapack_LU_svx(void *hdl, matrix *LU, matrix *X, int_vector *pivot)
 		trans, (int) LU->size1, (int) X->size2, LU->data, (int) LU->ld,
 		pivot->data, X->data, (int) X->ld, info->data));
 
-	OK_MAX_ERR(vector_memcpy_av(&host_info, &dev_info, 1));
+	OK_MAX_ERR(err, vector_memcpy_av(&host_info, &dev_info, 1));
 	if (host_info < 1)
 		printf("%s%i\n",
 			"CUSOLVER generic triangular solve fail. Error at ith parameter, i=",
