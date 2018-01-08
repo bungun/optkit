@@ -13,7 +13,7 @@
 #ifdef __CUDACC__
 #include "cublas_v2.h"
 #include <cusparse.h>
-#include <cusolver.h>
+#include <cusolverDn.h>
 #endif
 
 #ifdef __cplusplus
