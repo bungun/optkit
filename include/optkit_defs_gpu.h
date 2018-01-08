@@ -51,6 +51,16 @@ const unsigned int kMaxGridSize = 65535u;
 				__func__); \
 	} while (0)
 
+#define OK_SCAN_CUSOLVER(call) ok_cusolver_status(call, __FILE__, __LINE__, \
+		__func__)
+
+#define OK_CHECK_CUSOLVER(err, call) \
+	do { \
+		if (!err) \
+			err = ok_cusolver_status(call, __FILE__, __LINE__, \
+				__func__); \
+	} while (0)
+
 #define ok_alloc_gpu(x, n) ok_cuda_status( cudaMalloc((void **) &x, n), \
 		__FILE__,  __LINE__, __func__)
 
@@ -67,11 +77,13 @@ const unsigned int kMaxGridSize = 65535u;
 	#define CUBLAS(x) cublasD ## x
 	#define CUBLASI(x) cublasId ## x
 	#define CUSPARSE(x) cusparseD ## x
+	#define CUSOLVER(x) cusolverDnD ## x
 	#define OK_CUDA_NAN CUDART_NAN
 #else
 	#define CUBLAS(x) cublasS ## x
 	#define CUBLASI(x) cublasIs ## x
 	#define CUSPARSE(x) cusparseS ## x
+	#define CUSOLVER(x) cusolverDnS ## x
 	#define OK_CUDA_NAN CUDART_NAN_F
 #endif
 
@@ -134,6 +146,29 @@ static const char* cusparse_err2string(cusparseStatus_t error) {
 	}
 }
 
+static const char* cusolver_err2string(cusolverStatus_t error) {
+	switch (error) {
+	case CUSOLVER_STATUS_SUCCESS:
+		return "CUSOLVER_STATUS_SUCCESS";
+	case CUSOLVER_STATUS_NOT_INITIALIZED:
+		return "CUSOLVER_STATUS_NOT_INITIALIZED";
+	case CUSOLVER_STATUS_ALLOC_FAILED:
+		return "CUSOLVER_STATUS_ALLOC_FAILED";
+	case CUSOLVER_STATUS_INVALID_VALUE:
+		return "CUSOLVER_STATUS_INVALID_VALUE";
+	case CUSOLVER_STATUS_ARCH_MISMATCH:
+		return "CUSOLVER_STATUS_ARCH_MISMATCH";
+	case CUSOLVER_STATUS_EXECUTION_FAILED:
+		return "CUSOLVER_STATUS_EXECUTION_FAILED";
+	case CUSOLVER_STATUS_INTERNAL_ERROR:
+		return "CUSOLVER_STATUS_INTERNAL_ERROR";
+	case CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED:
+		return "CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED";
+	default:
+		return "<unknown>";
+	}
+}
+
 inline ok_status ok_cuda_status(cudaError_t code, const char *file, int line,
 	const char *function)
 {
@@ -165,6 +200,18 @@ inline ok_status ok_cusparse_status(cusparseStatus_t code, const char *file,
 		printf("%s:%d:%s\n ERROR CUSPARSE: %s\n", file, line, function,
 			cusparse_err2string(code));
 		return OPTKIT_ERROR_CUSPARSE;
+	} else {
+		return OPTKIT_SUCCESS;
+	}
+}
+
+inline ok_status ok_cusolver_status(cusolverStatus_t code, const char *file,
+	int line, const char *function)
+{
+	if (code != CUSOLVER_STATUS_SUCCESS) {
+		printf("%s:%d:%s\n ERROR CUSOLVER: %s\n", file, line, function,
+			cusolver_err2string(code));
+		return OPTKIT_ERROR_CUSOLVER;
 	} else {
 		return OPTKIT_SUCCESS;
 	}

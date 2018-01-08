@@ -13,6 +13,7 @@
 #ifdef __CUDACC__
 #include "cublas_v2.h"
 #include <cusparse.h>
+#include <cusolver.h>
 #endif
 
 #ifdef __cplusplus
@@ -59,6 +60,7 @@ typedef enum optkit_status {
 	OPTKIT_ERROR_CUBLAS = 3,
 	OPTKIT_ERROR_CUSPARSE = 4,
 	OPTKIT_ERROR_LAPACK = 5,
+	OPTKIT_ERROR_CUSOLVER = 6,
 	OPTKIT_ERROR_DOMAIN = 10,
 	OPTKIT_ERROR_DIVIDE_BY_ZERO = 11,
 	OPTKIT_ERROR_LAYOUT_MISMATCH = 100,
@@ -156,6 +158,8 @@ static const char * ok_err2string(const ok_status error) {
 		return "OPTKIT_ERROR_CUSPARSE";
 	case OPTKIT_ERROR_LAPACK:
 		return "OPTKIT_ERROR_LAPACK";
+	case OPTKIT_ERROR_CUSOLVER:
+		return "OPTKIT_ERROR_CUSOLVER";
 	case OPTKIT_ERROR_DOMAIN:
 		return "OPTKIT_ERROR_DOMAIN";
 	case OPTKIT_ERROR_DIVIDE_BY_ZERO:
