@@ -210,7 +210,7 @@ ok_status vector_mul_(vector_<T> *v1, const vector_<T> *v2)
 }
 
 template<typename T>
-ok_status vector_div(vector_<T> *v1, const vector_<T> *v2)
+ok_status vector_div_(vector_<T> *v1, const vector_<T> *v2)
 {
         OK_CHECK_VECTOR(v1);
         OK_CHECK_VECTOR(v2);
