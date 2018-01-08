@@ -192,7 +192,7 @@ ok_status pogs_abstract_save_work(pogs_abstract_solver_private_data *data,
 	data->A_equil = W->A;
 	// RECOVER PROJECTOR
 
-	/* RECOVER PROJECTOR CACHE, IF DIRECT
+	// RECOVER PROJECTOR CACHE, IF DIRECT
 	if (W->P->kind == OkProjectorDenseDirect)
 		OK_CHECK_ERR( err, matrix_memcpy_am(data->ATA_cholesky, W->P->L,
 			flags->ord) );
