@@ -459,9 +459,6 @@ class DenseLapackTestCase(unittest.TestCase):
                 atol = 1e-2 * imprecision_factor * mindim
                 rtol = 1e-2 * imprecision_factor
 
-                if lib.GPU:
-                    continue
-                    #TODO: GPU IMPLEMENTATION
                 if order == lib.enums.CblasRowMajor:
                     continue
                     #TODO: ROWMAJOR IMPLEMENTATION (LAPACK->LAPACKE)
