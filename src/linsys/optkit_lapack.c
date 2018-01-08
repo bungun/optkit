@@ -18,7 +18,7 @@ ok_status lapack_destroy_handle(void *lapack_handle)
  * TODO: no support for row-major matrices when compiling against fortran
  * LAPACK, as opposed to C LAPACKE interface which accomodates array layout
  */
-ok_status lapack_solve_LU_flagged(void *hdl, matrix *A, vector *x,
+ok_status lapack_solve_LU_matrix_flagged(void *hdl, matrix *A, matrix *X,
 	int_vector *pivot, int silence_lapack_err)
 {
 	lapack_int *ipiv = OK_NULL;
@@ -26,26 +26,28 @@ ok_status lapack_solve_LU_flagged(void *hdl, matrix *A, vector *x,
 	lapack_int n, nrhs, lda, ldb;
 
 	OK_CHECK_MATRIX(A);
-	OK_CHECK_VECTOR(x);
+	OK_CHECK_MATRIX(X);
 	OK_CHECK_VECTOR(pivot);
 
-	if (A->size1 != A->size2 || x->size != A->size2 || pivot->size != A->size2)
+	if (A->size1 != A->size2 || X->size1 != A->size2 || pivot->size != A->size2)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
+#ifndef OK_C_LAPACKE
 	if (A->order != CblasColMajor)
 		return OK_SCAN_ERR( OPTKIT_ERROR_LAYOUT_MISMATCH );
+#endif
 
 	n = (lapack_int) A->size1;
-	nrhs = (lapack_int) 1;
+	nrhs = (lapack_int) X->size2;
 	lda = (lapack_int) A->ld;
-	ldb = (lapack_int) x->size;
+	ldb = (lapack_int) X->ld;
 	ipiv = (lapack_int *) pivot->data;
 
 #ifdef OK_C_LAPACKE
 	err = LAPACKE(gesv)((int) A->order, n, nrhs, A->data, lda, ipiv,
-		x->data, ldb);
+		X->data, ldb);
 #else
-	LAPACK(gesv)(&n, &nrhs, A->data, &lda, ipiv, x->data, &ldb, &err);
+	LAPACK(gesv)(&n, &nrhs, A->data, &lda, ipiv, X->data, &ldb, &err);
 #endif
 
 	if (err) {
@@ -58,37 +60,3 @@ ok_status lapack_solve_LU_flagged(void *hdl, matrix *A, vector *x,
 	}
 	return OPTKIT_SUCCESS;
 }
-
-ok_status lapack_solve_LU(void *hdl, matrix *A, vector *x, int_vector *pivot)
-{
-	return lapack_solve_LU_flagged(hdl, A, x, pivot, 0);
-}
-
-// ok_status lapack_solve_LU_matrix(void *hdl, matrix *A, matrix *X,
-//	int_vector *pivot)
-// {
-// 	lapack_int *pivot = OK_NULL;
-// 	lapack_int err = 0;
-
-// 	OK_CHECK_MATRIX(A);
-// 	OK_CHECK_MATRIX(X);
-
-// 	if (A->size1 != A->size2 || X->size1 != A->size2)
-// 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
-// 	if (A->order != X->order)
-// 		return OK_SCAN_ERR( OPTKIT_ERROR_LAYOUT_MISMATCH );
-
-// 	err = LAPACKE(gesv)((int) A->order, (lapack_int) A->size1,
-// 	(lapack_int) X->size2, A->data, (int) A->ld, (lapack_int *) pivot,
-// 	X->data, (int) X->ld);
-
-// 	if (err) {
-// 		printf("%s%i\n", "LAPACK ERROR: ", (int) err);
-// 		return OK_SCAN_ERR( OPTKIT_ERROR_LAPACK );
-// 	}
-// 	return OPTKIT_SUCCESS;
-// }
-
-#ifdef __cplusplus
-}
-#endif
