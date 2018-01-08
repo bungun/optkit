@@ -66,62 +66,56 @@ typedef strided_range<thrust::device_ptr<ok_float> > strided_range_t;
  */
 
 /* x -> |x| */
-template<typename T>
-struct AbsF : thrust::unary_function<T, T>
+struct AbsF : thrust::unary_function<ok_float, ok_float>
 {
-	__device__ inline T operator()(T x)
+	__device__ inline ok_float operator()(ok_float x)
 		{ return MATH(fabs)(x); }
 };
 
 /* x -> alpha / x */
-template<typename T>
-struct ReciprF : thrust::unary_function<T, T>
+struct ReciprF : thrust::unary_function<ok_float, ok_float>
 {
-	T alpha;
+	ok_float alpha;
 	ReciprF() : alpha(1) {}
-	ReciprF(T alpha) : alpha(alpha) {}
-	__device__ inline T operator()(T x)
+	ReciprF(ok_float alpha) : alpha(alpha) {}
+	__device__ inline ok_float operator()(ok_float x)
 		{ return alpha / x; }
 };
 
 /*
  * x -> alpha / x 	x != 0
- *		0 	otherwise
+ * 	0 		otherwise
  */
-template<typename T>
-struct SafeReciprF : thrust::unary_function<T, T>
+struct SafeReciprF : thrust::unary_function<ok_float, ok_float>
 {
-	T alpha;
+	ok_float alpha;
 	SafeReciprF() : alpha(1) {}
-	SafeReciprF(T alpha) : alpha(alpha) {}
-	__device__ inline T operator()(T x)
-		{ return ((T) (x == kZero)) * alpha / x; }
+	SafeReciprF(ok_float alpha) : alpha(alpha) {}
+	__device__ inline ok_float operator()(ok_float x)
+		{ return ((ok_float) (x == kZero)) * alpha / x; }
 };
 
 
 /* x -> sqrt(x) */
-template<typename T>
-struct SqrtF : thrust::unary_function<T, T>
+struct SqrtF : thrust::unary_function<ok_float, ok_float>
 {
-        __device__ inline T operator()(T x)
-                { return MATH(sqrt)(x); }
+	__device__ inline ok_float operator()(ok_float x)
+		{ return MATH(sqrt)(x); }
 };
 
 /* x -> x^p */
-template<typename T>
-struct PowF : thrust::unary_function<T, const T>
+struct PowF : thrust::unary_function<ok_float, const ok_float>
 {
-	const T p;
-	PowF(const T p) : p(p) {}
-	__device__ inline T operator()(T x)
+	const ok_float p;
+	PowF(const ok_float p) : p(p) {}
+	__device__ inline ok_float operator()(ok_float x)
 		{ return MATH(pow)(x, p); }
 };
 
 /* x -> exp(x) */
-template<typename T>
-struct ExpF : thrust::unary_function<T, T>
+struct ExpF : thrust::unary_function<ok_float, ok_float>
 {
-	__device__ inline T operator()(T x)
+	__device__ inline ok_float operator()(ok_float x)
 		{ return MATH(exp)(x); }
 };
 
@@ -266,7 +260,7 @@ inline void __thrust_vector_sqrt(vector *v)
 }
 
 
-inline void __thrust_vector_pow(vector *v, const T p)
+inline void __thrust_vector_pow(vector *v, const ok_float p)
 {
 	strided_range_t r = __make_strided_range<ok_float>(v);
 	__transform_r(r, PowF(p));
