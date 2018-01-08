@@ -66,19 +66,21 @@ typedef strided_range<thrust::device_ptr<ok_float> > strided_range_t;
  */
 
 /* x -> |x| */
-struct AbsF : thrust::unary_function<ok_float, ok_float>
+template<typename T>
+struct AbsF : thrust::unary_function<T, T>
 {
-	__device__ inline ok_float operator()(ok_float x)
+	__device__ inline T operator()(T x)
 		{ return MATH(fabs)(x); }
 };
 
 /* x -> alpha / x */
-struct ReciprF : thrust::unary_function<ok_float, ok_float>
+template<typename T>
+struct ReciprF : thrust::unary_function<T, T>
 {
-	ok_float alpha;
+	T alpha;
 	ReciprF() : alpha(1) {}
-	ReciprF(ok_float alpha) : alpha(alpha) {}
-	__device__ inline ok_float operator()(ok_float x)
+	ReciprF(T alpha) : alpha(alpha) {}
+	__device__ inline T operator()(T x)
 		{ return alpha / x; }
 };
 
@@ -86,36 +88,40 @@ struct ReciprF : thrust::unary_function<ok_float, ok_float>
  * x -> alpha / x 	x != 0
  *		0 	otherwise
  */
-struct SafeReciprF : thrust::unary_function<ok_float, ok_float>
+template<typename T>
+struct SafeReciprF : thrust::unary_function<T, T>
 {
-	ok_float alpha;
+	T alpha;
 	SafeReciprF() : alpha(1) {}
-	SafeReciprF(ok_float alpha) : alpha(alpha) {}
-	__device__ inline ok_float operator()(ok_float x)
-		{ return ((ok_float) (x == kZero)) * alpha / x; }
+	SafeReciprF(T alpha) : alpha(alpha) {}
+	__device__ inline T operator()(T x)
+		{ return ((T) (x == kZero)) * alpha / x; }
 };
 
 
 /* x -> sqrt(x) */
-struct SqrtF : thrust::unary_function<ok_float, ok_float>
+template<typename T>
+struct SqrtF : thrust::unary_function<T, T>
 {
-        __device__ inline ok_float operator()(ok_float x)
+        __device__ inline T operator()(T x)
                 { return MATH(sqrt)(x); }
 };
 
 /* x -> x^p */
-struct PowF : thrust::unary_function<ok_float, const ok_float>
+template<typename T>
+struct PowF : thrust::unary_function<T, const T>
 {
-	const ok_float p;
-	PowF(const ok_float p) : p(p) {}
-	__device__ inline ok_float operator()(ok_float x)
+	const T p;
+	PowF(const T p) : p(p) {}
+	__device__ inline T operator()(T x)
 		{ return MATH(pow)(x, p); }
 };
 
 /* x -> exp(x) */
-struct ExpF : thrust::unary_function<ok_float, ok_float>
+template<typename T>
+struct ExpF : thrust::unary_function<T, T>
 {
-	__device__ inline ok_float operator()(ok_float x)
+	__device__ inline T operator()(T x)
 		{ return MATH(exp)(x); }
 };
 
@@ -185,45 +191,52 @@ inline void __transform_cr(ok_float x, strided_range_t r, BinaryFunction f)
  * =============================================
  */
 
-inline void __thrust_vector_scale(vector *v, ok_float x)
+template<typename T>
+inline void __thrust_vector_scale(vector_<T> *v, T x)
 {
-	strided_range_t r = __make_strided_range<ok_float>(v);
-	__transform_rc(r, x, thrust::multiplies<ok_float>());
+	strided_range_t r = __make_strided_range<T>(v);
+	__transform_rc(r, x, thrust::multiplies<T>());
 }
 
-inline void __thrust_vector_add(vector *v1, const vector *v2)
+template<typename T>
+inline void __thrust_vector_add(vector_<T> *v1, const vector_<T> *v2)
 {
-	strided_range_t r1 = __make_strided_range<ok_float>(v1);
-	strided_range_t r2 = __make_const_strided_range<ok_float>(v2);
-	__transform_rr(r1, r2, thrust::plus<ok_float>());
+	strided_range_t r1 = __make_strided_range<T>(v1);
+	strided_range_t r2 = __make_const_strided_range<T>(v2);
+	__transform_rr(r1, r2, thrust::plus<T>());
 }
 
-inline void __thrust_vector_sub(vector *v1, const vector *v2)
+template<typename T>
+inline void __thrust_vector_sub(vector_<T> *v1, const vector_<T> *v2)
 {
-	strided_range_t r1 = __make_strided_range<ok_float>(v1);
-	strided_range_t r2 = __make_const_strided_range<ok_float>(v2);
-	__transform_rr(r1, r2, thrust::minus<ok_float>());
+	strided_range_t r1 = __make_strided_range<T>(v1);
+	strided_range_t r2 = __make_const_strided_range<T>(v2);
+	__transform_rr(r1, r2, thrust::minus<T>());
 }
 
-inline void __thrust_vector_mul(vector *v1, const vector *v2)
+template<typename T>
+inline void __thrust_vector_mul(vector_<T> *v1, const vector_<T> *v2)
 {
-	strided_range_t r1 = __make_strided_range<ok_float>(v1);
-	strided_range_t r2 = __make_const_strided_range<ok_float>(v2);
-	__transform_rr(r1, r2, thrust::multiplies<ok_float>());
+	strided_range_t r1 = __make_strided_range<T>(v1);
+	strided_range_t r2 = __make_const_strided_range<T>(v2);
+	__transform_rr(r1, r2, thrust::multiplies<T>());
 }
 
-inline void __thrust_vector_div(vector *v1, const vector *v2)
+template<typename T>
+inline void __thrust_vector_div(vector_<T>*v1, const vector_<T> *v2)
 {
-	strided_range_t r1 = __make_strided_range<ok_float>(v1);
-	strided_range_t r2 = __make_const_strided_range<ok_float>(v2);
-	__transform_rr(r1, r2, thrust::divides<ok_float>());
+	strided_range_t r1 = __make_strided_range<T>(v1);
+	strided_range_t r2 = __make_const_strided_range<T>(v2);
+	__transform_rr(r1, r2, thrust::divides<T>());
 }
 
-inline void __thrust_vector_add_constant(vector *v, const ok_float x)
+template<typename T>
+inline void __thrust_vector_add_constant(vector_<T> *v, const T x)
 {
-	strided_range_t r = __make_strided_range<ok_float>(v);
-	__transform_rc(r, x, thrust::plus<ok_float>());
+	strided_range_t r = __make_strided_range<T>(v);
+	__transform_rc(r, x, thrust::plus<T>());
 }
+
 
 inline void __thrust_vector_abs(vector *v)
 {
@@ -231,11 +244,13 @@ inline void __thrust_vector_abs(vector *v)
 	__transform_r(r, AbsF());
 }
 
+
 inline void __thrust_vector_recip(vector *v)
 {
 	strided_range_t r = __make_strided_range<ok_float>(v);
 	__transform_r(r, ReciprF());
 }
+
 
 inline void __thrust_vector_safe_recip(vector *v)
 {
@@ -243,17 +258,20 @@ inline void __thrust_vector_safe_recip(vector *v)
 	__transform_r(r, SafeReciprF());
 }
 
+
 inline void __thrust_vector_sqrt(vector *v)
 {
 	strided_range_t r = __make_strided_range<ok_float>(v);
 	__transform_r(r, SqrtF());
 }
 
-inline void __thrust_vector_pow(vector *v, const ok_float p)
+
+inline void __thrust_vector_pow(vector *v, const T p)
 {
 	strided_range_t r = __make_strided_range<ok_float>(v);
 	__transform_r(r, PowF(p));
 }
+
 
 inline void __thrust_vector_exp(vector *v)
 {
