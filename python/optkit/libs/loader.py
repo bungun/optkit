@@ -29,6 +29,23 @@ def get_optkit_libdir():
 
     return os.path.join(p, '_optkit_libs')
 
+def patch_GOMP_cusolver(lib_path):
+    """ fix for loading libcusolver.so
+
+    error:
+    "OSError: /usr/local/cuda/lib64/libcusolver.so.8.0: undefined symbol: GOMP_critical_end"
+
+    solution:
+    https://github.com/lebedov/scikit-cuda/issues/171
+    """
+    problem_lib = 'libcusolver.so.8.0'
+    if 'linux' in sys.platform:
+        if problem_lib in str(subprocess.check_output(['ldd', lib_path])):
+            try:
+                ct.CDLL('libgomp.so.1', mode=ct.RTLD_GLOBAL)
+            except:
+                pass
+
 def retrieve_libs(lib_prefix):
     libs = {}
     global_c_build = get_optkit_libdir()
@@ -49,6 +66,8 @@ def retrieve_libs(lib_prefix):
                 lib_path = os.path.join(local_c_build, lib_name)
 
             if os.path.exists(lib_path):
+                if device == 'gpu':
+                    patch_GOMP_cusolver(lib_path)
                 print('loading lib: {} at {}'.format(lib_name, lib_path))
                 libs[lib_tag] = ct.CDLL(lib_path)
                 libs[lib_tag].INITIALIZED = False
