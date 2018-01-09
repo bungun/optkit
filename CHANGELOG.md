@@ -19,7 +19,7 @@ check problem size? or...handle allocation failures in python?)
 - TODO: projection as abstract_operator
 - TODO: solver caching for pogs_abstract
 - TODO: POGS IO ABSTRACT
-- TODO: CPU LAPACK ROWMAJOR
+- TODO: GPU/CPU LU ROWMAJOR
 
 ###v0.0.5 (current)
 - Python 3 (3.3, 3.4, 3.5) support
@@ -34,9 +34,6 @@ check problem size? or...handle allocation failures in python?)
 - Add setting "toladapt" (default value: 1e-3) to POGS to use relatively tighter tolerances for adaptive rho subroutine of POGS in order to avoid oscillations when POGS solver residuals approach solver tolerances 
 - Refactor tests to be reflect that they are (mostly) functional tests, not unit tests with an eye toward using the nose2.such DSL; add optkit-specific context managers to manage C variables
 - TODO: CONDA RECIPE GPU FEATURE?
-- TODO: GPU LAPACK. 
-- TODO: TEST GPU ANDERSON
-- TODO: TEST GPU POGS
 
 ###v0.0.4
 - Migrate tests to unittests
