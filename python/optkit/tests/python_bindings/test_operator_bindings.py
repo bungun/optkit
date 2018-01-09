@@ -8,6 +8,7 @@ import unittest
 
 from optkit.api import backend
 from optkit.types.operator import *
+from optkit.tests import defs
 
 class OperatorBindingsTestCase(unittest.TestCase):
     @classmethod
@@ -20,10 +21,11 @@ class OperatorBindingsTestCase(unittest.TestCase):
         os.environ['OPTKIT_USE_LOCALLIBS'] = self.env_orig
 
     def setUp(self):
-        self.A_test = self.A_test_gen
-        self.A_test_csr = sp.csr_matrix(self.A_test_sparse_gen)
-        self.A_test_csc = sp.csc_matrix(self.A_test_sparse_gen)
-        self.A_test_coo = sp.coo_matrix(self.A_test_sparse_gen)
+        self.A_test = defs.A_test_gen()
+        A_sp = defs.A_test_sparse_gen()
+        self.A_test_csr = sp.csr_matrix(A_sp)
+        self.A_test_csc = sp.csc_matrix(A_sp)
+        self.A_test_coo = sp.coo_matrix(A_sp)
 
         self.matrices = [
             self.A_test, self.A_test_csr, self.A_test_csc, self.A_test_coo,
