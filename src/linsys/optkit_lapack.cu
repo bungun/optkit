@@ -26,15 +26,10 @@ ok_status lapack_destroy_handle(void *lapack_handle)
 {
 	OK_CHECK_PTR(lapack_handle);
 	ok_status err = OK_SCAN_CUSOLVER(
-		cusolverDnDestroy(*(cusolverDnHandle_t *) handle) );
+		cusolverDnDestroy(*(cusolverDnHandle_t *) lapack_handle) );
 	ok_free(lapack_handle);
 	return err;
 }
-
-ok_status lapack_LU_decomp_flagged(void *hdl, matrix *A, int_vector *pivot,
-	int silence_cusolver_err);
-ok_status lapack_LU_decomp(void *hdl, matrix *A, int_vector *pivot);
-ok_status lapack_LU_svx(void *hdl, matrix *LU, vector *x);
 
 ok_status lapack_LU_decomp_flagged(void *hdl, matrix *A, int_vector *pivot,
 	int silence_cusolver_err)
@@ -52,7 +47,7 @@ ok_status lapack_LU_decomp_flagged(void *hdl, matrix *A, int_vector *pivot,
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 
-	cusolver_err = CUSOLVER(getrf_bufferSize)(*(cusolverDnHandle_t *) handle,
+	cusolver_err = CUSOLVER(getrf_bufferSize)(*(cusolverDnHandle_t *) hdl,
 		(int) A->size1, (int) A->size2, A->data, (int) A->ld, &dim_work);
 	if (cusolver_err)
 		return OK_SCAN_CUSOLVER(cusolver_err);
@@ -61,9 +56,9 @@ ok_status lapack_LU_decomp_flagged(void *hdl, matrix *A, int_vector *pivot,
 	OK_CHECK_ERR(err, int_vector_calloc(&info, 1));
 
 	/* http://docs.nvidia.com/cuda/cusolver/index.html#ixzz53Sp2qt3h */
-	cusolver_err = CUSOLVER(getrf)(*(cusolverDnHandle_t *) handle,
+	cusolver_err = CUSOLVER(getrf)(*(cusolverDnHandle_t *) hdl,
 		(int) A->size1, (int) A->size2, A->data, (int) A->ld,
-		workspace->data, pivot->data, info->data);
+		workspace.data, pivot->data, info.data);
 
 	if (cusolver_err && silence_cusolver_err)
 		err = OPTKIT_ERROR_CUSOLVER;
@@ -97,17 +92,19 @@ ok_status lapack_LU_svx(void *hdl, matrix *LU, matrix *X, int_vector *pivot)
 
 	if (LU->size1 != LU->size2 || X->size1 != LU->size2)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
-	if (X->ord != CblasColMajor)
+	if (X->order != CblasColMajor)
 		return OK_SCAN_ERR( OPTKIT_ERROR_LAYOUT_MISMATCH );
 
-	trans = (LU->ord == CblasColMajor) ? CUBLAS_OP_N : CUBLAS_OP_T;
+	trans = (LU->order == CblasColMajor) ? CUBLAS_OP_N : CUBLAS_OP_T;
 
-	err = OK_SCAN_CUSOLVER(CUSOLVER(getrs)(*(cusolverDnHandle_t *) handle,
+	OK_CHECK_ERR(err, int_vector_calloc(&dev_info, 1));
+	OK_CHECK_CUSOLVER(err, CUSOLVER(getrs)(*(cusolverDnHandle_t *) hdl,
 		trans, (int) LU->size1, (int) X->size2, LU->data, (int) LU->ld,
-		pivot->data, X->data, (int) X->ld, info->data));
+		pivot->data, X->data, (int) X->ld, dev_info.data));
 
-	OK_MAX_ERR(err, vector_memcpy_av(&host_info, &dev_info, 1));
-	if (host_info < 1)
+	OK_CHECK_ERR(err, int_vector_memcpy_av(&host_info, &dev_info, 1));
+	OK_MAX_ERR(err, int_vector_free(&dev_info));
+	if (host_info < 0)
 		printf("%s%i\n",
 			"CUSOLVER generic triangular solve fail. Error at ith parameter, i=",
 			-host_info);
