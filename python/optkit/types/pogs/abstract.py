@@ -7,7 +7,7 @@ import ctypes as ct
 from optkit.types.operator import OperatorTypes
 from optkit.types.pogs.base import PogsTypesBase
 
-class PogsAbstractTypes(PogsCommonTypes):
+class PogsAbstractTypes(PogsTypesBase):
     def __init__(self, backend):
         lib = backend.pogs_abstract
         PogsTypesBase.__init__(self, lib)
@@ -36,6 +36,13 @@ class PogsAbstractTypes(PogsCommonTypes):
                 _SolverBase._unregister_solver(self)
                 if self.A is not None:
                     self.A.release_operator()
+
+            @property
+            def A(self):
+                try:
+                    return self._A
+                except:
+                    return None
 
             @A.setter
             def A(self, A):

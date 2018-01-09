@@ -182,7 +182,7 @@ class PogsTypesBase(object):
                                                 item, type(params[item]),
                                                 Objective, start, end))
 
-                param_types = {k:(int, float) for k in [1:]}
+                param_types = {k: (int, float) for k in self.__fields[1:]}
                 param_types['h'] = (int, str)
 
                 for key in param_types:
@@ -238,7 +238,7 @@ class PogsTypesBase(object):
                         'maxiter',
                         'anderson_lookback',
                         'verbose',
-                        'suppress'.
+                        'suppress',
                         'adaptiverho',
                         'accelerate',
                         'gapstop',
@@ -281,7 +281,7 @@ class PogsTypesBase(object):
                 if value < 0:
                     raise ValueError('argument `{}` must be >= 0'.format(key))
                 setattr(settings.c, key, value)
-            setattr(SolverSettings, property(get_setting, set_setting))
+            setattr(SolverSettings, key, property(get_setting, set_setting))
 
         for key in ('maxiter', 'anderson_lookback', 'verbose', 'suppress'):
             def get_setting(settings):
@@ -291,7 +291,7 @@ class PogsTypesBase(object):
                 if value < 0:
                     raise ValueError('argument `{}` must be >= 0'.format(key))
                 setattr(settings.c, key, value)
-            setattr(SolverSettings, property(get_setting, set_setting))
+            setattr(SolverSettings, key, property(get_setting, set_setting))
 
         for key in (
                 'adaptiverho',
@@ -304,7 +304,7 @@ class PogsTypesBase(object):
                 return getattr(settings.c, key)
             def set_setting(settings, value):
                 setattr(settings.c, key, int(bool(value)))
-            setattr(SolverSettings, property(get_setting, set_setting))
+            setattr(SolverSettings, key, property(get_setting, set_setting))
 
         for key in ('x0', 'nu0'):
             def get_setting(settings):
@@ -312,7 +312,7 @@ class PogsTypesBase(object):
             def set_setting(settings, value):
                 value = value.astype(lib.pyfloat)
                 setattr(settings.c, key, value.ctypes.data_as(lib.ok_float_p))
-            setattr(SolverSettings, property(get_setting, set_setting))
+            setattr(SolverSettings, key, property(get_setting, set_setting))
 
 
         class SolverInfo(object):
@@ -390,11 +390,12 @@ class PogsTypesBase(object):
             def dict(self):
                 return {'state': self.vec, 'rho': self.rho[0]}
 
-        class _SolverCacheBase(metaclass=abc.ABCMeta):
+        @add_metaclass(abc.ABCMeta)
+        class _SolverCacheBase:
             def __init__(self, shapes, array_dict=None):
                 self.ptr = PogsPrivateData()
                 self.flags = PogsFlags()
-                if array_dict = None:
+                if array_dict is None:
                     array_dict = dict()
 
                 for key in shapes:
@@ -418,7 +419,8 @@ class PogsTypesBase(object):
                 self.ptr = self.py.ctypes.data_as(lib.function_p)
                 self.c = lib.function_vector(size, self.ptr)
 
-        class _SolverBase(metaclass=abc.ABCMeta):
+        @add_metaclass(abc.ABCMeta)
+        class _SolverBase:
             def __init__(self, A, **options):
                 self.__backend = backend
                 self.shape = self.m, self.n = m, n
@@ -456,11 +458,10 @@ class PogsTypesBase(object):
                 return self.__c_solver
 
             @property
+            @abc.abstractmethod
             def A(self):
-                try:
-                    return self._A
-                except:
-                    return None
+                raise NotImplementedError
+
             @A.setter
             @abc.abstractmethod
             def A(self, A):
@@ -530,7 +531,8 @@ class PogsTypesBase(object):
                 self.settings.update(**options)
                 if self.settings.reltol < 1e-3:
                     if 'accelerate' not in options:
-                        self.settings.accelerate =
+                        self.settings.accelerate = 1
+                        self.settings.toladapt = 1e-2
 
                 lib.pogs_solve(
                         self.c_solver, self.f.c, self.g.c, self.settings.c,

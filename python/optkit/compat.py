@@ -1,7 +1,8 @@
 from __future__ import print_function
 import six
-
 import os
+
+from six import add_metaclass
 
 def listmap(f, *args):
     return list(six.moves.map(f, *args))

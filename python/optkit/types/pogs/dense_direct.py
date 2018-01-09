@@ -43,6 +43,13 @@ class PogsDenseDirectTypes(PogsTypesBase):
                     raise TypeError('input must be a 2-d {}'.format(np.ndarray))
                 _SolverBase.__init__(self, A, **options)
 
+            @property
+            def A(self):
+                try:
+                    return self._A
+                except:
+                    return None
+
             @A.setter
             def A(self, A):
                 if self.A is not None:
