@@ -98,7 +98,7 @@ class OperatorTypes(object):
                 return self.__c_ptr
 
             def release_operator(self):
-                if isinstance(self.c_ptr, lib.operator_p):
+                if isinstance(self.c_ptr, lib.abstract_operator_p):
                     self.c_ptr.contents.free(self.c_ptr.contents.data)
                     backend.decrement_cobject_count()
                     self.__c_ptr = None
