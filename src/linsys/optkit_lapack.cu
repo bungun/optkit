@@ -37,8 +37,8 @@ ok_status lapack_LU_decomp_flagged(void *hdl, matrix *A, int_vector *pivot,
 	ok_status err = OPTKIT_SUCCESS;
 	cusolverStatus_t cusolver_err;
 	int dim_work, host_info;
-	vector workspace;
-	int_vector info;
+	vector workspace = (vector){OK_NULL};
+	int_vector info = (int_vector){OK_NULL};
 	OK_CHECK_MATRIX(A);
 	OK_CHECK_VECTOR(pivot);
 	OK_CHECK_PTR(hdl);
@@ -84,7 +84,7 @@ ok_status lapack_LU_svx(void *hdl, matrix *LU, matrix *X, int_vector *pivot)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	cublasOperation_t trans;
-	int_vector dev_info;
+	int_vector dev_info = (int_vector){OK_NULL};
 	int host_info;
 	OK_CHECK_MATRIX(LU);
 	OK_CHECK_MATRIX(X);
