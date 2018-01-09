@@ -57,6 +57,7 @@ script:
   - ./test dense
   - ./test sparse
   - ./test prox
+  - ./test anderson
   - ./test operator
   - ./test cg
   - ./test equil
