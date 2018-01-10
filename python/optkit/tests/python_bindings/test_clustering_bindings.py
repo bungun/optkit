@@ -10,10 +10,9 @@ from optkit import api
 from optkit.libs import error
 from optkit.types import clustering
 from optkit.tests import defs
+from optkit.tests.python_bindings import prepare
 
-if os.getenv('OPTKIT_PYTEST_GPU', False):
-    optkit.set_backend(gpu=1)
-
+prepare.establish_backend()
 backend = api.backend
 NO_ERR = error.NO_ERR
 

@@ -9,9 +9,9 @@ import unittest
 from optkit import api
 from optkit.types import operator as ok_operator
 from optkit.tests import defs
+from optkit.tests.python_bindings import prepare
 
-if os.getenv('OPTKIT_PYTEST_GPU', False):
-    optkit.set_backend(gpu=1)
+prepare.establish_backend()
 
 class OperatorBindingsTestCase(unittest.TestCase):
     @classmethod

@@ -11,11 +11,10 @@ from optkit.types import pogs
 from optkit.tests import defs
 from optkit.tests import statements
 from optkit.tests import context_managers as okctx
+from optkit.tests.python_bindings import prepare
 
 SCAL_EQ = statements.scalar_equal
-
-if os.getenv('OPTKIT_PYTEST_GPU', False):
-    optkit.set_backend(gpu=1)
+prepare.establish_backend()
 
 print('BACKEND:', api.backend.config)
 
