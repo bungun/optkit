@@ -9,7 +9,7 @@ from optkit.types.pogs.base import PogsTypesBase
 class PogsDenseDirectTypes(PogsTypesBase):
     def __init__(self, backend):
         lib = backend.pogs
-        PogsTypesBase.__init__(self, lib)
+        PogsTypesBase.__init__(self, backend, lib)
 
         _SolverBase = self._SolverBase
         _SolverCacheBase = self._SolverCacheBase
@@ -33,7 +33,7 @@ class PogsDenseDirectTypes(PogsTypesBase):
                                      'data layouts')
 
                 self.flags.m, self.flags.n = m, n
-                self.flags.layout = (
+                self.flags.ord = (
                         lib.enums.CblasRowMajor if A_rowmajor else
                         lib.enums.CblasColMajor)
 
@@ -63,6 +63,7 @@ class PogsDenseDirectTypes(PogsTypesBase):
                 return A.ctypes.data_as(lib.ok_float_p)
 
             def _build_solver_flags(self, A, **options):
+                m, n = A.shape
                 layout = (
                         lib.enums.CblasRowMajor if A.flags.c_contiguous else
                         lib.enums.CblasColMajor)
@@ -72,23 +73,19 @@ class PogsDenseDirectTypes(PogsTypesBase):
                 err = (
                     'A_equil' not in cache or
                     'd' not in cache or
-                    'e' not in cache
+                    'e' not in cache or
+                    'flags' not in cache
                 )
 
                 solver_cache = SolverCache(self.m, self.n, cache)
+                A_equil = solver_cache.A_equil
 
-                if not err and 'LLT' not in cache:
+                if not err and 'ATA_cholesky' not in cache:
                     if allow_cholesky:
                         if self.m >= self.n:
                             AA = A_equil.T.dot(A_equil)
                         else:
                             AA = A_equil.dot(A_equil.T)
-                        mean_diag = 0
-                        for i in xrange(mindim):
-                            mean_diag += AA[i, i]
-
-                        mean_diag /= AA.shape[0]
-                        normA = sqrt()
                         solver_cache.ATA_cholesky = la.cholesky(AA)
                     else:
                         err = 1
@@ -96,12 +93,15 @@ class PogsDenseDirectTypes(PogsTypesBase):
                 if err:
                     raise ValueError(
                             'Minimal requirements to load solver '
-                            'not met. Specified file(s) must contain '
-                            'at least one .npz file with entries "A_equil",'
-                            ' "LLT", "d", and "e", or the specified folder '
+                            'not met. Specified folder/file(s) must '
+                            'contain at least one .npz file with '
+                            'entries "A_equil", "ATA_cholesky", "d", '
+                            '"e", and "flags", or the specified folder '
                             'must contain .npy files of the same names.')
 
+                return solver_cache
+
             def _allocate_solver_cache(self):
-                return SolverCache(lib, self.m, self.n)
+                return SolverCache(self.m, self.n)
 
         self.Solver = Solver

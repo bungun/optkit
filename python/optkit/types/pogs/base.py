@@ -5,6 +5,7 @@ import numpy as np
 
 from optkit.utils.pyutils import const_iterator
 from optkit.utils.proxutils import func_eval_python
+from optkit.libs import error as okerr
 
 class DoubleCache(object):
     def __init__(self, npz_file=None, dictionary=None):
@@ -43,26 +44,35 @@ class DoubleCache(object):
             raise KeyError(
                     '{} has no entry for key=`{}`'.format(DoubleCache, key))
 
-class PogsTypesBase(object):
-    def __init__(self, lib):
+    def pop(self, key, default_value=None):
+        if default_value is None:
+            return self[key]
+        else:
+            if key in self:
+                return self[key]
+            else:
+                return default_value
+
+class PogsTypesBase:
+    def __init__(self, backend, lib):
         PogsSettings = lib.pogs_settings
         PogsInfo = lib.pogs_info
         PogsOutput = lib.pogs_output
         PogsPrivateData = lib.pogs_solver_priv_data
         PogsFlags = lib.pogs_solver_flags
 
-        class Objective(object):
+        class Objective:
             def __init__(self, n, **params):
                 self.enums = lib.function_enums
                 self.size = n
-                self.__fields = ['h', 'a', 'b', 'c', 'd', 'e', 's']
-                self.__h = np.zeros(self.size, dtype=int)
-                self.__a = np.ones(self.size)
-                self.__b = np.zeros(self.size)
-                self.__c = np.ones(self.size)
-                self.__d = np.zeros(self.size)
-                self.__e = np.zeros(self.size)
-                self.__s = np.ones(self.size)
+                self._fields = ['h', 'a', 'b', 'c', 'd', 'e', 's']
+                self._h = np.zeros(self.size, dtype=int)
+                self._a = np.ones(self.size)
+                self._b = np.zeros(self.size)
+                self._c = np.ones(self.size)
+                self._d = np.zeros(self.size)
+                self._e = np.zeros(self.size)
+                self._s = np.ones(self.size)
                 if 'f' in params:
                     self.copy_from(params['f'])
                 else:
@@ -102,8 +112,8 @@ class PogsTypesBase(object):
                     end_source = min(start_source + int(n_values), end_source)
                 end_target = start_target + (end_source - start_source)
 
-                for key in self.__fields:
-                    key = '__' + key
+                for key in self._fields:
+                    key = '_' + key
                     targ_arr = getattr(self, key)
                     source_arr = getattr(obj, key)
                     targ_arr[start_target : end_target] = (
@@ -112,9 +122,9 @@ class PogsTypesBase(object):
             def list(self, function_t):
                 return [
                         function_t(
-                            self.__h[t], self.__a[t], self.__b[t],
-                            self.__c[t], self.__d[t], self.__e[t],
-                            self.__s[t],
+                            self._h[t], self._a[t], self._b[t],
+                            self._c[t], self._d[t], self._e[t],
+                            self._s[t],
                             )
                         for t in xrange(self.size)]
 
@@ -124,31 +134,31 @@ class PogsTypesBase(object):
 
             @property
             def h(self):
-                return self.__h
+                return self._h
 
             @property
             def a(self):
-                return self.__a
+                return self._a
 
             @property
             def b(self):
-                return self.__b
+                return self._b
 
             @property
             def c(self):
-                return self.__c
+                return self._c
 
             @property
             def d(self):
-                return self.__d
+                return self._d
 
             @property
             def e(self):
-                return self.__e
+                return self._e
 
             @property
             def s(self):
-                return self.__s
+                return self._s
 
             def set(self, **params):
                 if self.size == 0:
@@ -170,7 +180,7 @@ class PogsTypesBase(object):
                             'to an {} of length {}.'
                             ''.format(start, end, Objective, self.size))
 
-                for item in self.__fields:
+                for item in self._fields:
                     if item in params:
                         if isinstance(params[item], (list, np.ndarray)):
                             if len(params[item]) != range_length:
@@ -182,18 +192,21 @@ class PogsTypesBase(object):
                                                 item, type(params[item]),
                                                 Objective, start, end))
 
-                param_types = {k: (int, float) for k in self.__fields[1:]}
+                param_types = {k: (int, float) for k in self._fields[1:]}
                 param_types['h'] = (int, str)
 
                 for key in param_types:
                     if key in params:
                         param = params[key]
+                        attr = '_' + key
+                        array = getattr(self, attr)
+                        validate = self.enums.validator(key)
                         val = None
                         try:
-                            val = map(self.enums.validate, param)
+                            val = map(validate, param)
                         except:
                             try:
-                                param = self.enums.validate(param)
+                                param = validate(param)
                                 val = const_iterator(param, range_length)
                             except:
                                 allowed = [list, np.ndarray] + list(param_types[key])
@@ -203,9 +216,8 @@ class PogsTypesBase(object):
                                         'type {}.\n\n'
                                         'allowed types: {}, {}, {}, {}'
                                         ''.format(key, type(param), *allowed))
+
                         for i, v in enumerate(val):
-                            attr = '__' + key
-                            array = getattr(self, attr)
                             array[r[i]] = v
 
             def __str__(self):
@@ -218,12 +230,12 @@ class PogsTypesBase(object):
 
         self.Objective = Objective
 
-        class SolverSettings(object):
+        class SolverSettings:
             def __init__(self, **options):
                 self.c = PogsSettings()
                 self.c.x0 = None
                 self.c.nu0 = None
-                lib.set_default_settings(self.c)
+                assert okerr.NO_ERR(lib.pogs_set_default_settings(self.c))
                 self.update(**options)
 
             def update(self, **options):
@@ -253,16 +265,16 @@ class PogsTypesBase(object):
 
                 for key in keys:
                     if key in options:
-                        setattr(self, key, options[key])
+                        setattr(self.c, key, options[key])
 
                 for key in ('x0', 'nu0'):
                     if key in options:
                         vec = options[key].astype(lib.pyfloat)
-                        setattr(self, key, vec.ctypes.data_as(lib.ok_float_p))
+                        setattr(self.c, key, vec.ctypes.data_as(lib.ok_float_p))
 
             def __str__(self):
                 summary = ''
-                for key in self.keys:
+                for key in self.__keys:
                     summary += '{}: {}\n'.format(key, getattr(self, key))
                 return summary
 
@@ -283,36 +295,36 @@ class PogsTypesBase(object):
                 setattr(settings.c, key, value)
             setattr(SolverSettings, key, property(get_setting, set_setting))
 
-        for key in ('maxiter', 'anderson_lookback', 'verbose', 'suppress'):
-            def get_setting(settings):
-                return getattr(settings.c, key)
-            def set_setting(settings, value):
-                value = int(value)
-                if value < 0:
-                    raise ValueError('argument `{}` must be >= 0'.format(key))
-                setattr(settings.c, key, value)
-            setattr(SolverSettings, key, property(get_setting, set_setting))
+        # for key in ('maxiter', 'anderson_lookback', 'verbose', 'suppress'):
+        #     def get_setting(settings):
+        #         return getattr(settings.c, key)
+        #     def set_setting(settings, value):
+        #         value = int(value)
+        #         if value < 0:
+        #             raise ValueError('argument `{}` must be >= 0'.format(key))
+        #         setattr(settings.c, key, value)
+        #     setattr(SolverSettings, key, property(get_setting, set_setting))
 
-        for key in (
-                'adaptiverho',
-                'accelerate',
-                'gapstop',
-                'warmstart',
-                'resume',
-                'diagnostic'):
-            def get_setting(settings):
-                return getattr(settings.c, key)
-            def set_setting(settings, value):
-                setattr(settings.c, key, int(bool(value)))
-            setattr(SolverSettings, key, property(get_setting, set_setting))
+        # for key in (
+        #         'adaptiverho',
+        #         'accelerate',
+        #         'gapstop',
+        #         'warmstart',
+        #         'resume',
+        #         'diagnostic'):
+        #     def get_setting(settings):
+        #         return getattr(settings.c, key)
+        #     def set_setting(settings, value):
+        #         setattr(settings.c, key, int(bool(value)))
+        #     setattr(SolverSettings, key, property(get_setting, set_setting))
 
-        for key in ('x0', 'nu0'):
-            def get_setting(settings):
-                return getattr(settings.c, key)
-            def set_setting(settings, value):
-                value = value.astype(lib.pyfloat)
-                setattr(settings.c, key, value.ctypes.data_as(lib.ok_float_p))
-            setattr(SolverSettings, key, property(get_setting, set_setting))
+        # for key in ('x0', 'nu0'):
+        #     def get_setting(settings):
+        #         return getattr(settings.c, key)
+        #     def set_setting(settings, value):
+        #         value = value.astype(lib.pyfloat)
+        #         setattr(settings.c, key, value.ctypes.data_as(lib.ok_float_p))
+        #     setattr(SolverSettings, key, property(get_setting, set_setting))
 
 
         class SolverInfo(object):
@@ -361,7 +373,7 @@ class PogsTypesBase(object):
                         'setup time: {}\n'.format(self.setup_time)).join(
                         'solve time: {}\n'.format(self.solve_time)))
 
-        class SolverOutput(object):
+        class SolverOutput:
             def __init__(self, m, n):
                 self.x = np.zeros(n).astype(lib.pyfloat)
                 self.y = np.zeros(m).astype(lib.pyfloat)
@@ -381,7 +393,8 @@ class PogsTypesBase(object):
 
         class SolverState:
             def __init__(self, m, n):
-                self.vec = np.zeros(lib.POGS_STATE_LENGTH * (m + n), dtype=pyfloat)
+                self.vec = np.zeros(
+                        lib.POGS_STATE_LENGTH * (m + n), dtype=lib.pyfloat)
                 self.ptr = self.vec.ctypes.data_as(lib.ok_float_p)
                 self.rho = np.zeros(1, dtype=lib.pyfloat)
                 self.rho_ptr = self.rho.ctypes.data_as(lib.ok_float_p)
@@ -407,9 +420,16 @@ class PogsTypesBase(object):
                     setattr(self.ptr, key, array.ctypes.data_as(lib.ok_float_p))
                 self.__keys = shapes.keys()
 
+                flag_dict = array_dict.pop('flags', {})
+                for k in self.flags._fields_:
+                    if k[0] in flag_dict:
+                        setattr(self.flags, k[0], flag_dict[k[0]])
+
             @property
             def dict(self):
-                return {k: getattr(self, k) for k in self.__keys}
+                d = {k: getattr(self, k) for k in self.__keys}
+                d['flags'] = {k[0]: getattr(self.flags, k[0]) for k in self.flags._fields_}
+                return d
 
         self._SolverCacheBase = _SolverCacheBase
 
@@ -423,7 +443,10 @@ class PogsTypesBase(object):
         class _SolverBase:
             def __init__(self, A, **options):
                 self.__backend = backend
-                self.shape = self.m, self.n = m, n
+                self.__c_solver = None
+                self.__state = None
+                self.__cache = None
+                self.shape = self.m, self.n = m, n = A.shape
                 self.A = A
                 self.f = FunctionVectorLocal(m)
                 self.g = FunctionVectorLocal(n)
@@ -437,12 +460,11 @@ class PogsTypesBase(object):
                 NO_INIT = options.pop('no_init', False) or cache is not None
                 if NO_INIT:
                     if cache is not None:
-                        self._load_solver_from_cache(cache, **options)
+                        self.load(cache, **options)
                 else:
                     data = self._build_solver_data(self.A)
                     flags = self._build_solver_flags(self.A, **options)
                     self._register_solver(lib.pogs_init(data, flags))
-
 
             def __del__(self):
                 self._unregister_solver()
@@ -455,7 +477,7 @@ class PogsTypesBase(object):
 
             @property
             def c_solver(self):
-                return self.__c_solver
+                    return self.__c_solver
 
             @property
             @abc.abstractmethod
@@ -484,17 +506,17 @@ class PogsTypesBase(object):
                 raise NotImplementedError
 
             def _register_solver(self, solver):
-                err = lib.pogs_solver_exists(solver)
-                if err > 0:
+                try:
+                    assert okerr.NO_ERR(lib.pogs_solver_exists(solver))
+                    self.__backend.increment_cobject_count()
+                    self.__c_solver = solver
+                except:
                     raise RuntimeError('solver allocation failed')
-
-                self.__backend.increment_cobject_count()
-                self.__c_solver = solver
 
             def _unregister_solver(self):
                 if self.__c_solver is None:
                     return
-                lib.pogs_finish(self.c_solver, 0)
+                assert okerr.NO_ERR(lib.pogs_finish(self.c_solver, 0))
                 self.__c_solver = None
                 self.__backend.decrement_cobject_count()
 
@@ -534,30 +556,28 @@ class PogsTypesBase(object):
                         self.settings.accelerate = 1
                         self.settings.toladapt = 1e-2
 
-                lib.pogs_solve(
+                assert okerr.NO_ERR(lib.pogs_solve(
                         self.c_solver, self.f.c, self.g.c, self.settings.c,
-                        self.info.c, self.output.c)
+                        self.info.c, self.output.c))
                 self.first_run = False
 
             def _solver_state_from_dict(self, cache):
+                state = SolverState(self.m, self.n)
                 if 'state' in cache:
-                    state = cache['state'].astype(lib.pyfloat)
-                else:
-                    state_length = lib.POGS_STATE_LENGTH * (self.m + self.n)
-                    state = np.zeros(state_length, dtype=lib.pyfloat)
-
+                    state.vec[:] = cache['state']
                 if 'rho' in cache:
-                    rho = lib.pyfloat(cache['rho'])
+                    state.rho[0] = lib.pyfloat(cache['rho'])
                 else:
-                    rho = 1.
+                    state.rho[0] = 1.
+                return state
 
             def _build_solver_from_cache(self, solver_cache, solver_state):
                 if self.c_solver is not None:
                     self._unregister_solver()
                 self._register_solver(lib.pogs_load_solver(
                         solver_cache.ptr,
-                        state.ptr,
-                        state.rho[0],
+                        solver_state.ptr,
+                        solver_state.rho[0],
                         solver_cache.flags
                 ))
 
@@ -576,25 +596,26 @@ class PogsTypesBase(object):
                     raise AttributeError(
                             'no solver exists, cannot build cache')
 
-                state = self.state
-                cache = self._blank_solver_cache()
-                lib.pogs_export_solver(
+                state = self._state
+                cache = self._allocate_solver_cache()
+                assert okerr.NO_ERR(lib.pogs_export_solver(
                         cache.ptr,
                         state.ptr,
                         state.rho_ptr,
                         cache.flags,
                         self.c_solver
-                )
+                ))
                 return cache
 
             @property
             def _state(self):
                 if self.c_solver is None:
                     raise AttributeError('no C solver built, state undefined')
-
-                if not hasattr(self, '__state'):
-                    self.__state = state = SolverState(*self.shape)
-                lib.pogs_solver_save_state(state.ptr, state.rho_ptr, self.c_solver)
+                if self.__state is None:
+                    self.__state = SolverState(*self.shape)
+                state = self.__state
+                assert okerr.NO_ERR(lib.pogs_solver_save_state(
+                        state.ptr, state.rho_ptr, self.c_solver))
                 return state
 
             @property
@@ -602,14 +623,19 @@ class PogsTypesBase(object):
                 return self._state.dict
 
             @property
-            def cache(self):
-                if self.__cache is not None:
+            def _cache(self):
+                if self.__cache is None:
                     self.__cache = self._build_cache_from_solver()
-                return self.__cache.dict
+                return self.__cache
 
-            def load(self, directory, name, allow_cholesky=True):
-                filename = os.path.join(directory, name)
-                if not '.npz' in name:
+            @property
+            def cache(self):
+                return self._cache.dict
+
+            def load(self, filename, allow_cholesky=True, directory=None, **options):
+                if directory is not None:
+                    filename = os.path.join(directory, filename)
+                if not '.npz' in filename:
                     filename += '.npz'
 
                 try:
@@ -617,8 +643,7 @@ class PogsTypesBase(object):
                 except:
                     data = DoubleCache()
 
-                self.load_solver_from_cache(data, allow_cholesky=allow_cholesky)
-                self.load_state_from_cache(data)
+                self._load_solver_from_cache(data, allow_cholesky=allow_cholesky)
 
             def save(self, directory, name, save_equil=True,
                      save_factorization=True):

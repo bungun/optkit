@@ -2,6 +2,7 @@ from optkit.compat import *
 
 import os
 import numpy as np
+import scipy.sparse as sp
 import ctypes as ct
 
 from optkit.types.operator import OperatorTypes
@@ -10,7 +11,7 @@ from optkit.types.pogs.base import PogsTypesBase
 class PogsAbstractTypes(PogsTypesBase):
     def __init__(self, backend):
         lib = backend.pogs_abstract
-        PogsTypesBase.__init__(self, lib)
+        PogsTypesBase.__init__(self, backend, lib)
 
         _SolverBase = self._SolverBase
         _SolverCacheBase = self._SolverCacheBase
@@ -28,8 +29,6 @@ class PogsAbstractTypes(PogsTypesBase):
 
         class Solver(_SolverBase):
             def __init__(self, A, **options):
-                if not isinstance(A, np.ndarray) or len(A.shape) != 2:
-                    raise TypeError('input must be a 2-d {}'.format(np.ndarray))
                 _SolverBase.__init__(self, A, **options)
 
             def _unregister_solver(self):
