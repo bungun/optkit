@@ -31,3 +31,5 @@ def optkit_print_error(err, print_success=False):
     else:
         print('\nunrecognized error code: {}'.format(err))
     return err
+
+def NO_ERR(call): return optkit_print_error(call) == 0
