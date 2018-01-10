@@ -95,7 +95,19 @@ class OKFunctionEnums(object):
     def dict(self):
         return self.__str2fun
 
-    def validate(self, h):
+    def validator(self, key):
+        if key == 'h':
+            return self.validate_func
+        elif key == 'c':
+            return self.validate_c
+        elif key == 'e':
+            return self.validate_e
+        elif key == 's':
+            return self.validate_s
+        else:
+            return lambda val: val
+
+    def validate_func(self, h):
         if isinstance(h, int):
             if h < self.min_enum or h > self.max_enum:
                 raise IndexError(
