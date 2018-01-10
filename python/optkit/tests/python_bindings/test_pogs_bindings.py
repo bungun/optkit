@@ -14,6 +14,9 @@ from optkit.tests import context_managers as okctx
 
 SCAL_EQ = statements.scalar_equal
 
+if os.getenv('OPTKIT_PYTEST_GPU', False):
+    optkit.set_backend(gpu=1)
+
 print('BACKEND:', api.backend.config)
 
 class PogsBindingsTestCase(unittest.TestCase):
