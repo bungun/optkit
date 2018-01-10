@@ -2,7 +2,7 @@ from optkit.compat import *
 
 import ctypes as ct
 
-class OKEnums(object):
+class OKEnums:
     # C BLAS
     CblasRowMajor = ct.c_uint(101).value
     CblasColMajor = ct.c_uint(102).value
@@ -57,7 +57,26 @@ class OKEnums(object):
     OPTKIT_ERROR_OVERWRITE = 1000
     OPTKIT_ERROR_UNALLOCATED = 1001
 
-class OKFunctionEnums(object):
+    def get_layout(self, array):
+        # SCIPY SPARSE CSR/CSC
+        if hasattr(array, 'format'):
+            if array.format == 'csr':
+                return self.CblasRowMajor
+            if array.format == 'csc':
+                return self.CblasColMajor
+        # NUMPY NDARRAY
+        if hasattr(array, 'flags'):
+            flags = array.flags
+            try:
+                if getattr(flags, 'c_contiguous'):
+                    return self.CblasRowMajor
+                else:
+                    return self.CblasColMajor
+            except:
+                pass
+        raise ValueError('array of unknown layout')
+
+class OKFunctionEnums:
     Zero = ct.c_uint(0).value
     Abs = ct.c_uint(1).value
     Exp = ct.c_uint(2).value
@@ -160,3 +179,31 @@ class OKFunctionEnums(object):
                     '\n, with h convex.')
         else:
             return s
+
+class OKOperatorEnums(object):
+    OkOperatorNull = ct.cuint(0).value,
+    OkOperatorIdentity = ct.cuint(101).value,
+    OkOperatorNeg = ct.cuint(102).value,
+    OkOperatorAdd = ct.cuint(103).value,
+    OkOperatorCat = ct.cuint(104).value,
+    OkOperatorSplit = ct.cuint(105).value,
+    OkOperatorDense = ct.cuint(201).value,
+    OkOperatorSparseCSR = ct.cuint(301).value,
+    OkOperatorSparseCSC = ct.cuint(302).value,
+    OkOperatorSparseCOO = ct.cuint(303).value,
+    OkOperatorDiagonal = ct.cuint(401).value,
+    OkOperatorBanded = ct.cuint(402).value,
+    OkOperatorTriangular = ct.cuint(403).value,
+    OkOperatorKronecker = ct.cuint(404).value,
+    OkOperatorToeplitz = ct.cuint(405).value,
+    OkOperatorCirculant = ct.cuint(406).value,
+    OkOperatorConvolution = ct.cuint(501).value,
+    OkOperatorCircularConvolution = ct.cuint(502).value,
+    OkOperatorFourier = ct.cuint(503).value,
+    OkOperatorDifference = ct.cuint(504).value,
+    OkOperatorUpsampling = ct.cuint(505).value,
+    OkOperatorDownsampling = ct.cuint(506).value,
+    OkOperatorBlockDifference = ct.cuint(507).value,
+    OkOperatorDirectProjection = ct.cuint(901).value,
+    OkOperatorIndirectProjection = ct.cuint(902).value,
+    OkOperatorOther = ct.cuint(1000).value
