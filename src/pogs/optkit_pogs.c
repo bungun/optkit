@@ -645,6 +645,15 @@ ok_status pogs_solver_load_state(pogs_solver *solver, const ok_float *state,
 	return OPTKIT_SUCCESS;
 }
 
+ok_status pogs_solver_exists(const pogs_solver *solver)
+{
+	if (!solver || !solver->z)
+		return OPTKIT_ERROR_UNALLOCATED;
+	else
+		return OPTKIT_SUCCESS;
+}
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -134,6 +134,8 @@ ok_status pogs_solver_save_state(ok_float *state, ok_float *rho,
 ok_status pogs_solver_load_state(pogs_solver *solver, const ok_float *state,
 	const ok_float rho);
 
+ok_status pogs_solver_exists(const pogs_solver *solver);
+
 
 #ifdef __cplusplus
 }

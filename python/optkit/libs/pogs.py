@@ -534,6 +534,8 @@ def _attach_pogs_generic_ccalls(lib):
 	lib.pogs_solver_load_state.argtypes = [
 			lib.pogs_solver_p, lib.ok_float_p, lib.ok_float]
 
+	lib.pogs_solver_exists.argstypes = [lib.pogs_solver_p]
+
 	## return types
 	OptkitLibs.attach_default_restype(
 			lib.pogs_work_alloc,
@@ -560,11 +562,11 @@ def _attach_pogs_generic_ccalls(lib):
 			lib.pogs_export_solver,
 			lib.pogs_solver_save_state,
 			lib.pogs_solver_load_state,
+			lib.pogs_solver_exists,
 	)
 
 	lib.pogs_init.restype = lib.pogs_solver_p
 	lib.pogs_load_solver.restype = lib.pogs_solver_p
-
 
 def attach_pogs_ccalls(lib, single_precision=False):
 	include_ok_pogs(lib, single_precision=single_precision)
