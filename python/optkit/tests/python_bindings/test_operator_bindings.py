@@ -38,6 +38,7 @@ class OperatorBindingsTestCase(unittest.TestCase):
         lib = api.backend.pogs_abstract
         ALO = ok_operator.OperatorTypes(api.backend, lib).AbstractLinearOperator
         for A in self.matrices:
+            print "MATRIX:", type(A)
             with ALO(A):
                 assert not api.backend.device_reset_allowed
             gc.collect()
