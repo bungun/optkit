@@ -43,7 +43,7 @@ def attach_operator_ctypes(lib, single_precision=False):
 
     lib.abstract_operator = ok_abstract_operator
     lib.abstract_operator_p = ct.POINTER(lib.abstract_operator)
-    lib.operator_enums = enums.OkOperatorEnums()
+    lib.operator_enums = enums.OKOperatorEnums()
 
     def get_opcode(abstract_operator):
         if isinstance(abstract_operator, lib.abstract_operator_p):
