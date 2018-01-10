@@ -6,12 +6,16 @@ import numpy as np
 import ctypes as ct
 import unittest
 
-from optkit.api import backend
+from optkit import api
+from optkit.libs import error
 from optkit.types import clustering
 from optkit.tests import defs
-from optkit.tests.C import statements
 
-NO_ERR = statements.noerr
+if os.getenv('OPTKIT_PYTEST_GPU', False):
+    optkit.set_backend(gpu=1)
+
+backend = api.backend
+NO_ERR = error.NO_ERR
 
 class ClusteringBindingsTestCase(unittest.TestCase):
     @classmethod

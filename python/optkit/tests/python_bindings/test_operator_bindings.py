@@ -6,9 +6,12 @@ import numpy as np
 import scipy.sparse as sp
 import unittest
 
-from optkit.api import backend
+from optkit import api
 from optkit.types import operator as ok_operator
 from optkit.tests import defs
+
+if os.getenv('OPTKIT_PYTEST_GPU', False):
+    optkit.set_backend(gpu=1)
 
 class OperatorBindingsTestCase(unittest.TestCase):
     @classmethod
@@ -32,10 +35,10 @@ class OperatorBindingsTestCase(unittest.TestCase):
         ]
 
     def test_abstract_linear_operator(self):
-        lib = backend.pogs_abstract
-        ALO = ok_operator.OperatorTypes(backend, lib).AbstractLinearOperator
+        lib = api.backend.pogs_abstract
+        ALO = ok_operator.OperatorTypes(api.backend, lib).AbstractLinearOperator
         for A in self.matrices:
-            O = ALO(A)
-            assert ( not backend.device_reset_allowed )
-            del O
-            assert ( backend.device_reset_allowed )
+            with ALO(A):
+                assert not api.backend.device_reset_allowed
+            gc.collect()
+            assert api.backend.device_reset_allowed
