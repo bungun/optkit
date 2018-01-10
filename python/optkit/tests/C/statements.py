@@ -1,7 +1,8 @@
 from optkit.compat import *
 
-import optkit.libs.error as okerr
+from optkit.libs import error
 from optkit.tests.statements import *
 
-def noerr(c_call_status):
-    return okerr.optkit_print_error(c_call_status) == 0
+noerr = error.NO_ERR
+# def noerr(c_call_status):
+#     return okerr.optkit_print_error(c_call_status) == 0
