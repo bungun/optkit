@@ -14,6 +14,12 @@ class OperatorTypes(object):
             def __del__(self):
                 self.release_operator()
 
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                self.release_operator()
+
             def __init__(self, py_operator):
                 if isinstance(py_operator, sp.coo_matrix):
                     print('sparse matrix: converting COO input to CSR')
