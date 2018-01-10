@@ -38,7 +38,7 @@ install:
   - conda update -q conda
   - conda info -a
   - if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
-      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc openblas;
+      conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy=0.17 nose gcc openblas;
     else
       conda create -q -n test-environment python=$PYTHON_VERSION numpy scipy nose gcc;      
     fi
