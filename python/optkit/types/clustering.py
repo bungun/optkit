@@ -201,6 +201,12 @@ class ClusteringTypes(object):
                 self.__kmeans_work = None
                 self.__register_kmeans_work(lib, lib.kmeans_easy_init(m, k, n))
 
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                self.__unregister_kmeans_work()
+
             def __del__(self):
                 self.__unregister_kmeans_work()
 
@@ -250,6 +256,16 @@ class ClusteringTypes(object):
                 self.__a2c_ptr = None
                 self.__counts = None
                 self.__counts_ptr = None
+
+            def __enter__(self):
+                if self.__kmeans_work is not None:
+                    self.__kmeans_work.__enter__()
+                return self
+
+            def __exit__(self, *exc):
+                if self.__kmeans_work is not None:
+                    self.__kmeans_work.__exit__()
+                self.__kmeans_work = None
 
             def __del__(self):
                 self.kmeans_work_finish()
