@@ -7,7 +7,7 @@ import scipy.sparse as sp
 import unittest
 
 from optkit.api import backend
-from optkit.types.operator import *
+from optkit.types import operator as ok_operator
 from optkit.tests import defs
 
 class OperatorBindingsTestCase(unittest.TestCase):
@@ -33,9 +33,9 @@ class OperatorBindingsTestCase(unittest.TestCase):
 
     def test_abstract_linear_operator(self):
         lib = backend.pogs_abstract
-        ALO = OperatorTypes(backend, lib).AbstractLinearOperator
+        ALO = ok_operator.OperatorTypes(backend, lib).AbstractLinearOperator
         for A in self.matrices:
             O = ALO(A)
-            self.assertFalse( backend.device_reset_allowed )
+            assert ( not backend.device_reset_allowed )
             del O
-            self.assertTrue( backend.device_reset_allowed )
+            assert ( backend.device_reset_allowed )
