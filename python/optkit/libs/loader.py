@@ -7,6 +7,11 @@ import ctypes as ct
 
 from optkit.libs.enums import OKEnums
 
+def verbose_load(lib_name, lib_path, force_verbose=False):
+    verbose = int(os.getenv('OPTKIT_VERBOSE_LOAD', force_verbose))
+    if verbose:
+        print('loading lib: {} at {}'.format(lib_name, lib_path))
+
 def get_optkit_libdir():
     p = os.path.dirname(str(subprocess.check_output(['which', 'python'])))
 
@@ -68,7 +73,7 @@ def retrieve_libs(lib_prefix):
             if os.path.exists(lib_path):
                 if device == 'gpu':
                     patch_GOMP_cusolver(lib_path)
-                print('loading lib: {} at {}'.format(lib_name, lib_path))
+                verbose_load(lib_name, lib_path)
                 libs[lib_tag] = ct.CDLL(lib_path)
                 libs[lib_tag].INITIALIZED = False
             else:
