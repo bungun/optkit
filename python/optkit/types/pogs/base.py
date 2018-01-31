@@ -246,13 +246,16 @@ class PogsTypesBase:
                         'reltol',
                         'tolproj',
                         'toladapt',
+                        'tolcorr',          # TODO: keep?
                         'anderson_regularization',
                         'maxiter',
                         'anderson_lookback',
+                        'rho_interval',     # TODO: keep?
                         'verbose',
                         'suppress',
                         'adaptiverho',
                         'accelerate',
+                        'adapt_spectral',   # TODO: keep?
                         'gapstop',
                         'warmstart',
                         'resume',
@@ -285,6 +288,7 @@ class PogsTypesBase:
                 'reltol',
                 'tolproj',
                 'toladapt',
+                'tolcorr', # TODO: keep?
                 'anderson_regularization'):
             def get_setting(settings):
                 return getattr(settings.c, key)
@@ -295,7 +299,12 @@ class PogsTypesBase:
                 setattr(settings.c, key, value)
             setattr(SolverSettings, key, property(get_setting, set_setting))
 
-        # for key in ('maxiter', 'anderson_lookback', 'verbose', 'suppress'):
+        #  for key in (
+        #         'maxiter',
+        #         'anderson_lookback',
+        #         'rho_interval', # TODO: keep?
+        #         'verbose',
+        #         'suppress'):
         #     def get_setting(settings):
         #         return getattr(settings.c, key)
         #     def set_setting(settings, value):
@@ -308,6 +317,7 @@ class PogsTypesBase:
         # for key in (
         #         'adaptiverho',
         #         'accelerate',
+        #         'adapt_spectral', # TODO: keep?
         #         'gapstop',
         #         'warmstart',
         #         'resume',
