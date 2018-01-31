@@ -426,7 +426,7 @@ ok_status pogs_solver_loop(pogs_solver *solver, pogs_info *info)
 
 	if (settings->adapt_spectral) {
 		OK_CHECK_ERR( err, pogs_spectral_rho_initialize(&sr_params,
-			solver->z->m + solver->z->n))
+			solver->z->m + solver->z->n) );
 		OK_CHECK_ERR( err, pogs_spectral_update_start(&sr_params,
 			solver->z, solver->rho) );
 	} else {
