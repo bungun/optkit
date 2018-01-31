@@ -28,7 +28,7 @@ ok_status pogs_spectral_rho_free(spectral_rho_params *params)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_MAX_ERR(err, vector_free(params->dH));
-	OK_MAX_ERR(err, vector_free(params->dH));
+	OK_MAX_ERR(err, vector_free(params->dG));
 	OK_MAX_ERR(err, vector_free(params->dlambda));
 	OK_MAX_ERR(err, vector_free(params->dlambda12));
 	ok_free(params->dH);
@@ -68,9 +68,9 @@ ok_status pogs_spectral_update_start(spectral_rho_params *params,
 	OK_CHECK_ERR(err, vector_memcpy_vv(params->dG, z->primal->vec));
 	OK_CHECK_ERR(err, vector_scale(params->dG, -kOne));
 	OK_CHECK_ERR(err, vector_memcpy_vv(params->dlambda, z->dual->vec));
-	OK_CHECK_ERR(err, vector_scale(params->dG, -rho));
+	OK_CHECK_ERR(err, vector_scale(params->dlambda, -rho));
 	OK_CHECK_ERR(err, vector_memcpy_vv(params->dlambda12, z->dual12->vec));
-	OK_CHECK_ERR(err, vector_scale(params->dG, -rho));
+	OK_CHECK_ERR(err, vector_scale(params->dlambda12, -rho));
 	return err;
 }
 
