@@ -26,14 +26,17 @@ extern "C" {
 #define kRTOL (ok_float) 1e-3
 #define kTOLPROJ (ok_float) 1e-6
 #define kTOLADAPT (ok_float) 1
+#define kTOLCORR (ok_float) 2e-1 /* TODO: keep? */
 #define kMU (ok_float) 1e-3
 #define kADAPTIVE 1
+#define kADAPTSPECTRAL 0 /* TODO: keep? */
 #define kACCELERATE 0 /* CHANGE THIS TO 1 AFTER DEBUGGING */
 #define kGAPSTOP 0
 #define kWARMSTART 0
 #define kDIAGNOSTIC 0
 #define kVERBOSE 2u
 #define kSUPPRESS 0u
+#define kRHOINTERVAL 2u /* TODO: keep? */
 #define kRESUME 0
 #endif /* POGS_CONSTANTS */
 
@@ -56,11 +59,12 @@ typedef struct POGSObjectiveValues {
 	ok_float primal, dual, gap;
 } pogs_objective_values;
 
+/* TODO: keep tolcorr, rho_interval, adaptspectral?? */
 typedef struct POGSSettings {
-	ok_float alpha, rho, abstol, reltol, tolproj, toladapt;
+	ok_float alpha, rho, abstol, reltol, tolproj, toladapt, tolcorr;
 	ok_float anderson_regularization;
-	uint maxiter, anderson_lookback, verbose, suppress;
-	int adaptiverho, accelerate, gapstop, warmstart, resume, diagnostic;
+	uint maxiter, anderson_lookback, rho_interval, verbose, suppress;
+	int adaptiverho, adapt_spectral, accelerate, gapstop, warmstart, resume, diagnostic;
 	ok_float *x0, *nu0;
 } pogs_settings;
 

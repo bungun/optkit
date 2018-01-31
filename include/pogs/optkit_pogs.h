@@ -7,6 +7,7 @@
 #include "optkit_anderson_difference.h"
 #include "optkit_pogs_datatypes.h"
 #include "optkit_pogs_adaptive_rho.h"
+#include "optkit_pogs_spectral_rho.h"
 #include "optkit_pogs_common.h"
 
 #ifdef __cplusplus

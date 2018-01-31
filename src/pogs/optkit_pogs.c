@@ -403,7 +403,7 @@ ok_status pogs_emit_diagnostics(pogs_output *output, pogs_solver *solver)
 	return err;
 }
 
-
+/* TODO: keep spectral rho ?? */
 ok_status pogs_solver_loop(pogs_solver *solver, pogs_info *info)
 {
 	if (!solver || !info)
@@ -413,7 +413,8 @@ ok_status pogs_solver_loop(pogs_solver *solver, pogs_info *info)
 	ok_status err = OPTKIT_SUCCESS;
 	int converged = 0;
 	uint k, PRINT_ITER = 10000u;
-	adapt_params rho_params = (adapt_params){kZero, kZero, kZero, kZero};
+	adapt_params rho_params = (adapt_params){OK_NULL};
+	spectral_rho_params sr_params = (spectral_rho_params){OK_NULL};
 	pogs_settings *settings = solver->settings;
 	pogs_objective_values obj = (pogs_objective_values){
 		OK_NAN, OK_NAN, OK_NAN};
@@ -422,7 +423,15 @@ ok_status pogs_solver_loop(pogs_solver *solver, pogs_info *info)
 
 	err = OK_SCAN_ERR( pogs_initialize_conditions(&obj, &res,
 		&tol, settings, solver->z->m, solver->z->n) );
-	OK_CHECK_ERR( err, pogs_adaptive_rho_initialize(&rho_params) );
+
+	if (settings->adapt_spectral) {
+		OK_CHECK_ERR( err, pogs_spectral_rho_initialize(&sr_params,
+			solver->z->m + solver->z->n))
+		OK_CHECK_ERR( err, pogs_spectral_update_start(&sr_params,
+			solver->z, solver->rho) );
+	} else {
+		OK_CHECK_ERR( err, pogs_adaptive_rho_initialize(&rho_params) );
+	}
 
 	// TODO: SET ANDERSON LOOKBACK WINDOW
 
@@ -450,9 +459,18 @@ ok_status pogs_solver_loop(pogs_solver *solver, pogs_info *info)
 		if (converged || k == settings->maxiter)
 			break;
 
-		OK_CHECK_ERR( err, pogs_adapt_rho(solver->z, &(solver->rho),
-			&rho_params, settings, &res, &tol, k) );
+		if (settings->adapt_spectral)
+			OK_CHECK_ERR( err, pogs_spectral_adapt_rho(
+				solver->linalg_handle, solver->z,
+				&(solver->rho), &sr_params, settings, k) );
+		else
+			OK_CHECK_ERR( err, pogs_adapt_rho(solver->z,
+				&(solver->rho), &rho_params, settings, &res,
+				&tol, k) );
 	}
+
+	if (settings->adapt_spectral)
+		pogs_spectral_rho_free(&sr_params);
 
 	if (!converged && k == settings->maxiter)
 		printf("reached max iter = %u\n", k);
@@ -517,7 +535,6 @@ ok_status pogs_solve(pogs_solver *solver, const function_vector *f,
 			solver->z->fixed_point_iterate->size,
 			(size_t) settings->anderson_lookback, (size_t) 2) );
 
-
 	OK_CHECK_ERR( err, pogs_update_settings(solver->settings, settings) );
 	OK_CHECK_ERR( err, pogs_scale_objectives(solver->f, solver->g,
 		solver->W->d, solver->W->e, f, g) );
@@ -533,6 +550,7 @@ ok_status pogs_solve(pogs_solver *solver, const function_vector *f,
 
 	if (!(settings->resume))
 		solver->rho = settings->rho;
+
 
 	info->setup_time = ok_timer_toc(t);
 	if (!(settings->warmstart || settings->resume))
