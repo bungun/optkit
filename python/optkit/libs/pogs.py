@@ -331,9 +331,9 @@ def _attach_pogs_adaptrho_ccalls(lib):
     OptkitLibs.attach_default_restype(
             lib.pogs_spectral_rho_initialize,
             lib.pogs_spectral_rho_free,
-            lib.pogs_spectral_update_start.argtypes,
-            lib.pogs_spectral_update_end.argtypes,
-            lib.pogs_spectral_estimate_tangent.argtypes,
+            lib.pogs_spectral_update_start,
+            lib.pogs_spectral_update_end,
+            lib.pogs_spectral_estimate_tangent,
             lib.pogs_spectral_adapt_rho)
 
 def _attach_pogs_common_ccalls(lib):
