@@ -95,20 +95,20 @@ ok_status pogs_spectral_estimate_tangent(void *linalg_handle, vector *dF,
 	OK_CHECK_PTR(corr);
 	ok_status err = OPTKIT_SUCCESS;
 	ok_float dFdx = kOne, dFdF = kOne, dxdx = kZero;
-	ok_float max_gradient = kZero, steepest_descent = kZero;
+	ok_float min_gradient = kZero, steepest_descent = kZero;
 	ok_float Fnorm = kOne, xnorm = kOne;
 
 	OK_CHECK_ERR(err, blas_dot(linalg_handle, dx, dF, &dFdx));
 	OK_CHECK_ERR(err, blas_dot(linalg_handle, dx, dx, &dxdx));
 	OK_CHECK_ERR(err, blas_dot(linalg_handle, dF, dF, &dFdF));
 
-	max_gradient = dFdx / dFdF;
+	min_gradient = dFdx / dFdF;
 	steepest_descent = dxdx / dFdx;
 
-	if (steepest_descent < 0.5 * max_gradient)
-		*slope = max_gradient;
+	if (steepest_descent < 0.5 * min_gradient)
+		*slope = min_gradient;
 	else
-		*slope = steepest_descent - 0.5 * max_gradient;
+		*slope = steepest_descent - 0.5 * min_gradient;
 
 	OK_CHECK_ERR(err, blas_nrm2(linalg_handle, dx, &xnorm));
 	OK_CHECK_ERR(err, blas_nrm2(linalg_handle, dF, &Fnorm));
@@ -135,7 +135,8 @@ ok_status pogs_spectral_adapt_rho(void *linalg_handle, pogs_variables *z,
 		return OPTKIT_SUCCESS;
 
 	/* complete differences from previous iteration */
-	pogs_spectral_update_end(linalg_handle, params, z, *rho);
+	OK_CHECK_ERR(err, pogs_spectral_update_end(linalg_handle, params, z,
+		*rho));
 
 	/* estimate tangents from differences */
 	OK_CHECK_ERR(err, pogs_spectral_estimate_tangent(linalg_handle,
@@ -158,7 +159,8 @@ ok_status pogs_spectral_adapt_rho(void *linalg_handle, pogs_variables *z,
 		rho_new = *rho;
 
 	/* start building differences for next iteration */
-	pogs_spectral_update_start(params, z, rho_new);
+	OK_CHECK_ERR(err, pogs_spectral_update_start(params, z, rho_new));
+
 
 	OK_CHECK_ERR(err, vector_scale(z->dual->vec, *rho / rho_new));
 	*rho = rho_new;
