@@ -2,6 +2,8 @@ from optkit.compat import *
 
 import gc
 import ctypes as ct
+import itertools
+import six
 
 # from optkit.libs.linsys import DenseLinsysLibs, SparseLinsysLibs
 # from optkit.libs.prox import ProxLibs
@@ -20,22 +22,39 @@ class OKBackend(object):
         self.__precision = None
         self.__config = None
 
-        # library loaders
-        # self.dense_lib_loader = DenseLinsysLibs()
-        # self.sparse_lib_loader = SparseLinsysLibs()
-        # self.prox_lib_loader = ProxLibs()
-        self.pogs_lib_loader = PogsDenseLibs()
-        self.pogs_abstract_lib_loader = PogsAbstractLibs()
-        self.cluster_lib_loader = ClusteringLibs()
+        self.__libs = dict()
+        self.__loaders = {
+                'pogs': PogsDenseLibs,
+                'pogs_abstract': PogsAbstractLibs,
+                'cluster': ClusteringLibs,
+        }
+        self.accessible_libs = [name for name in self.__LIBNAMES]
+        if os.getenv('OPTKIT_NO_LOAD_ABSTRACT_POGS', False):
+            self.accessible_libs.remove('pogs_abstract')
+        if os.getenv('OPTKIT_NO_LOAD_CLUSTERING', False):
+            self.accessible_libs.remove('cluster')
 
-        # library instances
-        # self.dense = None
-        # self.sparse = None
-        # self.prox = None
-        self.pogs = None
-        self.pogs_abstract = None
-        self.cluster = None
-        self.__active_libs = []
+        for key in self.__loaders:
+            if key in self.accessible_libs:
+                self.__loaders[key] = self.__loaders[key]()
+            else:
+                self.__loaders[key] = None
+
+        # # library loaders
+        # # self.dense_lib_loader = DenseLinsysLibs()
+        # # self.sparse_lib_loader = SparseLinsysLibs()
+        # # self.prox_lib_loader = ProxLibs()
+        # self.pogs_lib_loader =
+        # self.pogs_abstract_lib_loader = PogsAbstractLibs()
+        # self.cluster_lib_loader = ClusteringLibs()
+
+        # # library instances
+        # # self.dense = None
+        # # self.sparse = None
+        # # self.prox = None
+        # self.pogs = None
+        # self.pogs_abstract = None
+        # self.cluster = None
 
         self.__set_lib()
 
@@ -45,13 +64,15 @@ class OKBackend(object):
         self.__precision = None
         self.__config = '(No libraries selected)'
 
-        # library instances
-        # self.dense = None
-        # self.sparse = None
-        # self.prox = None
-        self.pogs = None
-        self.pogs_abstract = None
-        self.cluster = None
+        self.__libs = dict()
+
+        # # library instances
+        # # self.dense = None
+        # # self.sparse = None
+        # # self.prox = None
+        # self.pogs = None
+        # self.pogs_abstract = None
+        # self.cluster = None
 
         self.__LIBGUARD_ON = False
         self.__COBJECT_COUNT = 0
@@ -122,56 +143,47 @@ class OKBackend(object):
     def load_lib(self, name, override=False):
         if name not in self.__LIBNAMES:
             raise ValueError('invalid library name')
-        elif self.__dict__[name] is not None:
-            if not override:
-                print('\nlibrary {} already loaded; call with keyword arg '
-                      '"override"=True to bypass this check\n'.format(name))
-
-        if name == 'pogs':
-            self.pogs = self.pogs_lib_loader.get(
+        if name in self.__libs and not override:
+            print('\nlibrary {} already loaded; call with keyword arg '
+                  '"override"=True to bypass this check\n'.format(name))
+        self.__libs[name] = self.__loaders[name].get(
                     single_precision=self.precision_is_32bit,
                     gpu=self.device_is_gpu)
-            self.__active_libs.append(self.pogs)
-        elif name == 'cluster':
-            self.cluster = self.cluster_lib_loader.get(
-                    single_precision=self.precision_is_32bit,
-                    gpu=self.device_is_gpu)
-            self.__active_libs.append(self.cluster)
-        elif name == 'pogs_abstract':
-            self.pogs_abstract = self.pogs_abstract_lib_loader.get(
-                    single_precision=self.precision_is_32bit,
-                    gpu=self.device_is_gpu)
-            self.__active_libs.append(self.pogs_abstract)
 
     def load_libs(self, *names):
-        for name in names:
-            self.load_lib(name)
+        map(self.load_lib, names)
 
     def __set_lib(self, device=None, precision=None, order=None):
         self.__clear()
 
         devices = ['gpu', 'cpu'] if device == 'gpu' else ['cpu', 'gpu']
         precisions = ['32', '64'] if precision == '32' else ['64', '32']
+        configs = itertools.product(devices, precisions)
 
-        for dev in devices:
-            for prec in precisions:
-                lib_key ='{}{}'.format(dev, prec)
-                valid = self.pogs_lib_loader.libs[lib_key] is not None
-                if valid:
+        try:
+            assert len(self.accessible_libs) > 0
+            test_loader = self.__loaders[self.accessible_libs[0]]
+            valid = False
+            for dev, prec in configs:
+                lib_key = '{}{}'.format(dev, prec)
+                if test_loader.libs[lib_key] is not None:
+                    valid = True
                     self.__device = dev
                     self.__precision = prec
                     self.__config = lib_key
-                    self.load_lib('pogs', override=True)
-                    self.load_lib('cluster', override=True)
-                    self.load_lib('pogs_abstract', override=True)
-                    return
+                    map(
+                            lambda nm: self.load_lib(nm, override=True),
+                            self.accessible_libs)
+                    break
                 else:
                     print (
                             'Libraries for configuration {} '
                             'not found. Trying next configuration.'
                             ''.format(lib_key))
+            assert valid
+        except:
+            raise RuntimeError('No libraries found for any backend')
 
-        raise RuntimeError('No libraries found for backend.')
 
     def change(self, gpu=False, double=True):
         if self.__LIBGUARD_ON:
@@ -186,15 +198,26 @@ class OKBackend(object):
         self.__get_version()
 
     def reset_device(self):
-        if self.device_reset_allowed:
-            for lib in self.__active_libs:
-                if isinstance(lib, ct.CDLL):
-                    if 'ok_device_reset' in lib.__dict__:
-                        if lib.ok_device_reset():
-                            raise RuntimeError('device reset failed')
-                        return 0
-            raise RuntimeError('device reset not possible: '
-                               'no libraries loaded')
+        err_msg =    ''
+        def can_reset(lib):
+                return isinstance(lib, ct.CDLL) and hasattr(lib, 'ok_device_reset')
+        reset_libs = list(six.moves.filter(can_reset, self.__libs.values()))
+
+        if not self.device_reset_allowed:
+            err_msg = 'device reset not allowed: C objects allocated'
+        elif len(reset_libs) == 0:
+            err_msg = 'device reset not possible: no libs with reset call loaded'
         else:
-            raise RuntimeError('device reset not allowed: '
-                               'C objects allocated')
+            if reset_libs[0].ok_reset_device() > 0:
+                err_msg = 'device reset failed'
+
+        if len(err_msg) > 0:
+            raise RuntimeError(err_msg)
+
+def add_lib(factory, libname):
+    def getlib(backend):
+        libs = backend._OKBackend__libs
+        return libs[libname] if libname in libs else None
+    setattr(factory, libname, property(getlib))
+map(lambda lib: add_lib(OKBackend, lib), OKBackend._OKBackend__LIBNAMES)
+

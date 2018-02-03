@@ -59,16 +59,19 @@ def set_backend(gpu=False, double=True):
     OPTKIT_VERSION = backend.version
 
     ## C implemenetations
-    pogs_types = PogsTypes(backend)
-    PogsSolver = pogs_types.Solver
-    PogsObjective = pogs_types.Objective
+    if backend.pogs is not None:
+        pogs_types = PogsTypes(backend)
+        PogsSolver = pogs_types.Solver
+        PogsObjective = pogs_types.Objective
 
-    pogs_abstract_types = PogsAbstractTypes(backend)
-    PogsAbstractSolver = pogs_abstract_types.Solver
+    if backend.pogs_abstract is not None:
+        pogs_abstract_types = PogsAbstractTypes(backend)
+        PogsAbstractSolver = pogs_abstract_types.Solver
 
-    clustering_types = ClusteringTypes(backend)
-    ClusteringSettings = clustering_types.ClusteringSettings
-    Clustering = clustering_types.Clustering
+    if backend.cluster is not None:
+        clustering_types = ClusteringTypes(backend)
+        ClusteringSettings = clustering_types.ClusteringSettings
+        Clustering = clustering_types.Clustering
 
     print('optkit backend set to {}'.format(backend.config))
     return int(requested_config != backend.config)
@@ -87,4 +90,4 @@ default_precision = os.getenv('OPTKIT_DEFAULT_FLOATBITS', '64')
 set_backend(gpu=(default_device == 'gpu'),
             double=(default_precision == '64'))
 
-del OKBackend
+# del OKBackend
