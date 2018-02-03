@@ -236,10 +236,7 @@ class PogsTypesBase:
                 self.c.x0 = None
                 self.c.nu0 = None
                 assert okerr.NO_ERR(lib.pogs_set_default_settings(self.c))
-                self.update(**options)
-
-            def update(self, **options):
-                keys = (
+                self._keys = [
                         'alpha',
                         'rho',
                         'abstol',
@@ -260,20 +257,25 @@ class PogsTypesBase:
                         'warmstart',
                         'resume',
                         'diagnostic',
-                )
-                self.__keys = list(keys) + ['x0', 'nu0']
+                        'x0',
+                        'nu0']
+                self.update(**options)
 
+            def update(self, **options):
+                print "ENTERING SETTINGS UPDATE"
                 if 'maxiters' in options:
                     options['maxiter'] = options['maxiters']
 
-                for key in keys:
-                    if key in options:
-                        setattr(self.c, key, options[key])
+                print "OPTIONS", options
 
-                for key in ('x0', 'nu0'):
+                for key in self._keys:
                     if key in options:
-                        vec = options[key].astype(lib.pyfloat)
-                        setattr(self.c, key, vec.ctypes.data_as(lib.ok_float_p))
+                        print "OPTION: ", key
+                        setattr(self, key, options[key])
+                        print "VALUE", getattr(self, key)
+
+                print "LEAVING SETTINGS UPDATE"
+
 
             def __str__(self):
                 summary = ''
@@ -281,7 +283,27 @@ class PogsTypesBase:
                     summary += '{}: {}\n'.format(key, getattr(self, key))
                 return summary
 
-        for key in (
+        def add_setting(factory, key, conversion, test=None, msg=None):
+            def get_setting(settings):
+                return getattr(settings.c, key)
+            def set_setting(settings, value):
+                value = conversion(value)
+                if test is not None:
+                    if not (test(value)):
+                        raise ValueError('argument `{}` must be {}'.format(key, msg))
+                setattr(settings.c, key, value)
+            setattr(factory, key, property(get_setting, set_setting))
+
+        def add_float(factory, key):
+            add_setting(factory, key, float, lambda val: val >= 0, '>= 0')
+        def add_uint(factory, key):
+            add_setting(factory, key, int, lambda val: val >= 0, '>= 0')
+        def add_bool(factory, key):
+            add_setting(factory, key, lambda val: int(bool(val)))
+        def add_ptr(factory, key):
+            add_settings(factory, key, lambda val: val.ctypes.data_as(lib.ok_float_p))
+
+        float_settings = [
                 'alpha',
                 'rho',
                 'abstol',
@@ -289,53 +311,28 @@ class PogsTypesBase:
                 'tolproj',
                 'toladapt',
                 'tolcorr', # TODO: keep?
-                'anderson_regularization'):
-            def get_setting(settings):
-                return getattr(settings.c, key)
-            def set_setting(settings, value):
-                value = float(value)
-                if value < 0:
-                    raise ValueError('argument `{}` must be >= 0'.format(key))
-                setattr(settings.c, key, value)
-            setattr(SolverSettings, key, property(get_setting, set_setting))
+                'anderson_regularization',]
 
-        #  for key in (
-        #         'maxiter',
-        #         'anderson_lookback',
-        #         'rho_interval', # TODO: keep?
-        #         'verbose',
-        #         'suppress'):
-        #     def get_setting(settings):
-        #         return getattr(settings.c, key)
-        #     def set_setting(settings, value):
-        #         value = int(value)
-        #         if value < 0:
-        #             raise ValueError('argument `{}` must be >= 0'.format(key))
-        #         setattr(settings.c, key, value)
-        #     setattr(SolverSettings, key, property(get_setting, set_setting))
+        uint_settings = [
+                'maxiter',
+                'anderson_lookback',
+                'rho_interval', # TODO: keep?
+                'verbose',
+                'suppress',]
 
-        # for key in (
-        #         'adaptiverho',
-        #         'accelerate',
-        #         'adapt_spectral', # TODO: keep?
-        #         'gapstop',
-        #         'warmstart',
-        #         'resume',
-        #         'diagnostic'):
-        #     def get_setting(settings):
-        #         return getattr(settings.c, key)
-        #     def set_setting(settings, value):
-        #         setattr(settings.c, key, int(bool(value)))
-        #     setattr(SolverSettings, key, property(get_setting, set_setting))
+        bool_settings = [
+                'adaptiverho',
+                'accelerate',
+                'adapt_spectral', # TODO: keep?
+                'gapstop',
+                'warmstart',
+                'resume',
+                'diagnostic',]
 
-        # for key in ('x0', 'nu0'):
-        #     def get_setting(settings):
-        #         return getattr(settings.c, key)
-        #     def set_setting(settings, value):
-        #         value = value.astype(lib.pyfloat)
-        #         setattr(settings.c, key, value.ctypes.data_as(lib.ok_float_p))
-        #     setattr(SolverSettings, key, property(get_setting, set_setting))
-
+        map(lambda stg: add_float(SolverSettings, stg), float_settings)
+        map(lambda stg: add_uint(SolverSettings, stg), uint_settings)
+        map(lambda stg: add_bool(SolverSettings, stg), bool_settings)
+        map(lambda stg: add_ptr(SolverSettings, stg), ('x0', 'nu0'))s
 
         class SolverInfo(object):
             def __init__(self):
@@ -542,6 +539,7 @@ class PogsTypesBase:
                             g.s[j])
 
             def solve(self, f, g, **options):
+                print "IN SOLVE CAL!!!!!!!!!!!!"
                 if self.c_solver is None:
                     raise ValueError(
                             'No solver intialized, solve() call invalid')
@@ -560,11 +558,14 @@ class PogsTypesBase:
 
                 # TODO : logic around resume, warmstart, rho input
                 self._update_function_vectors(f, g)
+                print "PRIOR TO SETTINGS UPDATE"
                 self.settings.update(**options)
-                if self.settings.reltol < 1e-3:
-                    if 'accelerate' not in options:
-                        self.settings.accelerate = 1
-                        self.settings.toladapt = 1e-2
+                print "AFTER SETTINGS UPDATE"
+
+                # if self.settings.reltol < 1e-3:
+                #     if 'accelerate' not in options:
+                #         self.settings.accelerate = 1
+                #         self.settings.toladapt = 1e-2
 
                 assert okerr.NO_ERR(lib.pogs_solve(
                         self.c_solver, self.f.c, self.g.c, self.settings.c,
