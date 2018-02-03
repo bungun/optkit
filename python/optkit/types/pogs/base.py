@@ -262,20 +262,12 @@ class PogsTypesBase:
                 self.update(**options)
 
             def update(self, **options):
-                print "ENTERING SETTINGS UPDATE"
                 if 'maxiters' in options:
                     options['maxiter'] = options['maxiters']
 
-                print "OPTIONS", options
-
                 for key in self._keys:
                     if key in options:
-                        print "OPTION: ", key
                         setattr(self, key, options[key])
-                        print "VALUE", getattr(self, key)
-
-                print "LEAVING SETTINGS UPDATE"
-
 
             def __str__(self):
                 summary = ''
@@ -539,7 +531,6 @@ class PogsTypesBase:
                             g.s[j])
 
             def solve(self, f, g, **options):
-                print "IN SOLVE CAL!!!!!!!!!!!!"
                 if self.c_solver is None:
                     raise ValueError(
                             'No solver intialized, solve() call invalid')
@@ -558,9 +549,7 @@ class PogsTypesBase:
 
                 # TODO : logic around resume, warmstart, rho input
                 self._update_function_vectors(f, g)
-                print "PRIOR TO SETTINGS UPDATE"
                 self.settings.update(**options)
-                print "AFTER SETTINGS UPDATE"
 
                 # if self.settings.reltol < 1e-3:
                 #     if 'accelerate' not in options:
