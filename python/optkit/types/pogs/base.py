@@ -66,7 +66,7 @@ class PogsTypesBase:
                 self.enums = lib.function_enums
                 self.size = n
                 self._fields = ['h', 'a', 'b', 'c', 'd', 'e', 's']
-                self._h = np.zeros(self.size, dtype=int)
+                self._h = np.zeros(self.size, dtype=np.uint32)
                 self._a = np.ones(self.size)
                 self._b = np.zeros(self.size)
                 self._c = np.ones(self.size)
@@ -426,9 +426,19 @@ class PogsTypesBase:
 
         class FunctionVectorLocal:
             def __init__(self, size):
-                self.py = np.zeros(size).astype(lib.function)
+                self.py = np.zeros(size, dtype=lib.function)
                 self.ptr = self.py.ctypes.data_as(lib.function_p)
                 self.c = lib.function_vector(size, self.ptr)
+
+            def update(self, objective):
+                for i in range(self.py.size):
+                    self.py[i][0] = objective.h[i]
+                    self.py[i][1] = objective.a[i]
+                    self.py[i][2] = objective.b[i]
+                    self.py[i][3] = objective.c[i]
+                    self.py[i][4] = objective.d[i]
+                    self.py[i][5] = objective.e[i]
+                    self.py[i][6] = objective.s[i]
 
         @add_metaclass(abc.ABCMeta)
         class _SolverBase:
@@ -511,17 +521,6 @@ class PogsTypesBase:
                 self.__c_solver = None
                 self.__backend.decrement_cobject_count()
 
-            def _update_function_vectors(self, f, g):
-                for i in range(f.size):
-                    self.f.py[i] = lib.function(
-                            f.h[i], f.a[i], f.b[i], f.c[i], f.d[i], f.e[i],
-                            f.s[i])
-
-                for j in range(g.size):
-                    self.g.py[j] = lib.function(
-                            g.h[j], g.a[j], g.b[j], g.c[j], g.d[j], g.e[j],
-                            g.s[j])
-
             def solve(self, f, g, **options):
                 if self.c_solver is None:
                     raise ValueError(
@@ -540,7 +539,8 @@ class PogsTypesBase:
 
 
                 # TODO : logic around resume, warmstart, rho input
-                self._update_function_vectors(f, g)
+                self.f.update(f)
+                self.g.update(g)
                 self.settings.update(**options)
 
                 # if self.settings.reltol < 1e-3:
