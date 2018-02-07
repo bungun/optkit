@@ -181,8 +181,10 @@ class OKBackend(object):
                             'not found. Trying next configuration.'
                             ''.format(lib_key))
             assert valid
-        except:
+        except AssertionError:
             raise RuntimeError('No libraries found for any backend')
+        except:
+            raise
 
 
     def change(self, gpu=False, double=True):
