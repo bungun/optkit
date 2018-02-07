@@ -21,6 +21,7 @@ ok_status pogs_variables_free(pogs_variables *z);
 ok_status pogs_set_default_settings(pogs_settings *s);
 ok_status pogs_update_settings(pogs_settings *settings,
 	const pogs_settings *input);
+ok_status pogs_print_settings(const pogs_settings *settings);
 
 ok_status pogs_initialize_conditions(pogs_objective_values *obj,
 	pogs_residuals *res, pogs_tolerances *tol,
@@ -208,6 +209,7 @@ ok_status pogs_set_default_settings(pogs_settings *s)
 	s->toladapt = kTOLADAPT;
 	s->tolcorr = kTOLCORR; /* TODO: keep? */
 	s->anderson_regularization = kMU;
+	s->rho_breakpoint = kRHOBREAKPOINT; /* TODO: keep? */
 	s->maxiter = kMAXITER;
 	s->anderson_lookback = kANDERSON;
 	s->rho_interval = kRHOINTERVAL; /* TODO: keep? */
@@ -238,6 +240,7 @@ ok_status pogs_update_settings(pogs_settings *settings,
 	settings->toladapt = input->toladapt;
 	settings->tolcorr = input->tolcorr; /* TODO: keep? */
 	settings->anderson_regularization = input->anderson_regularization;
+	settings->rho_breakpoint = input->rho_breakpoint; /* TODO: keep? */
 	settings->maxiter = input->maxiter;
 	settings->anderson_lookback = input->anderson_lookback;
 	settings->rho_interval = input->rho_interval; /* TODO: keep? */
@@ -254,6 +257,40 @@ ok_status pogs_update_settings(pogs_settings *settings,
 	settings->nu0 = input->nu0;
 	return OPTKIT_SUCCESS;
 }
+
+ok_status pogs_print_settings(const pogs_settings *settings)
+{
+	OK_CHECK_PTR(settings);
+	printf("%30s %.1e\n", "overrelaxation", settings->alpha);
+	printf("%30s %.1e\n", "proximal parameter", settings->rho);
+	printf("%30s %.1e\n", "abs tol", settings->abstol);
+	printf("%30s %.1e\n", "rel tol", settings->reltol);
+	printf("%30s %.1e\n", "tol projector", settings->tolproj);
+	printf("%30s %.1e\n", "tol adaptive", settings->toladapt);
+	printf("%30s %.1e\n", "tol correlation", settings->tolcorr);
+	printf("%30s %.1e\n", "anderson regularization",
+		settings->anderson_regularization);
+	printf("%30s %.1e\n", "rho breakpoint", settings->rho_breakpoint);
+
+	printf("%30s %u\n", "maximum iterations", settings->maxiter);
+	printf("%30s %u\n", "anderson lookback", settings->anderson_lookback);
+	printf("%30s %u\n", "rho interval (spectral)", settings->rho_interval);
+	printf("%30s %u\n", "verbosity", settings->verbose);
+	printf("%30s %u\n", "output suppression", settings->suppress);
+
+	printf("%30s %i\n", "adaptive rho?", settings->adaptiverho);
+	printf("%30s %i\n", "anderson acceleration?", settings->accelerate);
+	printf("%30s %i\n", "adapt rho spectral?", settings->adapt_spectral);
+	printf("%30s %i\n", "gap stop?", settings->gapstop);
+	printf("%30s %i\n", "warm start?", settings->warmstart);
+	printf("%30s %i\n", "resume?", settings->resume);
+	printf("%30s %i\n", "diagnostic?", settings->diagnostic);
+
+	printf("%30s %p\n", "warmstart x pointer", (void *)settings->x0);
+	printf("%30s %p\n", "warmstart nu pointer", (void *)settings->nu0);
+	return OPTKIT_SUCCESS;
+}
+
 
 ok_status pogs_initialize_conditions(pogs_objective_values *obj,
 	pogs_residuals *res, pogs_tolerances *tol,
@@ -304,9 +341,9 @@ ok_status pogs_update_objective_values(void *linalg_handle,
 }
 
 /*
- * tol_primal = tol_abs + tol_rel * sqrt(m) * ||y^k+1/2||
- * tol_dual = tol_abs + tol_rel * sqrt(n) * ||xt^k+1/2||
- * tol_gap = tol_abs + tol_rel * sqrt(mn) * ||z^k|| * ||z^k+1/2||
+ * tol_primal = tol_abs * sqrt(m) + tol_rel * ||y^k+1/2||
+ * tol_dual = tol_abs * sqrt(n) + tol_rel * ||xt^k+1/2||
+ * tol_gap = tol_abs * sqrt(mn) + tol_rel * ||z^k|| * ||z^k+1/2||
  */
 ok_status pogs_update_tolerances(void *linalg_handle,
 	pogs_variables *z, pogs_objective_values *obj, pogs_tolerances *tol)

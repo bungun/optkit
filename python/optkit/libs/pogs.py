@@ -135,6 +135,7 @@ def attach_pogs_datatypes_ctypes(lib, single_precision=False):
                     ('toladapt', lib.ok_float),
                     ('tolcorr', lib.ok_float),
                     ('anderson_regularization', lib.ok_float),
+                    ('rho_breakpoint', lib.ok_float),
                     ('maxiter', ct.c_uint),
                     ('anderson_lookback', ct.c_uint),
                     ('rho_interval', ct.c_uint),
@@ -223,6 +224,15 @@ def attach_pogs_adaptrho_ctypes(lib, single_precision=False):
 
     lib.spectral_rho_params = SpectralRhoParameters
     lib.spectral_rho_params_p = ct.POINTER(lib.spectral_rho_params)
+
+    class HybridRhoParameters(ct.Structure):
+        _fields_ = [('adapt_params', lib.adapt_params_p),
+                    ('spectral_params', lib.spectral_rho_params_p),
+                    ('breakpoint', lib.ok_float),
+                    ('spectral', ct.c_int)]
+
+    lib.hybrid_rho_params = HybridRhoParameters
+    lib.hybrid_rho_params_p = ct.POINTER(lib.hybrid_rho_params)
 
 def attach_pogs_ctypes(lib, single_precision=False):
     include_ok_prox(lib, single_precision=single_precision)
@@ -335,6 +345,21 @@ def _attach_pogs_adaptrho_ccalls(lib):
             lib.pogs_spectral_update_end,
             lib.pogs_spectral_estimate_tangent,
             lib.pogs_spectral_adapt_rho)
+
+    # TODO: keep hybrid rho?
+    lib.pogs_hybrid_rho_initialize.argtypes = [
+            lib.hybrid_rho_params_p, lib.pogs_settings_p, lib.pogs_variables_p]
+    lib.pogs_hybrid_rho_free.argtypes = [lib.hybrid_rho_params_p]
+    lib.pogs_hybrid_adapt_rho.argtypes = [
+            ct.c_void_p, lib.pogs_variables_p, lib.ok_float_p,
+            lib.hybrid_rho_params_p, lib.pogs_settings_p,
+            lib.pogs_residuals_p, lib.pogs_tolerances_p, ct.c_uint]
+
+    OptkitLibs.attach_default_restype(
+            lib.pogs_hybrid_rho_initialize,
+            lib.pogs_hybrid_rho_free,
+            lib.pogs_hybrid_adapt_rho,)
+
 
 def _attach_pogs_common_ccalls(lib):
     # arguments
@@ -535,7 +560,7 @@ def _attach_pogs_generic_ccalls(lib):
             ct.c_void_p, lib.pogs_variables_p, lib.ok_float]
 
     lib.pogs_iterate.argtypes = [lib.pogs_solver_p]
-    lib.pogs_accelerate.argtypes = [lib.pogs_solver_p]
+    lib.pogs_accelerate.argtypes = [lib.pogs_solver_p, lib.hybrid_rho_params_p]
     lib.pogs_update_residuals.argtypes = [
             lib.pogs_solver_p, lib.pogs_objective_values_p,
             lib.pogs_residuals_p]

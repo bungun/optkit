@@ -160,7 +160,8 @@ OPERATOR_HDR+=$(INCLUDE)optkit_abstract_operator.h $(OPINC)transforms.h
 CG_HDR=$(OPERATOR_HDR) $(INCLUDE)optkit_cg.h
 
 POGS_BASE_HDR=$(DENSE_HDR) $(INCLUDE)optkit_prox.hpp 
-POGS_BASE_HDR+=$(POGSINC)datatypes.h $(POGSINC)adaptive_rho.h $(POGSINC)spectral_rho.h
+POGS_BASE_HDR+=$(POGSINC)datatypes.h $(POGSINC)adaptive_rho.h 
+POGS_BASE_HDR+=$(POGSINC)spectral_rho.h $(POGSINC)hybrid_rho.h
 POGS_BASE_HDR+=$(POGSINC)common.h $(INCLUDE)pogs/optkit_pogs.h
 POGS_BASE_HDR+=$(INCLUDE)optkit_projector.h $(INCLUDE)optkit_equilibration.h
 POGS_ABSTRACT_HDR=$(POGS_BASE_HDR) $(CG_HDR) $(POGSINC)abstract.h

@@ -204,10 +204,14 @@ class PogsTypesBase:
                         val = None
                         try:
                             val = map(validate, param)
+                        except ValueError, TypeError:
+                            raise
                         except:
                             try:
                                 param = validate(param)
                                 val = const_iterator(param, range_length)
+                            except ValueError, TypeError:
+                                raise
                             except:
                                 allowed = [list, np.ndarray] + list(param_types[key])
                                 raise ValueError(
@@ -230,8 +234,8 @@ class PogsTypesBase:
 
         self.Objective = Objective
 
-        class SolverSettings:
-            def __init__(self, **options):
+        class SolverSettingsProto(object):
+            def __init__(self):
                 self.c = PogsSettings()
                 self.c.x0 = None
                 self.c.nu0 = None
@@ -245,6 +249,7 @@ class PogsTypesBase:
                         'toladapt',
                         'tolcorr',          # TODO: keep?
                         'anderson_regularization',
+                        'rho_threshold',    # TODO: keep?
                         'maxiter',
                         'anderson_lookback',
                         'rho_interval',     # TODO: keep?
@@ -259,21 +264,6 @@ class PogsTypesBase:
                         'diagnostic',
                         'x0',
                         'nu0']
-                self.update(**options)
-
-            def update(self, **options):
-                if 'maxiters' in options:
-                    options['maxiter'] = options['maxiters']
-
-                for key in self._keys:
-                    if key in options:
-                        setattr(self, key, options[key])
-
-            def __str__(self):
-                summary = ''
-                for key in self.__keys:
-                    summary += '{}: {}\n'.format(key, getattr(self, key))
-                return summary
 
         def add_setting(factory, key, conversion, test=None, msg=None):
             def get_setting(settings):
@@ -293,7 +283,7 @@ class PogsTypesBase:
         def add_bool(factory, key):
             add_setting(factory, key, lambda val: int(bool(val)))
         def add_ptr(factory, key):
-            add_settings(factory, key, lambda val: val.ctypes.data_as(lib.ok_float_p))
+            add_setting(factory, key, lambda val: val.ctypes.data_as(lib.ok_float_p))
 
         float_settings = [
                 'alpha',
@@ -303,7 +293,9 @@ class PogsTypesBase:
                 'tolproj',
                 'toladapt',
                 'tolcorr', # TODO: keep?
-                'anderson_regularization',]
+                'anderson_regularization',
+                'rho_threshold', #TODO: keep?
+        ]
 
         uint_settings = [
                 'maxiter',
@@ -321,56 +313,56 @@ class PogsTypesBase:
                 'resume',
                 'diagnostic',]
 
-        map(lambda stg: add_float(SolverSettings, stg), float_settings)
-        map(lambda stg: add_uint(SolverSettings, stg), uint_settings)
-        map(lambda stg: add_bool(SolverSettings, stg), bool_settings)
-        map(lambda stg: add_ptr(SolverSettings, stg), ('x0', 'nu0'))s
+        map(lambda stg: add_float(SolverSettingsProto, stg), float_settings)
+        map(lambda stg: add_uint(SolverSettingsProto, stg), uint_settings)
+        map(lambda stg: add_bool(SolverSettingsProto, stg), bool_settings)
+        map(lambda stg: add_ptr(SolverSettingsProto, stg), ('x0', 'nu0'))
+
+        class SolverSettings(SolverSettingsProto):
+            def __init__(self, **options):
+                SolverSettingsProto.__init__(self)
+                self.update(**options)
+
+            def update(self, **options):
+                if 'maxiters' in options:
+                    options['maxiter'] = options['maxiters']
+
+                for key in self._keys:
+                    if key in options:
+                        setattr(self, key, options[key])
+
+            def __str__(self):
+                summary = ''
+                for key in self._keys:
+                    summary += '{}: {}\n'.format(key, getattr(self, key))
+                return summary
 
         class SolverInfo(object):
             def __init__(self):
                 self.c = PogsInfo()
 
-            @property
-            def err(self):
-                return self.c.err
-
-            @property
-            def iters(self):
-                return self.c.k
-
-            @property
-            def solve_time(self):
-                return self.c.solve_time
-
-            @property
-            def setup_time(self):
-                return self.c.setup_time
-
-            @property
-            def error(self):
-                return self.c.error
-
-            @property
-            def converged(self):
-                return self.c.converged
-
-            @property
-            def objval(self):
-                return self.c.obj
-
-            @property
-            def rho(self):
-                return self.c.rho
-
             def __str__(self):
                 return str(
-                        'error: {}\n'.format(self.err).join(
-                        'converged: {}\n'.format(self.converged)).join(
-                        'iterations: {}\n'.format(self.iters)).join(
-                        'objective: {}\n'.format(self.objval)).join(
-                        'rho: {}\n'.format(self.rho)).join(
-                        'setup time: {}\n'.format(self.setup_time)).join(
-                        'solve time: {}\n'.format(self.solve_time)))
+                        'error: {}\n'.format(self.c.err)
+                        + 'converged: {}\n'.format(self.c.converged)
+                        + 'iterations: {}\n'.format(self.c.k)
+                        + 'objective: {}\n'.format(self.c.obj)
+                        + 'rho: {}\n'.format(self.c.rho)
+                        + 'setup time: {}\n'.format(self.c.setup_time)
+                        + 'solve time: {}\n'.format(self.c.solve_time))
+
+        properties = ['converged', 'rho', 'setup_time', 'solve_time']
+        renamed = [('error','err'), ('iterations','k'), ('objective','obj')]
+
+        def add_property(factory, public_name, private_name=None):
+            if private_name is None:
+                private_name = public_name
+            def get_prop(settings):
+                return getattr(settings.c, private_name)
+            setattr(factory, public_name, property(get_prop))
+
+        map(lambda prop: add_property(SolverInfo, prop), properties)
+        map(lambda prop: add_property(SolverInfo, prop[0], prop[1]), renamed)
 
         class SolverOutput:
             def __init__(self, m, n):
@@ -520,12 +512,12 @@ class PogsTypesBase:
                 self.__backend.decrement_cobject_count()
 
             def _update_function_vectors(self, f, g):
-                for i in xrange(f.size):
+                for i in range(f.size):
                     self.f.py[i] = lib.function(
                             f.h[i], f.a[i], f.b[i], f.c[i], f.d[i], f.e[i],
                             f.s[i])
 
-                for j in xrange(g.size):
+                for j in range(g.size):
                     self.g.py[j] = lib.function(
                             g.h[j], g.a[j], g.b[j], g.c[j], g.d[j], g.e[j],
                             g.s[j])

@@ -6,8 +6,7 @@
 #include "optkit_anderson.h"
 #include "optkit_anderson_difference.h"
 #include "optkit_pogs_datatypes.h"
-#include "optkit_pogs_adaptive_rho.h"
-#include "optkit_pogs_spectral_rho.h"
+#include "optkit_pogs_hybrid_rho.h"
 #include "optkit_pogs_common.h"
 
 #ifdef __cplusplus
@@ -99,7 +98,7 @@ ok_status pogs_dual_update(void *linalg_handle, pogs_variables *z,
 	ok_float alpha);
 
 ok_status pogs_iterate(pogs_solver *solver);
-ok_status pogs_accelerate(pogs_solver *solver);
+ok_status pogs_accelerate(pogs_solver *solver, const rho_params *prox_params);
 ok_status pogs_update_residuals(pogs_solver *solver,
 	pogs_objective_values *obj, pogs_residuals *res);
 ok_status pogs_check_convergence(pogs_solver *solver,
