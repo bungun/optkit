@@ -153,8 +153,8 @@ class OKFunctionEnums:
             raise ValueError(
                     'Function parameter `c` must be nonnegative '
                     'for function to be convex:\n '
-                    '\tf(x) =def= c * h(ax - b) + dx + ex^2'
-                    '\n, with h convex.')
+                    '\tf(x) =def= c * h(ax - b) + dx + ex^2,'
+                    '\nwith h convex.')
         else:
             return c
 
@@ -163,8 +163,8 @@ class OKFunctionEnums:
             raise ValueError(
                     'Function parameter `e` must be nonnegative '
                     'for function to be convex:\n '
-                    '\tf(x) =def= c * h(ax - b) + dx + ex^2'
-                    '\n, with h convex.')
+                    '\tf(x) =def= c * h(ax - b) + dx + ex^2,'
+                    '\nwith h convex.')
         else:
             return e
 
@@ -175,8 +175,8 @@ class OKFunctionEnums:
                     'positive for function to be convex:\n '
                     '\t s =def= 1 * I(ax < b) + scalar * I(ax > b)\n'
                     'and\n'
-                    '\tf(x) =def= c * s * h(ax - b) + dx + ex^2'
-                    '\n, with h convex.')
+                    '\tf(x) =def= c * s * h(ax - b) + dx + ex^2,'
+                    '\nwith h convex.')
         else:
             return s
 
