@@ -544,10 +544,6 @@ ok_status pogs_solve(pogs_solver *solver, const function_vector *f,
 			(size_t) settings->anderson_lookback, (size_t) 2) );
 
 	OK_CHECK_ERR( err, pogs_update_settings(solver->settings, settings) );
-
-	OK_CHECK_ERR(err, pogs_print_settings(settings));
-	OK_CHECK_ERR(err, pogs_print_settings(solver->settings));
-
 	OK_CHECK_ERR( err, pogs_scale_objectives(solver->f, solver->g,
 		solver->W->d, solver->W->e, f, g) );
 	if (settings->warmstart)
