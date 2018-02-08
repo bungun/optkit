@@ -249,7 +249,7 @@ class PogsTypesBase:
                         'toladapt',
                         'tolcorr',          # TODO: keep?
                         'anderson_regularization',
-                        'rho_threshold',    # TODO: keep?
+                        'rho_breakpoint',    # TODO: keep?
                         'maxiter',
                         'anderson_lookback',
                         'rho_interval',     # TODO: keep?
@@ -294,7 +294,7 @@ class PogsTypesBase:
                 'toladapt',
                 'tolcorr', # TODO: keep?
                 'anderson_regularization',
-                'rho_threshold', #TODO: keep?
+                'rho_breakpoint', #TODO: keep?
         ]
 
         uint_settings = [
