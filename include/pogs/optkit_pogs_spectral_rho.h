@@ -105,10 +105,10 @@ ok_status pogs_spectral_estimate_tangent(void *linalg_handle, vector *dF,
 	min_gradient = dFdx / dFdF;
 	steepest_descent = dxdx / dFdx;
 
-	if (steepest_descent < 0.5 * min_gradient)
+	if (steepest_descent < (ok_float) 0.5 * min_gradient)
 		*slope = min_gradient;
 	else
-		*slope = steepest_descent - 0.5 * min_gradient;
+		*slope = steepest_descent - (ok_float) 0.5 * min_gradient;
 
 	OK_CHECK_ERR(err, blas_nrm2(linalg_handle, dx, &xnorm));
 	OK_CHECK_ERR(err, blas_nrm2(linalg_handle, dF, &Fnorm));
