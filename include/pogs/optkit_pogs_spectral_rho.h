@@ -13,6 +13,8 @@ extern "C" {
 
 #ifndef SPECTRAL_RHO_CONSTANTS
 #define SPECTRAL_RHO_CONSTANTS
+#define kRHOMAX_SPECTRAL (ok_float) 0.5 * OK_FLOAT_MAX
+#define kRHOMIN_SPECTRAL (ok_float) 2 * MACHINETOL
 // #define kRHOITERS (size_t) 2
 // #define kEPSCORR (ok_float) 0.2
 #endif /* SPECTRAL_RHO_CONSTANTS */
@@ -153,6 +155,9 @@ ok_status pogs_spectral_adapt_rho(void *linalg_handle, pogs_variables *z,
 		rho_new = beta;
 	else
 		rho_new = *rho;
+
+	rho_new = (rho_new < kRHOMIN_SPECTRAL) ? kRHOMIN_SPECTRAL : rho_new;
+	rho_new = (rho_new > kRHOMAX_SPECTRAL) ? kRHOMAX_SPECTRAL : rho_new;
 
 	/* fallback */
 	if (err)
