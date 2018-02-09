@@ -130,7 +130,6 @@ ok_status pogs_spectral_adapt_rho(void *linalg_handle, pogs_variables *z,
 	ok_status err = OPTKIT_SUCCESS;
 	ok_float rho_new;
 	ok_float alpha_corr = kZero, alpha, beta_corr = kZero, beta;
-	ok_float rescale, rho_limit, zmin;
 
 	if (!z || !rho || !params || !(params->dH) || !settings)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
