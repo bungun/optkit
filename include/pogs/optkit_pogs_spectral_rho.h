@@ -13,8 +13,8 @@ extern "C" {
 
 #ifndef SPECTRAL_RHO_CONSTANTS
 #define SPECTRAL_RHO_CONSTANTS
-#define kRHOMAX_SPECTRAL (ok_float) 0.5 * OK_FLOAT_MAX
-#define kRHOMIN_SPECTRAL (ok_float) 2 * MACHINETOL
+#define kRHOMIN_SPECTRAL (ok_float) 1e-5
+#define kRHOMAX_SPECTRAL (ok_float) 1e5
 // #define kRHOITERS (size_t) 2
 // #define kEPSCORR (ok_float) 0.2
 #endif /* SPECTRAL_RHO_CONSTANTS */
@@ -130,6 +130,7 @@ ok_status pogs_spectral_adapt_rho(void *linalg_handle, pogs_variables *z,
 	ok_status err = OPTKIT_SUCCESS;
 	ok_float rho_new;
 	ok_float alpha_corr = kZero, alpha, beta_corr = kZero, beta;
+	ok_float rescale, rho_limit, zmin;
 
 	if (!z || !rho || !params || !(params->dH) || !settings)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
@@ -156,27 +157,24 @@ ok_status pogs_spectral_adapt_rho(void *linalg_handle, pogs_variables *z,
 	else
 		rho_new = *rho;
 
-	rho_new = (rho_new < kRHOMIN_SPECTRAL) ? kRHOMIN_SPECTRAL : rho_new;
-	rho_new = (rho_new > kRHOMAX_SPECTRAL) ? kRHOMAX_SPECTRAL : rho_new;
-
 	/* fallback */
 	if (err)
 		rho_new = *rho;
 
-	/* start building differences for next iteration */
-	OK_CHECK_ERR(err, pogs_spectral_update_start(params, z, rho_new));
+	rho_new = (rho_new < kRHOMIN_SPECTRAL) ? kRHOMIN_SPECTRAL : rho_new;
+	rho_new = (rho_new > kRHOMAX_SPECTRAL) ? kRHOMAX_SPECTRAL : rho_new;
 
-
-	OK_CHECK_ERR(err, vector_scale(z->dual->vec, *rho / rho_new));
+	OK_CHECK_ERR(err, blas_scal(linalg_handle, *rho / rho_new, z->dual->vec));
 	*rho = rho_new;
+
+	/* start building differences for next iteration */
+	OK_CHECK_ERR(err, pogs_spectral_update_start(params, z, *rho));
 
 	return err;
 }
-
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
 #endif /* OPTKIT_POGS_SPECTRAL_RHO_H_ */
-
