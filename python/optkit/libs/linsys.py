@@ -334,15 +334,15 @@ def attach_dense_linsys_ccalls(lib, single_precision=False):
     lib.lapack_make_handle.argtypes = [ct.c_void_p]
     lib.lapack_destroy_handle.argtypes = [ct.c_void_p]
     lib.lapack_solve_LU.argtypes = [ct.c_void_p, matrix_p, vector_p, int_vector_p]
-    lib.lapack_cholesky_decomp.argtypes = [c_void_p, matrix_p]
-    lib.lapack_cholesky_svx.argtypes = [c_void_p, matrix_p, vector_p]
+    lib.lapack_cholesky_decomp.argtypes = [ct.c_void_p, matrix_p]
+    lib.lapack_cholesky_svx.argtypes = [ct.c_void_p, matrix_p, vector_p]
 
     OptkitLibs.attach_default_restype(
             lib.lapack_make_handle,
             lib.lapack_destroy_handle,
             lib.lapack_solve_LU,
-            lib.lapack_cholesky_decomp.argtypes,
-            lib.lapack_cholesky_svx.argtypes,
+            lib.lapack_cholesky_decomp,
+            lib.lapack_cholesky_svx,
     )
 
     # LINALG

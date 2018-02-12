@@ -125,4 +125,4 @@ class OptkitLibs(object):
     @staticmethod
     def attach_default_restype(*methods):
         for m in methods:
-            m.restypes = ct.c_uint
+            m.restype = ct.c_uint

@@ -483,28 +483,28 @@ class DenseLapackTestCase(unittest.TestCase):
                     x.sync_to_py()
                     assert VEC_EQ( x.py, pysol, atol * mindim**0.5, rtol )
 
-    def test_lapack_cholesky(sef):
+    def test_lapack_cholesky(self):
         A = self.Q_test.dot(np.diag(self.eigs).dot(self.Q_test.T))
         xrand = np.random.random(A.shape[0])
         LLT = np.linalg.cholesky(A)
-        sol = np.linalg.solve(xrand)
+        sol = np.linalg.solve(A, xrand)
 
         for lib, order in self.LIBS_LAYOUTS:
             with lib as lib:
+                nn = A.shape[0]
                 imprecision_factor = 5**(int(lib.GPU) + int(lib.FLOAT))
-                atol = 1e-2 * imprecision_factor * mindim
+                atol = 1e-2 * imprecision_factor * nn
                 rtol = 1e-2 * imprecision_factor
 
-                L = okcctx.CDenseMatrixContext(lib, mindim, mindim, order, value=A)
-                x = okcctx.CVectorContext(lib, mindim, value=xrand)
-                hdl = okcctx.CDenseLinalgContext(lib)
+                L = okcctx.CDenseMatrixContext(lib, nn, nn, order, value=A)
+                x = okcctx.CVectorContext(lib, nn, value=xrand)
+                hdl = okcctx.CDenseLapackContext(lib)
 
                 with L, x, hdl as hdl:
-                    assert lib.lapack_cholesky_decome(hdl, L.c)
+                    assert NO_ERR(lib.lapack_cholesky_decomp(hdl, L.c))
                     assert NO_ERR( lib.linalg_cholesky_svx(hdl, L.c, x.c) )
                     x.sync_to_py()
                     assert VEC_EQ(x.py, sol, atol, rtol)
-
 
 class DenseLinalgTestCase(unittest.TestCase):
     @classmethod
