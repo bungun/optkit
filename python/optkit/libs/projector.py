@@ -130,10 +130,10 @@ def attach_operator_projector_ctypes_ccalls(lib, single_precision=False):
     lib.indirect_projector_alloc.argtypes = [
             indirect_projector_p, abstract_operator_p]
     lib.indirect_projector_initialize.argtypes = [
-            ct.c_void_p, indirect_projector_p, ct.c_int]
+            ct.c_void_p, ct.c_void_p, indirect_projector_p, ct.c_int]
     lib.indirect_projector_project.argtypes = [
-            ct.c_void_p, indirect_projector_p, vector_p, vector_p, vector_p,
-            vector_p]
+            ct.c_void_p, ct.c_void_p, indirect_projector_p, vector_p,
+            vector_p, vector_p, vector_p]
     lib.indirect_projector_free.argtypes = [indirect_projector_p]
     lib.indirect_projector_generic_alloc.argtypes = [abstract_operator_p]
 

@@ -260,7 +260,7 @@ class AndersonTestCase(unittest.TestCase):
                 with F, alpha, aa as aa:
                     alpha_expect = self.py_anderson_solve(F.py, 0.)
                     assert NO_ERR( lib.anderson_solve(
-                            aa.blas, F.c, aa.F_gram, alpha.c, aa.ones,
+                            aa.blas_handle, F.c, aa.F_gram, alpha.c, aa.ones,
                             aa.mu_regularization) )
                     alpha.sync_to_py()
                     assert VEC_EQ( alpha.py, alpha_expect, ATOL, RTOL )

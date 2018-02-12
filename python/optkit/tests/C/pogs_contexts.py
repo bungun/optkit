@@ -149,11 +149,14 @@ class Base:
         h = lib.function_enums.dict[self._objstring]
         asymm = 1 + int('Asymm' in self._objstring)
         for i in xrange(m):
-            self.f.py[i] = lib.function(h, 1, 1, 1, 0, 0, asymm)
+            for ii, val in enumerate((h, 1, 1, 1, 0, 0, asymm)):
+                self.f.py[i][ii] = val
         self.f.sync_to_c()
+        indicator = lib.function_enums.IndGe0
         for j in xrange(n):
-            self.g.py[j] = lib.function(
-                    lib.function_enums.IndGe0, 1, 0, 1, 0, 0, 1)
+            for jj, val in enumerate((indicator, 1, 0, 1, 0, 0, 1)):
+                self.g.py[j][jj] = val
+
         self.g.sync_to_c()
         self.params.f = self.f.c
         self.params.g = self.g.c

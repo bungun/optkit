@@ -182,7 +182,7 @@ ok_status indirect_projector_alloc(indirect_projector *P, abstract_operator *A)
 	return err;
 }
 
-ok_status indirect_projector_initialize(void *blas_handle,
+ok_status indirect_projector_initialize(void *blas_handle, void *lapack_handle,
 	indirect_projector *P, int normalize)
 {
 	/* no-op*/
@@ -221,7 +221,7 @@ ok_status indirect_projector_initialize(void *blas_handle,
  *
  * hence we obtain the desired projection.
  */
-ok_status indirect_projector_project(void *blas_handle,
+ok_status indirect_projector_project(void *blas_handle, void *lapack_handle,
 	indirect_projector *P, vector *x_in, vector *y_in, vector *x_out,
 	vector *y_out)
 {

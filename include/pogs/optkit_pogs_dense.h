@@ -125,10 +125,9 @@ ok_status pogs_dense_project_graph(pogs_dense_work *W, vector *x_in,
 	vector *y_in, vector *x_out, vector *y_out, ok_float tol)
 {
 	/* ignore arg ``tol``, included for method signature consistency */
-	return OK_SCAN_ERR( PROJECTOR(project)(W->blas_handle, W->P, x_in,
-		y_in, x_out, y_out) );
+	return OK_SCAN_ERR( PROJECTOR(project)(W->blas_handle, W->lapack_handle,
+		W->P, x_in, y_in, x_out, y_out) );
 }
-
 
 ok_status pogs_dense_equilibrate_matrix(pogs_dense_work *W, ok_float *A,
 	const pogs_dense_solver_flags *flags)
@@ -141,7 +140,8 @@ ok_status pogs_dense_equilibrate_matrix(pogs_dense_work *W, ok_float *A,
 
 ok_status pogs_dense_initalize_graph_projector(pogs_dense_work *W)
 {
-	return OK_SCAN_ERR( PROJECTOR(initialize)(W->blas_handle, W->P, 1) );
+	return OK_SCAN_ERR( PROJECTOR(initialize)(W->blas_handle,
+		W->lapack_handle, W->P, 1) );
 }
 
 /* STUB */

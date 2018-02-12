@@ -58,10 +58,11 @@ typedef struct indirect_projector {
 } indirect_projector;
 
 ok_status indirect_projector_alloc(indirect_projector *P, abstract_operator *A);
-ok_status indirect_projector_initialize(void *blas_handle,
+ok_status indirect_projector_initialize(void *blas_handle, void *lapack_handle,
 	indirect_projector *P, const int normalize);
-ok_status indirect_projector_project(void *blas_handle, indirect_projector *P,
-	vector *x_in, vector *y_in, vector *x_out, vector *y_out);
+ok_status indirect_projector_project(void *blas_handle, void *lapack_handle,
+	indirect_projector *P, vector *x_in, vector *y_in, vector *x_out,
+	vector *y_out);
 ok_status indirect_projector_free(indirect_projector *P);
 
 typedef struct dense_direct_projector {

@@ -81,20 +81,20 @@ class DirectProjectorTestCase(unittest.TestCase):
                     y_out = okcctx.CVectorContext(lib, m)
                     A = okcctx.CDenseMatrixContext(lib, m, n, order, random=True)
                     hdl = okcctx.CDenseLinalgContext(lib)
-                    lapack_hdl = okcctx.CDenseLapackContext(lib)
+                    lhdl = okcctx.CDenseLapackContext(lib)
 
                     skinny = 1 if m >= n else 0
 
-                    with x_in, y_in, x_out, y_out, A, hdl as hdl:
+                    with x_in, y_in, x_out, y_out, A, hdl as hdl, lhdl as lhdl:
 
                         P = lib.direct_projector(None, None, 0, skinny, 0)
                         def build_(): return lib.direct_projector_alloc(P, A.c)
                         def free_(): return lib.direct_projector_free(P)
                         with okcctx.CVariableContext(build_, free_):
                             assert NO_ERR( lib.direct_projector_initialize(
-                                    hdl, lapack_hdl, P, normalize) )
+                                    hdl, lhdl, P, normalize) )
                             assert NO_ERR( lib.direct_projector_project(
-                                    hdl, lapack_hdl, P, x_in.c, y_in.c, x_out.c,
+                                    hdl, lhdl, P, x_in.c, y_in.c, x_out.c,
                                     y_out.c) )
 
                             # copy results
@@ -164,7 +164,7 @@ class IndirectProjectorTestCase(unittest.TestCase):
                     def free_(): return lib.indirect_projector_free(p)
                     with okcctx.CVariableContext(build_, free_):
                         assert NO_ERR( lib.indirect_projector_project(
-                                hdl, p, x_in.c, y_in.c, x_out.c, y_out.c) )
+                                hdl, hdl, p, x_in.c, y_in.c, x_out.c, y_out.c) )
 
                         x_out.sync_to_py()
                         y_out.sync_to_py()
