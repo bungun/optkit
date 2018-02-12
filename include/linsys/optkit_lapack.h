@@ -10,6 +10,10 @@ extern "C" {
 
 void LAPACK(gesv)(lapack_int *n, lapack_int *nrhs, ok_float *a, lapack_int *lda,
 	lapack_int *ipiv, ok_float *b, lapack_int *ldb, lapack_int *info);
+void LAPACK(potrf)(char *uplo, lapack_int *n, ok_float *a, lapack_int *lda,
+	lapack_int *info);
+void LAPACK(potrs)(char *uplo, lapack_int *n, lapack_int *nrhs, ok_float *a,
+	lapack_int *lda, ok_float *b, lapack_int *ldb, lapack_int *info);
 
 /* LAPACK context */
 ok_status lapack_make_handle(void **lapack_handle);
@@ -27,6 +31,10 @@ ok_status lapack_solve_LU_matrix(void *hdl, matrix *A, matrix *X,
 	int_vector *pivot);
 
 /* CHOLESKY SOLVE */
+ok_status lapack_cholesky_decomp(void *hdl, matrix *A);
+ok_status lapack_cholesky_decomp_flagged(void *hdl, matrix *A,
+	int silence_lapack_err);
+ok_status lapack_cholesky_svx(void *hdl, const matrix *L, vector *x);
 
 /* EVD */
 

@@ -27,6 +27,13 @@ ok_status lapack_solve_LU(void *hdl, matrix *A, vector *x, int_vector *pivot)
 	return lapack_solve_LU_flagged(hdl, A, x, pivot, 0);
 }
 
+ok_status lapack_cholesky_decomp(void *hdl, matrix *A)
+{
+	return lapack_cholesky_decomp_flagged(hdl, A, 0);
+}
+
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -436,6 +436,9 @@ class DenseLapackTestCase(unittest.TestCase):
         self.libs = okcctx.lib_contexts(DenseLinsysLibs())
         self.A_test = defs.A_test_gen()
         self.B_test = defs.A_test_gen()
+        mindim = min(defs.shape())
+        self.eigs = 1 + np.random.uniform(0, 1, mindim)
+        self.Q_test, _ = np.linalg.qr(self.A_test[:mindim, :mindim])
 
     @classmethod
     def tearDownClass(self):
@@ -479,6 +482,29 @@ class DenseLapackTestCase(unittest.TestCase):
                     assert NO_ERR( lib.lapack_solve_LU(hdl, C.c, x.c, pivot.c) )
                     x.sync_to_py()
                     assert VEC_EQ( x.py, pysol, atol * mindim**0.5, rtol )
+
+    def test_lapack_cholesky(sef):
+        A = self.Q_test.dot(np.diag(self.eigs).dot(self.Q_test.T))
+        xrand = np.random.random(A.shape[0])
+        LLT = np.linalg.cholesky(A)
+        sol = np.linalg.solve(xrand)
+
+        for lib, order in self.LIBS_LAYOUTS:
+            with lib as lib:
+                imprecision_factor = 5**(int(lib.GPU) + int(lib.FLOAT))
+                atol = 1e-2 * imprecision_factor * mindim
+                rtol = 1e-2 * imprecision_factor
+
+                L = okcctx.CDenseMatrixContext(lib, mindim, mindim, order, value=A)
+                x = okcctx.CVectorContext(lib, mindim, value=xrand)
+                hdl = okcctx.CDenseLinalgContext(lib)
+
+                with L, x, hdl as hdl:
+                    assert lib.lapack_cholesky_decome(hdl, L.c)
+                    assert NO_ERR( lib.linalg_cholesky_svx(hdl, L.c, x.c) )
+                    x.sync_to_py()
+                    assert VEC_EQ(x.py, sol, atol, rtol)
+
 
 class DenseLinalgTestCase(unittest.TestCase):
     @classmethod

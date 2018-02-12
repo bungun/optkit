@@ -125,6 +125,80 @@ ok_status lapack_solve_LU_matrix_flagged(void *hdl, matrix *A, matrix *X,
 	return err;
 }
 
+ok_status lapack_cholesky_decomp_flagged(void *hdl, matrix *A,
+	int silence_lapack_err)
+{
+	ok_status err = OPTKIT_SUCCESS;
+	cusolverStatus_t cusolver_err;
+	cublasFillMode_t uplo;
+	int dim_work, host_info;
+	vector workspace = (vector){OK_NULL};
+	int_vector info = (int_vector){OK_NULL};
+
+	OK_CHECK_MATRIX(A);
+	if (A->size1 != A->size2)
+		return OK_SCAN_ERR(OPTKIT_ERROR_DIMENSION_MISMATCH);
+
+	uplo = (A->order == CblasColMajor) ? CUBLAS_FILL_MODE_LOWER :
+					     CUBLAS_FILL_MODE_UPPER;
+
+
+	cusolver_err = CUSOLVER(potrf_bufferSize)(*(cusolverDnHandle_t *) hdl,
+		uplo, (int) A->size1, A->data, (int) A->ld, &dim_work);
+	if (cusolver_err)
+		return OK_SCAN_CUSOLVER(cusolver_err);
+
+	OK_CHECK_ERR(err, vector_calloc(&workspace, (size_t) dim_work));
+	OK_CHECK_ERR(err, int_vector_calloc(&info, 1));
+
+	cusolver_err = CUSOLVER(potrf)(*(cusolverDnHandle_t *) hdl, uplo,
+		(int) A->size1, A->data, (int) A->ld, workspace.data, info.data);
+
+	if (cusolver_err && silence_cusolver_err)
+		err = OPTKIT_ERROR_CUSOLVER;
+	else
+		err = OK_SCAN_CUSOLVER(cusolver_err);
+
+	OK_MAX_ERR(err, int_vector_memcpy_av(&host_info, &info, 1));
+	if (host_info && !silence_cusolver_err)
+		printf("%s%i\n", "CUDA cholesky factorization failed: L_ii = 0 at i=",
+			host_info);
+
+	OK_MAX_ERR(err, vector_free(&workspace));
+	OK_MAX_ERR(err, int_vector_free(&info));
+	return err;
+}
+
+ok_status lapack_cholesky_svx(void *hdl, const matrix *L, vector *x)
+{
+	ok_status err = OPTKIT_SUCCESS;
+	cublasFillMode_t uplo;
+	int_vector dev_info = (int_vector){OK_NULL};
+	int n, host_info;
+
+	OK_CHECK_MATRIX(LU);
+	OK_CHECK_VECTOR(x);
+	OK_CHECK_PTR(hdl);
+	if (L->size1 != L->size2 || x->size != L->size2)
+		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
+	n = (int) LU->size1;
+	uplo = (A->order == CblasColMajor) ? CUBLAS_FILL_MODE_LOWER :
+					     CUBLAS_FILL_MODE_UPPER;
+
+	OK_CHECK_ERR(err, int_vector_calloc(&dev_info, 1));
+	OK_CHECK_CUSOLVER(err, CUSOLVER(getrs)(*(cusolverDnHandle_t *) hdl,
+		uplo, n, 1, L->data, n, x->data, n, dev_info.data));
+
+	OK_CHECK_ERR(err, int_vector_memcpy_av(&host_info, &dev_info, 1));
+	OK_MAX_ERR(err, int_vector_free(&dev_info));
+	if (host_info < 0)
+		printf("%s%i\n",
+			"CUSOLVER cholesky solve fail. Error at ith parameter, i=",
+			host_info);
+	return err;
+}
+
 #ifdef __cplusplus
 }
 #endif
