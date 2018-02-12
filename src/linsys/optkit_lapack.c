@@ -35,7 +35,7 @@ ok_status lapack_solve_LU_matrix_flagged(void *hdl, matrix *A, matrix *X,
 #ifndef OK_C_LAPACKE
 	if (A->order != CblasColMajor)
 		return OK_SCAN_ERR( OPTKIT_ERROR_LAYOUT_MISMATCH );
-#endif
+#endif /* OK_C_LAPACKE */
 
 	n = (lapack_int) A->size1;
 	nrhs = (lapack_int) X->size2;
@@ -48,7 +48,7 @@ ok_status lapack_solve_LU_matrix_flagged(void *hdl, matrix *A, matrix *X,
 		X->data, ldb);
 #else
 	LAPACK(gesv)(&n, &nrhs, A->data, &lda, ipiv, X->data, &ldb, &err);
-#endif
+#endif /* OK_C_LAPACKE */
 
 	if (err) {
 		if (silence_lapack_err) {
@@ -74,7 +74,12 @@ ok_status lapack_cholesky_decomp_flagged(void *hdl, matrix *A,
 	uplo = (A->order == CblasColMajor) ? 'L' : 'U';
 	n = (lapack_int) A->size1;
 
+
+#ifdef OK_C_LAPACKE
+	err = LAPACKE(potrf)((int) CblasColMajor, uplo, n, A->data, n);
+#else
 	LAPACK(potrf)(&uplo, &n, A->data, &n, &err);
+#endif /* OK_C_LAPACKE */
 
 	if (err && silence_lapack_err) {
 		return OPTKIT_ERROR_LAPACK;
@@ -99,7 +104,12 @@ ok_status lapack_cholesky_svx(void *hdl, const matrix *L, vector *x)
 	n = (lapack_int) L->size1;
 	n_rhs = 1;
 
+#ifdef OK_C_LAPACKE
+	err = LAPACKE(potrs)((int) CblasColMajor, uplo, n, n_rhs, A->data, n,
+		x->data, n);
+#else
 	LAPACK(potrs)(&uplo, &n, &n_rhs, L->data, &n, x->data, &n, &err);
+#endif /* OK_C_LAPACKE */
 
 	if (err) {
 		printf("%s%i\n", "LAPACK ERROR: ", (int) err);

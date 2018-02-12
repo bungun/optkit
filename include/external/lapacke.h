@@ -51,6 +51,16 @@ lapack_int LAPACKE_dgesv( int matrix_layout, lapack_int n, lapack_int nrhs,
                           double *a, lapack_int lda, lapack_int *ipiv,
                           double *b, lapack_int ldb );
 
+lapack_int LAPACKE_spotrf( int matrix_layout, char uplo, lapack_int n, float* a,
+                           lapack_int lda );
+lapack_int LAPACKE_dpotrf( int matrix_layout, char uplo, lapack_int n, double* a,
+                           lapack_int lda );
+lapack_int LAPACKE_spotrs( int matrix_layout, char uplo, lapack_int n,
+                           lapack_int nrhs, const float* a, lapack_int lda,
+                           float* b, lapack_int ldb );
+lapack_int LAPACKE_dpotrs( int matrix_layout, char uplo, lapack_int n,
+                           lapack_int nrhs, const double* a, lapack_int lda,
+                           double* b, lapack_int ldb );
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
