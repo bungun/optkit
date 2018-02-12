@@ -105,7 +105,7 @@ ok_status lapack_cholesky_svx(void *hdl, const matrix *L, vector *x)
 	n_rhs = 1;
 
 #ifdef OK_C_LAPACKE
-	err = LAPACKE(potrs)((int) CblasColMajor, uplo, n, n_rhs, A->data, n,
+	err = LAPACKE(potrs)((int) CblasColMajor, uplo, n, n_rhs, L->data, n,
 		x->data, n);
 #else
 	LAPACK(potrs)(&uplo, &n, &n_rhs, L->data, &n, x->data, &n, &err);
