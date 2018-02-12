@@ -35,12 +35,15 @@ def function_vector_values_are(lib, func_ctx, h, a, b, c, d, e, s, tol):
 
 def function_vector_set_constants(lib, func_ctx, h, a, b, c, d, e, s):
     for i in xrange(func_ctx.py.size):
-        func_ctx.py[i] = lib.function(h, a, b, c, d, e, s)
+        for idx, val in enumerate((h, a, b, c, d, e, s)):
+            func_ctx.py[i][idx] = val
     func_ctx.sync_to_c()
 
-def function_vector_set_vectors(lib, func_ctx, h, a, b, c, d, e, s):
+def function_vector_set_vectors(lib, func_ctx, h_value, a, b, c, d, e, s):
     for i in xrange(func_ctx.py.size):
-        func_ctx.py[i] = lib.function(h, a[i], b[i], c[i], d[i], e[i], s[i])
+        func_ctx.py[i][0]
+        for field_idx, vec in enumerate((a, b, c, d, e, s)):
+            func_ctx.py[i][field_idx + 1] = vec[i]
     func_ctx.sync_to_c()
 
 class ProxLibsTestCase(unittest.TestCase):
@@ -139,7 +142,8 @@ class ProxTestCase(unittest.TestCase):
                 f = okcctx.CFunctionVectorContext(lib, m)
                 with f:
                     for i in xrange(m):
-                        f.py[i] = lib.function(hval, a, b, c, d, e, s)
+                        for ii, val in enumerate((hval, a, b, c, d, e, s)):
+                            f.py[i][ii] = val
                     assert function_vector_values_are(
                             lib, f, hval, a, b, c, d, e, s, TOL)
 
