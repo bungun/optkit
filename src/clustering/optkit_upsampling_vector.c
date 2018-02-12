@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-ok_status upsamplingvec_mul_matrix(void *linalg_handle,
+ok_status upsamplingvec_mul_matrix(void *blas_handle,
 	const enum CBLAS_TRANSPOSE transU, const enum CBLAS_TRANSPOSE transI,
 	const enum CBLAS_TRANSPOSE transO, const ok_float alpha,
 	upsamplingvec *u, matrix *M_in, ok_float beta, matrix *M_out)

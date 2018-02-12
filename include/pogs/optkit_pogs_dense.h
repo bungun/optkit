@@ -23,7 +23,8 @@ typedef struct POGSDenseWork {
 	vector *d, *e;
 	ok_float normA;
 	int skinny, normalized, equilibrated;
-	void *linalg_handle;
+	void *blas_handle;
+	void *lapack_handle;
 } pogs_dense_work;
 
 typedef struct POGSDenseSolverFlags {
@@ -109,14 +110,14 @@ ok_status pogs_dense_get_init_data(ok_float **A,
 ok_status pogs_dense_apply_matrix(pogs_dense_work *W, ok_float alpha,
 	vector *x, ok_float beta, vector *y)
 {
-	return OK_SCAN_ERR( blas_gemv(W->linalg_handle, CblasNoTrans, alpha,
+	return OK_SCAN_ERR( blas_gemv(W->blas_handle, CblasNoTrans, alpha,
 		W->A, x, beta, y) );
 }
 
 ok_status pogs_dense_apply_adjoint(pogs_dense_work *W, ok_float alpha,
 	vector *x, ok_float beta, vector *y)
 {
-	return OK_SCAN_ERR( blas_gemv(W->linalg_handle, CblasTrans, alpha, W->A,
+	return OK_SCAN_ERR( blas_gemv(W->blas_handle, CblasTrans, alpha, W->A,
 		x, beta, y) );
 }
 
@@ -124,7 +125,7 @@ ok_status pogs_dense_project_graph(pogs_dense_work *W, vector *x_in,
 	vector *y_in, vector *x_out, vector *y_out, ok_float tol)
 {
 	/* ignore arg ``tol``, included for method signature consistency */
-	return OK_SCAN_ERR( PROJECTOR(project)(W->linalg_handle, W->P, x_in,
+	return OK_SCAN_ERR( PROJECTOR(project)(W->blas_handle, W->P, x_in,
 		y_in, x_out, y_out) );
 }
 
@@ -133,14 +134,14 @@ ok_status pogs_dense_equilibrate_matrix(pogs_dense_work *W, ok_float *A,
 	const pogs_dense_solver_flags *flags)
 {
 	ok_status err = OK_SCAN_ERR( regularized_sinkhorn_knopp(
-		W->linalg_handle, A, W->A, W->d, W->e, flags->ord) );
+		W->blas_handle, A, W->A, W->d, W->e, flags->ord) );
 	W->equilibrated = (err == OPTKIT_SUCCESS);
 	return err;
 }
 
 ok_status pogs_dense_initalize_graph_projector(pogs_dense_work *W)
 {
-	return OK_SCAN_ERR( PROJECTOR(initialize)(W->linalg_handle, W->P, 1) );
+	return OK_SCAN_ERR( PROJECTOR(initialize)(W->blas_handle, W->P, 1) );
 }
 
 /* STUB */

@@ -32,7 +32,7 @@ ok_status anderson_update_G(matrix *G, vector *gx, size_t index)
 	return OPTKIT_SUCCESS;
 }
 
-ok_status anderson_regularized_gram(void *linalg_handle, matrix *F,
+ok_status anderson_regularized_gram(void *blas_handle, matrix *F,
 	matrix *F_gram, ok_float mu)
 {
 	ok_status err = OPTKIT_SUCCESS;
@@ -40,10 +40,10 @@ ok_status anderson_regularized_gram(void *linalg_handle, matrix *F,
 	vector diag = (vector){OK_NULL};
 
 	/* F_gram = F'F */
-	OK_CHECK_ERR( err, blas_gemm(linalg_handle, CblasTrans, CblasNoTrans,
+	OK_CHECK_ERR( err, blas_gemm(blas_handle, CblasTrans, CblasNoTrans,
 		kOne, F, F, kZero, F_gram) );
 	// TODO: consider sryk instead of gemm:
-	//	OK_CHECK_ERR( err, blas_syrk(linalg_handle, CblasLower,
+	//	OK_CHECK_ERR( err, blas_syrk(blas_handle, CblasLower,
 	//		CblasTrans, kOne, F, kZero, F_gram) )
 
 	/* F_gram = F'F + \sqrt(mu) I */
@@ -220,7 +220,7 @@ ok_status anderson_accelerator_init(anderson_accelerator *aa,
 	ok_alloc(aa->ones, sizeof(*aa->ones));
 	OK_CHECK_ERR( err, vector_calloc(aa->ones, lookback_dim + 1) );
 
-	OK_CHECK_ERR( err, blas_make_handle(&(aa->linalg_handle)) );
+	OK_CHECK_ERR( err, blas_make_handle(&(aa->blas_handle)) );
 
 	/* initialize aa->ones to 1 vector */
 	OK_CHECK_ERR( err, vector_set_all(aa->ones, kOne) );
@@ -235,7 +235,7 @@ ok_status anderson_accelerator_free(anderson_accelerator *aa)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_PTR(aa);
-	OK_MAX_ERR( err, blas_destroy_handle(aa->linalg_handle) );
+	OK_MAX_ERR( err, blas_destroy_handle(aa->blas_handle) );
 	OK_MAX_ERR( err, matrix_free(aa->F) );
 	OK_MAX_ERR( err, matrix_free(aa->G) );
 	OK_MAX_ERR( err, matrix_free(aa->F_gram) );
@@ -272,7 +272,7 @@ ok_status anderson_accelerate(anderson_accelerator *aa, vector *x)
 {
 	OK_CHECK_PTR(aa);
 	return OK_SCAN_ERR( anderson_accelerate_template(
-		aa->linalg_handle, aa->F, aa->G, aa->F_gram, aa->alpha,
+		aa->blas_handle, aa->F, aa->G, aa->F_gram, aa->alpha,
 		aa->ones, aa->mu_regularization, &aa->iter, x, x, (size_t) 0,
 		anderson_reduce_null) );
 }

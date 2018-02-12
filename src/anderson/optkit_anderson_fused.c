@@ -40,7 +40,7 @@ ok_status anderson_fused_accelerator_init(fused_accelerator *aa,
 	ok_alloc(aa->ones, sizeof(*aa->ones));
 	OK_CHECK_ERR( err, vector_calloc(aa->ones, lookback_dim + 1) );
 
-	OK_CHECK_ERR( err, blas_make_handle(&(aa->linalg_handle)) );
+	OK_CHECK_ERR( err, blas_make_handle(&(aa->blas_handle)) );
 
 	/* initialize aa->ones to 1 vector */
 	OK_CHECK_ERR( err, vector_set_all(aa->ones, kOne) );
@@ -55,7 +55,7 @@ ok_status anderson_fused_accelerator_free(fused_accelerator *aa)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_PTR(aa);
-	OK_MAX_ERR( err, blas_destroy_handle(aa->linalg_handle) );
+	OK_MAX_ERR( err, blas_destroy_handle(aa->blas_handle) );
 	OK_MAX_ERR( err, matrix_free(aa->F) );
 	OK_MAX_ERR( err, matrix_free(aa->G) );
 	OK_MAX_ERR( err, matrix_free(aa->F_gram) );
@@ -95,7 +95,7 @@ ok_status anderson_fused_accelerate(fused_accelerator *aa, vector *x)
 {
 	OK_CHECK_PTR(aa);
 	return OK_SCAN_ERR( anderson_accelerate_template(
-		aa->linalg_handle, aa->F, aa->G, aa->F_gram, aa->alpha,
+		aa->blas_handle, aa->F, aa->G, aa->F_gram, aa->alpha,
 		aa->ones, aa->mu_regularization, &aa->iter, x, aa->w,
 		aa->n_blocks, anderson_sum_blocks) );
 }

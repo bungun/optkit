@@ -226,12 +226,12 @@ class AndersonTestCase(unittest.TestCase):
                 with F, F_gram, aa as aa:
                     F_gram_calc = F.py.T.dot(F.py)
                     assert NO_ERR( lib.anderson_regularized_gram(
-                            aa.linalg_handle, F.c, F_gram.c, 0) )
+                            aa.blas_handle, F.c, F_gram.c, 0) )
                     F_gram.sync_to_py()
                     assert VEC_EQ( F_gram.py, F_gram_calc, ATOL, RTOL)
 
                     assert NO_ERR( lib.anderson_regularized_gram(
-                            aa.linalg_handle, F.c, F_gram.c, mu) )
+                            aa.blas_handle, F.c, F_gram.c, mu) )
                     F_gram.sync_to_py()
                     mu_eff = np.sqrt(mu) * np.max(np.diag(F_gram_calc))
                     F_gram_calc += np.eye(lookback + 1) * mu_eff
@@ -260,7 +260,7 @@ class AndersonTestCase(unittest.TestCase):
                 with F, alpha, aa as aa:
                     alpha_expect = self.py_anderson_solve(F.py, 0.)
                     assert NO_ERR( lib.anderson_solve(
-                            aa.linalg_handle, F.c, aa.F_gram, alpha.c, aa.ones,
+                            aa.blas, F.c, aa.F_gram, alpha.c, aa.ones,
                             aa.mu_regularization) )
                     alpha.sync_to_py()
                     assert VEC_EQ( alpha.py, alpha_expect, ATOL, RTOL )
@@ -279,7 +279,7 @@ class AndersonTestCase(unittest.TestCase):
 
                 with G, alpha, x, aa as aa:
                     assert NO_ERR( lib.anderson_mix(
-                            aa.linalg_handle, G.c, alpha.c, x.c) )
+                            aa.blas_handle, G.c, alpha.c, x.c) )
                     x.sync_to_py()
                     assert VEC_EQ(
                             x.py, np.dot(G.py, alpha.py), ATOL, RTOL )

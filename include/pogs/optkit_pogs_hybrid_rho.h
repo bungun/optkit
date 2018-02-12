@@ -50,7 +50,7 @@ ok_status pogs_hybrid_rho_free(rho_params *params)
 	return err;
 }
 
-ok_status pogs_hybrid_adapt_rho(void * linalg_handle, pogs_variables *z,
+ok_status pogs_hybrid_adapt_rho(void *blas_handle, pogs_variables *z,
 	ok_float *rho, rho_params *params, const pogs_settings *settings,
 	const pogs_residuals *res, const pogs_tolerances *tol, const uint k)
 {
@@ -74,7 +74,7 @@ ok_status pogs_hybrid_adapt_rho(void * linalg_handle, pogs_variables *z,
 
 	if (params->spectral)
 		OK_CHECK_ERR(err, pogs_spectral_adapt_rho(
-			linalg_handle, z, rho, params->spectral_params,
+			blas_handle, z, rho, params->spectral_params,
 			settings, k));
 	else
 		OK_CHECK_ERR(err, pogs_adapt_rho(

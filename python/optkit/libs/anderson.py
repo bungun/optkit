@@ -28,7 +28,7 @@ def attach_anderson_ctypes(lib, single_precision=False):
                     ('ones', lib.vector_p),
                     ('mu_regularization', lib.ok_float),
                     ('iter', ct.c_size_t),
-                    ('linalg_handle', ct.c_void_p)]
+                    ('blas_handle', ct.c_void_p)]
 
     lib.anderson_accelerator = anderson_accelerator
     lib.anderson_accelerator_p = ct.POINTER(lib.anderson_accelerator)
@@ -46,7 +46,7 @@ def attach_anderson_ctypes(lib, single_precision=False):
                     ('ones', lib.vector_p),
                     ('mu_regularization', lib.ok_float),
                     ('iter', ct.c_size_t),
-                    ('linalg_handle', ct.c_void_p)]
+                    ('blas_handle', ct.c_void_p)]
 
     lib.fused_accelerator = fused_accelerator
     lib.fused_accelerator_p = ct.POINTER(lib.fused_accelerator)

@@ -17,13 +17,14 @@ typedef struct POGSAbstractWork {
 	projector *P;
 	ok_status (* operator_scale)(abstract_operator *o, const
 		ok_float scaling);
-	ok_status (* operator_equilibrate)(void *linalg_handle,
+	ok_status (* operator_equilibrate)(void *blas_handle,
 		abstract_operator *o, vector *d, vector *e,
 		const ok_float pnorm);
 	vector *d, *e;
 	ok_float normA;
 	int skinny, normalized, equilibrated;
-	void *linalg_handle;
+	void *blas_handle;
+	void *lapack_handle;
 } pogs_abstract_work;
 
 typedef struct POGSAbstractSolverFlags {
@@ -148,7 +149,7 @@ ok_status pogs_abstract_project_graph(pogs_abstract_work *W, vector *x_in,
 ok_status pogs_abstract_equilibrate_matrix(pogs_abstract_work *W,
 	abstract_operator *A, const pogs_abstract_solver_flags *flags)
 {
-	ok_status err = OK_SCAN_ERR( W->operator_equilibrate(W->linalg_handle,
+	ok_status err = OK_SCAN_ERR( W->operator_equilibrate(W->blas_handle,
 		W->A, W->d, W->e, flags->equil_norm) );
 	W->equilibrated = (err == OPTKIT_SUCCESS);
 	return err;
@@ -163,7 +164,7 @@ ok_status pogs_abstract_initalize_graph_projector(pogs_abstract_work *W)
 ok_status pogs_abstract_estimate_norm(pogs_abstract_work *W, ok_float *normest)
 {
 	return OK_SCAN_ERR(
-		operator_estimate_norm(W->linalg_handle, W->A, normest) );
+		operator_estimate_norm(W->blas_handle, W->A, normest) );
 }
 
 ok_status pogs_abstract_work_get_norm(pogs_abstract_work *W)

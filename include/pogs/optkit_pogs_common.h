@@ -27,13 +27,12 @@ ok_status pogs_initialize_conditions(pogs_objective_values *obj,
 	pogs_residuals *res, pogs_tolerances *tol,
 	const pogs_settings *settings, size_t m, size_t n);
 
-ok_status pogs_update_objective_values(void *linalg_handle,
+ok_status pogs_update_objective_values(void *blas_handle,
 	const function_vector *f, const function_vector *g, ok_float rho,
 	pogs_variables *z, pogs_objective_values *obj);
 
-ok_status pogs_update_tolerances(void *linalg_handle,
-	pogs_variables *z, pogs_objective_values *obj,
-	pogs_tolerances *tol);
+ok_status pogs_update_tolerances(void *blas_handle, pogs_variables *z,
+	pogs_objective_values *obj, pogs_tolerances *tol);
 
 ok_status pogs_set_print_iter(uint *PRINT_ITER, const pogs_settings *settings);
 ok_status pogs_print_header_string(void);
@@ -316,7 +315,7 @@ ok_status pogs_initialize_conditions(pogs_objective_values *obj,
 	return OPTKIT_SUCCESS;
 }
 
-ok_status pogs_update_objective_values(void *linalg_handle,
+ok_status pogs_update_objective_values(void *blas_handle,
 	const function_vector *f, const function_vector *g, ok_float rho,
 	pogs_variables *z, pogs_objective_values *obj)
 {
@@ -327,7 +326,7 @@ ok_status pogs_update_objective_values(void *linalg_handle,
 	if (!z || !obj)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
-	OK_RETURNIF_ERR( blas_dot(linalg_handle, z->primal12->vec,
+	OK_RETURNIF_ERR( blas_dot(blas_handle, z->primal12->vec,
 		z->dual12->vec, &obj->gap) );
 
 	obj->gap = MATH(fabs)(obj->gap);
@@ -345,21 +344,21 @@ ok_status pogs_update_objective_values(void *linalg_handle,
  * tol_dual = tol_abs * sqrt(n) + tol_rel * ||xt^k+1/2||
  * tol_gap = tol_abs * sqrt(mn) + tol_rel * ||z^k|| * ||z^k+1/2||
  */
-ok_status pogs_update_tolerances(void *linalg_handle,
+ok_status pogs_update_tolerances(void *blas_handle,
 	pogs_variables *z, pogs_objective_values *obj, pogs_tolerances *tol)
 {
 	ok_float nrm_z, nrm_z12;
 	if (!z || !obj || !tol)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 
-	OK_RETURNIF_ERR( blas_nrm2(linalg_handle, z->primal12->y, &nrm_z12) );
+	OK_RETURNIF_ERR( blas_nrm2(blas_handle, z->primal12->y, &nrm_z12) );
 	tol->primal = tol->atolm + tol->reltol * nrm_z12;
 
-	OK_RETURNIF_ERR( blas_nrm2(linalg_handle, z->dual12->x, &nrm_z12) );
+	OK_RETURNIF_ERR( blas_nrm2(blas_handle, z->dual12->x, &nrm_z12) );
 	tol->dual = tol->atoln + tol->reltol * nrm_z12;
 
-	OK_RETURNIF_ERR( blas_nrm2(linalg_handle, z->primal->vec, &nrm_z) );
-	OK_RETURNIF_ERR( blas_nrm2(linalg_handle, z->primal12->vec, &nrm_z12) );
+	OK_RETURNIF_ERR( blas_nrm2(blas_handle, z->primal->vec, &nrm_z) );
+	OK_RETURNIF_ERR( blas_nrm2(blas_handle, z->primal12->vec, &nrm_z12) );
 	tol->gap = tol->atolmn + tol->reltol * MATH(sqrt)(nrm_z) *
 		MATH(sqrt)(nrm_z12);
 

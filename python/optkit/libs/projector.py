@@ -57,7 +57,8 @@ def attach_projector_ctypes(lib, single_precision=False):
     class dense_direct_projector(ct.Structure):
         _fields_ = [('A', matrix_p),
                     ('L', matrix_p),
-                    ('linalg_handle', ct.c_void_p),
+                    ('blas_handle', ct.c_void_p),
+                    ('lapack_handle', ct.c_void_p),
                     ('normA', ok_float),
                     ('skinny', ct.c_int),
                     ('normalized', ct.c_int)]
@@ -77,10 +78,10 @@ def attach_projector_ccalls(lib, single_precision=False):
     # -direct
     lib.direct_projector_alloc.argtypes = [direct_projector_p, matrix_p]
     lib.direct_projector_initialize.argtypes = [
-            ct.c_void_p, direct_projector_p, ct.c_int]
+            ct.c_void_p, ct.c_void_p, direct_projector_p, ct.c_int]
     lib.direct_projector_project.argtypes = [
-            ct.c_void_p, direct_projector_p, vector_p, vector_p, vector_p,
-            vector_p]
+            ct.c_void_p, ct.c_void_p, direct_projector_p, vector_p, vector_p,
+            vector_p, vector_p]
     lib.direct_projector_free.argtypes = [direct_projector_p]
     lib.dense_direct_projector_alloc.argtypes = [matrix_p]
 
@@ -116,7 +117,7 @@ def attach_operator_projector_ctypes_ccalls(lib, single_precision=False):
     class indirect_projector_generic(ct.Structure):
         _fields_ = [('A', abstract_operator_p),
                     ('cgls_work', ct.c_void_p),
-                    ('linalg_handle', ct.c_void_p),
+                    ('blas_handle', ct.c_void_p),
                     ('normA', ok_float),
                     ('normalized', ct.c_int),
                     ('flag', ct.c_uint)]

@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-ok_status regularized_sinkhorn_knopp(void *linalg_handle, ok_float *A_in,
+ok_status regularized_sinkhorn_knopp(void *blas_bandle, ok_float *A_in,
 	matrix *A_out, vector *d, vector *e, enum CBLAS_ORDER ord)
 {
 	OK_CHECK_PTR(A_in);
@@ -45,22 +45,22 @@ ok_status regularized_sinkhorn_knopp(void *linalg_handle, ok_float *A_in,
 	*/
 
 	for (i = 0; i < kMaxIter && !err; ++i){
-		blas_gemv(linalg_handle, CblasTrans, kOne, A_out, d, kZero, e);
+		blas_gemv(blas_bandle, CblasTrans, kOne, A_out, d, kZero, e);
 		vector_add_constant(e, kSinkhornConst / (ok_float) e->size);
 		vector_recip(e);
 		vector_scale(e, (ok_float) d->size);
 
-		blas_gemv(linalg_handle, CblasNoTrans, kOne, A_out, e, kZero,
+		blas_gemv(blas_bandle, CblasNoTrans, kOne, A_out, e, kZero,
 			d);
 		vector_add_constant(d, kSinkhornConst / (ok_float) d->size);
 		vector_recip(d);
 		vector_scale(d, (ok_float) e->size);
 
-		blas_axpy(linalg_handle, -kOne, d, &d_diff);
-		blas_axpy(linalg_handle, -kOne, e, &e_diff);
+		blas_axpy(blas_bandle, -kOne, d, &d_diff);
+		blas_axpy(blas_bandle, -kOne, e, &e_diff);
 
-		blas_nrm2(linalg_handle, &d_diff, &norm_d);
-		blas_nrm2(linalg_handle, &e_diff, &norm_e);
+		blas_nrm2(blas_bandle, &d_diff, &norm_d);
+		blas_nrm2(blas_bandle, &e_diff, &norm_e);
 
 		if ((norm_d < kEps) && (norm_e < kEps))
 			break;
@@ -98,7 +98,7 @@ ok_status regularized_sinkhorn_knopp(void *linalg_handle, ok_float *A_in,
 }
 
 #ifndef OPTKIT_NO_OPERATOR_EQUIL
-ok_status operator_regularized_sinkhorn(void *linalg_handle,
+ok_status operator_regularized_sinkhorn(void *blas_bandle,
 	abstract_operator *A, vector *d, vector *e, const ok_float pnorm)
 {
 	OK_CHECK_OPERATOR(A);
@@ -113,7 +113,7 @@ ok_status operator_regularized_sinkhorn(void *linalg_handle,
 	ok_float norm_d, norm_e;
 	ok_status err = OPTKIT_SUCCESS;
 	size_t k;
-	int blas_handle_provided = (linalg_handle != OK_NULL);
+	int blas_handle_provided = (blas_bandle != OK_NULL);
 	vector d_diff, e_diff;
 	d_diff.data = OK_NULL;
 	e_diff.data = OK_NULL;
@@ -122,7 +122,7 @@ ok_status operator_regularized_sinkhorn(void *linalg_handle,
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
 	if (!blas_handle_provided)
-		OK_RETURNIF_ERR( blas_make_handle(&linalg_handle) );
+		OK_RETURNIF_ERR( blas_make_handle(&blas_bandle) );
 
 	if (A->kind == OkOperatorDense) {
 		transform = dense_operator_to_transformable(A);
@@ -161,8 +161,8 @@ ok_status operator_regularized_sinkhorn(void *linalg_handle,
 		vector_recip(d);
 		vector_scale(d, (ok_float) e->size);
 
-		blas_nrm2(linalg_handle, &d_diff, &norm_d);
-		blas_nrm2(linalg_handle, &e_diff, &norm_e);
+		blas_nrm2(blas_bandle, &d_diff, &norm_d);
+		blas_nrm2(blas_bandle, &e_diff, &norm_e);
 
 		if ((norm_d < kEps) && (norm_e < kEps))
 			break;
@@ -195,13 +195,13 @@ ok_status operator_regularized_sinkhorn(void *linalg_handle,
 	vector_free(&e_diff);
 
 	if (!blas_handle_provided)
-		OK_MAX_ERR( err, blas_destroy_handle(linalg_handle) );
+		OK_MAX_ERR( err, blas_destroy_handle(blas_bandle) );
 
 	return err;
 }
 
 /* STUB */
-ok_status operator_equilibrate(void *linalg_handle, abstract_operator *A,
+ok_status operator_equilibrate(void *blas_bandle, abstract_operator *A,
 	vector *d, vector *e, const ok_float pnorm)
 {
 	return OPTKIT_ERROR;
@@ -215,7 +215,7 @@ ok_status operator_equilibrate(void *linalg_handle, abstract_operator *A,
  * where x is a random vector and n <= kNormIter is a
  * given number of iterations.
  */
-ok_status operator_estimate_norm(void *linalg_handle, abstract_operator *A,
+ok_status operator_estimate_norm(void *blas_bandle, abstract_operator *A,
 	ok_float *norm_est)
 {
 	OK_CHECK_OPERATOR(A);
@@ -241,8 +241,8 @@ ok_status operator_estimate_norm(void *linalg_handle, abstract_operator *A,
 		norm_est_prev = *norm_est;
 		A->apply(A->data, &x, &Ax);
 		A->adjoint(A->data, &Ax, &x);
-		blas_nrm2(linalg_handle, &x, &norm_x);
-		blas_nrm2(linalg_handle, &Ax, norm_est);
+		blas_nrm2(blas_bandle, &x, &norm_x);
+		blas_nrm2(blas_bandle, &Ax, norm_est);
 
 		if (norm_x == 0 || *norm_est == 0)
 			return OK_SCAN_ERR( OPTKIT_ERROR_DIVIDE_BY_ZERO );
@@ -258,19 +258,19 @@ ok_status operator_estimate_norm(void *linalg_handle, abstract_operator *A,
 	return OPTKIT_SUCCESS;
 }
 // #else
-// ok_status operator_regularized_sinkhorn(void *linalg_handle,
+// ok_status operator_regularized_sinkhorn(void *blas_bandle,
 // 	abstract_operator *A, vector *d, vector *e, const ok_float pnorm)
 // {
 // 	return OPTKIT_ERROR;
 // }
 
-// ok_status operator_equilibrate(void *linalg_handle, abstract_operator *A,
+// ok_status operator_equilibrate(void *blas_bandle, abstract_operator *A,
 // 	vector *d, vector *e, const ok_float pnorm)
 // {
 // 	return OPTKIT_ERROR;
 // }
 
-// ok_status operator_estimate_norm(void *linalg_handle, abstract_operator *A,
+// ok_status operator_estimate_norm(void *blas_bandle, abstract_operator *A,
 // 	ok_float *norm_est)
 // {
 // 	return OPTKIT_ERROR;

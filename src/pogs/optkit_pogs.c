@@ -24,7 +24,8 @@ ok_status pogs_work_alloc(pogs_work *W, pogs_solver_data *A,
 	W->skinny = (W->A->size1 >= W->A->size2);
 	W->normalized = 0;
 	W->equilibrated = 0;
-	OK_CHECK_ERR( err, blas_make_handle(&(W->linalg_handle)) );
+	OK_CHECK_ERR( err, blas_make_handle(&(W->blas_handle)) );
+	OK_CHECK_ERR( err, lapack_make_handle(&(W->lapack_handle)) );
 	if (err)
 		OK_MAX_ERR( err, pogs_work_free(W) );
 	return err;
@@ -38,7 +39,8 @@ ok_status pogs_work_free(pogs_work *W)
 	OK_MAX_ERR( err, vector_free(W->e) );
 	ok_free(W->d);
 	ok_free(W->e);
-	OK_MAX_ERR( err, blas_destroy_handle(W->linalg_handle) );
+	OK_MAX_ERR( err, blas_destroy_handle(W->blas_handle) );
+	OK_MAX_ERR( err, lapack_destroy_handle(W->lapack_handle) );
 	return err;
 }
 
@@ -64,7 +66,7 @@ ok_status pogs_solver_alloc(pogs_solver *solver, pogs_solver_data *A,
 	OK_CHECK_ERR( err, function_vector_calloc(solver->g, n) );
 	ok_alloc(solver->z, sizeof(*solver->z));
 	OK_CHECK_ERR( err, pogs_variables_alloc(solver->z, m, n) );
-	OK_CHECK_ERR( err, blas_make_handle(&(solver->linalg_handle)) );
+	OK_CHECK_ERR( err, blas_make_handle(&(solver->blas_handle)) );
 	ok_alloc(solver->aa, sizeof(*solver->aa));
 	// OK_CHECK_ERR( err, anderson_accelerator_init(solver->aa,
 	// 	solver->z->fixed_point_iterate->size,
@@ -78,7 +80,7 @@ ok_status pogs_solver_alloc(pogs_solver *solver, pogs_solver_data *A,
 ok_status pogs_solver_free(pogs_solver *solver)
 {
 	OK_CHECK_PTR(solver);
-	ok_status err = OK_SCAN_ERR( blas_destroy_handle(solver->linalg_handle) );
+	ok_status err = OK_SCAN_ERR( blas_destroy_handle(solver->blas_handle) );
 	OK_MAX_ERR( err, pogs_work_free(solver->W) );
 	ok_free(solver->W);
 	OK_MAX_ERR( err, pogs_variables_free(solver->z) );
@@ -140,8 +142,8 @@ ok_status pogs_normalize_DAE(pogs_work *W)
 		W->normalized = 1;
 	}
 
-	OK_CHECK_ERR( err, blas_nrm2(W->linalg_handle, W->d, &nrm_d) );
-	OK_CHECK_ERR( err, blas_nrm2(W->linalg_handle, W->e, &nrm_e) );
+	OK_CHECK_ERR( err, blas_nrm2(W->blas_handle, W->d, &nrm_d) );
+	OK_CHECK_ERR( err, blas_nrm2(W->blas_handle, W->e, &nrm_e) );
 	factor = MATH(sqrt)(sqrt_n_over_m *nrm_d / nrm_e);
 
 	if (factor == 0 || W->normA == 0)
@@ -195,12 +197,12 @@ ok_status pogs_primal_update(pogs_variables *z)
  *	y^{k+1/2} = Prox_{rho, f} (y^k - yt^k)
  *	x^{k+1/2} = Prox_{rho, g} (x^k - xt^k)
  */
-ok_status pogs_prox(void *linalg_handle, function_vector *f,
+ok_status pogs_prox(void *blas_handle, function_vector *f,
 	function_vector *g, pogs_variables *z, ok_float rho)
 {
 	OK_RETURNIF_ERR( pogs_graph_vector_copy(z->temp, z->primal) );
 	OK_RETURNIF_ERR(
-		blas_axpy(linalg_handle, -kOne, z->dual->vec, z->temp->vec) );
+		blas_axpy(blas_handle, -kOne, z->dual->vec, z->temp->vec) );
 	OK_RETURNIF_ERR(
 		prox_eval_vector(f, rho, z->temp->y, z->primal12->y) );
 	return OK_SCAN_ERR(
@@ -220,16 +222,16 @@ ok_status pogs_project_graph(pogs_work *W, pogs_variables *z, ok_float alpha,
 	ok_float tol)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	void *linalg_handle = W->linalg_handle;
+	void *blas_handle = W->blas_handle;
 	if (!W || !z)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	OK_CHECK_ERR( err, vector_set_all(z->temp->vec, kZero) );
 	OK_CHECK_ERR( err, blas_axpy(
-		linalg_handle, alpha, z->primal12->vec, z->temp->vec) );
+		blas_handle, alpha, z->primal12->vec, z->temp->vec) );
 	OK_CHECK_ERR( err, blas_axpy(
-		linalg_handle, kOne - alpha, z->prev->vec, z->temp->vec) );
+		blas_handle, kOne - alpha, z->prev->vec, z->temp->vec) );
 	OK_CHECK_ERR( err, blas_axpy(
-		linalg_handle, kOne, z->dual->vec, z->temp->vec) );
+		blas_handle, kOne, z->dual->vec, z->temp->vec) );
 	OK_CHECK_ERR( err, POGS(project_graph)(W, z->temp->x,
 		z->temp->y, z->primal->x, z->primal->y, tol) );
 	return err;
@@ -245,19 +247,18 @@ ok_status pogs_project_graph(pogs_work *W, pogs_variables *z, ok_float alpha,
  *	instead of above update, perform
  *		zt^{k+1} = zt^k + alpha * z^{k+1/2} + (1-alpha)z^k - z^k+1
  */
-ok_status pogs_dual_update(void *linalg_handle, pogs_variables *z,
-	ok_float alpha)
+ok_status pogs_dual_update(void *blas_handle, pogs_variables *z, ok_float alpha)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_PTR(z);
 
 	OK_CHECK_ERR( err, pogs_graph_vector_copy(z->dual12, z->primal12) );
-	OK_CHECK_ERR( err, blas_axpy(linalg_handle, -kOne, z->prev->vec, z->dual12->vec) );
-	OK_CHECK_ERR( err, blas_axpy(linalg_handle, kOne, z->dual->vec, z->dual12->vec) );
+	OK_CHECK_ERR( err, blas_axpy(blas_handle, -kOne, z->prev->vec, z->dual12->vec) );
+	OK_CHECK_ERR( err, blas_axpy(blas_handle, kOne, z->dual->vec, z->dual12->vec) );
 
-	OK_CHECK_ERR( err, blas_axpy(linalg_handle, alpha, z->primal12->vec, z->dual->vec) );
-	OK_CHECK_ERR( err, blas_axpy(linalg_handle, kOne - alpha, z->prev->vec, z->dual->vec) );
-	OK_CHECK_ERR( err, blas_axpy(linalg_handle, -kOne, z->primal->vec, z->dual->vec) );
+	OK_CHECK_ERR( err, blas_axpy(blas_handle, alpha, z->primal12->vec, z->dual->vec) );
+	OK_CHECK_ERR( err, blas_axpy(blas_handle, kOne - alpha, z->prev->vec, z->dual->vec) );
+	OK_CHECK_ERR( err, blas_axpy(blas_handle, -kOne, z->primal->vec, z->dual->vec) );
 
 	return OPTKIT_SUCCESS;
 }
@@ -279,9 +280,9 @@ ok_status pogs_iterate(pogs_solver *solver)
 	ok_float alpha = s->settings->alpha;
 	ok_float tolproj = s->settings->tolproj;
 	err = OK_SCAN_ERR( pogs_primal_update(s->z) );
-	OK_CHECK_ERR( err, pogs_prox(s->linalg_handle, s->f, s->g, s->z, s->rho) );
+	OK_CHECK_ERR( err, pogs_prox(s->blas_handle, s->f, s->g, s->z, s->rho) );
 	OK_CHECK_ERR( err, pogs_project_graph(s->W, s->z, alpha, tolproj) );
-	OK_CHECK_ERR( err, pogs_dual_update(s->linalg_handle, s->z, alpha) );
+	OK_CHECK_ERR( err, pogs_dual_update(s->blas_handle, s->z, alpha) );
 	return err;
 	/* TODO: modify tolproj as monotonic decr function of iteration? */
 }
@@ -301,17 +302,17 @@ ok_status pogs_update_residuals(pogs_solver *solver,
 
 	ok_status err = OPTKIT_SUCCESS;
 	pogs_variables *z = solver->z;
-	void *linalg_handle = solver->linalg_handle;
+	void *blas_handle = solver->blas_handle;
 
 	res->gap = obj->gap;
 	OK_CHECK_ERR( err, vector_memcpy_vv(z->temp->y, z->primal12->y) );
 	OK_CHECK_ERR( err, POGS(apply_matrix)(solver->W, kOne,
 		z->primal12->x, -kOne, z->temp->y) );
-	OK_CHECK_ERR( err, blas_nrm2(linalg_handle, z->temp->y, &res->primal) );
+	OK_CHECK_ERR( err, blas_nrm2(blas_handle, z->temp->y, &res->primal) );
 	OK_CHECK_ERR( err, vector_memcpy_vv(z->temp->x, z->dual12->x) );
 	OK_CHECK_ERR( err, POGS(apply_adjoint)(solver->W, kOne,
 		z->dual12->y, kOne, z->temp->x) );
-	OK_CHECK_ERR( err, blas_nrm2(linalg_handle, z->temp->x, &res->dual) );
+	OK_CHECK_ERR( err, blas_nrm2(blas_handle, z->temp->x, &res->dual) );
 	return err;
 }
 
@@ -324,9 +325,9 @@ ok_status pogs_check_convergence(pogs_solver *solver,
 		err = OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	pogs_solver *s = solver;
 	OK_CHECK_ERR( err, pogs_update_objective_values(
-		s->linalg_handle, s->f, s->g, s->rho, s->z, obj) );
+		s->blas_handle, s->f, s->g, s->rho, s->z, obj) );
 	OK_CHECK_ERR( err, pogs_update_tolerances(
-		s->linalg_handle, s->z, obj, tol) );
+		s->blas_handle, s->z, obj, tol) );
 	OK_CHECK_ERR( err, pogs_update_residuals(s, obj, res) );
 
 	*converged = !err &&
@@ -464,12 +465,12 @@ ok_status pogs_solver_loop(pogs_solver *solver, pogs_info *info)
 		if (converged || k == settings->maxiter)
 			break;
 
-		OK_CHECK_ERR( err, pogs_hybrid_adapt_rho(solver->linalg_handle,
+		OK_CHECK_ERR( err, pogs_hybrid_adapt_rho(solver->blas_handle,
 			solver->z, &(solver->rho), &prox_params, settings, &res,
 			&tol, k) );
 		// if (settings->adapt_spectral) {
 		// 	OK_CHECK_ERR( err, pogs_spectral_adapt_rho(
-		// 		solver->linalg_handle, solver->z,
+		// 		solver->blas_handle, solver->z,
 		// 		&(solver->rho), &sr_params, settings, k) );
 		// } else {
 		// 	OK_CHECK_ERR( err, pogs_adapt_rho(solver->z,

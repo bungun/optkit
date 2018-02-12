@@ -10,10 +10,10 @@
 extern "C" {
 #endif
 
-ok_status linalg_cholesky_decomp_flagged(void *linalg_handle, matrix *A,
+ok_status linalg_cholesky_decomp_flagged(void *blas_handle, matrix *A,
 	int silence_domain_err);
-ok_status linalg_cholesky_decomp(void *linalg_handle, matrix *A);
-ok_status linalg_cholesky_svx(void *linalg_handle, const matrix *L,
+ok_status linalg_cholesky_decomp(void *blas_handle, matrix *A);
+ok_status linalg_cholesky_svx(void *blas_handle, const matrix *L,
 	vector *x);
 
 /* TODO: consider changing this to matrix_reduce_unary(const enum t, matrix A,

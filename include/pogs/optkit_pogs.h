@@ -70,7 +70,7 @@ typedef struct POGSSolver {
 	function_vector *f, *g;
 	ok_float rho;
 	pogs_settings *settings;
-	void *linalg_handle;
+	void *blas_handle;
 	ok_float init_time;
 	pogs_accelerator *aa;
 	pogs_convergence *convergence;
@@ -90,11 +90,11 @@ ok_status pogs_normalize_DAE(pogs_work *W);
 ok_status pogs_set_z0(pogs_solver *solver);
 
 ok_status pogs_primal_update(pogs_variables *z);
-ok_status pogs_prox(void *linalg_handle, function_vector *f,
+ok_status pogs_prox(void *blas_handle, function_vector *f,
 	function_vector *g, pogs_variables *z, ok_float rho);
 ok_status pogs_project_graph(pogs_work *W, pogs_variables *z, ok_float alpha,
 	ok_float tol);
-ok_status pogs_dual_update(void *linalg_handle, pogs_variables *z,
+ok_status pogs_dual_update(void *blas_handle, pogs_variables *z,
 	ok_float alpha);
 
 ok_status pogs_iterate(pogs_solver *solver);

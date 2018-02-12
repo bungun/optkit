@@ -127,7 +127,7 @@ static __global__ void __block_trsv(ok_float *A, uint iter, uint n, uint ld,
  *
  * Stores result in Lower triangular part.
  */
-ok_status linalg_cholesky_decomp_flagged(void *linalg_handle, matrix *A,
+ok_status linalg_cholesky_decomp_flagged(void *blas_handle, matrix *A,
 	int silence_domain_err)
 {
 	ok_status err;
@@ -135,13 +135,13 @@ ok_status linalg_cholesky_decomp_flagged(void *linalg_handle, matrix *A,
 	uint num_tiles, grid_dim, i;
 	matrix L21, A22;
 
-	if (!linalg_handle)
+	if (!blas_handle)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	OK_CHECK_MATRIX(A);
 	if (A->size1 != A->size2)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	err = OK_SCAN_CUBLAS( cublasGetStream(*(cublasHandle_t *) linalg_handle,
+	err = OK_SCAN_CUBLAS( cublasGetStream(*(cublasHandle_t *) blas_handle,
 		&stm) );
 	num_tiles = (A->size1 + kTileSize - 1u) / kTileSize;
 
@@ -186,31 +186,31 @@ ok_status linalg_cholesky_decomp_flagged(void *linalg_handle, matrix *A,
 			(i + 1) * kTileSize, A->size1 - (i + 1) * kTileSize,
 			A->size1 - (i + 1) * kTileSize) );
 
-		OK_RETURNIF_ERR( blas_syrk(linalg_handle, CblasLower,
+		OK_RETURNIF_ERR( blas_syrk(blas_handle, CblasLower,
 			CblasNoTrans, -kOne, &L21, kOne, &A22) );
 	}
 	return err;
 }
 
-ok_status linalg_cholesky_decomp(void *linalg_handle, matrix *A)
+ok_status linalg_cholesky_decomp(void *blas_handle, matrix *A)
 {
-	return linalg_cholesky_decomp_flagged(linalg_handle, A, 0);
+	return linalg_cholesky_decomp_flagged(blas_handle, A, 0);
 }
 
 /* Cholesky solve */
-ok_status linalg_cholesky_svx(void *linalg_handle, const matrix *L, vector *x)
+ok_status linalg_cholesky_svx(void *blas_handle, const matrix *L, vector *x)
 {
 	OK_CHECK_MATRIX(L);
 	OK_CHECK_VECTOR(x);
 
-	if (!linalg_handle)
+	if (!blas_handle)
 		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
 	if (L->size1 != L->size2 || L->size1 != x->size)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	OK_RETURNIF_ERR( blas_trsv(linalg_handle, CblasLower, CblasNoTrans,
+	OK_RETURNIF_ERR( blas_trsv(blas_handle, CblasLower, CblasNoTrans,
 		CblasNonUnit, L, x) );
-	return OK_SCAN_ERR( blas_trsv(linalg_handle, CblasLower, CblasTrans,
+	return OK_SCAN_ERR( blas_trsv(blas_handle, CblasLower, CblasTrans,
 		CblasNonUnit, L, x) );
 }
 

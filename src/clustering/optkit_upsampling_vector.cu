@@ -11,7 +11,7 @@ inline __device__ ok_float& __get(ok_float *data, uint i, uint j,
 extern "C" {
 #endif
 
-ok_status upsamplingvec_mul_matrix(void *linalg_handle,
+ok_status upsamplingvec_mul_matrix(void *blas_handle,
 	const enum CBLAS_TRANSPOSE transU, const enum CBLAS_TRANSPOSE transI,
 	const enum CBLAS_TRANSPOSE transO, const ok_float alpha,
 	upsamplingvec *u, matrix *M_in, ok_float beta, matrix *M_out)
@@ -63,10 +63,9 @@ ok_status upsamplingvec_mul_matrix(void *linalg_handle,
 					s) );
 			OK_CHECK_CUBLAS( err,
 				cublasSetStream(
-					*(cublasHandle_t *) linalg_handle,
-					s) );
+					*(cublasHandle_t *) blas_handle, s) );
 			OK_CHECK_CUBLAS( err,
-				CUBLAS(axpy)(*(cublasHandle_t *) linalg_handle,
+				CUBLAS(axpy)(*(cublasHandle_t *) blas_handle,
 					dim_in2, &alpha,
 					M_in->data + row_ * ptr_stride_in,
 					stride_in,
@@ -88,10 +87,9 @@ ok_status upsamplingvec_mul_matrix(void *linalg_handle,
 					s) );
 			OK_CHECK_CUBLAS( err,
 				cublasSetStream(
-					*(cublasHandle_t *) linalg_handle,
-					s) );
+					*(cublasHandle_t *) blas_handle, s) );
 			OK_CHECK_CUBLAS( err,
-				CUBLAS(axpy)(*(cublasHandle_t *) linalg_handle,
+				CUBLAS(axpy)(*(cublasHandle_t *) blas_handle,
 					dim_in2, &alpha,
 					M_in->data + i * ptr_stride_in,
 					stride_in,
@@ -106,7 +104,7 @@ ok_status upsamplingvec_mul_matrix(void *linalg_handle,
 
 	/* restore CUDA BLAS context to the default stream */
 	OK_MAX_ERR( err, OK_SCAN_CUBLAS(
-		cublasSetStream( *(cublasHandle_t *) linalg_handle, NULL) ));
+		cublasSetStream( *(cublasHandle_t *) blas_handle, NULL) ));
 	return err ? err : OK_STATUS_CUDA;
 }
 

@@ -131,7 +131,7 @@ def matrix_is_equilibrated(lib, solver_work, A_orig):
     with x, y:
         if lib.py_pogs_impl == 'dense':
             A = solver_work.contents.A
-            hdl = solver_work.contents.linalg_handle
+            hdl = solver_work.contents.blas_handle
             tr = lib.enums.CblasNoTrans
             assert NO_ERR( lib.blas_gemv(hdl, tr, 1, A, x.c, 0, y.c) )
         elif lib.py_pogs_impl == 'abstract':
@@ -234,7 +234,7 @@ def proximal_update_is_correct(lib, solver, test_params):
     z = solver.contents.z
     rho = test_params.settings.rho
 
-    hdl = solver.contents.linalg_handle
+    hdl = solver.contents.blas_handle
     local_vars.load_all_from(solver)
     # pogsctx.load_all_local(lib, local_vars, solver)
 
@@ -296,7 +296,7 @@ def dual_update_is_correct(lib, solver, local_vars):
     m, n = local_vars.m, local_vars.n
     RTOL, _, _, ATOLMN = STANDARD_TOLS(lib, m, n)
 
-    blas_handle = solver.contents.linalg_handle
+    blas_handle = solver.contents.blas_handle
     z = solver.contents.z
 
     local_vars.load_all_from(solver)

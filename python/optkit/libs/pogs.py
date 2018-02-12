@@ -277,7 +277,8 @@ def attach_pogs_ctypes(lib, single_precision=False):
             ('skinny', ct.c_int),
             ('normalized', ct.c_int),
             ('equilibrated', ct.c_int),
-            ('linalg_handle', ct.c_void_p)]
+            ('blas_handle', ct.c_void_p),
+            ('lapack_handle', ct.c_void_p)]
 
     class PogsWork(ct.Structure):
         _fields_ = work_fields
@@ -304,7 +305,8 @@ def attach_pogs_ctypes(lib, single_precision=False):
                     ('g', lib.function_vector_p),
                     ('rho', lib.ok_float),
                     ('settings', lib.pogs_settings_p),
-                    ('linalg_handle', ct.c_void_p),
+                    ('blas_handle', ct.c_void_p),
+                    ('lapack_handle', ct.c_void_p),
                     ('init_time', lib.ok_float),
                     ('aa', lib.anderson_accelerator_p)]
 

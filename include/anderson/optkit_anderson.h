@@ -16,7 +16,7 @@ typedef struct anderson_accelerator{
 	vector *alpha, *ones;
 	ok_float mu_regularization;
 	size_t iter;
-	void *linalg_handle;
+	void *blas_handle;
 } anderson_accelerator;
 
 typedef struct fused_accelerator{
@@ -25,7 +25,7 @@ typedef struct fused_accelerator{
 	vector *w, *alpha, *ones;
 	ok_float mu_regularization;
 	size_t iter;
-	void *linalg_handle;
+	void *blas_handle;
 } fused_accelerator;
 
 

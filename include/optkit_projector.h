@@ -44,10 +44,11 @@ typedef struct direct_projector {
 } direct_projector;
 
 ok_status direct_projector_alloc(direct_projector *P, matrix *A);
-ok_status direct_projector_initialize(void *linalg_handle,
+ok_status direct_projector_initialize(void *blas_handle, void *lapack_handle,
 	direct_projector *P, const int normalize);
-ok_status direct_projector_project(void *linalg_handle, direct_projector *P,
-	vector *x_in, vector *y_in, vector *x_out, vector *y_out);
+ok_status direct_projector_project(void *blas_handle, void *lapack_handle,
+	direct_projector *P, vector *x_in, vector *y_in, vector *x_out,
+	vector *y_out);
 ok_status direct_projector_free(direct_projector *P);
 
 typedef struct indirect_projector {
@@ -57,17 +58,17 @@ typedef struct indirect_projector {
 } indirect_projector;
 
 ok_status indirect_projector_alloc(indirect_projector *P, abstract_operator *A);
-ok_status indirect_projector_initialize(void *linalg_handle,
+ok_status indirect_projector_initialize(void *blas_handle,
 	indirect_projector *P, const int normalize);
-ok_status indirect_projector_project(void *linalg_handle,
-	indirect_projector *P, vector *x_in, vector *y_in, vector *x_out,
-	vector *y_out);
+ok_status indirect_projector_project(void *blas_handle, indirect_projector *P,
+	vector *x_in, vector *y_in, vector *x_out, vector *y_out);
 ok_status indirect_projector_free(indirect_projector *P);
 
 typedef struct dense_direct_projector {
 	matrix *A;
 	matrix *L;
-	void *linalg_handle;
+	void *blas_handle;
+	void *lapack_handle;
 	ok_float normA;
 	int skinny, normalized;
 } dense_direct_projector;
@@ -82,7 +83,8 @@ projector *dense_direct_projector_alloc(matrix *A);
 typedef struct indirect_projector_generic {
 	abstract_operator *A;
 	void *cgls_work;
-	void *linalg_handle;
+	void *blas_handle;
+	void *lapack_handle;
 	ok_float normA;
 	int normalized;
 	uint flag;
