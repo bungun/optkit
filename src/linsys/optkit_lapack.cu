@@ -126,7 +126,7 @@ ok_status lapack_solve_LU_matrix_flagged(void *hdl, matrix *A, matrix *X,
 }
 
 ok_status lapack_cholesky_decomp_flagged(void *hdl, matrix *A,
-	int silence_lapack_err)
+	int silence_cusolver_err)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	cusolverStatus_t cusolver_err;
@@ -152,7 +152,8 @@ ok_status lapack_cholesky_decomp_flagged(void *hdl, matrix *A,
 	OK_CHECK_ERR(err, int_vector_calloc(&info, 1));
 
 	cusolver_err = CUSOLVER(potrf)(*(cusolverDnHandle_t *) hdl, uplo,
-		(int) A->size1, A->data, (int) A->ld, workspace.data, info.data);
+		(int) A->size1, A->data, (int) A->ld, workspace.data, dim_work,
+		info.data);
 
 	if (cusolver_err && silence_cusolver_err)
 		err = OPTKIT_ERROR_CUSOLVER;
@@ -176,18 +177,18 @@ ok_status lapack_cholesky_svx(void *hdl, const matrix *L, vector *x)
 	int_vector dev_info = (int_vector){OK_NULL};
 	int n, host_info;
 
-	OK_CHECK_MATRIX(LU);
+	OK_CHECK_MATRIX(L);
 	OK_CHECK_VECTOR(x);
 	OK_CHECK_PTR(hdl);
 	if (L->size1 != L->size2 || x->size != L->size2)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-	n = (int) LU->size1;
-	uplo = (A->order == CblasColMajor) ? CUBLAS_FILL_MODE_LOWER :
+	n = (int) L->size1;
+	uplo = (L->order == CblasColMajor) ? CUBLAS_FILL_MODE_LOWER :
 					     CUBLAS_FILL_MODE_UPPER;
 
 	OK_CHECK_ERR(err, int_vector_calloc(&dev_info, 1));
-	OK_CHECK_CUSOLVER(err, CUSOLVER(getrs)(*(cusolverDnHandle_t *) hdl,
+	OK_CHECK_CUSOLVER(err, CUSOLVER(potrs)(*(cusolverDnHandle_t *) hdl,
 		uplo, n, 1, L->data, n, x->data, n, dev_info.data));
 
 	OK_CHECK_ERR(err, int_vector_memcpy_av(&host_info, &dev_info, 1));
