@@ -15,6 +15,15 @@ extern "C" {
 #define SPECTRAL_RHO_CONSTANTS
 #define kRHOMIN_SPECTRAL (ok_float) 1e-5
 #define kRHOMAX_SPECTRAL (ok_float) 1e5
+#ifdef FLOAT
+#define kRHOSTEP_MAX (ok_float) 2e0
+#else
+#ifdef OK_GPU
+#define kRHOSTEP_MAX (ok_float) 1e2
+#else
+#define kRHOSTEP_MAX (ok_float) 1e4
+#endif /* OK_GPU */
+#endif /* FLOAT */
 // #define kRHOITERS (size_t) 2
 // #define kEPSCORR (ok_float) 0.2
 #endif /* SPECTRAL_RHO_CONSTANTS */
@@ -163,8 +172,11 @@ ok_status pogs_spectral_adapt_rho(void *blas_handle, pogs_variables *z,
 	rho_new = (rho_new < kRHOMIN_SPECTRAL) ? kRHOMIN_SPECTRAL : rho_new;
 	rho_new = (rho_new > kRHOMAX_SPECTRAL) ? kRHOMAX_SPECTRAL : rho_new;
 
+	rho_new = (rho_new / *rho > kRHOSTEP_MAX) ? *rho * kRHOSTEP_MAX : rho_new;
+	rho_new = (*rho / rho_new > kRHOSTEP_MAX) ? *rho / kRHOSTEP_MAX : rho_new;
+
 	OK_CHECK_ERR(err, blas_scal(blas_handle, *rho / rho_new, z->dual->vec));
-	*rho = rho_new;
+	*rho = rho_new;	
 
 	/* start building differences for next iteration */
 	OK_CHECK_ERR(err, pogs_spectral_update_start(params, z, *rho));
