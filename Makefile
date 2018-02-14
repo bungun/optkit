@@ -108,6 +108,10 @@ ifneq ($(C_LAPACKE), 0)
 OPT_FLAGS+=-DOK_C_LAPACKE
 endif 
 
+ifneq ($(GPU), 0)
+OPT_FLAGS+=-DOK_GPU
+endif 
+
 ifdef OPTKIT_DEBUG_PYTHON
 OPT_FLAGS+=-DOK_DEBUG_PYTHON
 endif
