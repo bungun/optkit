@@ -69,49 +69,51 @@ ok_status anderson_autoregularize(vector *F_gram_diag, ok_float *mu_auto)
 	return err;
 }
 
-ok_status anderson_solve(void *hdl, matrix *F, matrix *F_gram, vector *alpha,
-	const vector *ones, ok_float mu)
+ok_status anderson_solve(void *blas_hdl, void * lapack_hdl, matrix *F,
+	matrix *F_gram, vector *alpha, const vector *ones, ok_float mu)
 {
 	ok_status err = OPTKIT_SUCCESS;
 	ok_status cholesky_err = OPTKIT_SUCCESS;
 	ok_float denominator = kOne;
 
 	/* F_gram = F'F + \sqrt(mu)I  */
-	OK_CHECK_ERR( err, anderson_regularized_gram(hdl, F, F_gram, kZero) );
+	OK_CHECK_ERR(err, anderson_regularized_gram(blas_hdl, F, F_gram, kZero));
 
 	/* LL' = F_gram */
 	if (!err)
-		cholesky_err = linalg_cholesky_decomp_flagged(hdl, F_gram,
-			kANDERSON_SILENCE_CHOLESKY);
+		cholesky_err = lapack_cholesky_decomp_flagged(lapack_hdl,
+			F_gram, kANDERSON_SILENCE_CHOLESKY);
 	if (!kANDERSON_SILENCE_CHOLESKY)
 		OK_SCAN_ERR(cholesky_err);
 
 	if (cholesky_err && mu > 0) {
-		OK_CHECK_ERR( err, anderson_regularized_gram(hdl, F, F_gram, mu) );
-		OK_CHECK_ERR( err, linalg_cholesky_decomp(hdl, F_gram) );
+		OK_CHECK_ERR(err, anderson_regularized_gram(blas_hdl, F,
+			F_gram, mu));
+		OK_CHECK_ERR(err, lapack_cholesky_decomp(lapack_hdl, F_gram));
 	} else if (cholesky_err) {
 		err = cholesky_err > err ? cholesky_err : err;
 	}
 
 	/* alpha_hat = F_gram^{-1} 1 */
-	OK_CHECK_ERR( err, vector_set_all(alpha, kOne) );
-	OK_CHECK_ERR( err, linalg_cholesky_svx(hdl, F_gram, alpha));
+	OK_CHECK_ERR(err, vector_set_all(alpha, kOne) );
+	OK_CHECK_ERR(err, lapack_cholesky_svx(lapack_hdl, F_gram, alpha));
 
 	/* denom = 1'alpha_hat */
-	OK_CHECK_ERR( err, blas_dot(hdl, ones, alpha, &denominator) );
+	OK_CHECK_ERR(err, blas_dot(blas_hdl, ones, alpha, &denominator));
 
 	/*
 	 * alpha = alpha_hat / denom
 	 * 	 = alpha_hat / 1'alpha_hat
 	 *	 = (F'F + \sqrt(mu)I)^{-1}1 / 1'(F'F + \sqrt(mu)I)^{-1}1
 	 */
-	OK_CHECK_ERR( err, vector_scale(alpha, kOne / denominator) );
+	OK_CHECK_ERR(err, vector_scale(alpha, kOne / denominator));
 	return err;
 }
 
-ok_status anderson_mix(void *hdl, matrix *G, vector *alpha, vector *x)
+ok_status anderson_mix(void *blas_hdl, matrix *G, vector *alpha, vector *x)
 {
-	return OK_SCAN_ERR( blas_gemv(hdl, CblasNoTrans, kOne, G, alpha, kZero, x) );
+	return OK_SCAN_ERR( blas_gemv(blas_hdl, CblasNoTrans, kOne, G, alpha,
+		kZero, x) );
 }
 
 /*
@@ -133,9 +135,10 @@ ok_status anderson_mix(void *hdl, matrix *G, vector *alpha, vector *x)
  *	linear combination of the residuals stored in the columns of ``aa->F``.
  */
 
-ok_status anderson_accelerate_template(void *hdl, matrix *F, matrix *G,
-	matrix *F_gram, vector *alpha, const vector *ones, ok_float mu,
-	size_t *iter, vector *iterate, vector *x_reduced, size_t n_reduction,
+ok_status anderson_accelerate_template(void *blas_hdl, void *lapack_hdl,
+	matrix *F, matrix *G, matrix *F_gram, vector *alpha, const vector *ones,
+	ok_float mu, size_t *iter, vector *iterate, vector *x_reduced,
+	size_t n_reduction,
 	ok_status (* x_reduction)(vector *x_rdx, vector *x, size_t n_rdx))
 {
 	ok_status err = OPTKIT_SUCCESS;
@@ -170,12 +173,13 @@ ok_status anderson_accelerate_template(void *hdl, matrix *F, matrix *G,
 	/* CHECK ITERATION >= LOOKBACK */
 	if (*iter >= lookback_dim){
 		/* SOLVE argmin_\alpha ||F \alpha||_2 s.t. 1'\alpha = 1 */
-		OK_CHECK_ERR( cholesky_err, anderson_solve(hdl, F, F_gram,
-			alpha, ones, mu) );
+		OK_CHECK_ERR( cholesky_err, anderson_solve(blas_hdl, lapack_hdl,
+			F, F_gram, alpha, ones, mu) );
 
 		/* x = G \alpha */
 		if (!cholesky_err)
-			OK_CHECK_ERR( err, anderson_mix(hdl, G, alpha, iterate) );
+			OK_CHECK_ERR( err, anderson_mix(blas_hdl, G, alpha,
+				iterate) );
 	}
 
 	/*
@@ -221,6 +225,7 @@ ok_status anderson_accelerator_init(anderson_accelerator *aa,
 	OK_CHECK_ERR( err, vector_calloc(aa->ones, lookback_dim + 1) );
 
 	OK_CHECK_ERR( err, blas_make_handle(&(aa->blas_handle)) );
+	OK_CHECK_ERR( err, lapack_make_handle(&(aa->lapack_handle)) );
 
 	/* initialize aa->ones to 1 vector */
 	OK_CHECK_ERR( err, vector_set_all(aa->ones, kOne) );
@@ -236,6 +241,7 @@ ok_status anderson_accelerator_free(anderson_accelerator *aa)
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_PTR(aa);
 	OK_MAX_ERR( err, blas_destroy_handle(aa->blas_handle) );
+	OK_MAX_ERR( err, lapack_destroy_handle(aa->lapack_handle) );
 	OK_MAX_ERR( err, matrix_free(aa->F) );
 	OK_MAX_ERR( err, matrix_free(aa->G) );
 	OK_MAX_ERR( err, matrix_free(aa->F_gram) );

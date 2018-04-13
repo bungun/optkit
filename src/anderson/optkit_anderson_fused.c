@@ -41,6 +41,7 @@ ok_status anderson_fused_accelerator_init(fused_accelerator *aa,
 	OK_CHECK_ERR( err, vector_calloc(aa->ones, lookback_dim + 1) );
 
 	OK_CHECK_ERR( err, blas_make_handle(&(aa->blas_handle)) );
+	OK_CHECK_ERR( err, lapack_make_handle(&(aa->lapack_handle)) );
 
 	/* initialize aa->ones to 1 vector */
 	OK_CHECK_ERR( err, vector_set_all(aa->ones, kOne) );
@@ -56,6 +57,7 @@ ok_status anderson_fused_accelerator_free(fused_accelerator *aa)
 	ok_status err = OPTKIT_SUCCESS;
 	OK_CHECK_PTR(aa);
 	OK_MAX_ERR( err, blas_destroy_handle(aa->blas_handle) );
+	OK_MAX_ERR( err, lapack_destroy_handle(aa->lapack_handle) );
 	OK_MAX_ERR( err, matrix_free(aa->F) );
 	OK_MAX_ERR( err, matrix_free(aa->G) );
 	OK_MAX_ERR( err, matrix_free(aa->F_gram) );
