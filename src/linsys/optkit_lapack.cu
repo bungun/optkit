@@ -203,3 +203,4 @@ ok_status lapack_cholesky_svx(void *hdl, const matrix *L, vector *x)
 #ifdef __cplusplus
 }
 #endif
+
