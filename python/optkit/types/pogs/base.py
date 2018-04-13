@@ -239,7 +239,8 @@ class PogsTypesBase:
                 self.c = PogsSettings()
                 self.c.x0 = None
                 self.c.nu0 = None
-                assert okerr.NO_ERR(lib.pogs_set_default_settings(self.c))
+                assert okerr.NO_ERR(lib.pogs_set_default_settings(self.c)), (
+                        'settings to default without C error')
                 self._keys = [
                         'alpha',
                         'rho',
@@ -508,7 +509,8 @@ class PogsTypesBase:
 
             def _register_solver(self, solver):
                 try:
-                    assert okerr.NO_ERR(lib.pogs_solver_exists(solver))
+                    assert okerr.NO_ERR(lib.pogs_solver_exists(solver)), (
+                            'C solver exists')
                     self.__backend.increment_cobject_count()
                     self.__c_solver = solver
                 except:
@@ -517,7 +519,8 @@ class PogsTypesBase:
             def _unregister_solver(self):
                 if self.__c_solver is None:
                     return
-                assert okerr.NO_ERR(lib.pogs_finish(self.c_solver, 0))
+                assert okerr.NO_ERR(lib.pogs_finish(self.c_solver, 0)), (
+                        'solver_finish called without C error')
                 self.__c_solver = None
                 self.__backend.decrement_cobject_count()
 
@@ -550,7 +553,8 @@ class PogsTypesBase:
 
                 assert okerr.NO_ERR(lib.pogs_solve(
                         self.c_solver, self.f.c, self.g.c, self.settings.c,
-                        self.info.c, self.output.c))
+                        self.info.c, self.output.c)), (
+                        'solve called without C error')
                 self.first_run = False
 
             def _solver_state_from_dict(self, cache):
@@ -596,7 +600,7 @@ class PogsTypesBase:
                         state.rho_ptr,
                         cache.flags,
                         self.c_solver
-                ))
+                )), ('solver exported without C error')
                 return cache
 
             @property
@@ -607,7 +611,8 @@ class PogsTypesBase:
                     self.__state = SolverState(*self.shape)
                 state = self.__state
                 assert okerr.NO_ERR(lib.pogs_solver_save_state(
-                        state.ptr, state.rho_ptr, self.c_solver))
+                        state.ptr, state.rho_ptr, self.c_solver)), (
+                    'solver state saved without C error')
                 return state
 
             @property
