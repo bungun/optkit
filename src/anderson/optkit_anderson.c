@@ -278,9 +278,9 @@ ok_status anderson_accelerate(anderson_accelerator *aa, vector *x)
 {
 	OK_CHECK_PTR(aa);
 	return OK_SCAN_ERR( anderson_accelerate_template(
-		aa->blas_handle, aa->F, aa->G, aa->F_gram, aa->alpha,
-		aa->ones, aa->mu_regularization, &aa->iter, x, x, (size_t) 0,
-		anderson_reduce_null) );
+		aa->blas_handle, aa->lapack_handle, aa->F, aa->G, aa->F_gram,
+		aa->alpha, aa->ones, aa->mu_regularization, &aa->iter, x, x,
+		(size_t) 0, anderson_reduce_null) );
 }
 
 #ifdef __cplusplus

@@ -97,8 +97,8 @@ ok_status anderson_fused_accelerate(fused_accelerator *aa, vector *x)
 {
 	OK_CHECK_PTR(aa);
 	return OK_SCAN_ERR( anderson_accelerate_template(
-		aa->blas_handle, aa->F, aa->G, aa->F_gram, aa->alpha,
-		aa->ones, aa->mu_regularization, &aa->iter, x, aa->w,
+		aa->blas_handle, aa->lapack_handle, aa->F, aa->G, aa->F_gram,
+		aa->alpha, aa->ones, aa->mu_regularization, &aa->iter, x, aa->w,
 		aa->n_blocks, anderson_sum_blocks) );
 }
 
