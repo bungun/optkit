@@ -46,9 +46,9 @@ ok_status lapack_LU_decomp_flagged(void *hdl, matrix *A, int_vector *pivot,
 	if (A->size1 != A->size2 || pivot->size != A->size2)
 		return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
 
-
 	cusolver_err = CUSOLVER(getrf_bufferSize)(*(cusolverDnHandle_t *) hdl,
 		(int) A->size1, (int) A->size2, A->data, (int) A->ld, &dim_work);
+
 	if (cusolver_err)
 		return OK_SCAN_CUSOLVER(cusolver_err);
 
@@ -56,16 +56,19 @@ ok_status lapack_LU_decomp_flagged(void *hdl, matrix *A, int_vector *pivot,
 	OK_CHECK_ERR(err, int_vector_calloc(&info, 1));
 
 	/* http://docs.nvidia.com/cuda/cusolver/index.html#ixzz53Sp2qt3h */
-	cusolver_err = CUSOLVER(getrf)(*(cusolverDnHandle_t *) hdl,
-		(int) A->size1, (int) A->size2, A->data, (int) A->ld,
-		workspace.data, pivot->data, info.data);
+	if (!err)
+		cusolver_err = CUSOLVER(getrf)(*(cusolverDnHandle_t *) hdl,
+			(int) A->size1, (int) A->size2, A->data, (int) A->ld,
+			workspace.data, pivot->data, info.data);
 
 	if (cusolver_err && silence_cusolver_err)
-		err = OPTKIT_ERROR_CUSOLVER;
+		err = err > OPTKIT_ERROR_CUSOLVER ? err : OPTKIT_ERROR_CUSOLVER;
 	else
-		err = OK_SCAN_CUSOLVER(cusolver_err);
+		OK_MAX_ERR(err, OK_SCAN_CUSOLVER(cusolver_err));
 
 	OK_MAX_ERR(err, int_vector_memcpy_av(&host_info, &info, 1));
+	if (host_info != 0)
+		OK_MAX_ERR(err, OPTKIT_ERROR_CUSOLVER);
 	if (host_info && !silence_cusolver_err)
 		printf("%s%i\n", "CUDA LU factorization failed: U_ii = 0 at i=",
 			host_info);
@@ -103,11 +106,15 @@ ok_status lapack_LU_svx(void *hdl, matrix *LU, matrix *X, int_vector *pivot)
 		pivot->data, X->data, (int) X->ld, dev_info.data));
 
 	OK_CHECK_ERR(err, int_vector_memcpy_av(&host_info, &dev_info, 1));
-	OK_MAX_ERR(err, int_vector_free(&dev_info));
+	if (host_info != 0)
+		OK_MAX_ERR(err, OPTKIT_ERROR_CUSOLVER);
+
 	if (host_info < 0)
 		printf("%s%i\n",
 			"CUSOLVER generic triangular solve fail. Error at ith parameter, i=",
 			-host_info);
+
+	OK_MAX_ERR(err, int_vector_free(&dev_info));
 	return err;
 }
 
@@ -142,25 +149,27 @@ ok_status lapack_cholesky_decomp_flagged(void *hdl, matrix *A,
 	uplo = (A->order == CblasColMajor) ? CUBLAS_FILL_MODE_LOWER :
 					     CUBLAS_FILL_MODE_UPPER;
 
-
 	cusolver_err = CUSOLVER(potrf_bufferSize)(*(cusolverDnHandle_t *) hdl,
 		uplo, (int) A->size1, A->data, (int) A->ld, &dim_work);
 	if (cusolver_err)
 		return OK_SCAN_CUSOLVER(cusolver_err);
 
+
 	OK_CHECK_ERR(err, vector_calloc(&workspace, (size_t) dim_work));
 	OK_CHECK_ERR(err, int_vector_calloc(&info, 1));
-
-	cusolver_err = CUSOLVER(potrf)(*(cusolverDnHandle_t *) hdl, uplo,
-		(int) A->size1, A->data, (int) A->ld, workspace.data, dim_work,
-		info.data);
+	if (!err)
+		cusolver_err = CUSOLVER(potrf)(*(cusolverDnHandle_t *) hdl, uplo,
+			(int) A->size1, A->data, (int) A->ld, workspace.data, dim_work,
+			info.data);
 
 	if (cusolver_err && silence_cusolver_err)
-		err = OPTKIT_ERROR_CUSOLVER;
+		err = err > OPTKIT_ERROR_CUSOLVER ? err : OPTKIT_ERROR_CUSOLVER;
 	else
-		err = OK_SCAN_CUSOLVER(cusolver_err);
+		OK_MAX_ERR(err, OK_SCAN_CUSOLVER(cusolver_err));
 
 	OK_MAX_ERR(err, int_vector_memcpy_av(&host_info, &info, 1));
+	if (host_info != 0)
+		OK_MAX_ERR(err, OPTKIT_ERROR_CUSOLVER);
 	if (host_info && !silence_cusolver_err)
 		printf("%s%i\n", "CUDA cholesky factorization failed: L_ii = 0 at i=",
 			host_info);
@@ -192,11 +201,14 @@ ok_status lapack_cholesky_svx(void *hdl, const matrix *L, vector *x)
 		uplo, n, 1, L->data, n, x->data, n, dev_info.data));
 
 	OK_CHECK_ERR(err, int_vector_memcpy_av(&host_info, &dev_info, 1));
-	OK_MAX_ERR(err, int_vector_free(&dev_info));
+	if (host_info != 0)
+		OK_MAX_ERR(err, OPTKIT_ERROR_CUSOLVER);
 	if (host_info < 0)
 		printf("%s%i\n",
 			"CUSOLVER cholesky solve fail. Error at ith parameter, i=",
 			host_info);
+
+	OK_MAX_ERR(err, int_vector_free(&dev_info));
 	return err;
 }
 
