@@ -68,7 +68,9 @@ ok_status lapack_LU_decomp_flagged(void *hdl, matrix *A, int_vector *pivot,
 
 	OK_MAX_ERR(err, int_vector_memcpy_av(&host_info, &info, 1));
 	if (host_info != 0)
-		OK_MAX_ERR(err, OPTKIT_ERROR_CUSOLVER);
+		err = err > OPTKIT_ERROR_CUSOLVER ? err : OPTKIT_ERROR_CUSOLVER;
+		if (!silence_cusolver_err)
+			OK_SCAN_ERR(OPTKIT_ERROR_CUSOLVER);
 	if (host_info && !silence_cusolver_err)
 		printf("%s%i\n", "CUDA LU factorization failed: U_ii = 0 at i=",
 			host_info);
@@ -169,7 +171,10 @@ ok_status lapack_cholesky_decomp_flagged(void *hdl, matrix *A,
 
 	OK_MAX_ERR(err, int_vector_memcpy_av(&host_info, &info, 1));
 	if (host_info != 0)
-		OK_MAX_ERR(err, OPTKIT_ERROR_CUSOLVER);
+		err = err > OPTKIT_ERROR_CUSOLVER ? err : OPTKIT_ERROR_CUSOLVER;
+		if (!silence_cusolver_err)
+			OK_SCAN_ERR(OPTKIT_ERROR_CUSOLVER);
+
 	if (host_info && !silence_cusolver_err)
 		printf("%s%i\n", "CUDA cholesky factorization failed: L_ii = 0 at i=",
 			host_info);
