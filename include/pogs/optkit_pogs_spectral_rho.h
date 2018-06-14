@@ -145,6 +145,7 @@ ok_status pogs_spectral_adapt_rho(void *blas_handle, pogs_variables *z,
 	if (!(settings->adaptiverho) || (k % settings->rho_interval != 0))
 		return OPTKIT_SUCCESS;
 
+
 	/* complete differences from previous iteration */
 	OK_CHECK_ERR(err, pogs_spectral_update_end(blas_handle, params, z,
 		*rho));
@@ -175,12 +176,22 @@ ok_status pogs_spectral_adapt_rho(void *blas_handle, pogs_variables *z,
 	rho_new = (rho_new / *rho > kRHOSTEP_MAX) ? *rho * kRHOSTEP_MAX : rho_new;
 	rho_new = (*rho / rho_new > kRHOSTEP_MAX) ? *rho / kRHOSTEP_MAX : rho_new;
 
+
+	if (*rho > rho_new) {
+		if (settings->verbose > 2)
+			printf("-RHO: %.3e\n", *rho);
+	}
+	else if (*rho < rho_new) {
+		if (settings->verbose > 2)
+			printf("+RHO: %.3e\n", *rho);
+	}
+
 	OK_CHECK_ERR(err, blas_scal(blas_handle, *rho / rho_new, z->dual->vec));
-	*rho = rho_new;	
+	*rho = rho_new;
+
 
 	/* start building differences for next iteration */
 	OK_CHECK_ERR(err, pogs_spectral_update_start(params, z, *rho));
-
 	return err;
 }
 
