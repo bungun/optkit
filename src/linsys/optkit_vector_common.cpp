@@ -6,6 +6,8 @@ ok_status vector_subvector_(vector_<T> *v_out, vector_<T> *v_in, size_t offset,
 {
         if (!v_out || !v_in || !v_in->data)
                 return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+        if (v_out->data)
+                return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
         v_out->size=n;
         v_out->stride=v_in->stride;
         v_out->data=v_in->data + offset * v_in->stride;
@@ -17,6 +19,9 @@ ok_status vector_view_array_(vector_<T> *v, T *base, size_t n)
 {
         if (!v || !base)
                 return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
+        if (v->data)
+                return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
+
         v->size=n;
         v->stride=1;
         v->data=base;

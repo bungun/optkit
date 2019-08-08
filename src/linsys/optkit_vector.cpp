@@ -75,29 +75,6 @@ ok_status vector_set_all_(vector_<T> *v, T x)
 }
 
 template<typename T>
-ok_status vector_subvector_(vector_<T> *v_out, vector_<T> *v_in, size_t offset,
-	size_t n)
-{
-	if (!v_out || !v_in || !v_in->data)
-		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
-	v_out->size = n;
-	v_out->stride = v_in->stride;
-	v_out->data = v_in->data + offset * v_in->stride;
-	return OPTKIT_SUCCESS;
-}
-
-template<typename T>
-ok_status vector_view_array_(vector_<T> *v, T *base, size_t n)
-{
-	if (!v || !base)
-		return OK_SCAN_ERR( OPTKIT_ERROR_UNALLOCATED );
-	v->size = n;
-	v->stride = 1;
-	v->data = base;
-	return OPTKIT_SUCCESS;
-}
-
-template<typename T>
 ok_status vector_memcpy_vv_(vector_<T> *v1, const vector_<T> *v2)
 {
 	uint i;
