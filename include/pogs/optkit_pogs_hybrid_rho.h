@@ -30,6 +30,7 @@ ok_status pogs_hybrid_rho_initialize(rho_params *params,
 		params->spectral = settings->adapt_spectral;
 
 	ok_alloc(params->adapt_params, sizeof(*params->adapt_params));
+	OK_CHECK_ERR( err, pogs_adaptive_rho_initialize(params->adapt_params));
 	if (params->spectral) {
 		ok_alloc(params->spectral_params, sizeof(*params->spectral_params));
 		OK_CHECK_ERR(err, pogs_spectral_rho_initialize(
