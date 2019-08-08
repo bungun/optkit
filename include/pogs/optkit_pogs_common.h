@@ -83,8 +83,11 @@ ok_status pogs_graph_vector_attach_memory(pogs_graph_vector *z)
 	if (z->vec->data != OK_NULL)
 		return OK_SCAN_ERR( OPTKIT_ERROR_OVERWRITE );
 
+
 	err = OK_SCAN_ERR( vector_calloc(z->vec, z->m + z->n) );
+        /* assumes z->y->data correctly set to OK_NULL (in _release_memory below) */
 	OK_CHECK_ERR( err, vector_subvector(z->y, z->vec, 0, z->m) );
+        /* assumes z->x->data correctly set to OK_NULL (ditto)*/
 	OK_CHECK_ERR( err, vector_subvector(z->x, z->vec, z->m, z->n) );
 	z->memory_attached = 1;
 	if (err)
@@ -141,32 +144,39 @@ ok_status pogs_variables_alloc(pogs_variables *z, size_t m, size_t n)
 	ok_alloc(z->state, sizeof(*(z->state)));
 	OK_CHECK_ERR( err, vector_calloc(z->state, 6 * (m + n)) );
 
-	ok_alloc(z->primal, sizeof(*z));
+	ok_alloc(z->primal, sizeof(*z->primal));
+        z->primal->data = OK_NULL;
 	OK_CHECK_ERR( err, pogs_graph_vector_alloc(z->primal, m, n) );
 	OK_CHECK_ERR( err, pogs_graph_vector_view_vector(z->primal, z->state,
 		0, m + n) );
-	ok_alloc(z->dual, sizeof(*z));
+	ok_alloc(z->dual, sizeof(*z->dual));
+        z->dual->data = OK_NULL;
 	OK_CHECK_ERR( err, pogs_graph_vector_alloc(z->dual, m, n) );
 	OK_CHECK_ERR( err, pogs_graph_vector_view_vector(z->dual, z->state,
 		m + n, m + n) );
-	ok_alloc(z->primal12, sizeof(*z));
+	ok_alloc(z->primal12, sizeof(*z->primal12));
+        z->primal12->data = OK_NULL;
 	OK_CHECK_ERR( err, pogs_graph_vector_alloc(z->primal12, m, n) );
 	OK_CHECK_ERR( err, pogs_graph_vector_view_vector(z->primal12, z->state,
 		2 * (m + n), m + n) );
-	ok_alloc(z->dual12, sizeof(*z));
+	ok_alloc(z->dual12, sizeof(*z->dual12));
+        z->dual12->data = OK_NULL;
 	OK_CHECK_ERR( err, pogs_graph_vector_alloc(z->dual12, m, n) );
 	OK_CHECK_ERR( err, pogs_graph_vector_view_vector(z->dual12, z->state,
 		3 * (m + n), m + n) );
-	ok_alloc(z->prev, sizeof(*z));
+	ok_alloc(z->prev, sizeof(*z->prev));
+        z->prev->data = OK_NULL;
 	OK_CHECK_ERR( err, pogs_graph_vector_alloc(z->prev, m ,n) );
 	OK_CHECK_ERR( err, pogs_graph_vector_view_vector(z->prev, z->state,
 		4 * (m + n), m + n) );
-	ok_alloc(z->temp, sizeof(*z));
+	ok_alloc(z->temp, sizeof(*z->temp));
+        z->temp->data = OK_NULL;
 	OK_CHECK_ERR( err, pogs_graph_vector_alloc(z->temp, m, n) );
 	OK_CHECK_ERR( err, pogs_graph_vector_view_vector(z->temp, z->state,
 		5 * (m + n), m + n) );
 
 	ok_alloc(z->fixed_point_iterate, sizeof(*(z->fixed_point_iterate)));
+        z->fixed_point_iterate->data = OK_NULL;
 	OK_CHECK_ERR( err, vector_subvector(z->fixed_point_iterate, z->state,
 		0, 2 * (m + n)) );
 
