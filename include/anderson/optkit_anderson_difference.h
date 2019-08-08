@@ -12,8 +12,8 @@ extern "C" {
 
 typedef struct difference_accelerator{
 	size_t vector_dim, lookback_dim;
-	matrix *DX, *DF, *DG, *DXDF;
-	vector *f, *g, *x, *alpha;
+	matrix *DX, *DG, *DF, *DXDG;
+	vector *f, *g, *x, *gamma;
 	int_vector *pivot;
 	size_t iter;
 	void *blas_handle;
@@ -22,8 +22,8 @@ typedef struct difference_accelerator{
 
 typedef struct fused_diff_accelerator{
 	size_t vector_dim, lookback_dim, n_blocks;
-	matrix *DX, *DF, *DG, *DXDF;
-	vector *w, *f, *g, *x, *alpha;
+	matrix *DX, *DF, *DG, *DXDG;
+	vector *w, *f, *g, *x, *gamma;
 	int_vector *pivot;
 	size_t iter;
 	void *blas_handle;
@@ -32,14 +32,13 @@ typedef struct fused_diff_accelerator{
 
 
 /* ANDERSON, DIFFERENCE FORMULATION */
-ok_status anderson_difference_solve(void *blas_hdl, void *lapack_hdl, matrix *DX,
-	matrix *DF, matrix *DXDF, vector *f, vector *alpha, int_vector *pivot);
-ok_status anderson_difference_mix(void *blas_hdl, matrix *DG, vector *alpha,
-	vector *x);
+ok_status anderson_difference_solve(void *blas_hdl, void *lapack_hdl,
+        matrix *DX, matrix *DG, matrix *DXDG, vector *w, int_vector *pivot);
+ok_status anderson_difference_mix(void *blas_hdl, matrix *DF, vector *x);
 ok_status anderson_difference_accelerate_template(void *blas_handle,
-	void *lapack_handle, matrix *DX, matrix *DF, matrix *DG, matrix *DXDF,
-	vector *f, vector *g, vector *x, vector *alpha, int_vector *pivot,
-	size_t *iter, vector *iterate, vector *x_reduced, size_t n_reduction,
+	void *lapack_handle, matrix *DX, matrix *DF, matrix *DG, matrix *DXDG,
+	vector *w, vector *g, vector *x, vector *gamma, int_vector *pivot,
+        size_t *iter, vector *iterate, vector *x_reduced, size_t n_reduction,
 	ok_status (* x_reduction)(vector *x_rdx, vector *x, size_t n_rdx));
 
 /* UNMODIFIED STATE VARIABLE */

@@ -5,20 +5,20 @@ extern "C" {
 #endif
 
 ok_status anderson_difference_solve(void *blas_hdl, void *lapack_hdl, matrix *DX,
-	matrix *DF, matrix *DXDF, vector *f, vector *alpha, int_vector *pivot)
+	matrix *DG, matrix *DXDG, vector *g, vector *gamma, int_vector *pivot)
 {
 	ok_status err = OPTKIT_SUCCESS;
-	/* DXDF = DX' * DF */
+	/* DXDG = DX' * DG */
 	OK_CHECK_ERR( err, blas_gemm(blas_hdl, CblasTrans,
-		CblasNoTrans, kOne, DX, DF, kZero, DXDF) );
+		CblasNoTrans, kOne, DX, DG, kZero, DXDG) );
 
-	/* alpha = DX'f */
-	OK_CHECK_ERR( err, blas_gemv(blas_hdl, CblasTrans, kOne, DX, f,
-		kZero, alpha) );
+	/* gamma := DX'g (for now) */
+	OK_CHECK_ERR( err, blas_gemv(blas_hdl, CblasTrans, kOne, DX, g,
+		kZero, gamma) );
 
-	/* alpha = inv(DX'DF)DX'f */
+	/* gamma = inv(DX'DG)DX'g */
 	if (!err)
-		err = lapack_solve_LU_flagged(lapack_hdl, DXDF, alpha, pivot,
+		err = lapack_solve_LU_flagged(lapack_hdl, DXDG, gamma, pivot,
 			kANDERSON_SILENCE_LU);
 	if (!kANDERSON_SILENCE_LU)
 		OK_SCAN_ERR(err);
@@ -26,20 +26,22 @@ ok_status anderson_difference_solve(void *blas_hdl, void *lapack_hdl, matrix *DX
 	return err;
 }
 
-ok_status anderson_difference_mix(void *blas_hdl, matrix *DG,
-	vector *alpha, vector *x)
+ok_status anderson_difference_mix(void *blas_hdl, matrix *DF,
+	vector *gamma, vector *x)
 {
-	OK_RETURNIF_ERR( blas_gemv(blas_hdl, CblasNoTrans, -kOne, DG, alpha,
+	OK_RETURNIF_ERR( blas_gemv(blas_hdl, CblasNoTrans, -kOne, DF, gamma,
 		kOne, x) );
 	return OPTKIT_SUCCESS;
 }
 
 
+//>>>>>>>>>>>>>>>>>>
 ok_status anderson_difference_accelerate_template(void *blas_handle,
-	void *lapack_handle, matrix *DX, matrix *DF, matrix *DG, matrix *DXDF,
-	vector *f, vector *g, vector *x, vector *alpha, int_vector *pivot,
-	size_t *iter, vector *iterate, vector *x_reduced, size_t n_reduction,
-	ok_status (* x_reduction)(vector *x_rdx, vector *x, size_t n_rdx))
+	void *lapack_handle, matrix *DX, matrix *DF, matrix *DG, matrix *DXDG,
+	vector *f, vector *g, vector *x, vector *gamma,
+        int_vector *pivot, size_t *iter, vector *iterate, vector *x_reduced,
+        size_t n_reduction,
+        ok_status (* x_reduction)(vector *x_rdx, vector *x, size_t n_rdx))
 {
 	ok_status err = OPTKIT_SUCCESS;
 	ok_status lu_err = OPTKIT_SUCCESS;
@@ -59,43 +61,42 @@ ok_status anderson_difference_accelerate_template(void *blas_handle,
 	next_index = (*iter + 1) % (DF->size2);
 
 	/*
-	* g = iterate
-	* DG[:, index] = g_prev - g
+	* f(x) = iterate
+	* DF[:, index] = f_prev - f(x) = f_prev - iterate
 	*/
-	/* anderson_update_D("G")(aa->DG, aa->g, x, index); */
+	/* anderson_update_D("F")(aa->DF, aa->f, x, index); */
 
-	gcol.data = OK_NULL;
-	OK_CHECK_ERR( err, matrix_column(&gcol, DG, index) );
-	OK_CHECK_ERR( err, vector_memcpy_vv(&gcol, g) );
-	OK_CHECK_ERR( err, vector_memcpy_vv(g, iterate) );
-	OK_CHECK_ERR( err, vector_sub(&gcol, g) );
-
-	/*
-	* DF[:, index] = f_prev - f
-	*   step 1: add f_prev
-	*   step 2: calculate f = g - x = iterate - x
-	*   step 3: subtract f
-	*/
 	fcol.data = OK_NULL;
 	OK_CHECK_ERR( err, matrix_column(&fcol, DF, index) );
 	OK_CHECK_ERR( err, vector_memcpy_vv(&fcol, f) );
+	OK_CHECK_ERR( err, vector_memcpy_vv(f, iterate) );
+	OK_CHECK_ERR( err, vector_sub(&fcol, f) );
+
+	/*
+	* DF[:, index] = g_prev - g
+	*   step 1: add g_prev
+	*   step 2: calculate g = f(x) - x = iterate - x
+	*   step 3: subtract g
+	*/
+	gcol.data = OK_NULL;
+	OK_CHECK_ERR( err, matrix_column(&gcol, DG, index) );
+	OK_CHECK_ERR( err, vector_memcpy_vv(&gcol, g) );
 
 	OK_CHECK_ERR( err, x_reduction(x_reduced, iterate, n_reduction) );
-	OK_CHECK_ERR( err, vector_memcpy_vv(f, x_reduced) );
-	OK_CHECK_ERR( err, vector_sub(f, x) );
-	OK_CHECK_ERR( err, vector_sub(&fcol, f) );
+	OK_CHECK_ERR( err, vector_memcpy_vv(g, x_reduced) );
+	OK_CHECK_ERR( err, vector_sub(g, x) );
+	OK_CHECK_ERR( err, vector_sub(&gcol, g) );
 
 	/* CHECK ITERATION >= LOOKBACK */
 	if (*iter > lookback_dim && !err){
-		/* SOLVE argmin_\alpha ||F \alpha||_2 s.t. 1'\alpha = 1 */
 		OK_CHECK_ERR( lu_err, anderson_difference_solve(
-			blas_handle, lapack_handle, DX, DF,
-			DXDF, f, alpha, pivot) );
+			blas_handle, lapack_handle, DX, DG,
+			DXDG, f, gamma, pivot) );
 
-		/* x = G \alpha, if solve was successful */
+		/* x = f(x) + Jg = f(x) + DF \gamma, if solve was successful */
 		if (!lu_err)
 			OK_CHECK_ERR( err, anderson_difference_mix(
-				blas_handle, DG, alpha, iterate) );
+				blas_handle, DF, gamma, iterate) );
 	}
 
 	/*
@@ -138,8 +139,8 @@ ok_status anderson_difference_accelerator_init(difference_accelerator *aa,
 	ok_alloc(aa->DG, sizeof(*aa->DG));
 	OK_CHECK_ERR( err, matrix_calloc(aa->DG, vector_dim, lookback_dim - 1,
 		CblasColMajor) );
-	ok_alloc(aa->DXDF, sizeof(*aa->DXDF));
-	OK_CHECK_ERR( err, matrix_calloc(aa->DXDF, lookback_dim - 1,
+	ok_alloc(aa->DXDG, sizeof(*aa->DXDG));
+	OK_CHECK_ERR( err, matrix_calloc(aa->DXDG, lookback_dim - 1,
 		lookback_dim - 1, CblasColMajor) );
 
 	ok_alloc(aa->f, sizeof(*aa->f));
@@ -148,8 +149,9 @@ ok_status anderson_difference_accelerator_init(difference_accelerator *aa,
 	OK_CHECK_ERR( err, vector_calloc(aa->g, vector_dim) );
 	ok_alloc(aa->x, sizeof(*aa->x));
 	OK_CHECK_ERR( err, vector_calloc(aa->x, vector_dim) );
-	ok_alloc(aa->alpha, sizeof(*aa->alpha));
-	OK_CHECK_ERR( err, vector_calloc(aa->alpha, lookback_dim - 1) );
+        ok_alloc(aa->gamma, sizeof(*aa->gamma));
+        OK_CHECK_ERR( err, vector_calloc(aa->gamma, lookback_dim - 1) );
+
 
 	ok_alloc(aa->pivot, sizeof(*aa->pivot));
 	OK_CHECK_ERR( err, int_vector_calloc(aa->pivot, lookback_dim - 1) );
@@ -172,12 +174,12 @@ ok_status anderson_difference_accelerator_free(difference_accelerator *aa)
 	// OK_SCAN_ERR( matrix_print(aa->DF) );
 	OK_MAX_ERR( err, matrix_free(aa->DF) );
 	OK_MAX_ERR( err, matrix_free(aa->DG) );
-	OK_MAX_ERR( err, matrix_free(aa->DXDF) );
+	OK_MAX_ERR( err, matrix_free(aa->DXDG) );
 
 	OK_MAX_ERR( err, vector_free(aa->f) );
 	OK_MAX_ERR( err, vector_free(aa->g) );
 	OK_MAX_ERR( err, vector_free(aa->x) );
-	OK_MAX_ERR( err, vector_free(aa->alpha) );
+        OK_MAX_ERR( err, vector_free(aa->gamma) );
 
 	OK_MAX_ERR( err, int_vector_free(aa->pivot) );
 
@@ -187,12 +189,12 @@ ok_status anderson_difference_accelerator_free(difference_accelerator *aa)
 	ok_free(aa->DX);
 	ok_free(aa->DF);
 	ok_free(aa->DG);
-	ok_free(aa->DXDF);
+	ok_free(aa->DXDG);
 
 	ok_free(aa->f);
 	ok_free(aa->g);
 	ok_free(aa->x);
-	ok_free(aa->alpha);
+        ok_free(aa->gamma);
 	ok_free(aa->pivot);
 
 	return err;
@@ -217,8 +219,8 @@ ok_status anderson_difference_accelerate(difference_accelerator *aa, vector *x)
 	OK_CHECK_PTR(aa);
 	return OK_SCAN_ERR( anderson_difference_accelerate_template(
 		aa->blas_handle, aa->lapack_handle, aa->DX, aa->DF, aa->DG,
-		aa->DXDF, aa->f, aa->g, aa->x, aa->alpha, aa->pivot, &aa->iter,
-		x, x, (size_t) 0, anderson_reduce_null) );
+		aa->DXDG, aa->f, aa->g, aa->x, aa->gamma, aa->pivot,
+                &aa->iter, x, x, (size_t) 0, anderson_reduce_null) );
 }
 
 #ifdef __cplusplus

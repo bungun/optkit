@@ -43,8 +43,8 @@ ok_status anderson_fused_diff_accelerator_init(fused_diff_accelerator *aa,
 	OK_CHECK_ERR( err, vector_calloc(aa->g, vector_dim) );
 	ok_alloc(aa->x, sizeof(*aa->x));
 	OK_CHECK_ERR( err, vector_calloc(aa->x, vector_dim / n_blocks) );
-	ok_alloc(aa->alpha, sizeof(*aa->alpha));
-	OK_CHECK_ERR( err, vector_calloc(aa->alpha, lookback_dim - 1) );
+        ok_alloc(aa->gamma, sizeof(*aa->gamma));
+        OK_CHECK_ERR( err, vector_calloc(aa->gamma, lookback_dim - 1) );
 
 	ok_alloc(aa->pivot, sizeof(*aa->pivot));
 	OK_CHECK_ERR( err, int_vector_calloc(aa->pivot, lookback_dim - 1) );
@@ -71,7 +71,7 @@ ok_status anderson_fused_diff_accelerator_free(fused_diff_accelerator *aa)
 	OK_MAX_ERR( err, vector_free(aa->f) );
 	OK_MAX_ERR( err, vector_free(aa->g) );
 	OK_MAX_ERR( err, vector_free(aa->x) );
-	OK_MAX_ERR( err, vector_free(aa->alpha) );
+        OK_MAX_ERR( err, vector_free(aa->gamma) );
 
 	OK_MAX_ERR( err, int_vector_free(aa->pivot) );
 
@@ -87,7 +87,7 @@ ok_status anderson_fused_diff_accelerator_free(fused_diff_accelerator *aa)
 	ok_free(aa->f);
 	ok_free(aa->g);
 	ok_free(aa->x);
-	ok_free(aa->alpha);
+        ok_free(aa->gamma);
 	ok_free(aa->pivot);
 	return err;
 }
@@ -115,8 +115,8 @@ ok_status anderson_fused_diff_accelerate(fused_diff_accelerator *aa,
 	OK_CHECK_PTR(aa);
 	return OK_SCAN_ERR( anderson_difference_accelerate_template(
 		aa->blas_handle, aa->lapack_handle, aa->DX, aa->DF, aa->DG,
-		aa->DXDF, aa->f, aa->g, aa->x, aa->alpha, aa->pivot, &aa->iter,
-		x, aa->w, aa->n_blocks, anderson_sum_blocks) );
+		aa->DXDF, aa->f, aa->g, aa->x, aa->gamma, aa->pivot,
+                &aa->iter, x, aa->w, aa->n_blocks, anderson_sum_blocks) );
 
 }
 

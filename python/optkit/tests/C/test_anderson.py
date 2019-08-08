@@ -166,7 +166,7 @@ class AndersonTestCase(unittest.TestCase):
                     assert isinstance(aa.f, lib.vector_p)
                     assert isinstance(aa.g, lib.vector_p)
                     assert isinstance(aa.x, lib.vector_p)
-                    assert isinstance(aa.alpha, lib.vector_p)
+                    assert isinstance(aa.gamma, lib.vector_p)
                     assert isinstance(aa.pivot, lib.int_vector_p)
                     assert (aa.iter == 0 )
                 finally:
