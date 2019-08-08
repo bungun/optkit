@@ -410,6 +410,13 @@ ok_status sp_blas_gemv(void *sparse_handle, enum CBLAS_TRANSPOSE transA,
 	return OPTKIT_SUCCESS;
 }
 
+/* STUB */
+ok_status sp_blas_gemm(void *sparse_handle, enum CBLAS_TRANSPOSE transA,
+        ok_float alpha, sp_matrix *A, matrix *X, ok_float beta, matrix *Y) {
+
+	return OK_SCAN_ERR( OPTKIT_ERROR_NOT_IMPLEMENTED );
+}
+
 #ifdef __cplusplus
 }
 #endif

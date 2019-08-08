@@ -100,9 +100,12 @@ ok_status sp_matrix_scale_right(void *sparse_handle, sp_matrix *A,
 ok_status sp_matrix_print(const sp_matrix *A);
 ok_status sp_matrix_print_transpose(const sp_matrix *A);
 
-/* matrix multiplication */
+/* matrix-vector multiplication */
 ok_status sp_blas_gemv(void *sparse_handle, enum CBLAS_TRANSPOSE transA,
 	ok_float alpha, sp_matrix *A, vector *x, ok_float beta, vector *y);
+
+ok_status sp_blas_gemm(void *sparse_handle, enum CBLAS_TRANSPOSE transA,
+        ok_float alpha, sp_matrix *A, matrix *X, ok_float beta, matrix *Y);
 
 #ifdef __cplusplus
 }

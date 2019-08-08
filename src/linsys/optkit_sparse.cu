@@ -473,6 +473,41 @@ ok_status sp_blas_gemv(void *sparse_handle, enum CBLAS_TRANSPOSE transA,
 	return err;
 }
 
+/* STUB */
+ok_status sp_blas_gemm(void *sparse_handle, enum CBLAS_TRANSPOSE transA,
+        ok_float alpha, sp_matrix *A, matrix *X, ok_float beta, matrix *Y) {
+
+	return OK_SCAN_ERR( OPTKIT_ERROR_NOT_IMPLEMENTED );
+
+	OK_CHECK_SPARSEMAT(A);
+	OK_CHECK_MATRIX(X);
+	OK_CHECK_MATRIX(Y);
+	OK_CHECK_PTR(sparse_handle);
+
+	if ((Y->size2 != X->size2) ||
+	    (transA == CblasNoTrans &&
+		(A->size1 != Y->size1 || A->size2 != X->size1)) ||
+	    (transA == CblasTrans &&
+	    	(A->size1 != X->size1 || A->size2 != Y->size1)))
+	    	return OK_SCAN_ERR( OPTKIT_ERROR_DIMENSION_MISMATCH );
+
+	ok_status err = OPTKIT_SUCCESS;
+	ok_sparse_handle *sp_hdl = (ok_sparse_handle *) sparse_handle;
+	int forward = ((A->order == CblasRowMajor) == (transA == CblasNoTrans));
+	int size1 = (transA == CblasNoTrans) ? (int) A->size1 : (int) A->size2;
+	int size2 = (transA == CblasNoTrans) ? (int) A->size2 : (int) A->size1;
+	int nrhs = (int) X->size2;
+	size_t offset = forward ? 0 : A->nnz;
+	size_t offset_ptr = forward ? 0 : A->ptrlen;
+
+	err = OK_SCAN_CUSPARSE( CUSPARSE(csrmm)( *(sp_hdl->hdl),
+		CUSPARSE_OPERATION_NON_TRANSPOSE, size1, size2, (int) A->nnz,
+		&alpha, *(sp_hdl->descr), A->val + offset, A->ptr + offset_ptr,
+		A->ind + offset, X->data, &beta, Y->data) );
+	cudaDeviceSynchronize();
+	return err;
+}
+
 #ifdef __cplusplus
 }
 #endif
